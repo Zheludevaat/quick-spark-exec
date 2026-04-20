@@ -111,6 +111,22 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private daimonMark!: GBCText;
   private knotTracker!: GBCText;
   private soulTracker!: GBCText;
+  /** Stonechild's 3 syllable lanterns — each lights when OBSERVED nearby. */
+  private syllableLanterns: {
+    syllable: string;
+    x: number;
+    y: number;
+    flame: Phaser.GameObjects.Arc;
+    halo: Phaser.GameObjects.Arc;
+    label?: GBCText;
+    lit: boolean;
+  }[] = [];
+  /** Echo follower (NG+ companion). Trails Rowan opposite Soryn. */
+  private echoFollower?: {
+    container: Phaser.GameObjects.Container;
+    halo: Phaser.GameObjects.Arc;
+    barkTimer?: Phaser.Time.TimerEvent;
+  };
   private souls: {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
@@ -131,6 +147,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.knots = [];
     this.seedEchoes = [];
     this.souls = [];
+    this.syllableLanterns = [];
     this.dialogActive = false;
     this.knotActive = false;
     this.save.act = 1;
