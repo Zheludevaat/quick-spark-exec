@@ -59,11 +59,21 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "incomplete",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "CARTOGRAPHER", text: "I am mapping a country that does not exist." },
-          { who: "CARTOGRAPHER", text: "It has three rivers. None of them flow." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          // Cross-soul: if you held the Feather, the cartographer notices the
+          // weight in your hands and his country gets a fourth river.
+          if (hasChoice(save, "weighed_heart", "held")) {
+            return [
+              { who: "CARTOGRAPHER", text: "You walk like someone who held a feather." },
+              { who: "CARTOGRAPHER", text: "I'll add a fourth river. It will run through your hands." },
+            ];
+          }
+          return [
+            { who: "CARTOGRAPHER", text: "I am mapping a country that does not exist." },
+            { who: "CARTOGRAPHER", text: "It has three rivers. None of them flow." },
+          ];
+        },
       },
       {
         kind: "inquiry",
