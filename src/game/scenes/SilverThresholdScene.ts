@@ -73,6 +73,10 @@ export class SilverThresholdScene extends Phaser.Scene {
       }
     }
 
+    // Ambient silver dust drifting upward
+    spawnMotes(this, { count: 22, color: 0xdde6f5, alpha: 0.55, driftY: -0.012, driftX: 0.003, depth: 30 });
+    spawnMotes(this, { count: 8, color: 0xa8c8e8, alpha: 0.35, driftY: -0.006, driftX: -0.004, depth: 30 });
+
     // Element circles along the path
     const placements: { kind: ElemKind; x: number; y: number }[] = [
       { kind: "air",   x: 28,  y: 76 },
