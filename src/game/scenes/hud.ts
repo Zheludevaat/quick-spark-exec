@@ -11,6 +11,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const cam = scene.cameras.main;
   cam.setRoundPixels(true);
 
+  // Re-apply LCD overlay if it was toggled on in a previous scene
+  reapplyLcd(scene);
+
+  // Global LCD toggle: backslash key
+  scene.input.keyboard?.on("keydown-BACKSLASH", () => toggleLcd(scene));
+
   // Top stats bar (compact for 160-wide screen)
   const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
   scene.add.rectangle(0, 11, GBC_W, 1, 0x7889a8, 1).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
