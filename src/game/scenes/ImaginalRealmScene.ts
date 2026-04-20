@@ -687,6 +687,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow.destroy();
         k.glow = undefined;
       }
+      this.refreshKnotTracker();
     });
   }
 
@@ -722,10 +723,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
   }
 
   private daimonBondLabel(): string {
-    if (this.save.flags.daimon_bond_accept) return "✦ACCEPT";
-    if (this.save.flags.daimon_bond_question) return "✦QUEST";
-    if (this.save.flags.daimon_bond_refuse) return "✦REFUSE";
-    if (this.save.flags.daimon_bond_listen) return "✦LISTEN";
+    // Uniform 4-letter codes so the badge never visually clips.
+    if (this.save.flags.daimon_bond_accept) return "✦BIND";
+    if (this.save.flags.daimon_bond_question) return "✦QUES";
+    if (this.save.flags.daimon_bond_refuse) return "✦REFU";
+    if (this.save.flags.daimon_bond_listen) return "✦HEAR";
     return "✦BOND";
+  }
+
+  private refreshKnotTracker() {
+    if (!this.knotTracker) return;
+    this.knotTracker.setText(`KNOTS ${this.totalCleared()}/5`);
   }
 }
