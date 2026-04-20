@@ -36,8 +36,8 @@ export class IntroScene extends Phaser.Scene {
     void g;
 
     drawGBCBox(this, 8, GBC_H - 50, GBC_W - 16, 42);
-    const text = new GBCText(this, 14, GBC_H - 44, "", { color: COLOR.textLight, maxWidthPx: GBC_W - 28 });
-    const hint = new GBCText(this, GBC_W - 22, GBC_H - 14, "▼A", { color: COLOR.textAccent });
+    const text = new GBCText(this, 14, GBC_H - 44, "", { color: COLOR.textLight, maxWidthPx: GBC_W - 28, depth: 110 });
+    const hint = new GBCText(this, GBC_W - 22, GBC_H - 14, "▼A", { color: COLOR.textAccent, depth: 110 });
     this.tweens.add({ targets: hint.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
     let i = 0;
@@ -47,14 +47,16 @@ export class IntroScene extends Phaser.Scene {
         this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("SilverThreshold", { save: this.save }));
         return;
       }
-      // Show two lines at a time for readability
       const a = LINES[i++] ?? "";
       const b = LINES[i++] ?? "";
-      text.setText(`${a}\n${b}`.trim());
+      text.setText(`${a} ${b}`.trim());
     };
     advance();
 
-    this.input.on("pointerdown", advance);
+    // Defer pointerdown so the click that opened this scene doesn't auto-advance.
+    this.time.delayedCall(150, () => {
+      this.input.on("pointerdown", advance);
+    });
     this.input.keyboard?.on("keydown-ENTER", advance);
     this.input.keyboard?.on("keydown-SPACE", advance);
   }
