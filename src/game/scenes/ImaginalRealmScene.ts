@@ -17,7 +17,7 @@ import { awardShardFragment } from "../shardFeedback";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite } from "./imaginal/soulSprites";
-import { runSoul, isSoulDone } from "./imaginal/soulRunner";
+import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
 
@@ -110,6 +110,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
   private knotTracker!: GBCText;
+  private soulTracker!: GBCText;
   private souls: {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
@@ -176,7 +177,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       depth: 220,
       scrollFactor: 0,
     });
+    // Soul-completion chip (left of knot tracker) — per-region count.
+    this.soulTracker = new GBCText(this, GBC_W - 96, 2, "", {
+      color: COLOR.textAccent,
+      depth: 220,
+      scrollFactor: 0,
+    });
     this.refreshKnotTracker();
+    this.refreshSoulTracker();
 
     // Spawn the daimon companion (lives across all 3 sub-regions)
     this.companion = new SorynCompanion(this, this.rowan, () => this.companionLines(), [
