@@ -1214,6 +1214,7 @@ export function bakeElements(scene: Phaser.Scene, key = "elements") {
     paintGrid(ctx, ELEM_BASE[0], PAL[p], (ei * 2) * TILE, 0);
     paintGrid(ctx, ELEM_BASE[1], PAL[p], (ei * 2 + 1) * TILE, 0);
   });
+  addGridFrames(tex, TILE, TILE, 8, 1);
   tex.refresh();
   return key;
 }
