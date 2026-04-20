@@ -19,7 +19,8 @@ import { attachHUD, runDialog } from "./hud";
 import { writeSave } from "../save";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardStone, awardNamedStone } from "../athanor/operations";
+import { awardStoneFx, awardNamedStone } from "../athanor/operations";
+import { emitHudStainAdded } from "../ui/hudSignals";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { completeQuest, questStatus } from "../sideQuests";
@@ -96,10 +97,17 @@ export class AlbedoScene extends Phaser.Scene {
       { title: "FORGIVE", beats, window },
       (r) => {
         const stains = r.total - r.hits;
-        this.save.stainsCarried += stains;
+        if (stains > 0) {
+          this.save.stainsCarried += stains;
+          // Emit per stain so the HUD plate flashes the newest pip.
+          for (let i = 0; i < stains; i++) {
+            const next = Math.min(3, this.save.stainsCarried - (stains - 1 - i));
+            emitHudStainAdded(this, next);
+          }
+        }
         if (r.judgment === "great") awardNamedStone(this, this.save, "white", "all forgiven");
         else if (r.judgment === "ok") awardNamedStone(this, this.save, "white", "most forgiven");
-        else awardStone(this.save, "white", 1);
+        else awardStoneFx(this, this.save, "white", 1);
         writeSave(this.save);
         this.vesselHud.refresh();
         unlockLore(this.save, "on_albedo");

@@ -1831,4 +1831,107 @@ export function bakeAll(scene: Phaser.Scene) {
   bakeEnemies(scene);
   bakeBoss(scene);
   bakeElements(scene);
+  bakeStatIcons(scene);
 }
+
+// ============================================================================
+// Lightweight HUD plate — solid GBC dark fill, 1px frame, pixel corners.
+// Variants: "dark" (default, dialog-like), "light" (lighter midtone fill for
+// inline chips), "frameless" (no border, just the dark fill).
+// Returns the created Image; caller is responsible for destroying it AND the
+// generated texture if dynamic.
+// ============================================================================
+export function drawGBCPlate(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  depth = 100,
+  variant: "dark" | "light" | "frameless" = "dark",
+) {
+  const key = `gbcplate_${Math.random().toString(36).slice(2, 9)}`;
+  const { ctx, tex } = makeTex(scene, key, w, h);
+  const fill = variant === "light" ? "#1a2030" : "#0a0e1a";
+  ctx.fillStyle = fill;
+  ctx.fillRect(0, 0, w, h);
+  if (variant !== "frameless") {
+    ctx.fillStyle = "#7889a8";
+    ctx.fillRect(0, 0, w, 1);
+    ctx.fillRect(0, h - 1, w, 1);
+    ctx.fillRect(0, 0, 1, h);
+    ctx.fillRect(w - 1, 0, 1, h);
+    // Pixel corners — clear then re-poke inset pixel for chunky GBC feel
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.clearRect(w - 1, 0, 1, 1);
+    ctx.clearRect(0, h - 1, 1, 1);
+    ctx.clearRect(w - 1, h - 1, 1, 1);
+  }
+  tex.refresh();
+  const img = scene.add.image(x, y, key).setOrigin(0, 0).setDepth(depth).setScrollFactor(0);
+  return {
+    img,
+    key,
+    destroy: () => {
+      img.destroy();
+      if (scene.textures.exists(key)) scene.textures.remove(key);
+    },
+  };
+}
+
+// ============================================================================
+// Stat icons — three 7x7 frames (clarity diamond, compassion heart,
+// courage triangle). Indexed 0,1,2.
+// ============================================================================
+function bakeStatIcons(scene: Phaser.Scene, key = "stat_icons") {
+  const W = 7,
+    H = 7,
+    FRAMES = 3;
+  if (scene.textures.exists(key)) return key;
+  const { ctx, tex } = makeTex(scene, key, W * FRAMES, H);
+
+  // Frame 0: clarity = diamond (cyan-pale)
+  const dia = "#b8e0f0";
+  const diaShade = "#5a90c8";
+  const px = (ox: number, x: number, y: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox + x, y, 1, 1);
+  };
+  // diamond
+  px(0, 3, 0, dia);
+  px(0, 2, 1, dia); px(0, 3, 1, dia); px(0, 4, 1, dia);
+  px(0, 1, 2, dia); px(0, 2, 2, diaShade); px(0, 3, 2, dia); px(0, 4, 2, diaShade); px(0, 5, 2, dia);
+  px(0, 0, 3, dia); px(0, 1, 3, diaShade); px(0, 2, 3, dia); px(0, 3, 3, dia); px(0, 4, 3, dia); px(0, 5, 3, diaShade); px(0, 6, 3, dia);
+  px(0, 1, 4, dia); px(0, 2, 4, diaShade); px(0, 3, 4, dia); px(0, 4, 4, diaShade); px(0, 5, 4, dia);
+  px(0, 2, 5, dia); px(0, 3, 5, dia); px(0, 4, 5, dia);
+  px(0, 3, 6, dia);
+
+  // Frame 1: compassion = heart (warm rose)
+  const heart = "#f0a8b8";
+  const heartShade = "#a83858";
+  const ox1 = W;
+  px(ox1, 1, 1, heart); px(ox1, 2, 1, heart); px(ox1, 4, 1, heart); px(ox1, 5, 1, heart);
+  px(ox1, 0, 2, heart); px(ox1, 1, 2, heart); px(ox1, 2, 2, heart); px(ox1, 3, 2, heart); px(ox1, 4, 2, heart); px(ox1, 5, 2, heart); px(ox1, 6, 2, heart);
+  px(ox1, 0, 3, heart); px(ox1, 1, 3, heartShade); px(ox1, 2, 3, heart); px(ox1, 3, 3, heart); px(ox1, 4, 3, heart); px(ox1, 5, 3, heartShade); px(ox1, 6, 3, heart);
+  px(ox1, 1, 4, heart); px(ox1, 2, 4, heart); px(ox1, 3, 4, heartShade); px(ox1, 4, 4, heart); px(ox1, 5, 4, heart);
+  px(ox1, 2, 5, heart); px(ox1, 3, 5, heart); px(ox1, 4, 5, heart);
+  px(ox1, 3, 6, heart);
+
+  // Frame 2: courage = triangle (gold)
+  const tri = "#e8c860";
+  const triShade = "#a87830";
+  const ox2 = W * 2;
+  px(ox2, 3, 0, tri);
+  px(ox2, 2, 1, tri); px(ox2, 3, 1, tri); px(ox2, 4, 1, tri);
+  px(ox2, 2, 2, tri); px(ox2, 3, 2, triShade); px(ox2, 4, 2, tri);
+  px(ox2, 1, 3, tri); px(ox2, 2, 3, triShade); px(ox2, 3, 3, triShade); px(ox2, 4, 3, triShade); px(ox2, 5, 3, tri);
+  px(ox2, 1, 4, tri); px(ox2, 2, 4, triShade); px(ox2, 3, 4, triShade); px(ox2, 4, 4, triShade); px(ox2, 5, 4, tri);
+  px(ox2, 0, 5, tri); px(ox2, 1, 5, triShade); px(ox2, 2, 5, triShade); px(ox2, 3, 5, triShade); px(ox2, 4, 5, triShade); px(ox2, 5, 5, triShade); px(ox2, 6, 5, tri);
+  px(ox2, 0, 6, tri); px(ox2, 1, 6, tri); px(ox2, 2, 6, tri); px(ox2, 3, 6, tri); px(ox2, 4, 6, tri); px(ox2, 5, 6, tri); px(ox2, 6, 6, tri);
+
+  addGridFrames(tex, W, H, FRAMES, 1);
+  tex.refresh();
+  return key;
+}
+
+export const STAT_ICON_FRAME = { clarity: 0, compassion: 1, courage: 2 } as const;

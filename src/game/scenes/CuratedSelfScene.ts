@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt"
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
+import { mountVesselHud } from "../athanor/vessel";
 import { runInquiry } from "../inquiry";
 import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
@@ -305,6 +306,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.refreshAvailable();
 
     attachHUD(this, () => this.save.stats);
+    // Mount the centered vessel plate so Act 3 reflects current stones,
+    // shards, stains, gold, and ALN — without replaying any gain animations.
+    mountVesselHud(this, this.save);
 
     // Opening whisper — fading inscription line.
     this.showWhisper(openingWhisper(this.save));
