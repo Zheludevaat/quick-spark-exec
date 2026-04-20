@@ -117,15 +117,41 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Bind action
     onActionDown(this, "action", () => this.tryInteract());
 
-    // First visit only — opening + derive inventory
+    // Always derive on entry — covers first visit AND returning after each
+    // operation when new shards may have become available (e.g. salvage).
+    deriveInventory(this.save);
+    this.refreshVesselFill();
+    this.vesselHud.refresh();
+
+    // First visit only — opening dialog
     if (!this.save.flags.athanor_visited) {
       this.save.flags.athanor_visited = true;
       writeSave(this.save);
       this.busy = true;
       runDialog(this, OPENING_LINES, () => {
-        deriveInventory(this.save);
-        this.vesselHud.refresh();
         this.busy = false;
+      });
+    }
+
+    // If all four operations are done and player returns, prompt the seal.
+    if (
+      this.save.flags.op_nigredo_done &&
+      this.save.flags.op_albedo_done &&
+      this.save.flags.op_citrinitas_done &&
+      this.save.flags.op_rubedo_done &&
+      !this.save.act2Inscription
+    ) {
+      this.time.delayedCall(600, () => {
+        if (this.busy) return;
+        this.busy = true;
+        runDialog(
+          this,
+          [{ who: "SORYN", text: "All four are done. The vessel waits to be sealed." }],
+          () => {
+            this.busy = false;
+            this.gotoSealedVessel();
+          },
+        );
       });
     }
 
@@ -264,6 +290,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         t.destroy();
         this.busy = false;
         this.depositedThisVisit++;
+        this.refreshVesselFill();
       },
     });
     getAudio().sfx("confirm");
