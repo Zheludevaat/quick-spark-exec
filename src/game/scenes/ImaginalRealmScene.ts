@@ -343,7 +343,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Place rowan at the entry side. We track which region they came from
+    // Spawn souls for this region (skip those already finished — keep the world
+    // feeling alive but uncluttered; finished souls return as faint statues).
+    for (const def of soulsForRegion(this.save, region)) {
+      const built = buildSoulSprite(this, def.archetype, def.x, def.y);
+      if (isSoulDone(this.save, def.id)) {
+        built.container.setAlpha(0.45);
+      }
+      this.regionRoot.add(built.container);
+      this.regionRoot.add(built.halo);
+      this.souls.push({ def, container: built.container, halo: built.halo });
+    }
     // so a "go back north" flow lands them at the south edge instead of
     // teleporting back to the original entry.
     const from = this.lastRegion;
