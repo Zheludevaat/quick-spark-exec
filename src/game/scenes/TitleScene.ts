@@ -44,15 +44,31 @@ export class TitleScene extends Phaser.Scene {
 
     const save = loadSave();
     const remaining = save?.flags?.plateau_remain;
-    drawGBCBox(this, 18, 118, GBC_W - 36, 22);
-    const startLabel = remaining ? "PRESS A: LEAVE THE IMAGINAL"
-      : save ? "PRESS A: CONTINUE"
-      : "PRESS A: NEW GAME";
-    const start = new GBCText(this, 26, 124, startLabel, { color: COLOR.textLight, depth: 110 });
-    new GBCText(this, 26, 132, save ? "B: ERASE SAVE" : "", { color: COLOR.textDim, depth: 110 });
+    const primaryLabel = remaining ? "LEAVE THE IMAGINAL"
+      : save ? "CONTINUE"
+      : "NEW GAME";
 
-    // Blink the prompt
-    this.tweens.add({ targets: start.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+    // Menu: one option if no save, two if save exists.
+    const options: { label: string; action: "launch" | "erase" }[] = save
+      ? [{ label: primaryLabel, action: "launch" }, { label: "ERASE SAVE", action: "erase" }]
+      : [{ label: primaryLabel, action: "launch" }];
+
+    const boxH = save ? 28 : 18;
+    drawGBCBox(this, 18, 118, GBC_W - 36, boxH);
+
+    let cursor = 0;
+    const labels: GBCText[] = options.map((opt, i) =>
+      new GBCText(this, 30, 124 + i * 10, opt.label, { color: COLOR.textLight, depth: 110 }),
+    );
+    const cursorMark = new GBCText(this, 22, 124, "▶", { color: COLOR.textGold, depth: 111 });
+    const refresh = () => {
+      labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
+      cursorMark.setPosition(22, 124 + cursor * 10);
+    };
+    refresh();
+
+    // Blink only the active row
+    this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
     // Boot audio on first user gesture (browsers require it)
     const audio = getAudio();
@@ -69,10 +85,36 @@ export class TitleScene extends Phaser.Scene {
       this.scene.start(next, { save: slot });
     };
     const erase = () => { audio.sfx("cancel"); clearSave(); this.scene.restart(); };
+    const confirm = () => {
+      const opt = options[cursor];
+      if (opt.action === "launch") launch();
+      else erase();
+    };
+    const move = (d: number) => {
+      if (options.length < 2) return;
+      cursor = (cursor + d + options.length) % options.length;
+      audio.sfx("cursor");
+      refresh();
+    };
 
-    this.input.keyboard?.on("keydown-ENTER", launch);
-    this.input.keyboard?.on("keydown-SPACE", launch);
-    this.input.on("pointerdown", launch);
-    this.input.keyboard?.on("keydown-BACKSPACE", erase);
+    // Make rows clickable
+    labels.forEach((t, i) => {
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerover", () => { cursor = i; refresh(); });
+      t.obj.on("pointerdown", () => { cursor = i; refresh(); confirm(); });
+    });
+
+    this.input.keyboard?.on("keydown-UP", () => move(-1));
+    this.input.keyboard?.on("keydown-DOWN", () => move(1));
+    this.input.keyboard?.on("keydown-W", () => move(-1));
+    this.input.keyboard?.on("keydown-S", () => move(1));
+    this.input.keyboard?.on("keydown-ENTER", confirm);
+    this.input.keyboard?.on("keydown-SPACE", confirm);
+    this.input.keyboard?.on("keydown-BACKSPACE", () => { if (save) { cursor = 1; refresh(); erase(); } });
+    this.events.on("vinput-down", (dir: string) => {
+      if (dir === "up") move(-1);
+      if (dir === "down") move(1);
+    });
+    this.events.on("vinput-action", confirm);
   }
 }
