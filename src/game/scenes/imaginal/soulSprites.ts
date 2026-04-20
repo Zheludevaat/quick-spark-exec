@@ -10,9 +10,20 @@ import type { SoulArchetype } from "./souls";
  * identify them by hook + tell alone.
  */
 
-type Built = {
+export type SoulMood = "waiting" | "engaged" | "resolved";
+
+export type Built = {
   container: Phaser.GameObjects.Container;
   halo: Phaser.GameObjects.Arc;
+  /** Apply a mood — changes halo color/intensity and idle bob speed. */
+  setMood: (m: SoulMood) => void;
+  archetype: SoulArchetype;
+};
+
+const MOOD_COLOR: Record<SoulMood, number> = {
+  waiting: 0xdde6f5,
+  engaged: 0xffe098,
+  resolved: 0xa8e8c8,
 };
 
 const PALETTE: Record<SoulArchetype, { robe: number; head: number; accent: number }> = {
@@ -176,5 +187,11 @@ export function buildSoulSprite(
     ease: "Sine.inOut",
   });
 
-  return { container: c, halo };
+  const setMood = (m: SoulMood) => {
+    halo.fillColor = MOOD_COLOR[m];
+    if (m === "resolved") c.setAlpha(0.6);
+  };
+
+  return { container: c, halo, setMood, archetype };
 }
+

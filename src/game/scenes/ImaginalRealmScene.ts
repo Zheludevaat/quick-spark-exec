@@ -19,6 +19,7 @@ import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
+import { openQuestLog } from "../questLog";
 
 type Knot = {
   kind: KnotKind;
@@ -113,8 +114,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
     halo: Phaser.GameObjects.Arc;
+    setMood: (m: "waiting" | "engaged" | "resolved") => void;
     nameLabel?: GBCText;
     hookLabel?: GBCText;
+    nearTime: number;
+    barkShown: boolean;
+    bark?: GBCText;
   }[] = [];
 
   constructor() {
@@ -143,6 +148,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
     attachHUD(this, () => this.save.stats);
+    // Quest-log on J (DOM listener — simple, doesn't conflict with rebindable actions)
+    const onJ = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "j" && !this.dialogActive && !this.knotActive) {
+        this.dialogActive = true;
+        openQuestLog(this, this.save, () => {
+          this.dialogActive = false;
+        });
+      }
+    };
+    window.addEventListener("keydown", onJ);
+    this.events.once("shutdown", () => window.removeEventListener("keydown", onJ));
     this.input2 = new InputState(this);
     this.events.on("vinput-action", () => this.tryInteract());
     onActionDown(this, "action", () => this.tryInteract());
@@ -347,12 +363,18 @@ export class ImaginalRealmScene extends Phaser.Scene {
     // feeling alive but uncluttered; finished souls return as faint statues).
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
-      if (isSoulDone(this.save, def.id)) {
-        built.container.setAlpha(0.45);
-      }
+      const done = isSoulDone(this.save, def.id);
+      built.setMood(done ? "resolved" : "waiting");
       this.regionRoot.add(built.container);
       this.regionRoot.add(built.halo);
-      this.souls.push({ def, container: built.container, halo: built.halo });
+      this.souls.push({
+        def,
+        container: built.container,
+        halo: built.halo,
+        setMood: built.setMood,
+        nearTime: 0,
+        barkShown: false,
+      });
     }
     // so a "go back north" flow lands them at the south edge instead of
     // teleporting back to the original entry.
@@ -508,12 +530,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
-    // Soul proximity: pulse halo + show name/hook label.
+    // Soul proximity: pulse halo, show name/hook, accumulate ambient bark timer.
     const nearSoul = this.nearestSoul();
     for (const s of this.souls) {
       const isNear = s === nearSoul;
-      s.halo.fillAlpha = isNear ? (isSoulDone(this.save, s.def.id) ? 0.15 : 0.3) : 0;
+      const done = isSoulDone(this.save, s.def.id);
+      s.halo.fillAlpha = isNear ? (done ? 0.15 : 0.3) : 0;
       if (isNear) {
+        s.setMood(done ? "resolved" : "engaged");
         if (!s.nameLabel) {
           s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
             color: COLOR.textGold,
@@ -526,11 +550,33 @@ export class ImaginalRealmScene extends Phaser.Scene {
             maxWidthPx: GBC_W - 8,
           });
         }
-      } else if (s.nameLabel) {
-        s.nameLabel.destroy();
-        s.nameLabel = undefined;
-        s.hookLabel?.destroy();
-        s.hookLabel = undefined;
+        s.nearTime += dt;
+        // After 2.4s near without interacting, drift a one-shot ambient thought.
+        if (!s.barkShown && !done && s.nearTime > 2400) {
+          s.barkShown = true;
+          s.bark = new GBCText(this, s.def.x - 18, s.def.y - 26, "...", {
+            color: COLOR.textDim,
+            depth: 23,
+          });
+          this.tweens.add({
+            targets: s.bark.obj,
+            alpha: 0,
+            y: s.def.y - 36,
+            duration: 1800,
+            delay: 600,
+            onComplete: () => s.bark?.destroy(),
+          });
+        }
+      } else {
+        s.setMood(done ? "resolved" : "waiting");
+        s.nearTime = 0;
+        s.barkShown = false;
+        if (s.nameLabel) {
+          s.nameLabel.destroy();
+          s.nameLabel = undefined;
+          s.hookLabel?.destroy();
+          s.hookLabel = undefined;
+        }
       }
     }
 

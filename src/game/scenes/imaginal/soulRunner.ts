@@ -11,42 +11,81 @@ import { getAudio } from "../../audio";
 import { setSoulState, soulState, type SoulId, SOULS } from "./souls";
 
 /**
- * Declarative arc runner for plateau souls.
+ * Branching declarative arc runner for plateau souls.
  *
- * Each `SoulArc` is an ordered list of steps. A step can be:
- *  - "dialog"   — show a sequence of dialog lines (always advances)
- *  - "inquiry"  — present choices; advance only if chosen choice is in advanceOn
- *  - "rhythm"   — run a rhythm-tap; advance only on hits >= required
- *  - "idle"     — require the player to stand still for N ms (advances or aborts)
- *  - "witness"  — require save.verbs.witness; otherwise show hint and abort
+ * Each `SoulArc` is an array of `SoulStep`s. A step can be:
+ *  - "dialog"   — show lines (advances).
+ *  - "react"    — lines built at runtime from save state (advances).
+ *                 Lets souls remember prior choices anywhere in the save.
+ *  - "inquiry"  — choices; each can branch to a labeled step or end the arc.
+ *                 Choices are recorded into save.soulChoices[id].
+ *  - "rhythm"   — rhythm-tap; advance only on hits >= required.
+ *  - "idle"     — stand-still timer; aborts on movement.
+ *  - "witness"  — requires save.verbs.witness; increments save.witnessUses.
+ *  - "gate"     — predicate check; if true → branch label, else → branch elseLabel.
+ *  - "set"      — write a flag/choice tag into the ledger (no UI).
  *
- * `save.souls[id]` tracks the current step index. Re-entering an in-progress
- * arc resumes at that index. On final step success, `onComplete` fires (which
- * typically awards lore + stats and marks the soul "done" by setting state to
- * `steps.length + 1`).
+ * Each step may carry an optional `label`. Branches reference labels.
+ * `ending` on the last reached step decides which `endings[name]` payload pays out.
+ *
+ * `save.souls[id]` stores the current step INDEX (legacy compatibility).
+ * `save.soulChoices[id]` stores the ordered ledger of every recorded tag.
  */
 
 export type DialogLine = { who: string; text: string };
 
-export type SoulStep =
-  | { kind: "dialog"; lines: DialogLine[] }
-  | {
-      kind: "inquiry";
-      prompt: { who: string; text: string };
-      options: InquiryOption[];
-      /** Choice values that advance to the next step. Others end the arc here. */
-      advanceOn: InquiryChoice[];
-      /** Optional reaction lines per non-advancing choice (already shown by inquiry reply). */
-    }
-  | { kind: "rhythm"; title: string; beats: number[]; required: number }
-  | { kind: "idle"; ms: number; prompt: string }
-  | { kind: "witness"; lines: DialogLine[]; missingHint: DialogLine };
+export type Branch = {
+  /** Step `label` to jump to. Special value "end" finalises the arc. */
+  to: string | "end" | "next";
+  /** Optional ending key — selects which `endings[ending]` to pay out on "end". */
+  ending?: string;
+};
+
+export type StepBase = { label?: string };
+
+export type SoulStep = StepBase &
+  (
+    | { kind: "dialog"; lines: DialogLine[]; next?: Branch }
+    | {
+        kind: "react";
+        build: (save: SaveSlot) => DialogLine[];
+        next?: Branch;
+      }
+    | {
+        kind: "inquiry";
+        prompt: { who: string; text: string };
+        options: (InquiryOption & { tag?: string; branch?: Branch })[];
+        /** Default branch when an option has no explicit branch. */
+        defaultBranch?: Branch;
+      }
+    | { kind: "rhythm"; title: string; beats: number[]; required: number; pass?: Branch; fail?: Branch }
+    | { kind: "idle"; ms: number; prompt: string; pass?: Branch; fail?: Branch }
+    | { kind: "witness"; lines: DialogLine[]; missingHint: DialogLine; next?: Branch }
+    | {
+        kind: "gate";
+        check: (save: SaveSlot) => boolean;
+        pass: Branch;
+        fail: Branch;
+      }
+    | { kind: "set"; flag?: string; tag?: string; next?: Branch }
+  );
+
+export type SoulEnding = {
+  loreId?: string;
+  stats?: { clarity?: number; compassion?: number; courage?: number };
+  shardFragments?: number;
+  flag?: string;
+  /** Side effects: activate/complete quests, etc. */
+  effect?: (scene: Phaser.Scene, save: SaveSlot) => void;
+};
 
 export type SoulArc = {
   id: SoulId;
   steps: SoulStep[];
-  /** Called when the LAST step resolves successfully. */
-  onComplete: (scene: Phaser.Scene, save: SaveSlot) => void;
+  /** Keyed payouts. Inquiry branches set { ending } to pick one. */
+  endings: Record<string, SoulEnding>;
+  /** Default ending when none specified. */
+  defaultEnding: string;
 };
 
 const DONE_OFFSET = 1000;
@@ -55,14 +94,27 @@ export function isSoulDone(save: SaveSlot, id: SoulId): boolean {
   return soulState(save, id) >= DONE_OFFSET;
 }
 
-export function markSoulDone(save: SaveSlot, id: SoulId) {
-  setSoulState(save, id, DONE_OFFSET);
-  writeSave(save);
+export function recordChoice(save: SaveSlot, id: SoulId, tag: string) {
+  if (!save.soulChoices[id]) save.soulChoices[id] = [];
+  save.soulChoices[id].push(tag);
+}
+
+export function hasChoice(save: SaveSlot, id: SoulId, tag: string): boolean {
+  return !!save.soulChoices[id]?.includes(tag);
+}
+
+/** Resolve a label to an index. "next" = current+1, "end" = sentinel -1. */
+function resolveBranch(steps: SoulStep[], from: number, b?: Branch): number {
+  if (!b) return from + 1;
+  if (b.to === "end") return -1;
+  if (b.to === "next") return from + 1;
+  const idx = steps.findIndex((s) => s.label === b.to);
+  return idx >= 0 ? idx : from + 1;
 }
 
 /**
- * Run (or resume) a soul's arc. Always wraps the calling scene's dialog flow
- * so the caller should set its own `dialogActive` flag and clear it in `onClose`.
+ * Run (or resume) a soul's arc. Calls onClose exactly once.
+ * Selected ending is paid out when reaching index -1 ("end").
  */
 export function runSoul(
   scene: Phaser.Scene,
@@ -71,74 +123,120 @@ export function runSoul(
   onClose: () => void,
 ) {
   if (isSoulDone(save, arc.id)) {
-    // Re-visit reading: short reflective acknowledgment.
-    runDialog(scene, [{ who: nameOf(arc.id), text: revisitLine(arc.id) }], onClose);
+    runDialog(scene, [{ who: nameOf(arc.id), text: revisitLine(arc.id, save) }], onClose);
     return;
   }
 
-  let step = soulState(save, arc.id);
-  if (step >= arc.steps.length) step = arc.steps.length - 1;
+  let cursor = soulState(save, arc.id);
+  if (cursor >= arc.steps.length) cursor = arc.steps.length - 1;
+  let pendingEnding = arc.defaultEnding;
 
-  const advance = () => {
-    const next = step + 1;
-    if (next >= arc.steps.length) {
-      markSoulDone(save, arc.id);
-      arc.onComplete(scene, save);
-      writeSave(save);
-      onClose();
+  const finish = () => {
+    setSoulState(save, arc.id, DONE_OFFSET);
+    save.soulsCompleted = (save.soulsCompleted ?? 0) + 1;
+    const payout = arc.endings[pendingEnding] ?? arc.endings[arc.defaultEnding];
+    payout.effect?.(scene, save);
+    awardSoul(scene, save, payout);
+    writeSave(save);
+    onClose();
+  };
+
+  const stepInto = (idx: number) => {
+    if (idx < 0 || idx === -1) {
+      finish();
       return;
     }
-    setSoulState(save, arc.id, next);
+    if (idx >= arc.steps.length) {
+      finish();
+      return;
+    }
+    cursor = idx;
+    setSoulState(save, arc.id, cursor);
     writeSave(save);
-    onClose();
+    runStep(scene, save, arc, cursor, (branch, ending) => {
+      if (ending) pendingEnding = ending;
+      const next = resolveBranch(arc.steps, cursor, branch);
+      stepInto(next);
+    }, () => {
+      // Aborted (e.g. failed rhythm, walked away during idle, missing verb).
+      // Save current cursor; close dialog.
+      setSoulState(save, arc.id, cursor);
+      writeSave(save);
+      onClose();
+    });
   };
 
-  const stop = () => {
-    // Save current step (no advance) and close.
-    setSoulState(save, arc.id, step);
-    writeSave(save);
-    onClose();
-  };
-
-  runStep(scene, save, arc.steps[step], advance, stop);
+  stepInto(cursor);
 }
 
 function runStep(
   scene: Phaser.Scene,
   save: SaveSlot,
-  s: SoulStep,
-  advance: () => void,
-  stop: () => void,
+  arc: SoulArc,
+  idx: number,
+  proceed: (branch?: Branch, ending?: string) => void,
+  abort: () => void,
 ) {
+  const s = arc.steps[idx];
   switch (s.kind) {
     case "dialog":
-      runDialog(scene, s.lines, advance);
+      runDialog(scene, s.lines, () => proceed(s.next));
       return;
+
+    case "react": {
+      const lines = s.build(save);
+      runDialog(scene, lines, () => proceed(s.next));
+      return;
+    }
 
     case "inquiry":
       runInquiry(scene, s.prompt, s.options, (picked) => {
-        if (s.advanceOn.includes(picked.choice)) advance();
-        else stop();
+        const opt = s.options.find((o) => o === picked) ?? picked;
+        const tag = (opt as { tag?: string }).tag;
+        if (tag) recordChoice(save, arc.id, tag);
+        const branch = (opt as { branch?: Branch }).branch ?? s.defaultBranch;
+        proceed(branch, branch?.ending);
       });
       return;
 
     case "rhythm":
       runRhythmTap(scene, { title: s.title, beats: s.beats }, (r) => {
-        if (r.hits >= s.required) advance();
-        else stop();
+        if (r.hits >= s.required) proceed(s.pass);
+        else if (s.fail) proceed(s.fail);
+        else abort();
       });
       return;
 
     case "idle":
-      runIdleStep(scene, s.ms, s.prompt, advance, stop);
+      runIdleStep(scene, s.ms, s.prompt, () => proceed(s.pass), () => {
+        if (s.fail) proceed(s.fail);
+        else abort();
+      });
       return;
 
     case "witness":
       if (!save.verbs.witness) {
-        runDialog(scene, [s.missingHint], stop);
+        runDialog(scene, [s.missingHint], abort);
         return;
       }
-      runDialog(scene, s.lines, advance);
+      save.witnessUses = (save.witnessUses ?? 0) + 1;
+      writeSave(save);
+      // Auto-unlock witness lore at threshold
+      if (save.witnessUses >= 5 && unlockLore(save, "on_witnessing")) {
+        showLoreToast(scene, "on_witnessing");
+      }
+      runDialog(scene, s.lines, () => proceed(s.next));
+      return;
+
+    case "gate":
+      proceed(s.check(save) ? s.pass : s.fail);
+      return;
+
+    case "set":
+      if (s.flag) save.flags[s.flag] = true;
+      if (s.tag) recordChoice(save, arc.id, s.tag);
+      writeSave(save);
+      proceed(s.next);
       return;
   }
 }
@@ -185,7 +283,6 @@ function runIdleStep(
     onAbort();
   };
 
-  // Cancel if player moves (vinput emits direction events from touchpad too)
   scene.events.on("vinput-down", abort);
 
   const timer = scene.time.addEvent({
@@ -209,21 +306,27 @@ function nameOf(id: SoulId): string {
   return SOULS.find((s) => s.id === id)?.name ?? "ECHO";
 }
 
-function revisitLine(id: SoulId): string {
+/** Revisit lines that vary by which ending the player chose. */
+function revisitLine(id: SoulId, save: SaveSlot): string {
+  const ledger = save.soulChoices[id] ?? [];
   switch (id) {
     case "cartographer":
-      return "THE LAST MAP IS DONE. IT POINTS HERE.";
+      if (ledger.includes("witnessed")) return "THE LAST MAP IS DONE. IT POINTS HERE.";
+      return "HE NODS. HE IS STILL DRAWING.";
     case "weeping_twin":
       return "SHE LAUGHS. QUIETLY. THANK YOU.";
     case "drowned_poet":
       return "THE SONG IS WHOLE. I CAN STOP NOW.";
     case "mirror_philosopher":
-      return "THE POOL IS A POOL. THANK YOU.";
+      if (ledger.includes("agreed")) return "THE POOL AGREES WITH ITSELF, KINDLY.";
+      if (ledger.includes("argued")) return "STILL ARGUING WITH HIS REFLECTION. HAPPILY.";
+      return "HE IS GONE. THE POOL IS A POOL.";
     case "collector":
       return "THE JAR IS FULL ENOUGH.";
     case "sleeper":
       return "STILL SLEEPING. PEACEFULLY NOW.";
     case "walking_saint":
+      if (ledger.includes("forced")) return "SHE LEFT. KINDLY, BUT FIRMLY.";
       return "KIND OF YOU. STILL NO, THOUGH.";
     case "composer":
       return "I HEARD IT. I HEARD IT.";
@@ -232,7 +335,8 @@ function revisitLine(id: SoulId): string {
     case "stonechild":
       return "MY NAME. I HAVE IT NOW.";
     case "lantern_mathematician":
-      return "NEITHER. OF COURSE. OF COURSE.";
+      if (ledger.includes("witnessed_neither")) return "NEITHER. OF COURSE. OF COURSE.";
+      return "HE COUNTS ON. KINDLY.";
     case "weighed_heart":
       return "LIGHTER NOW. GO ON.";
     case "lampkeeper_echo":
@@ -240,36 +344,34 @@ function revisitLine(id: SoulId): string {
   }
 }
 
-/** Award helper used by arc onComplete callbacks. */
+/** Pay out an ending. */
 export function awardSoul(
   scene: Phaser.Scene,
   save: SaveSlot,
-  opts: {
-    loreId?: string;
-    stats?: { clarity?: number; compassion?: number; courage?: number };
-    shardFragments?: number;
-    flag?: string;
-  },
+  payout: SoulEnding,
 ) {
-  if (opts.loreId && unlockLore(save, opts.loreId)) showLoreToast(scene, opts.loreId);
-  if (opts.stats?.clarity) save.stats.clarity += opts.stats.clarity;
-  if (opts.stats?.compassion) save.stats.compassion += opts.stats.compassion;
-  if (opts.stats?.courage) save.stats.courage += opts.stats.courage;
-  if (opts.shardFragments) {
-    for (let i = 0; i < opts.shardFragments; i++) {
+  if (payout.loreId && unlockLore(save, payout.loreId)) showLoreToast(scene, payout.loreId);
+  if (payout.stats?.clarity) save.stats.clarity += payout.stats.clarity;
+  if (payout.stats?.compassion) save.stats.compassion += payout.stats.compassion;
+  if (payout.stats?.courage) save.stats.courage += payout.stats.courage;
+  if (payout.shardFragments) {
+    for (let i = 0; i < payout.shardFragments; i++) {
       awardShardFragment(scene, save, () => `soul_${save.shards.length}_${i}`, {
         x: GBC_W / 2,
         y: GBC_H / 2,
       });
     }
   }
-  if (opts.flag) save.flags[opts.flag] = true;
+  if (payout.flag) save.flags[payout.flag] = true;
   writeSave(save);
   scene.events.emit("stats-changed");
 }
 
-/** Bookkeeping: count souls completed (for unlocking world-expansion lore). */
+/** Bookkeeping: total souls completed (recomputed from save). */
 export function soulsCompleted(save: SaveSlot): number {
+  if (typeof save.soulsCompleted === "number" && save.soulsCompleted > 0) {
+    return save.soulsCompleted;
+  }
   let n = 0;
   for (const s of SOULS) if (isSoulDone(save, s.id)) n++;
   return n;
