@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "./gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, wrapText } from "./gbcArt";
 import { getAudio } from "./audio";
 
 export type InquiryChoice = "observe" | "ask" | "confess" | "silent";
@@ -11,9 +11,12 @@ export type InquiryOption = {
   reply: string;
 };
 
+const LINE_H = 9;   // px per text line (7 glyph + 2 leading)
+const PAD = 6;
+
 /**
- * A small four-option inquiry wheel. Renders inside the standard dialog box,
- * waits for the player to pick one, then resolves with their choice.
+ * A small inquiry list. Renders inside a dynamically-sized dialog box so the
+ * prompt and option labels never overlap, regardless of length.
  */
 export function runInquiry(
   scene: Phaser.Scene,
@@ -21,32 +24,45 @@ export function runInquiry(
   options: InquiryOption[],
   onDone: (picked: InquiryOption) => void,
 ) {
-  const boxX = 4, boxY = GBC_H - 64, boxW = GBC_W - 8, boxH = 60;
+  const boxW = GBC_W - 8;
+  const innerW = boxW - PAD * 2;
+  const promptText = prompt.text.toUpperCase();
+  const promptLines = wrapText(promptText, innerW);
+
+  // Layout: who(1) + prompt(N) + 1 spacer + options(M) + 1 hint pad
+  const totalLines = 1 + promptLines.length + 1 + options.length + 1;
+  const boxH = Math.min(GBC_H - 14, totalLines * LINE_H + PAD * 2);
+  const boxX = 4;
+  const boxY = GBC_H - boxH - 2;
+
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
-  const who = new GBCText(scene, boxX + 6, boxY + 4, prompt.who.toUpperCase(), { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
-  const text = new GBCText(scene, boxX + 6, boxY + 14, prompt.text.toUpperCase(), {
-    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 16,
+  const who = new GBCText(scene, boxX + PAD, boxY + 4, prompt.who.toUpperCase(), {
+    color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+  });
+  const text = new GBCText(scene, boxX + PAD, boxY + 4 + LINE_H, promptText, {
+    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW,
   });
 
+  // Options: one per line, marker on the left.
+  const optionsTop = boxY + 4 + LINE_H + promptLines.length * LINE_H + LINE_H;
   let cursor = 0;
   const opts: GBCText[] = [];
   options.forEach((o, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const x = boxX + 14 + col * 70;
-    const y = boxY + 36 + row * 10;
-    const t = new GBCText(scene, x, y, o.label.toUpperCase(), { color: COLOR.textLight, depth: 251, scrollFactor: 0 });
+    const y = optionsTop + i * LINE_H;
+    const t = new GBCText(scene, boxX + PAD + 8, y, o.label.toUpperCase(), {
+      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW - 8,
+    });
     t.obj.setInteractive({ useHandCursor: true });
     t.obj.on("pointerdown", () => { cursor = i; refresh(); pick(); });
     opts.push(t);
   });
-  const mark = new GBCText(scene, boxX + 6, boxY + 36, "▶", { color: COLOR.textGold, depth: 251, scrollFactor: 0 });
+  const mark = new GBCText(scene, boxX + PAD, optionsTop, "▶", {
+    color: COLOR.textGold, depth: 251, scrollFactor: 0,
+  });
 
   const refresh = () => {
     opts.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-    const col = cursor % 2;
-    const row = Math.floor(cursor / 2);
-    mark.setPosition(boxX + 6 + col * 70, boxY + 36 + row * 10);
+    mark.setPosition(boxX + PAD, optionsTop + cursor * LINE_H);
   };
   refresh();
 
@@ -60,16 +76,28 @@ export function runInquiry(
     cleanup();
     const picked = options[cursor];
     getAudio().sfx("confirm");
-    // Briefly show the reply via a small in-line dialog before resolving.
-    const replyBox = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
-    const replyWho = new GBCText(scene, boxX + 6, boxY + 4, prompt.who.toUpperCase(), { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
-    const replyText = new GBCText(scene, boxX + 6, boxY + 16, picked.reply.toUpperCase(), {
-      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 16,
+
+    // Reply: dynamically sized like the prompt.
+    const replyText = picked.reply.toUpperCase();
+    const replyLines = wrapText(replyText, innerW);
+    const rTotal = 1 + replyLines.length + 1;
+    const rBoxH = Math.min(GBC_H - 14, rTotal * LINE_H + PAD * 2);
+    const rBoxY = GBC_H - rBoxH - 2;
+    const replyBox = drawGBCBox(scene, boxX, rBoxY, boxW, rBoxH, 250);
+    const replyWho = new GBCText(scene, boxX + PAD, rBoxY + 4, prompt.who.toUpperCase(), {
+      color: COLOR.textAccent, depth: 251, scrollFactor: 0,
     });
-    const hint = new GBCText(scene, boxX + boxW - 10, boxY + boxH - 8, "▼", { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
+    const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + LINE_H, replyText, {
+      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW,
+    });
+    const hint = new GBCText(scene, boxX + boxW - 10, rBoxY + rBoxH - 8, "▼", {
+      color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+    });
     scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
+    let dismissed = false;
     const dismiss = () => {
-      replyBox.destroy(); replyWho.destroy(); replyText.destroy(); hint.destroy();
+      if (dismissed) return; dismissed = true;
+      replyBox.destroy(); replyWho.destroy(); replyBody.destroy(); hint.destroy();
       scene.input.keyboard?.off("keydown-SPACE", dismiss);
       scene.input.keyboard?.off("keydown-ENTER", dismiss);
       scene.events.off("vinput-action", dismiss);
@@ -97,13 +125,11 @@ export function runInquiry(
 
   const left = () => move(-1);
   const right = () => move(1);
-  const up = () => move(-2);
-  const down = () => move(2);
+  const up = () => move(-1);
+  const down = () => move(1);
   const vmove = (dir: string) => {
-    if (dir === "left") move(-1);
-    if (dir === "right") move(1);
-    if (dir === "up") move(-2);
-    if (dir === "down") move(2);
+    if (dir === "up" || dir === "left") move(-1);
+    if (dir === "down" || dir === "right") move(1);
   };
   scene.input.keyboard?.on("keydown-LEFT", left);
   scene.input.keyboard?.on("keydown-RIGHT", right);
