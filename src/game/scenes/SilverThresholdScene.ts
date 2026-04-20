@@ -359,41 +359,47 @@ export class SilverThresholdScene extends Phaser.Scene {
     onDone();
   }
 
-  /** AIR — 3 breath pulses; press A on each pulse (visual cue only, no fail). */
+  /** AIR — 3 breaths. Each press of A counts; gentle pulse loops as guidance. */
   private miniAir(c: { x: number; y: number }, onDone: () => void) {
     const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
-    const label = new GBCText(this, 8, GBC_H - 28, "BREATHE WITH ME (A x3)", { color: COLOR.textAccent, depth: 251 });
+    const label = new GBCText(this, 8, GBC_H - 28, "BREATHE WITH ME — PRESS A x3 (0/3)", {
+      color: COLOR.textAccent, depth: 251, maxWidthPx: GBC_W - 16,
+    });
     const pulse = this.add.circle(c.x, c.y, 6, 0xdde6f5, 0.4).setDepth(40);
+    // Continuous looping breath visual — no gating window.
+    const breathTween = this.tweens.add({
+      targets: pulse, scale: 2.5, alpha: 0.1, duration: 1100, ease: "Sine.inOut", yoyo: true, repeat: -1,
+    });
     let count = 0;
-    let pulsing = false;
-    const step = () => {
-      pulsing = true;
-      this.tweens.add({
-        targets: pulse, scale: 2.5, alpha: 0.1, duration: 1100, ease: "Sine.inOut", yoyo: true,
-        onComplete: () => { pulsing = false; },
-      });
-    };
-    step();
+    let done = false;
     const handler = () => {
-      if (!pulsing) return;
+      if (done) return;
       count++;
       getAudio().sfx("confirm");
-      label.setText(`BREATHE WITH ME (${count}/3)`);
+      // Quick burst feedback so the press feels heard.
+      this.tweens.add({ targets: pulse, scale: 3.2, alpha: 0.6, duration: 180, yoyo: true });
+      label.setText(`BREATHE WITH ME — PRESS A x3 (${count}/3)`);
       if (count >= 3) {
-        cleanup();
-        return;
+        done = true;
+        this.time.delayedCall(250, cleanup);
       }
-      this.time.delayedCall(300, step);
     };
     const cleanup = () => {
-      this.input.keyboard?.off("keydown-SPACE", handler);
-      this.input.keyboard?.off("keydown-ENTER", handler);
+      breathTween.stop();
+      window.removeEventListener("keydown", domHandler);
       this.events.off("vinput-action", handler);
       box.destroy(); label.destroy(); pulse.destroy();
       onDone();
     };
-    this.input.keyboard?.on("keydown-SPACE", handler);
-    this.input.keyboard?.on("keydown-ENTER", handler);
+    // Use DOM keydown to honor rebinds and avoid Phaser key conflicts.
+    const domHandler = (e: KeyboardEvent) => {
+      const k = e.code;
+      if (k === "Space" || k === "Enter" || k === "NumpadEnter") {
+        e.preventDefault();
+        handler();
+      }
+    };
+    window.addEventListener("keydown", domHandler);
     this.events.on("vinput-action", handler);
   }
 
