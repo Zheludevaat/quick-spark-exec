@@ -189,6 +189,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 8, GBC_W - 8);
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 50, GBC_H - 14);
     animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
     // Auto-trigger element circles on touch
     for (const c of this.circles) {
