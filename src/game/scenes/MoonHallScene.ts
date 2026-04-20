@@ -13,7 +13,31 @@ type Mirror = {
   glow?: Phaser.GameObjects.Arc;
 };
 
-const MAP_W = 10, MAP_H = 9;
+const MIRROR_TAGLINE: Record<Mirror["kind"], string> = {
+  reflection: "A SHAPE THAT MIMICS YOU.",
+  echo:       "A WORD YOU REGRET.",
+  glitter:    "A FRAGMENT OF AN AFTERNOON.",
+  boss:       "THE FACE YOU OFFERED.",
+};
+
+const SORYN_AFTER_CLEAR: Record<Mirror["kind"], { who: string; text: string }[]> = {
+  reflection: [
+    { who: "Soryn", text: "Seeing it plainly is the first kindness." },
+    { who: "Soryn", text: "Most knots are smaller once they are watched." },
+  ],
+  echo: [
+    { who: "Soryn", text: "Naming what you meant is half of mending." },
+    { who: "Soryn", text: "The other half is letting the echo answer back." },
+  ],
+  glitter: [
+    { who: "Soryn", text: "Memory in pieces is still memory." },
+    { who: "Soryn", text: "Hold the whole afternoon. Even the dull parts." },
+  ],
+  boss: [
+    { who: "Soryn", text: "The Curated Self is not your enemy." },
+    { who: "Soryn", text: "It is a story you outgrew. Thank it. Then go." },
+  ],
+};
 
 function buildMoonMap(): number[][] {
   const T = TILE_INDEX;
