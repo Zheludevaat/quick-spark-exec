@@ -4,9 +4,19 @@
  * The pattern: pick N shards → run a per-operation interaction →
  * award stones (and sometimes lore / stat shifts).
  */
+import * as Phaser from "phaser";
+import { GBCText, COLOR, GBC_W } from "../gbcArt";
+import { getAudio } from "../audio";
 import type { SaveSlot, ShardId, StoneColor } from "../types";
 import { writeSave } from "../save";
 import { consumeShard } from "./shards";
+
+const STONE_LABEL: Record<StoneColor, string> = {
+  black: "BLACK STONE",
+  white: "WHITE STONE",
+  yellow: "YELLOW STONE",
+  red: "RED STONE",
+};
 
 export function awardStone(save: SaveSlot, color: StoneColor, n = 1): void {
   switch (color) {
