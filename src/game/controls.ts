@@ -207,23 +207,27 @@ export function onActionDown(
   action: GameAction,
   handler: () => void,
 ): () => void {
-  const kb = scene.input.keyboard;
-  if (!kb)
-    return () => {
-      /* noop */
-    };
   const wrap = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
     const b = state.bindings[action];
     if (name === b.primary || name === b.secondary) handler();
   };
-  // We attach to the underlying DOM listener so rebinds at runtime "just work"
-  // without needing to re-register Phaser keys.
   const domHandler = (e: KeyboardEvent) => wrap(e);
   window.addEventListener("keydown", domHandler);
-  // Also clean up if scene shuts down.
-  const cleanup = () => window.removeEventListener("keydown", domHandler);
+
+  // Forward virtual-pad presses for the canonical action/cancel actions
+  // so scenes don't have to double-bind events.on("vinput-action", ...).
+  let vEvent: string | null = null;
+  if (action === "action") vEvent = "vinput-action";
+  else if (action === "cancel") vEvent = "vinput-cancel";
+  const vHandler = () => handler();
+  if (vEvent) scene.events.on(vEvent, vHandler);
+
+  const cleanup = () => {
+    window.removeEventListener("keydown", domHandler);
+    if (vEvent) scene.events.off(vEvent, vHandler);
+  };
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
   return cleanup;
