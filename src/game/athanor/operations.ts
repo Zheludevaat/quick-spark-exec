@@ -10,6 +10,7 @@ import { getAudio } from "../audio";
 import type { SaveSlot, ShardId, StoneColor } from "../types";
 import { writeSave } from "../save";
 import { consumeShard } from "./shards";
+import { emitHudStoneFilled } from "../ui/hudSignals";
 
 const STONE_LABEL: Record<StoneColor, string> = {
   black: "BLACK STONE",
