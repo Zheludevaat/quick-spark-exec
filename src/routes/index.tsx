@@ -81,7 +81,7 @@ function GamePage() {
       />
 
       <footer style={{ fontSize: 10, opacity: 0.6, textAlign: "center", padding: "0 16px", maxWidth: 720 }}>
-        Arrow keys / WASD to move · Enter or Space to act · A on touch
+        Arrow keys / WASD · Space or Enter = A · B or Q = witness · L = lore · P or Esc = settings · Tap ≡ on touch
         {!booted && !error && <div style={{ marginTop: 4 }}>Loading the silver…</div>}
         {error && <div style={{ marginTop: 4, color: "#d86a6a" }}>Failed to load: {error}</div>}
       </footer>

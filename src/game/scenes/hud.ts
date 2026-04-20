@@ -4,41 +4,62 @@ import type { SaveSlot, Stats } from "../types";
 import { getAudio } from "../audio";
 import { loadSave } from "../save";
 import { openLoreLog } from "./lore";
+import {
+  getControls, subscribeControls, isActionDown, normalizeKeyEvent, buzz,
+  type GameAction, type ButtonSize,
+} from "../controls";
+import { openSettings } from "./settings";
 
 /**
- * Reusable on-screen HUD: stats top bar + virtual D-pad + A/B for touch.
+ * Reusable on-screen HUD: stats top bar + virtual pad + A/B/menu for touch.
  * Emits scene events: "vinput-down" / "vinput-up" with a dir string,
  * and "vinput-action" / "vinput-cancel".
  */
+
+type TouchPadHandle = {
+  destroy(): void;
+};
+
 export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const cam = scene.cameras.main;
   cam.setRoundPixels(true);
 
-  // Re-apply LCD overlay if it was toggled on in a previous scene
   reapplyLcd(scene);
 
-  // Global LCD toggle: backslash key
-  scene.input.keyboard?.on("keydown-BACKSLASH", () => toggleLcd(scene));
-  // Global mute toggle: M key
-  scene.input.keyboard?.on("keydown-M", () => {
-    const a = getAudio();
-    a.setMuted(!a.muted);
-  });
-  // Lore log: L key — opens overlay listing unlocked entries.
+  // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
+  const onDomKey = (e: KeyboardEvent) => {
+    const name = normalizeKeyEvent(e);
+    if (!name) return;
+    const c = getControls();
+    const matches = (a: GameAction) =>
+      name === c.bindings[a].primary || name === c.bindings[a].secondary;
+
+    // Allow these whether or not the canvas is focused.
+    if (matches("lcd")) toggleLcd(scene);
+    else if (matches("mute")) {
+      const a = getAudio();
+      a.setMuted(!a.muted);
+    } else if (matches("lore")) {
+      if (loreOpen || settingsOpen) return;
+      const s: SaveSlot | null = loadSave();
+      if (!s) return;
+      loreOpen = true;
+      openLoreLog(scene, s, () => { loreOpen = false; });
+    } else if (matches("settings")) {
+      if (settingsOpen) return;
+      settingsOpen = true;
+      openSettings(scene, () => { settingsOpen = false; rebuildPad(); });
+    }
+  };
   let loreOpen = false;
-  scene.input.keyboard?.on("keydown-L", () => {
-    if (loreOpen) return;
-    const s: SaveSlot | null = loadSave();
-    if (!s) return;
-    loreOpen = true;
-    openLoreLog(scene, s, () => { loreOpen = false; });
-  });
+  let settingsOpen = false;
+  window.addEventListener("keydown", onDomKey);
+  scene.events.once("shutdown", () => window.removeEventListener("keydown", onDomKey));
+  scene.events.once("destroy", () => window.removeEventListener("keydown", onDomKey));
 
-  // Top stats bar (compact for 160-wide screen)
-  const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
+  // --- Top stats bar ---
+  scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
   scene.add.rectangle(0, 11, GBC_W, 1, 0x7889a8, 1).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
-  void barBg;
-
   const text = new GBCText(scene, 3, 2, "", { color: COLOR.textLight, depth: 201, scrollFactor: 0 });
   const refresh = () => {
     const s = getStats();
@@ -47,72 +68,233 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   refresh();
   scene.events.on("stats-changed", refresh);
 
-  // Touch controls
-  const isTouch = scene.sys.game.device.input.touch;
-  if (isTouch) {
-    const dpadCx = 22;
-    const dpadCy = GBC_H - 22;
+  // --- Touch pad (always available; user can hide via settings) ---
+  let pad: TouchPadHandle | null = null;
+  const rebuildPad = () => {
+    pad?.destroy();
+    const c = getControls();
+    if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
+    pad = buildTouchPad(scene);
+  };
+  rebuildPad();
 
-    const mkBtn = (x: number, y: number, w: number, h: number, dir: string, label?: string) => {
-      const z = scene.add.zone(x, y, w, h).setScrollFactor(0).setOrigin(0.5).setDepth(202).setInteractive();
-      const vis = scene.add.rectangle(x, y, w - 1, h - 1, 0x3a4868, 0.85).setScrollFactor(0).setDepth(201);
-      scene.add.rectangle(x, y, w + 1, h + 1, 0xdde6f5, 0.5).setScrollFactor(0).setDepth(200);
-      if (label) new GBCText(scene, x - 2, y - 3, label, { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
-      z.on("pointerdown", () => { vis.setFillStyle(0x7898c0); scene.events.emit("vinput-down", dir); });
-      z.on("pointerup",   () => { vis.setFillStyle(0x3a4868); scene.events.emit("vinput-up",   dir); });
-      z.on("pointerout",  () => { vis.setFillStyle(0x3a4868); scene.events.emit("vinput-up",   dir); });
-    };
-    mkBtn(dpadCx,      dpadCy - 11, 11, 9, "up");
-    mkBtn(dpadCx,      dpadCy + 11, 11, 9, "down");
-    mkBtn(dpadCx - 11, dpadCy,      9, 11, "left");
-    mkBtn(dpadCx + 11, dpadCy,      9, 11, "right");
+  // Live-rebuild when settings change.
+  const unsub = subscribeControls(rebuildPad);
+  scene.events.once("shutdown", () => { unsub(); pad?.destroy(); });
+  scene.events.once("destroy", () => { unsub(); pad?.destroy(); });
+}
 
-    // A and B (Game Boy color scheme: A red, B yellow-ish)
-    const aZ = scene.add.zone(GBC_W - 18, GBC_H - 22, 18, 18).setScrollFactor(0).setDepth(202).setInteractive();
-    const aVis = scene.add.circle(GBC_W - 18, GBC_H - 22, 8, 0xd84a4a, 1).setScrollFactor(0).setDepth(201);
-    new GBCText(scene, GBC_W - 21, GBC_H - 26, "A", { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
-    aZ.on("pointerdown", () => { aVis.setScale(0.9); scene.events.emit("vinput-action"); });
-    aZ.on("pointerup",   () => aVis.setScale(1));
-    aZ.on("pointerout",  () => aVis.setScale(1));
+function shouldForceTouch(scene: Phaser.Scene): boolean {
+  // Always show pad on touch devices regardless of "off" — too easy to lock yourself out.
+  return scene.sys.game.device.input.touch;
+}
 
-    const bZ = scene.add.zone(GBC_W - 36, GBC_H - 14, 14, 14).setScrollFactor(0).setDepth(202).setInteractive();
-    const bVis = scene.add.circle(GBC_W - 36, GBC_H - 14, 6, 0xe0c060, 1).setScrollFactor(0).setDepth(201);
-    new GBCText(scene, GBC_W - 39, GBC_H - 18, "B", { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
-    bZ.on("pointerdown", () => { bVis.setScale(0.9); scene.events.emit("vinput-cancel"); });
-    bZ.on("pointerup",   () => bVis.setScale(1));
-    bZ.on("pointerout",  () => bVis.setScale(1));
+// ============================================================================
+// VIRTUAL PAD
+// ============================================================================
+/**
+ * The pad is drawn in Phaser game-space. All sizes are in game pixels, then
+ * scaled by Phaser FIT to fill the canvas. On a typical iPhone the canvas
+ * displays at ~3-4× scale, which makes 16-px buttons → ~50-66 CSS px.
+ *
+ * Layouts:
+ *   - dpad   : classic 4-direction d-pad on the left, A/B on the right
+ *   - swipe  : full-screen invisible "swipe-anywhere" left-half + A/B right
+ *   - hybrid : both — d-pad visible AND swipe-anywhere works (default)
+ *   - off    : nothing (forced on for touch devices anyway)
+ */
+function sizeFor(s: ButtonSize): { d: number; ab: number; menu: number } {
+  switch (s) {
+    case "s":  return { d: 8,  ab: 7,  menu: 6 };
+    case "m":  return { d: 10, ab: 8,  menu: 7 };
+    case "l":  return { d: 12, ab: 10, menu: 7 };
+    case "xl": return { d: 14, ab: 12, menu: 8 };
   }
 }
 
-/** Track held directions from both keyboard and virtual pad. */
+function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
+  const c = getControls();
+  const { d, ab, menu } = sizeFor(c.buttonSize);
+  const padDepthBg = 195;
+  const padDepth = 196;
+  const padDepthHi = 197;
+  const created: Phaser.GameObjects.GameObject[] = [];
+
+  // D-pad anchor (lower-left by default; mirror to right if leftHanded)
+  const padCx = c.leftHanded ? GBC_W - 22 : 22;
+  const padCy = GBC_H - 22;
+
+  // A/B anchor (opposite side)
+  const abCx = c.leftHanded ? 22 : GBC_W - 18;
+  const abCy = GBC_H - 22;
+
+  // Settings gear top-right
+  const gearX = GBC_W - 8, gearY = 6;
+
+  const showDpad = c.touchLayout === "dpad" || c.touchLayout === "hybrid"
+                   || (c.touchLayout === "off" && shouldForceTouch(scene));
+  const useSwipe = c.touchLayout === "swipe" || c.touchLayout === "hybrid"
+                   || (c.touchLayout === "off" && shouldForceTouch(scene));
+
+  // ----- D-pad visible buttons -----
+  if (showDpad) {
+    const pressVis = new Map<string, Phaser.GameObjects.Rectangle>();
+    const mkBtn = (cx: number, cy: number, w: number, h: number, dir: string, label: string) => {
+      // backdrop ring for visibility on dark and light bgs
+      const ring = scene.add.rectangle(cx, cy, w + 2, h + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
+      const vis = scene.add.rectangle(cx, cy, w, h, 0x222a3a, 0.8).setScrollFactor(0).setDepth(padDepth);
+      vis.setStrokeStyle(1, 0x6a7a98, 0.9);
+      const lbl = new GBCText(scene, cx - 2, cy - 3, label, { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
+      // Wider hit zone than visual for fat-finger forgiveness.
+      const hit = scene.add.zone(cx, cy, w + 6, h + 6).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+      pressVis.set(dir, vis);
+      const down = () => { vis.setFillStyle(0x6a90c8, 0.9); buzz(8); scene.events.emit("vinput-down", dir); };
+      const up   = () => { vis.setFillStyle(0x222a3a, 0.8); scene.events.emit("vinput-up", dir); };
+      hit.on("pointerdown", down);
+      hit.on("pointerup", up);
+      hit.on("pointerout", up);
+      hit.on("pointerupoutside", up);
+      created.push(ring, vis, lbl.obj, hit);
+    };
+    mkBtn(padCx,         padCy - (d + 2), d + 2, d, "up",    "↑");
+    mkBtn(padCx,         padCy + (d + 2), d + 2, d, "down",  "↓");
+    mkBtn(padCx - (d + 2), padCy,         d, d + 2, "left",  "←");
+    mkBtn(padCx + (d + 2), padCy,         d, d + 2, "right", "→");
+    void pressVis;
+  }
+
+  // ----- Swipe-anywhere on left half -----
+  if (useSwipe) {
+    // Defines an invisible zone that interprets drags as 4-directional held input.
+    const swipeZone = scene.add.zone(0, 11, GBC_W / 2 - 4, GBC_H - 22).setOrigin(0, 0).setScrollFactor(0).setDepth(180).setInteractive();
+    const cur = { up: false, down: false, left: false, right: false };
+    const release = () => {
+      (["up", "down", "left", "right"] as const).forEach((k) => {
+        if (cur[k]) { cur[k] = false; scene.events.emit("vinput-up", k); }
+      });
+    };
+    let originX = 0, originY = 0;
+    let active = false;
+    const dead = 4; // game-space pixels
+    swipeZone.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      active = true;
+      // Convert to game-space — pointer.x is already in game-space because
+      // the zone's container is at depth 180 in scene coords.
+      originX = p.worldX || p.x;
+      originY = p.worldY || p.y;
+    });
+    swipeZone.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (!active || !p.isDown) return;
+      const dx = (p.worldX || p.x) - originX;
+      const dy = (p.worldY || p.y) - originY;
+      const next = { up: dy < -dead, down: dy > dead, left: dx < -dead, right: dx > dead };
+      // Disallow opposing simultaneously
+      if (next.up && next.down) { next.up = false; next.down = false; }
+      if (next.left && next.right) { next.left = false; next.right = false; }
+      (["up", "down", "left", "right"] as const).forEach((k) => {
+        if (next[k] && !cur[k]) { cur[k] = true; scene.events.emit("vinput-down", k); }
+        else if (!next[k] && cur[k]) { cur[k] = false; scene.events.emit("vinput-up", k); }
+      });
+    });
+    const stop = () => { active = false; release(); };
+    swipeZone.on("pointerup", stop);
+    swipeZone.on("pointerupoutside", stop);
+    swipeZone.on("pointerout", stop);
+    created.push(swipeZone);
+  }
+
+  // ----- A button -----
+  {
+    const ring = scene.add.circle(abCx, abCy, ab + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
+    const vis = scene.add.circle(abCx, abCy, ab, 0xd84a4a, 1).setScrollFactor(0).setDepth(padDepth);
+    vis.setStrokeStyle(1, 0xffd8d8, 0.9);
+    const lbl = new GBCText(scene, abCx - 3, abCy - 3, "A", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
+    const hit = scene.add.zone(abCx, abCy, ab * 2 + 8, ab * 2 + 8).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+    hit.on("pointerdown", () => { vis.setScale(0.85); buzz(10); scene.events.emit("vinput-action"); });
+    hit.on("pointerup",   () => vis.setScale(1));
+    hit.on("pointerout",  () => vis.setScale(1));
+    hit.on("pointerupoutside", () => vis.setScale(1));
+    created.push(ring, vis, lbl.obj, hit);
+  }
+
+  // ----- B button -----
+  {
+    const bx = abCx - (ab * 2 + 4) * (c.leftHanded ? -1 : 1);
+    const by = abCy + ab + 4;
+    const ring = scene.add.circle(bx, by, ab - 1 + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
+    const vis = scene.add.circle(bx, by, ab - 1, 0xe0c060, 1).setScrollFactor(0).setDepth(padDepth);
+    vis.setStrokeStyle(1, 0xfff3c0, 0.9);
+    const lbl = new GBCText(scene, bx - 3, by - 3, "B", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
+    const hit = scene.add.zone(bx, by, (ab - 1) * 2 + 8, (ab - 1) * 2 + 8).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+    hit.on("pointerdown", () => { vis.setScale(0.85); buzz(10); scene.events.emit("vinput-cancel"); });
+    hit.on("pointerup",   () => vis.setScale(1));
+    hit.on("pointerout",  () => vis.setScale(1));
+    hit.on("pointerupoutside", () => vis.setScale(1));
+    created.push(ring, vis, lbl.obj, hit);
+  }
+
+  // ----- Settings gear (top-right) -----
+  {
+    const vis = scene.add.circle(gearX, gearY, menu, 0x2a3550, 0.9).setScrollFactor(0).setDepth(padDepth);
+    vis.setStrokeStyle(1, 0xa8c8e8, 0.9);
+    const lbl = new GBCText(scene, gearX - 2, gearY - 3, "≡", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
+    const hit = scene.add.zone(gearX, gearY, menu * 2 + 6, menu * 2 + 6).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+    let opening = false;
+    hit.on("pointerdown", () => {
+      if (opening) return;
+      opening = true;
+      buzz(15);
+      openSettings(scene, () => { opening = false; });
+    });
+    created.push(vis, lbl.obj, hit);
+  }
+
+  // ----- Lore button (small, top-left of HUD strip) -----
+  {
+    const lx = 4, ly = 6;
+    const w = 14, h = 8;
+    const vis = scene.add.rectangle(lx, ly, w, h, 0x2a3550, 0).setOrigin(0, 0.5).setScrollFactor(0).setDepth(padDepth);
+    vis.setStrokeStyle(1, 0xa8c8e8, 0);
+    const hit = scene.add.zone(lx + w / 2, ly, w + 4, h + 4).setOrigin(0.5).setScrollFactor(0).setDepth(padDepth + 5).setInteractive();
+    hit.on("pointerdown", () => {
+      const s = loadSave(); if (!s) return;
+      buzz(8);
+      openLoreLog(scene, s);
+    });
+    created.push(vis, hit);
+  }
+
+  return {
+    destroy() {
+      created.forEach(o => { try { o.destroy(); } catch { /* ignore */ } });
+    },
+  };
+}
+
+// ============================================================================
+// InputState — merges keyboard (with rebinds) + virtual pad
+// ============================================================================
 export class InputState {
   up = false; down = false; left = false; right = false;
-  private keys: Record<string, Phaser.Input.Keyboard.Key>;
+  private scene: Phaser.Scene;
   constructor(scene: Phaser.Scene) {
-    const kb = scene.input.keyboard!;
-    this.keys = {
-      up: kb.addKey("UP"), down: kb.addKey("DOWN"), left: kb.addKey("LEFT"), right: kb.addKey("RIGHT"),
-      w: kb.addKey("W"), s: kb.addKey("S"), a: kb.addKey("A"), d: kb.addKey("D"),
-    };
-    scene.events.on("vinput-down", (dir: string) => { (this as any)[dir] = true; });
-    scene.events.on("vinput-up",   (dir: string) => { (this as any)[dir] = false; });
+    this.scene = scene;
+    scene.events.on("vinput-down", (dir: string) => { (this as Record<string, unknown>)[dir] = true; });
+    scene.events.on("vinput-up",   (dir: string) => { (this as Record<string, unknown>)[dir] = false; });
   }
   poll() {
-    const k = this.keys;
     return {
-      up: this.up || k.up.isDown || k.w.isDown,
-      down: this.down || k.down.isDown || k.s.isDown,
-      left: this.left || k.left.isDown || k.a.isDown,
-      right: this.right || k.right.isDown || k.d.isDown,
+      up:    this.up    || isActionDown(this.scene, "up"),
+      down:  this.down  || isActionDown(this.scene, "down"),
+      left:  this.left  || isActionDown(this.scene, "left"),
+      right: this.right || isActionDown(this.scene, "right"),
     };
   }
 }
 
-/**
- * Build an animated Rowan sprite using the rowan walk sheet.
- * skin: "living" attaches all 4 accessory overlays (scarf, coat, boots, satchel).
- *       "soul" is the bare luminescent form (slight translucence).
- */
+// ============================================================================
+// Rowan helpers (unchanged)
+// ============================================================================
 export type RowanSkin = "living" | "soul";
 
 export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: RowanSkin = "living") {
@@ -125,8 +307,6 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   c.setData("dir", "down");
   c.setData("skin", skin);
 
-  // Accessory overlay sprites (frames 0=scarf, 1=coat, 2=boots, 3=satchel)
-  // Same origin as base so they overlay perfectly.
   const accessoryKeys: ("scarf" | "coat" | "boots" | "satchel")[] = ["scarf", "coat", "boots", "satchel"];
   const accessories: Record<string, Phaser.GameObjects.Sprite> = {};
   accessoryKeys.forEach((k, i) => {
@@ -144,7 +324,6 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   return c;
 }
 
-/** Remove a single accessory layer with a small drift/fade animation. */
 export function shedAccessory(
   scene: Phaser.Scene,
   c: Phaser.GameObjects.Container,
@@ -153,7 +332,6 @@ export function shedAccessory(
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
   if (!accs || !accs[which] || !accs[which].visible) return;
   const a = accs[which];
-  // Detach to world space at Rowan's current position, then animate.
   const wx = c.x, wy = c.y;
   c.remove(a);
   a.setPosition(wx, wy);
@@ -176,7 +354,6 @@ export function shedAccessory(
   delete accs[which];
 }
 
-/** Convert the container to its "soul" form (used after the transformation pause). */
 export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
   const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
   if (!sprite) return;
@@ -192,7 +369,6 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
   if (accs) Object.values(accs).forEach(a => a.setVisible(skin === "living"));
 }
 
-/** Update Rowan's facing/animation based on movement input. */
 export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: number) {
   const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
   if (!sprite) return;
@@ -209,20 +385,15 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
     const key = `rowan_${dir}_idle`;
     if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
   }
-  // Keep accessory overlays in lockstep with the base sprite frame.
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
   if (accs) {
-    // Living-skin doesn't have per-direction accessory frames; we just keep them
-    // pinned to the same y/x as the base. The accessories are facing-agnostic
-    // for now (a deliberate stylization).
-    Object.values(accs).forEach(a => a.setFrame(a.frame.name)); // no-op; placeholder for future facing variants
+    Object.values(accs).forEach(a => a.setFrame(a.frame.name));
   }
 }
 
-/**
- * Render a multi-line dialog with bitmap font. Returns control object.
- * Lines come in [{who, text}], advance with A/Space/Enter/click.
- */
+// ============================================================================
+// Dialog (now respects autoAdvance + skip key)
+// ============================================================================
 export function runDialog(
   scene: Phaser.Scene,
   lines: { who: string; text: string }[],
@@ -244,12 +415,22 @@ export function runDialog(
   let typing = false;
   let fullText = "";
   let typeTimer: Phaser.Time.TimerEvent | null = null;
+  let autoTimer: Phaser.Time.TimerEvent | null = null;
 
   const finishTyping = () => {
     if (typeTimer) { typeTimer.remove(false); typeTimer = null; }
     text.setText(fullText);
     typing = false;
     hint.setVisible(true);
+    scheduleAuto();
+  };
+
+  const scheduleAuto = () => {
+    autoTimer?.remove(false); autoTimer = null;
+    const ms = getControls().dialogAutoAdvanceMs;
+    if (ms > 0 && !typing && active) {
+      autoTimer = scene.time.delayedCall(ms, () => next());
+    }
   };
 
   const startTyping = (s: string) => {
@@ -265,23 +446,26 @@ export function runDialog(
       callback: () => {
         n++;
         text.setText(s.slice(0, n));
-        // Tick a soft blip every other glyph (skip spaces) so it doesn't get noisy
         const ch = s[n - 1];
         if (n % 2 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
-        if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; }
+        if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; scheduleAuto(); }
       },
     });
+  };
+
+  const cleanupKb = () => {
+    window.removeEventListener("keydown", onKey);
   };
 
   const next = () => {
     if (!active) return;
     if (typing) { finishTyping(); return; }
+    autoTimer?.remove(false); autoTimer = null;
     if (i >= lines.length) {
       active = false;
       if (typeTimer) typeTimer.remove(false);
       box.destroy(); who.destroy(); text.destroy(); hint.destroy();
-      scene.input.keyboard?.off("keydown-SPACE", next);
-      scene.input.keyboard?.off("keydown-ENTER", next);
+      cleanupKb();
       scene.events.off("vinput-action", next);
       scene.input.off("pointerdown", next);
       onDone?.();
@@ -291,12 +475,26 @@ export function runDialog(
     startTyping(lines[i].text.toUpperCase());
     i++;
   };
+
+  // Skip = jump straight to end of all lines.
+  const skipAll = () => {
+    if (!active) return;
+    i = lines.length;
+    if (typeTimer) typeTimer.remove(false);
+    typing = false;
+    next();
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    const name = normalizeKeyEvent(e); if (!name) return;
+    const c = getControls();
+    if (name === c.bindings.action.primary || name === c.bindings.action.secondary) next();
+    else if (name === c.bindings.skip.primary || name === c.bindings.skip.secondary) skipAll();
+  };
+
   next();
-  scene.input.keyboard?.on("keydown-SPACE", next);
-  scene.input.keyboard?.on("keydown-ENTER", next);
+  window.addEventListener("keydown", onKey);
   scene.events.on("vinput-action", next);
-  // Defer pointerdown registration so the click/tap that opened the dialog
-  // does not immediately advance it.
   scene.time.delayedCall(120, () => {
     if (active) scene.input.on("pointerdown", next);
   });
