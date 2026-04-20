@@ -347,6 +347,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       g.fillRect(8, 24, 4, GBC_H - 36);
       g.fillRect(GBC_W - 12, 24, 4, GBC_H - 36);
       this.regionRoot.add(g);
+      this.spawnSyllableLanterns();
     }
 
     // Place knots for this region
