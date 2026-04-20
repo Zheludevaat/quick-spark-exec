@@ -131,11 +131,11 @@ export function runEchoKnot(
   const seedCall = save.seeds.seed_call;
   const seedKettle = save.seeds.seed_kettle;
   const original = seedCall ? "I should have called Mara." : seedKettle ? "I always pour two cups." : "I am tired of being unseen.";
-  const garbled = [
-    { choice: "address" as const, label: "I SHOULD CALL TOMORROW.",  reply: "Close. But too late was always the rhythm." },
-    { choice: "address" as const, label: original.toUpperCase(),     reply: "Yes. The echo answers, kindly." },
-    { choice: "observe" as const, label: "I AM FINE. I AM FINE.",    reply: "That was the surface. Not the line beneath." },
-    { choice: "silent"  as const, label: "(SAY NOTHING)",            reply: "Silence is also an echo. Quieter, not gone." },
+  const garbled: import("../../inquiry").InquiryOption[] = [
+    { choice: "ask",     label: "I SHOULD CALL TOMORROW.",  reply: "Close. But too late was always the rhythm." },
+    { choice: "ask",     label: original.toUpperCase(),     reply: "Yes. The echo answers, kindly." },
+    { choice: "observe", label: "I AM FINE. I AM FINE.",    reply: "That was the surface. Not the line beneath." },
+    { choice: "silent",  label: "(SAY NOTHING)",            reply: "Silence is also an echo. Quieter, not gone." },
   ];
   // Shuffle
   for (let i = garbled.length - 1; i > 0; i--) {
@@ -265,7 +265,7 @@ export function runLanternKnot(
     { who: "Lantern", text: lie },
     [
       { choice: "observe", label: "OBSERVE",  reply: "It loves being looked at. The light grows." },
-      { choice: "address", label: "ADDRESS",  reply: "It answers in your voice. The light grows." },
+      { choice: "ask",     label: "ADDRESS",  reply: "It answers in your voice. The light grows." },
       { choice: "silent",  label: "REMEMBER", reply: "You wrap the lie in memory. The light grows." },
       { choice: "confess", label: "RELEASE",  reply: "You let it go. The lantern winks out." },
     ],
@@ -325,7 +325,7 @@ export function runCrownKnot(
 
   runInquiry(scene, { who: "Crown", text: "AM I NOT WHO YOU WANTED TO BE?" }, [
     { choice: "observe", label: "OBSERVE", reply: "It preens under your gaze. It grows brighter." },
-    { choice: "address", label: "ADDRESS", reply: "It answers like a king. It grows brighter." },
+    { choice: "ask",     label: "ADDRESS", reply: "It answers like a king. It grows brighter." },
     { choice: "confess", label: "WITNESS", reply: "You stand and see it whole. The crown is paper." },
     { choice: "silent",  label: "RELEASE", reply: "You let it stay. It will be smaller next time." },
   ], (picked) => {
