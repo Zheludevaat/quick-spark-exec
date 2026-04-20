@@ -59,7 +59,11 @@ export class SilverThresholdScene extends Phaser.Scene {
   private hint!: GBCText;
 
   constructor() { super("SilverThreshold"); }
-  init(data: { save: SaveSlot }) { this.save = data.save; }
+  init(data: { save: SaveSlot }) {
+    this.save = data.save;
+    this.circles = [];
+    this.dialogActive = false;
+  }
 
   create() {
     this.cameras.main.setBackgroundColor(COLOR.void);
