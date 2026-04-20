@@ -82,6 +82,23 @@ export function makeTex(scene: Phaser.Scene, key: string, w: number, h: number) 
   return { tex, ctx: tex.getContext() as CanvasRenderingContext2D };
 }
 
+/** Register a grid of numbered frames on a CanvasTexture (left-to-right, top-to-bottom). */
+export function addGridFrames(
+  tex: Phaser.Textures.CanvasTexture,
+  frameW: number,
+  frameH: number,
+  cols: number,
+  rows: number,
+) {
+  let i = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      tex.add(i, 0, c * frameW, r * frameH, frameW, frameH);
+      i++;
+    }
+  }
+}
+
 // ============================================================================
 // TILES (16x16) — bake into a single tileset image
 // ============================================================================
