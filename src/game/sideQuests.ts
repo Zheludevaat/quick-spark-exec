@@ -1,9 +1,5 @@
 /**
  * Lightweight side-quest tracker.
- *
- * Side quests are small optional objectives. They live in `save.sideQuests`
- * as a status map: "todo" (unseen), "active" (started), "done" (complete).
- * Calls here are idempotent — safe to invoke from update loops.
  */
 import * as Phaser from "phaser";
 import { GBCText, COLOR, GBC_W } from "./gbcArt";
@@ -21,7 +17,12 @@ export type SideQuestId =
   | "name_the_stonechild"
   | "the_unfinished_song"
   | "weigh_the_feather"
-  | "witness_the_saint";
+  | "witness_the_saint"
+  // Act 2 — Athanor
+  | "salvage_a_shard"
+  | "read_the_fourth_book"
+  | "meet_the_thirteenth"
+  | "release_soryn";
 
 export const SIDE_QUEST_TITLES: Record<SideQuestId, string> = {
   all_seeds_lastday: "FIND EVERY SEED IN THE FLAT",
@@ -33,14 +34,19 @@ export const SIDE_QUEST_TITLES: Record<SideQuestId, string> = {
   the_unfinished_song: "FINISH THE DROWNED SONG",
   weigh_the_feather: "HOLD THE FEATHER STILL",
   witness_the_saint: "WITNESS THE ONE WHO REFUSES",
+  salvage_a_shard: "RECOVER A SHARD FROM THE BATH",
+  read_the_fourth_book: "ASK THE LIBRARIAN TWICE",
+  meet_the_thirteenth: "WELCOME THE THIRTEENTH SOUL",
+  release_soryn: "RELEASE THE DAIMON",
 };
 
-/** Optional follow-up hint shown when a quest completes. */
 export const SIDE_QUEST_NEXT_HINT: Partial<Record<SideQuestId, SideQuestId>> = {
   feed_the_collector: "the_unfinished_song",
   the_unfinished_song: "name_the_stonechild",
   chart_the_pools: "weigh_the_feather",
   witness_the_saint: "weigh_the_feather",
+  salvage_a_shard: "read_the_fourth_book",
+  meet_the_thirteenth: "release_soryn",
 };
 
 export function activateQuest(scene: Phaser.Scene, save: SaveSlot, id: SideQuestId) {
@@ -57,7 +63,6 @@ export function completeQuest(scene: Phaser.Scene, save: SaveSlot, id: SideQuest
   getAudio().sfx("resolve");
   toast(scene, "QUEST DONE: " + SIDE_QUEST_TITLES[id], COLOR.textGold);
 
-  // Chain hint
   const next = SIDE_QUEST_NEXT_HINT[id];
   if (next && !save.sideQuests[next]) {
     scene.time.delayedCall(2400, () => {
