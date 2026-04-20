@@ -228,12 +228,30 @@ export class SilverThresholdScene extends Phaser.Scene {
 
   private tryInteract() {
     if (this.dialogActive) return;
+    // Stone inspect (small radius)
+    const stx = this.rowan.x - this.stone.x, sty = this.rowan.y - this.stone.y;
+    if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) {
+      this.dialogActive = true;
+      this.save.flags.stone_found = true;
+      this.save.stats.courage++;
+      this.events.emit("stats-changed");
+      writeSave(this.save);
+      this.stone.setFillStyle(0x3a4868);
+      getAudio().sfx("resolve");
+      runDialog(this, STONE_LINES, () => { this.dialogActive = false; });
+      return;
+    }
     // Soryn talk
     const sdx = this.rowan.x - this.soryn.x, sdy = this.rowan.y - this.soryn.y;
     if (sdx * sdx + sdy * sdy < 14 * 14) {
       this.dialogActive = true;
       getAudio().sfx("confirm");
-      const lines = this.save.flags.elements_done ? SORYN_AFTER : SORYN_OPENING;
+      const firstTime = !this.save.flags.soryn_talked;
+      this.save.flags.soryn_talked = true;
+      writeSave(this.save);
+      const lines = this.save.flags.elements_done
+        ? (firstTime ? SORYN_AFTER : SORYN_REPEAT_AFTER)
+        : (firstTime ? SORYN_OPENING : SORYN_REPEAT);
       runDialog(this, lines, () => { this.dialogActive = false; });
       return;
     }
