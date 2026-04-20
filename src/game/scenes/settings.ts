@@ -293,7 +293,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     }
     if (page === "keys") {
       page = "main";
-      cursor = 5;
+      cursor = 7;
       render();
       return;
     }
@@ -306,7 +306,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       getAudio().sfx("cursor");
       render();
     } else if (d === "down") {
-      const max = page === "main" ? 6 : ACTION_ORDER.length - 1;
+      const max = page === "main" ? 8 : ACTION_ORDER.length - 1;
       cursor = Math.min(max, cursor + 1);
       getAudio().sfx("cursor");
       render();
