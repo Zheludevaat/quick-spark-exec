@@ -23,7 +23,7 @@ import {
 } from "./hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
-import { onActionDown, onDirection } from "../controls";
+import { onActionDown, onDirection, getControls } from "../controls";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -659,7 +659,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     const actionKeys: Phaser.Input.Keyboard.Key[] = [];
     const kb = this.input.keyboard;
     if (kb) {
-      const b = (require("../controls") as typeof import("../controls")).getControls().bindings.action;
+      const b = getControls().bindings.action;
       if (b.primary) actionKeys.push(kb.addKey(b.primary, false, false));
       if (b.secondary) actionKeys.push(kb.addKey(b.secondary, false, false));
     }
