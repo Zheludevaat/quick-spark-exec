@@ -5,6 +5,12 @@ export type SceneKey =
   | "Crossing"
   | "SilverThreshold"
   | "ImaginalRealm"
+  | "AthanorThreshold"
+  | "Nigredo"
+  | "Albedo"
+  | "Citrinitas"
+  | "Rubedo"
+  | "SealedVessel"
   | "CuratedSelf"
   | "Epilogue";
 
@@ -16,9 +22,32 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   Crossing: 0,
   SilverThreshold: 0,
   ImaginalRealm: 1,
-  CuratedSelf: 1,
-  Epilogue: 1,
+  AthanorThreshold: 2,
+  Nigredo: 2,
+  Albedo: 2,
+  Citrinitas: 2,
+  Rubedo: 2,
+  SealedVessel: 2,
+  CuratedSelf: 3,
+  Epilogue: 3,
 };
+
+/** Stable shard ID — derived from Act 1 quest completions + 2 prelude defaults. */
+export type ShardId =
+  | "breath"
+  | "name"
+  | "mothers_apron"
+  | "unfinished_song"
+  | "the_feather"
+  | "stonechild_name"
+  | "refused_gift"
+  | "pools_chart"
+  | "collectors_jar"
+  | "plateaus_weight";
+
+export type StoneColor = "black" | "white" | "yellow" | "red";
+
+export type WeddingType = "strong" | "gentle" | "fractured";
 
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
@@ -34,6 +63,12 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   Crossing: "The Crossing",
   SilverThreshold: "Silver Threshold",
   ImaginalRealm: "Imaginal Realm",
+  AthanorThreshold: "Threshold of the Athanor",
+  Nigredo: "Nigredo",
+  Albedo: "Albedo",
+  Citrinitas: "Citrinitas",
+  Rubedo: "Rubedo",
+  SealedVessel: "The Sealed Vessel",
   CuratedSelf: "Curated Self",
   Epilogue: "Epilogue",
 };
@@ -44,7 +79,7 @@ export type SaveSlot = {
   stats: Stats;
   flags: Record<string, boolean>;
   fragments: number;
-  verbs: { witness: boolean };
+  verbs: { witness: boolean; transmute: boolean };
   shards: string[];
   /** Memory-shard sub-fragments (4 = 1 shard). */
   shardFragments: number;
@@ -65,12 +100,24 @@ export type SaveSlot = {
   witnessUses: number;
   /** Side-quest tracker. */
   sideQuests: Record<string, "todo" | "active" | "done">;
-  /**
-   * Ring buffer of recent soul events (max 5). Each entry: `${soulId}:${tag}`.
-   * Lets Soryn comment on what just happened, and lets later souls react to
-   * earlier ones across regions.
-   */
+  /** Ring buffer of recent soul events (max 5). */
   soulEventLog: string[];
+
+  // ===== ACT 2 — THE GREAT WORK =====
+  shardInventory: ShardId[];
+  shardsConsumed: ShardId[];
+  blackStones: number;
+  whiteStones: number;
+  yellowStones: number;
+  redStones: number;
+  goldStone: boolean;
+  shadesEncountered: Record<string, "fled" | "sat_with" | "destroyed">;
+  convictions: Record<string, boolean>;
+  weddingType: WeddingType | null;
+  act2Inscription: string | null;
+  sorynReleased: boolean;
+  stainsCarried: number;
+
   updatedAt: number;
 };
 
@@ -78,37 +125,42 @@ export const SAVE_KEY = "hermetic_comedy_save_v1";
 
 export const DEFAULT_STATS: Stats = { clarity: 0, compassion: 0, courage: 0 };
 
-export type Command = "observe" | "address" | "remember" | "release" | "witness";
+export type Command = "observe" | "address" | "remember" | "release" | "witness" | "transmute";
 
 /** Coerce older or partial save shapes into the current SaveSlot shape. */
 export function migrateSave(raw: unknown): SaveSlot | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<SaveSlot> & { scene?: string; [k: string]: unknown };
   let scene = (r.scene ?? "LastDay") as string;
-  // Legacy scene names → new
   if (scene === "MoonHall" || scene === "MoonGate") scene = "ImaginalRealm";
   const allowed: SceneKey[] = [
     "LastDay",
     "Crossing",
     "SilverThreshold",
     "ImaginalRealm",
+    "AthanorThreshold",
+    "Nigredo",
+    "Albedo",
+    "Citrinitas",
+    "Rubedo",
+    "SealedVessel",
     "CuratedSelf",
     "Epilogue",
   ];
-  // Unknown scene → safest fallback is the start of the journey, not midway.
   if (!allowed.includes(scene as SceneKey)) scene = "LastDay";
   const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
   const region =
     (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
   const shardFrags = r.shardFragments;
   const loreList = r.lore;
+  const verbsRaw = (r.verbs ?? {}) as { witness?: boolean; transmute?: boolean };
   return {
     scene: scene as SceneKey,
     act: typeof r.act === "number" ? r.act : act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
     flags: r.flags ?? {},
     fragments: r.fragments ?? 0,
-    verbs: { witness: r.verbs?.witness ?? false },
+    verbs: { witness: verbsRaw.witness ?? false, transmute: verbsRaw.transmute ?? false },
     shards: Array.isArray(r.shards) ? r.shards : [],
     shardFragments: typeof shardFrags === "number" ? shardFrags : 0,
     seeds: r.seeds ?? {},
@@ -121,6 +173,22 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     witnessUses: typeof r.witnessUses === "number" ? r.witnessUses : 0,
     sideQuests: (r.sideQuests as Record<string, "todo" | "active" | "done"> | undefined) ?? {},
     soulEventLog: Array.isArray(r.soulEventLog) ? (r.soulEventLog as string[]).slice(-5) : [],
+
+    shardInventory: Array.isArray(r.shardInventory) ? (r.shardInventory as ShardId[]) : [],
+    shardsConsumed: Array.isArray(r.shardsConsumed) ? (r.shardsConsumed as ShardId[]) : [],
+    blackStones: typeof r.blackStones === "number" ? r.blackStones : 0,
+    whiteStones: typeof r.whiteStones === "number" ? r.whiteStones : 0,
+    yellowStones: typeof r.yellowStones === "number" ? r.yellowStones : 0,
+    redStones: typeof r.redStones === "number" ? r.redStones : 0,
+    goldStone: r.goldStone === true,
+    shadesEncountered:
+      (r.shadesEncountered as Record<string, "fled" | "sat_with" | "destroyed"> | undefined) ?? {},
+    convictions: (r.convictions as Record<string, boolean> | undefined) ?? {},
+    weddingType: (r.weddingType as WeddingType | null | undefined) ?? null,
+    act2Inscription: typeof r.act2Inscription === "string" ? r.act2Inscription : null,
+    sorynReleased: r.sorynReleased === true,
+    stainsCarried: typeof r.stainsCarried === "number" ? r.stainsCarried : 0,
+
     updatedAt: r.updatedAt ?? Date.now(),
   };
 }

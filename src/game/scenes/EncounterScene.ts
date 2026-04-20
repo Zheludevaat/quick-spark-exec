@@ -66,6 +66,7 @@ const VERB_HINT: Record<Command, string> = {
   remember: "Recall the whole afternoon.",
   release: "Let it go - you learn less.",
   witness: "Stand. See without flinching.",
+  transmute: "Change the matter of it.",
 };
 
 const KIND_GOAL: Record<EnemyKind, string> = {

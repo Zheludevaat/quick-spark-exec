@@ -476,6 +476,156 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
     source: "CORRIDOR — VARIANT (NAMED)",
     body: ["YOU MOVED. THE WEIGHT TIPPED.", "SHE SAID IT WAS ALL RIGHT.", "COME BACK HEAVIER."],
   },
+
+  // ===== ACT II — THE GREAT WORK =====
+  on_the_athanor: {
+    id: "on_the_athanor",
+    title: "ON THE ATHANOR",
+    source: "ACT II",
+    body: [
+      "THE VESSEL THAT WILL NOT BREAK",
+      "WHAT IT TRANSMUTES.",
+      "EVERY KITCHEN IS ONE, IN MINIATURE.",
+    ],
+  },
+  on_nigredo: {
+    id: "on_nigredo",
+    title: "ON THE BLACKENING",
+    source: "ACT II — NIGREDO",
+    body: [
+      "FIRST THE MATTER MUST ROT.",
+      "THEN THE SHAME MUST BE SAT WITH.",
+      "ONLY THEN CAN ANYTHING BEGIN.",
+    ],
+  },
+  on_the_shadow: {
+    id: "on_the_shadow",
+    title: "ON THE SHADE",
+    source: "ACT II — NIGREDO",
+    body: [
+      "WHAT YOU REFUSED TO LOOK AT",
+      "DID NOT LEAVE.",
+      "IT WAITED FOR THE FURNACE.",
+    ],
+  },
+  on_dissolving: {
+    id: "on_dissolving",
+    title: "ON DISSOLVING",
+    source: "ACT II — NIGREDO",
+    body: [
+      "YOU LOSE THE NAMED THING",
+      "TO GAIN THE BLACK STONE.",
+      "THE TRADE IS REAL.",
+    ],
+  },
+  on_albedo: {
+    id: "on_albedo",
+    title: "ON THE WHITENING",
+    source: "ACT II — ALBEDO",
+    body: [
+      "WATER. SALT. MOON.",
+      "EACH BEAT A FORGIVENESS.",
+      "MOSTLY OF YOURSELF.",
+    ],
+  },
+  on_forgiveness: {
+    id: "on_forgiveness",
+    title: "ON FORGIVENESS",
+    source: "ACT II — ALBEDO",
+    body: [
+      "NOT THE ERASURE OF DEBT.",
+      "THE CHOICE TO STOP COLLECTING.",
+    ],
+  },
+  on_the_moon_again: {
+    id: "on_the_moon_again",
+    title: "ON THE MOON AGAIN",
+    source: "ACT II — ALBEDO",
+    body: [
+      "SHE WATCHED YOU IN THE PLATEAU.",
+      "NOW SHE WASHES YOU.",
+      "SHE IS NOT KIND. SHE IS COOL.",
+    ],
+  },
+  on_citrinitas: {
+    id: "on_citrinitas",
+    title: "ON THE YELLOWING",
+    source: "ACT II — CITRINITAS",
+    body: [
+      "GOLD-LIGHT FALLS ON DUST.",
+      "THE TRUTH IS WHAT YOU LET STAY.",
+      "EVERYTHING ELSE WAS A ROOM.",
+    ],
+  },
+  on_conviction: {
+    id: "on_conviction",
+    title: "ON CONVICTION",
+    source: "ACT II — CITRINITAS",
+    body: [
+      "TO ACCEPT A TRUTH ABOUT YOURSELF",
+      "IS TO STOP NEGOTIATING WITH IT.",
+    ],
+  },
+  on_the_torn_teacher: {
+    id: "on_the_torn_teacher",
+    title: "ON THE TEACHER WHO WAS TORN",
+    source: "ACT II — HIDDEN",
+    body: [
+      "SHE TAUGHT MATHEMATICS AND ASTRONOMY.",
+      "A CROWD KILLED HER FOR IT.",
+      "SHE LEFT YOU A SENTENCE.",
+    ],
+  },
+  on_rubedo: {
+    id: "on_rubedo",
+    title: "ON THE REDDENING",
+    source: "ACT II — RUBEDO",
+    body: [
+      "OPPOSITES ARE WED.",
+      "THE WEDDING IS NEVER QUITE EVEN.",
+      "THAT IS HOW YOU KNOW IT IS REAL.",
+    ],
+  },
+  on_the_wedding: {
+    id: "on_the_wedding",
+    title: "ON THE WEDDING",
+    source: "ACT II — RUBEDO",
+    body: [
+      "STRONG, GENTLE, OR FRACTURED.",
+      "ALL THREE ARE MARRIAGES.",
+      "ALL THREE ARE WORK.",
+    ],
+  },
+  on_releasing_the_daimon: {
+    id: "on_releasing_the_daimon",
+    title: "ON RELEASING THE DAIMON",
+    source: "ACT II — VARIANT",
+    body: [
+      "YOU SAID THANK YOU. GO HOME.",
+      "SHE BECAME A WISP.",
+      "THE REST IS YOURS.",
+    ],
+  },
+  on_the_thirteenth: {
+    id: "on_the_thirteenth",
+    title: "ON THE THIRTEENTH",
+    source: "ACT II — HIDDEN",
+    body: [
+      "THE GUEST WITH NO FACE.",
+      "THEY CAME BECAUSE YOU FINISHED EVERY ARC.",
+      "THEY LEFT A GOLD STONE.",
+    ],
+  },
+  on_the_sealed_vessel: {
+    id: "on_the_sealed_vessel",
+    title: "ON THE SEALED VESSEL",
+    source: "ACT II — CODA",
+    body: [
+      "BLACK, WHITE, YELLOW, RED — IN LAYERS.",
+      "ONE SENTENCE INSCRIBED.",
+      "THE WORK CARRIES YOU NOW.",
+    ],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */

@@ -8,6 +8,12 @@ import { SilverThresholdScene } from "./scenes/SilverThresholdScene";
 import { ImaginalRealmScene } from "./scenes/ImaginalRealmScene";
 import { EncounterScene } from "./scenes/EncounterScene";
 import { CuratedSelfScene, EpilogueScene } from "./scenes/CuratedSelfScene";
+import { AthanorThresholdScene } from "./scenes/AthanorThresholdScene";
+import { NigredoScene } from "./scenes/NigredoScene";
+import { AlbedoScene } from "./scenes/AlbedoScene";
+import { CitrinitasScene } from "./scenes/CitrinitasScene";
+import { RubedoScene } from "./scenes/RubedoScene";
+import { SealedVesselScene } from "./scenes/SealedVesselScene";
 
 export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
@@ -39,6 +45,12 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       SilverThresholdScene,
       ImaginalRealmScene,
       EncounterScene,
+      AthanorThresholdScene,
+      NigredoScene,
+      AlbedoScene,
+      CitrinitasScene,
+      RubedoScene,
+      SealedVesselScene,
       CuratedSelfScene,
       EpilogueScene,
     ],
