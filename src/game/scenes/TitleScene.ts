@@ -399,7 +399,7 @@ export class TitleScene extends Phaser.Scene {
       slot.act = j.act;
       slot.scene = j.scene;
       slot.stats = { clarity: 9, compassion: 9, courage: 9 };
-      slot.verbs = { observe: true, address: true, witness: true, release: true };
+      slot.verbs = { witness: true, transmute: true };
       slot.blackStones = 3;
       slot.whiteStones = 3;
       slot.yellowStones = 3;
