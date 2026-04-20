@@ -98,9 +98,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private focusGlow!: Phaser.GameObjects.Arc;
   private companion?: SorynCompanion;
   private region: ImaginalRegion = "pools";
+  private lastRegion: ImaginalRegion | null = null;
   private regionRoot!: Phaser.GameObjects.Container;
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
+  private knotTracker!: GBCText;
 
   constructor() {
     super("ImaginalRealm");
