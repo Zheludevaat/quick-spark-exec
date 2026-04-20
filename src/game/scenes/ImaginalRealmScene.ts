@@ -504,6 +504,54 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private touchSeedEcho(m: SeedEchoMote) {
     m.touched = true;
     this.save.seedEchoes[m.seedRef] = true;
+    awardShardFragment(this, this.save, () => `field_${this.save.shards.length}`, {
+      x: m.x,
+      y: m.y,
+    });
+    writeSave(this.save);
+    const lines: Record<string, string> = {
+      seed_call: "MARA. SHE STILL CALLS.",
+      seed_window: "THE CHILD IS GROWN. STILL WAVING.",
+      seed_kettle: "TWO CUPS. STILL POURED.",
+      seed_coat: "THE COAT. STILL WAITING.",
+      seed_mirror: "YOU. STILL HERE.",
+    };
+    const t = new GBCText(this, m.x - 28, m.y - 12, lines[m.seedRef] ?? "AN ECHO.", {
+      color: COLOR.textGold,
+      depth: 220,
+    });
+    this.tweens.add({
+      targets: t.obj,
+      alpha: 0,
+      y: m.y - 28,
+      duration: 1800,
+      onComplete: () => t.destroy(),
+    });
+    this.tweens.add({
+      targets: m.sprite,
+      scale: 3,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => m.sprite.destroy(),
+    });
+    this.tweens.add({
+      targets: m.halo,
+      scale: 3,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => m.halo.destroy(),
+    });
+    // Side quest: touch every echo in the field
+    if (this.region === "field" && questStatus(this.save, "all_echoes_field") !== "done") {
+      activateQuest(this, this.save, "all_echoes_field");
+      const fieldRefs = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
+      const allTouched = fieldRefs.every((s) => this.save.seedEchoes[s]);
+      if (allTouched) completeQuest(this, this.save, "all_echoes_field");
+    }
+    this.events.emit("stats-changed");
+  }
+    m.touched = true;
+    this.save.seedEchoes[m.seedRef] = true;
     this.save.shardFragments = (this.save.shardFragments ?? 0) + 1;
     let extraShard = false;
     if (this.save.shardFragments >= 4) {
