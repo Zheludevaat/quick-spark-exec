@@ -23,7 +23,7 @@ import {
 } from "./hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
-import { onActionDown } from "../controls";
+import { onActionDown, onDirection } from "../controls";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -610,24 +610,17 @@ export class SilverThresholdScene extends Phaser.Scene {
         this.time.delayedCall(250, cleanup);
       }
     };
+    let unbindAct: (() => void) | null = null;
     const cleanup = () => {
       breathTween.stop();
-      window.removeEventListener("keydown", domHandler);
+      unbindAct?.();
       this.events.off("vinput-action", handler);
       box.destroy();
       label.destroy();
       pulse.destroy();
       onDone();
     };
-    // Use DOM keydown to honor rebinds and avoid Phaser key conflicts.
-    const domHandler = (e: KeyboardEvent) => {
-      const k = e.code;
-      if (k === "Space" || k === "Enter" || k === "NumpadEnter") {
-        e.preventDefault();
-        handler();
-      }
-    };
-    window.addEventListener("keydown", domHandler);
+    unbindAct = onActionDown(this, "action", handler);
     this.events.on("vinput-action", handler);
   }
 
@@ -677,8 +670,20 @@ export class SilverThresholdScene extends Phaser.Scene {
       getAudio().sfx("resolve");
       onDone();
     };
-    const isAB = (e: KeyboardEvent) =>
-      e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter";
+    // Read the player's bound A keys so rebinding works.
+    const isAB = (e: KeyboardEvent) => {
+      const name = (() => {
+        if (e.code === "Space") return "SPACE";
+        if (e.code === "Enter" || e.code === "NumpadEnter") return "ENTER";
+        if (e.code.startsWith("Key")) return e.code.slice(3);
+        return e.key?.toUpperCase() ?? "";
+      })();
+      const c = (window as unknown as { __controls?: never }) && undefined; void c;
+      // Fallback to bindings via dynamic import to avoid circular imports.
+      const { getControls } = require("../controls") as typeof import("../controls");
+      const b = getControls().bindings.action;
+      return name === b.primary || name === b.secondary;
+    };
     const domDown = (e: KeyboardEvent) => {
       if (isAB(e)) {
         e.preventDefault();
