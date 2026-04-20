@@ -508,9 +508,38 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
+    // Soul proximity: pulse halo + show name/hook label.
+    const nearSoul = this.nearestSoul();
+    for (const s of this.souls) {
+      const isNear = s === nearSoul;
+      s.halo.fillAlpha = isNear ? (isSoulDone(this.save, s.def.id) ? 0.15 : 0.3) : 0;
+      if (isNear) {
+        if (!s.nameLabel) {
+          s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
+            color: COLOR.textGold,
+            depth: 22,
+          });
+          s.hookLabel = new GBCText(this, 4, GBC_H - 9, s.def.hook, {
+            color: COLOR.textWarn,
+            depth: 200,
+            scrollFactor: 0,
+            maxWidthPx: GBC_W - 8,
+          });
+        }
+      } else if (s.nameLabel) {
+        s.nameLabel.destroy();
+        s.nameLabel = undefined;
+        s.hookLabel?.destroy();
+        s.hookLabel = undefined;
+      }
+    }
+
     // Hint + focus
     const near = this.nearestKnot();
-    if (near && this.dist(near) < 16 * 16) {
+    if (nearSoul) {
+      // Soul takes hint priority — its hookLabel is already showing.
+      this.focusGlow.fillAlpha = 0;
+    } else if (near && this.dist(near) < 16 * 16) {
       this.focusGlow.setPosition(near.x, near.y);
       this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : 0xa8c8e8;
       this.focusGlow.fillAlpha = 0.25;
@@ -531,6 +560,21 @@ export class ImaginalRealmScene extends Phaser.Scene {
         );
       }
     }
+  }
+
+  private nearestSoul() {
+    let best: (typeof this.souls)[number] | null = null;
+    let bd = 18 * 18;
+    for (const s of this.souls) {
+      const dx = this.rowan.x - s.def.x;
+      const dy = this.rowan.y - s.def.y;
+      const d = dx * dx + dy * dy;
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return best;
   }
 
   private touchSeedEcho(m: SeedEchoMote) {
