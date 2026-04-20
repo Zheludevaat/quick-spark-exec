@@ -97,8 +97,14 @@ export class InputState {
   }
 }
 
-/** Build an animated Rowan sprite using the rowan walk sheet. */
-export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
+/**
+ * Build an animated Rowan sprite using the rowan walk sheet.
+ * skin: "living" attaches all 4 accessory overlays (scarf, coat, boots, satchel).
+ *       "soul" is the bare luminescent form (slight translucence).
+ */
+export type RowanSkin = "living" | "soul";
+
+export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: RowanSkin = "living") {
   const c = scene.add.container(x, y);
   const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
   if (scene.anims.exists("rowan_down_idle")) sprite.play("rowan_down_idle");
@@ -106,7 +112,73 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
   c.setSize(16, 24);
   c.setData("sprite", sprite);
   c.setData("dir", "down");
+  c.setData("skin", skin);
+
+  // Accessory overlay sprites (frames 0=scarf, 1=coat, 2=boots, 3=satchel)
+  // Same origin as base so they overlay perfectly.
+  const accessoryKeys: ("scarf" | "coat" | "boots" | "satchel")[] = ["scarf", "coat", "boots", "satchel"];
+  const accessories: Record<string, Phaser.GameObjects.Sprite> = {};
+  accessoryKeys.forEach((k, i) => {
+    const a = scene.add.sprite(0, 0, "rowan_acc", i).setOrigin(0.5, 0.7);
+    a.setVisible(skin === "living");
+    c.add(a);
+    accessories[k] = a;
+  });
+  c.setData("accessories", accessories);
+
+  if (skin === "soul") {
+    sprite.setAlpha(0.85);
+    sprite.setTint(0xeaf2ff);
+  }
   return c;
+}
+
+/** Remove a single accessory layer with a small drift/fade animation. */
+export function shedAccessory(
+  scene: Phaser.Scene,
+  c: Phaser.GameObjects.Container,
+  which: "scarf" | "coat" | "boots" | "satchel",
+) {
+  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  if (!accs || !accs[which] || !accs[which].visible) return;
+  const a = accs[which];
+  // Detach to world space at Rowan's current position, then animate.
+  const wx = c.x, wy = c.y;
+  c.remove(a);
+  a.setPosition(wx, wy);
+  scene.add.existing(a);
+  a.setDepth(50);
+  switch (which) {
+    case "scarf":
+      scene.tweens.add({ targets: a, y: wy - 30, alpha: 0, duration: 1400, ease: "Sine.out", onComplete: () => a.destroy() });
+      break;
+    case "coat":
+      scene.tweens.add({ targets: a, y: wy + 6, alpha: 0, duration: 900, ease: "Quad.in", onComplete: () => a.destroy() });
+      break;
+    case "boots":
+      scene.tweens.add({ targets: a, alpha: 0, scaleY: 0.4, duration: 900, ease: "Sine.in", onComplete: () => a.destroy() });
+      break;
+    case "satchel":
+      scene.tweens.add({ targets: a, y: wy + 4, alpha: 0, duration: 900, ease: "Quad.in", onComplete: () => a.destroy() });
+      break;
+  }
+  delete accs[which];
+}
+
+/** Convert the container to its "soul" form (used after the transformation pause). */
+export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
+  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
+  if (!sprite) return;
+  c.setData("skin", skin);
+  if (skin === "soul") {
+    sprite.setAlpha(0.85);
+    sprite.setTint(0xeaf2ff);
+  } else {
+    sprite.setAlpha(1);
+    sprite.clearTint();
+  }
+  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  if (accs) Object.values(accs).forEach(a => a.setVisible(skin === "living"));
 }
 
 /** Update Rowan's facing/animation based on movement input. */
@@ -125,6 +197,14 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   } else {
     const key = `rowan_${dir}_idle`;
     if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
+  }
+  // Keep accessory overlays in lockstep with the base sprite frame.
+  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  if (accs) {
+    // Living-skin doesn't have per-direction accessory frames; we just keep them
+    // pinned to the same y/x as the base. The accessories are facing-agnostic
+    // for now (a deliberate stylization).
+    Object.values(accs).forEach(a => a.setFrame(a.frame.name)); // no-op; placeholder for future facing variants
   }
 }
 
