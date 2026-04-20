@@ -115,7 +115,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.hint = new GBCText(this, 4, GBC_H - 22, "", { color: COLOR.textDim, depth: 100 });
 
     // Bind action
-    onActionDown(this, () => this.tryInteract(), "action");
+    onActionDown(this, "action", () => this.tryInteract());
 
     // First visit only — opening + derive inventory
     if (!this.save.flags.athanor_visited) {
@@ -130,7 +130,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
     }
 
     // Music
-    getAudio().music.play(SONG_MOON, 0.3);
+    getAudio().music.play("athanor", SONG_MOON);
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.vesselHud.destroy();
