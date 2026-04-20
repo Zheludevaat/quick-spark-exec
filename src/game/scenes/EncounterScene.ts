@@ -59,6 +59,8 @@ export class EncounterScene extends Phaser.Scene {
   private busy = false;
   private enemy!: Phaser.GameObjects.Sprite;
   private cursorMark!: GBCText;
+  private misses = 0;
+  private intentText?: GBCText;
 
   constructor() { super("Encounter"); }
   init(data: { save: SaveSlot; kind: EnemyKind; onDone: (won: boolean) => void }) {
@@ -67,6 +69,7 @@ export class EncounterScene extends Phaser.Scene {
     this.hp = this.def.hp;
     this.onDone = data.onDone;
     this.cmdTexts = [];
+    this.misses = 0;
   }
 
   create() {
@@ -156,20 +159,39 @@ export class EncounterScene extends Phaser.Scene {
       this.logText.setText(this.def.resolved);
       this.cameras.main.flash(180, 220, 230, 255);
       this.tweens.add({ targets: this.enemy, alpha: 0, duration: 800 });
+      // Apply base reward
       if (this.def.reward.clarity)    this.save.stats.clarity    += this.def.reward.clarity;
       if (this.def.reward.compassion) this.save.stats.compassion += this.def.reward.compassion;
       if (this.def.reward.courage)    this.save.stats.courage    += this.def.reward.courage;
+      // First-try bonus: +1 to the same stat, plus a celebratory flash
+      if (this.misses === 0) {
+        if (this.def.reward.clarity)    this.save.stats.clarity    += 1;
+        if (this.def.reward.compassion) this.save.stats.compassion += 1;
+        if (this.def.reward.courage)    this.save.stats.courage    += 1;
+        this.time.delayedCall(400, () => {
+          new GBCText(this, GBC_W / 2 - 28, 60, "FIRST-TRY +1!", { color: COLOR.textGold, depth: 300 });
+          this.cameras.main.flash(120, 255, 224, 152);
+        });
+      }
       writeSave(this.save);
-      this.time.delayedCall(1500, () => { this.onDone(true); this.scene.stop(); });
+      this.time.delayedCall(1700, () => { this.onDone(true); this.scene.stop(); });
     } else if (cmd === "release") {
       this.logText.setText("You release without seeing. The shape lingers, gentler.");
       this.tweens.add({ targets: this.enemy, alpha: 0.3, duration: 700 });
       this.time.delayedCall(1300, () => { this.onDone(false); this.scene.stop(); });
     } else {
+      this.misses++;
       this.hp = Math.max(0, this.hp - 1);
       this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
       this.cameras.main.shake(120, 0.004);
+      // Telegraph the weakness after the first miss
+      if (this.misses === 1 && !this.intentText) {
+        this.intentText = new GBCText(this, 4, 84, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
+          color: COLOR.textGold, depth: 110,
+        });
+        this.tweens.add({ targets: this.intentText.obj, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
+      }
       this.busy = false;
       if (this.hp <= 0) {
         this.logText.setText("It dissolves anyway - you wore it out by trying.");

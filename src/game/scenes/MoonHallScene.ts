@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe } from "../gbcArt";
+import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
@@ -54,6 +54,10 @@ export class MoonHallScene extends Phaser.Scene {
       }
     }
 
+    // Ambient cyan motes drifting across the hall
+    spawnMotes(this, { count: 14, color: 0x5a78b8, alpha: 0.5, driftY: 0.006, driftX: 0.004, depth: 30 });
+    spawnMotes(this, { count: 6, color: 0xa8c8e8, alpha: 0.7, driftY: -0.004, driftX: -0.003, depth: 30 });
+
     // Three minor mirrors + boss mirror
     const layout: { x: number; y: number; kind: Mirror["kind"] }[] = [
       { x: 40,  y: 56, kind: "reflection" },
@@ -65,9 +69,19 @@ export class MoonHallScene extends Phaser.Scene {
       const cleared = !!this.save.flags[`m_${m.kind}`];
       const sprite = this.add.image(m.x, m.y, "gbc_tiles", cleared ? TILE_INDEX.MIRROR_CLEARED : TILE_INDEX.MIRROR_FRAME);
       let glow: Phaser.GameObjects.Arc | undefined;
-      if (m.kind === "boss" && !cleared) {
-        glow = this.add.circle(m.x, m.y, 12, 0xd86a6a, 0.3);
-        this.tweens.add({ targets: glow, scale: 1.5, alpha: 0.15, duration: 900, yoyo: true, repeat: -1 });
+      if (!cleared) {
+        // All uncleared mirrors get a soft shimmer; boss gets a warmer red one
+        const c = m.kind === "boss" ? 0xd86a6a : 0xa8c8e8;
+        glow = this.add.circle(m.x, m.y, m.kind === "boss" ? 12 : 9, c, 0.25);
+        this.tweens.add({
+          targets: glow,
+          scale: m.kind === "boss" ? 1.5 : 1.3,
+          alpha: 0.1,
+          duration: m.kind === "boss" ? 900 : 1200,
+          yoyo: true, repeat: -1,
+        });
+        // Subtle vertical sprite bob for living feel
+        this.tweens.add({ targets: sprite, y: m.y - 1, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
       }
       this.mirrors.push({ x: m.x, y: m.y, kind: m.kind, cleared, sprite, glow });
     }
