@@ -522,19 +522,20 @@ export class EpilogueScene extends Phaser.Scene {
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
 
     drawGBCBox(this, 12, 44, GBC_W - 24, 64);
-    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}`, {
+    const ng = this.save.flags.ng_plus ? " ★" : "";
+    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}${ng}`, {
       color: COLOR.textLight,
       depth: 110,
     });
-    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, {
+    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}${ng}`, {
       color: COLOR.textLight,
       depth: 110,
     });
-    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, {
+    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}${ng}`, {
       color: COLOR.textLight,
       depth: 110,
     });
-    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}`, {
+    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}${ng}`, {
       color: COLOR.textGold,
       depth: 110,
     });
@@ -549,7 +550,10 @@ export class EpilogueScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(199);
     this.optionTexts = [
-      new GBCText(this, 18, GBC_H - 24, "WALK AGAIN", { color: COLOR.textGold, depth: 200 }),
+      new GBCText(this, 18, GBC_H - 24, "WALK AGAIN (NG+)", {
+        color: COLOR.textGold,
+        depth: 200,
+      }),
       new GBCText(this, 18, GBC_H - 14, "ERASE RESTART", { color: COLOR.textDim, depth: 200 }),
     ];
     this.cursorMark = new GBCText(this, 8, GBC_H - 24, "▶", { color: COLOR.textGold, depth: 200 });
