@@ -309,11 +309,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       });
       f.sprite.fillColor = i === this.brightestIdx ? 0xffe098 : 0xd88080;
     });
-    // Auto-cycle every 3s if player doesn't act
-    this.time.delayedCall(3000, () => this.cycleBrightest());
+    // Re-arm — but track the timer so phase change can stop it.
+    this.brightestTimer?.remove(false);
+    this.brightestTimer = this.time.delayedCall(3000, () => this.cycleBrightest());
   }
 
   private cleanupFragments() {
+    this.brightestTimer?.remove(false);
+    this.brightestTimer = null;
     this.fragments.forEach((f) => f.sprite.destroy());
     this.fragments = [];
     this.boss.setVisible(true);
