@@ -93,18 +93,31 @@ export class CuratedSelfScene extends Phaser.Scene {
       g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
       g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
+    // A few twinkling stars on top of the static field
+    for (let i = 0; i < 6; i++) {
+      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 50), 1, 1, 0xffffff, 1);
+      this.tweens.add({ targets: s, alpha: 0.2, duration: Phaser.Math.Between(600, 1400), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1200) });
+    }
     g.fillStyle(0x1a2030, 1); g.fillRect(0, 64, GBC_W, 2);
     g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
     g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 70, 64, 8);
+
+    // Boss aura — pulsing red ring behind the figure
+    const aura = this.add.circle(GBC_W / 2, 46, 18, 0xd84a4a, 0.18);
+    this.tweens.add({ targets: aura, scale: 1.4, alpha: 0.05, duration: 1100, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+
+    // Drifting embers
+    spawnMotes(this, { count: 10, color: 0xd86a6a, alpha: 0.45, driftY: -0.01, driftX: 0.002, depth: 30 });
 
     // Title plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
     this.stateText = new GBCText(this, 4, 14, "COMPOSED", { color: COLOR.textAccent, depth: 101 });
 
-    // Boss sprite
+    // Boss sprite + subtle hover bob
     this.boss = this.add.sprite(GBC_W / 2, 46, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
     this.boss.play("boss_composed");
+    this.tweens.add({ targets: this.boss, y: 44, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
     // Log box — y 76..112 (36px)
     drawGBCBox(this, 0, 76, GBC_W, 36);
