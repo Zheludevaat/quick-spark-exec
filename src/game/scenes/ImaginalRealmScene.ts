@@ -229,6 +229,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (this.regionRoot) this.regionRoot.destroy();
     this.knots = [];
     this.seedEchoes = [];
+    // Tear down any souls from the previous region.
+    this.souls.forEach((s) => {
+      s.container.destroy();
+      s.halo.destroy();
+      s.nameLabel?.destroy();
+      s.hookLabel?.destroy();
+    });
+    this.souls = [];
     this.region = region;
     this.save.region = region;
     writeSave(this.save);
