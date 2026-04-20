@@ -7,8 +7,9 @@ import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
 
-const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string; misses: string[] }> = {
-  composed:   { taunt: "I am the version of you that smiles for cameras.",
+const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string; misses: string[]; phaseLabel: string }> = {
+  composed:   { phaseLabel: "PHASE 1/4 - SEE",
+                taunt: "I am the version of you that smiles for cameras.",
                 weakness: "observe",  next: "flattering",
                 success: "You see the careful posture. The smile loosens.",
                 misses: [
@@ -16,7 +17,8 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "Words slide off the lacquer. Try seeing first.",
                   "Release without sight is a shrug. Watch.",
                 ] },
-  flattering: { taunt: "Tell me what you actually wanted them to see.",
+  flattering: { phaseLabel: "PHASE 2/4 - SPEAK",
+                taunt: "Tell me what you actually wanted them to see.",
                 weakness: "address",  next: "fractured",
                 success: "You speak the unrehearsed line. The polish cracks.",
                 misses: [
@@ -24,7 +26,8 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "Memory is a lullaby to it. Name what is true.",
                   "It will not be released until it is addressed.",
                 ] },
-  fractured:  { taunt: "Remember the day you started becoming this?",
+  fractured:  { phaseLabel: "PHASE 3/4 - RECALL",
+                taunt: "Remember the day you started becoming this?",
                 weakness: "remember", next: "exposed",
                 success: "You remember. Not as a wound. As a stubborn child.",
                 misses: [
@@ -32,7 +35,8 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "Words are too late here. Where did this begin?",
                   "Seeing alone won't mend it. Remember.",
                 ] },
-  exposed:    { taunt: "And now? Will you keep me, or let me go?",
+  exposed:    { phaseLabel: "PHASE 4/4 - LET GO",
+                taunt: "And now? Will you keep me, or let me go?",
                 weakness: "release",  next: "released",
                 success: "You release. The figure exhales for the first time.",
                 misses: [
@@ -40,7 +44,7 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "More looking only stretches the moment. Release.",
                   "Speech now would be a leash. Open your hand.",
                 ] },
-  released:   { taunt: "", weakness: "release", next: "released", success: "", misses: [] },
+  released:   { phaseLabel: "RELEASED", taunt: "", weakness: "release", next: "released", success: "", misses: [] },
 };
 
 const STATE_HUE: Record<State, number> = {
