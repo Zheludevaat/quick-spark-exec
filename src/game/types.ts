@@ -12,7 +12,7 @@ export type ImaginalRegion = "pools" | "field" | "corridor";
 
 export type SaveSlot = {
   scene: SceneKey;
-  act: 0 | 1;
+  act: number;
   stats: Stats;
   flags: Record<string, boolean>;
   fragments: number;
