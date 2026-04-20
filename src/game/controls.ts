@@ -237,11 +237,6 @@ export function onDirection(
   scene: Phaser.Scene,
   handler: (dir: "up" | "down" | "left" | "right") => void,
 ): () => void {
-  const kb = scene.input.keyboard;
-  if (!kb)
-    return () => {
-      /* noop */
-    };
   const domHandler = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
@@ -254,7 +249,16 @@ export function onDirection(
     }
   };
   window.addEventListener("keydown", domHandler);
-  const cleanup = () => window.removeEventListener("keydown", domHandler);
+  // Also forward virtual-pad direction presses so scenes don't have to
+  // double-bind (vinput-down + onDirection caused double swaps in knot UIs).
+  const vHandler = (dir: string) => {
+    if (dir === "up" || dir === "down" || dir === "left" || dir === "right") handler(dir);
+  };
+  scene.events.on("vinput-down", vHandler);
+  const cleanup = () => {
+    window.removeEventListener("keydown", domHandler);
+    scene.events.off("vinput-down", vHandler);
+  };
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
   return cleanup;
