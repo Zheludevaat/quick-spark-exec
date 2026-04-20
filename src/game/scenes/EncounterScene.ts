@@ -243,9 +243,10 @@ export class EncounterScene extends Phaser.Scene {
         this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
       }
       audio.sfx("miss");
-      // Telegraph the weakness after the first miss
+      // Telegraph the weakness after the first miss — replaces the goal banner
       if (this.misses === 1 && !this.intentText) {
-        this.intentText = new GBCText(this, 4, 14, `FEARS:${this.def.weakness.toUpperCase()}`, {
+        this.goalText.setText("");
+        this.intentText = new GBCText(this, 4, 14, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
           color: COLOR.textGold, depth: 110,
         });
         this.tweens.add({ targets: this.intentText.obj, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
