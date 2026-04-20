@@ -200,9 +200,10 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
   const abCx = c.leftHanded ? 22 : GBC_W - 18;
   const abCy = GBC_H - 22;
 
-  // Settings gear top-right
+  // Settings gear top-right (sits just below the stats bar so its hit zone
+  // never collides with the SAVED indicator or the stats text).
   const gearX = GBC_W - 8,
-    gearY = 6;
+    gearY = 18;
 
   const showDpad =
     c.touchLayout === "dpad" ||
