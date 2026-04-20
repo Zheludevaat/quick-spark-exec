@@ -81,6 +81,129 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
       "IT DID NOT CLARIFY THE FIRST.",
     ],
   },
+  // ===== Act 1 — Silver Threshold =====
+  silver_air: {
+    id: "silver_air",
+    title: "WHAT AIR ASKED",
+    source: "GUARDIAN OF AIR",
+    body: [
+      "EVERY BREATH YOU HELD.",
+      "EVERY WAVE YOU DID NOT RETURN.",
+      "AIR REMEMBERS. AIR FORGIVES SLOWLY.",
+    ],
+  },
+  silver_fire: {
+    id: "silver_fire",
+    title: "WHAT FIRE ASKED",
+    source: "GUARDIAN OF FIRE",
+    body: [
+      "THE COURAGE YOU SPENT ON SMALL ANGERS.",
+      "THE BRIDGES BURNED FROM A POLITE DISTANCE.",
+      "FIRE DOES NOT MIND. FIRE NEVER MINDED.",
+    ],
+  },
+  silver_water: {
+    id: "silver_water",
+    title: "WHAT WATER ASKED",
+    source: "GUARDIAN OF WATER",
+    body: [
+      "WHICH REFLECTION DID YOU KEEP?",
+      "THE TRUE ONE OR THE BRIGHT ONE?",
+      "WATER WILL HOLD EITHER. WATER IS PATIENT.",
+    ],
+  },
+  silver_earth: {
+    id: "silver_earth",
+    title: "WHAT EARTH ASKED",
+    source: "GUARDIAN OF EARTH",
+    body: [
+      "YOU WALKED THE CIRCLE.",
+      "YOU DID NOT ASK WHY THE CIRCLE.",
+      "EARTH PREFERS YOU THAT WAY.",
+    ],
+  },
+  daimon_binding: {
+    id: "daimon_binding",
+    title: "ON DAIMONS",
+    source: "SORYN, AT THE THRESHOLD",
+    body: [
+      "A DAIMON IS NOT A GUIDE.",
+      "A DAIMON IS THE PART OF YOU",
+      "THAT KNEW BEFORE THE REST CAUGHT UP.",
+    ],
+  },
+  // ===== Act 2 — Imaginal Realm =====
+  imaginal_pools: {
+    id: "imaginal_pools",
+    title: "THE REFLECTING POOLS",
+    source: "FIRST KNOT",
+    body: [
+      "THE POOLS DO NOT SHOW YOUR FACE.",
+      "THEY SHOW THE FACE YOU WORE",
+      "THE LAST TIME YOU WERE HONEST.",
+    ],
+  },
+  imaginal_field: {
+    id: "imaginal_field",
+    title: "THE GLITTER FIELD",
+    source: "SECOND KNOT",
+    body: [
+      "FRAGMENTS OF AFTERNOONS.",
+      "EACH ONE WAS A WHOLE LIFE",
+      "FOR SOMEONE STANDING SOMEWHERE.",
+    ],
+  },
+  imaginal_corridor: {
+    id: "imaginal_corridor",
+    title: "THE LANTERN CORRIDOR",
+    source: "THIRD KNOT",
+    body: [
+      "THE LIGHTS DOWN HERE LIE KINDLY.",
+      "THE TRICK IS NOT TO BELIEVE THEM.",
+      "THE TRICK IS NOT TO THANK THEM EITHER.",
+    ],
+  },
+  crown_witnessed: {
+    id: "crown_witnessed",
+    title: "THE PAPER CROWN",
+    source: "OPTIONAL KNOT — WITNESSED",
+    body: [
+      "THE SELF YOU WISHED YOU WERE.",
+      "PAPER, AS IT TURNED OUT.",
+      "YOU WITNESSED IT. IT THANKED YOU.",
+    ],
+  },
+  // ===== Act 3 — Curated Self & Epilogue =====
+  curated_self: {
+    id: "curated_self",
+    title: "THE CURATED SELF",
+    source: "THIRD SPHERE",
+    body: [
+      "THE PERSON YOU PERFORMED TO STAY ALIVE.",
+      "THE PERSON OTHERS NEEDED YOU TO BE.",
+      "NOT A LIE. NOT THE WHOLE TRUTH EITHER.",
+    ],
+  },
+  shards_assembled: {
+    id: "shards_assembled",
+    title: "ON THE SHARDS",
+    source: "ASSEMBLED FROM FRAGMENTS",
+    body: [
+      "FOUR FRAGMENTS BECOME ONE SHARD.",
+      "ENOUGH SHARDS BECOME A MIRROR.",
+      "ENOUGH MIRRORS BECOME A WINDOW.",
+    ],
+  },
+  epilogue_walk: {
+    id: "epilogue_walk",
+    title: "THE WALK AGAIN",
+    source: "EPILOGUE",
+    body: [
+      "YOU CAN WALK IT AGAIN.",
+      "IT WILL NOT BE THE SAME WALK.",
+      "IT WAS NEVER THE SAME WALK.",
+    ],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */
