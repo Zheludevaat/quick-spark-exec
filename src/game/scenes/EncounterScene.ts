@@ -146,6 +146,12 @@ export class EncounterScene extends Phaser.Scene {
       this.cmdTexts.push(t);
     });
     this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
+
+    // Goal banner under HUD: tells the player what this encounter IS
+    this.goalText = new GBCText(this, 4, 14, KIND_GOAL[this.def.kind], { color: COLOR.textAccent, depth: 110, maxWidthPx: GBC_W - 90 });
+    // Verb hint inside log box, lower line: explains the highlighted command
+    this.verbHintText = new GBCText(this, 4, 102, `> ${VERB_HINT.observe}`, { color: COLOR.textDim, depth: 103, maxWidthPx: GBC_W - 8 });
+
     this.refreshCursor();
 
     // Input
