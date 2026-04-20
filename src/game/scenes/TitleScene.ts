@@ -61,7 +61,7 @@ export class TitleScene extends Phaser.Scene {
     const launch = () => {
       audio.sfx("confirm");
       const slot = save ?? newSave();
-      const next = save ? save.scene : "Intro";
+      const next = save ? save.scene : "LastDay";
       audio.music.stop();
       this.scene.start(next, { save: slot });
     };
