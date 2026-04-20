@@ -9,6 +9,7 @@ import * as Phaser from "phaser";
 import { GBCText, COLOR } from "./gbcArt";
 import { getAudio } from "./audio";
 import type { SaveSlot } from "./types";
+import { emitHudFragmentChanged, emitHudShardGained } from "./ui/hudSignals";
 
 export type ShardAwardResult = {
   /** True when the fragment completed a shard this call. */
@@ -32,6 +33,9 @@ export function awardShardFragment(
     formed = true;
   }
   showShardToast(scene, anchor, formed, save.shardFragments);
+  // Always emit fragment-changed; emit shard-gained only on full formation.
+  emitHudFragmentChanged(scene, save.shardFragments, save.shards.length);
+  if (formed) emitHudShardGained(scene, save.shards.length);
   return { formed, fragments: save.shardFragments };
 }
 
