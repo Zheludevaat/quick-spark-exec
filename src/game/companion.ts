@@ -25,7 +25,7 @@ export class SorynCompanion {
   private lastMoveAt = 0;
   private getContext: CompanionContextLines;
   private ambientLines: string[];
-  private dialogState: { box: Phaser.GameObjects.GameObject; who: GBCText; text: GBCText; hint: GBCText } | null = null;
+  private dialogState: { box: { destroy: () => void }; who: GBCText; text: GBCText; hint: GBCText } | null = null;
   private unbindCancel: (() => void) | null = null;
   private unbindAdvance: (() => void) | null = null;
 
