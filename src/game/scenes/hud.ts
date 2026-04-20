@@ -95,7 +95,7 @@ export class InputState {
 export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
   const c = scene.add.container(x, y);
   const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
-  sprite.play("rowan_down_idle");
+  if (scene.anims.exists("rowan_down_idle")) sprite.play("rowan_down_idle");
   c.add([sprite]);
   c.setSize(16, 24);
   c.setData("sprite", sprite);
@@ -109,15 +109,16 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   if (!sprite) return;
   let dir = c.getData("dir") as string;
   const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+  const anims = sprite.scene.anims;
   if (moving) {
     if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
     else                              dir = dy > 0 ? "down"  : "up";
     c.setData("dir", dir);
     const key = `rowan_${dir}`;
-    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
   } else {
     const key = `rowan_${dir}_idle`;
-    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
   }
 }
 
