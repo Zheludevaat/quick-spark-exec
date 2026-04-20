@@ -406,6 +406,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     const flame = this.add.circle(c.x, c.y, 4, 0xf08868, 0.6).setDepth(40);
     let progress = 0;
     let held = false;
+    let done = false;
     const tick = this.time.addEvent({
       delay: 30, loop: true, callback: () => {
         if (held) progress = Math.min(1, progress + 0.018);
@@ -418,6 +419,8 @@ export class SilverThresholdScene extends Phaser.Scene {
     const press = () => { held = true; };
     const release = () => { if (held && progress >= 0.4) finish(); held = false; };
     const finish = () => {
+      if (done) return;
+      done = true;
       tick.remove(false);
       this.input.keyboard?.off("keydown-SPACE", press);
       this.input.keyboard?.off("keyup-SPACE", release);
