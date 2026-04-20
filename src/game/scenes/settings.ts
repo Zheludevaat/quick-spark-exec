@@ -223,6 +223,18 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       case 4:
         cycleAuto(dir);
         break;
+      case 5: {
+        const a = getAudio();
+        // 10% steps; if muted, unmute first.
+        if (a.muted) a.setMuted(false);
+        a.setVolume(a.volume + dir * 0.1);
+        break;
+      }
+      case 6: {
+        const a = getAudio();
+        a.setMuted(!a.muted);
+        break;
+      }
     }
     getAudio().sfx("cursor");
     render();
@@ -230,11 +242,11 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
 
   const activateMain = () => {
     switch (cursor) {
-      case 5:
+      case 7:
         page = "keys";
         cursor = 0;
         break;
-      case 6:
+      case 8:
         resetControls();
         break;
       default:
