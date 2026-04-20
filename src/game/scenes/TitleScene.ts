@@ -322,6 +322,137 @@ export class TitleScene extends Phaser.Scene {
 
     // (Footer hint omitted — the HTML footer below the canvas already lists controls.)
   }
+
+  /**
+   * DEV-only skip menu — jumps to any scene with a fresh maxed save so the
+   * player can spot-check Act 2/3 work without replaying the whole game.
+   */
+  private openSkipMenu() {
+    const audio = getAudio();
+    audio.sfx("cursor");
+
+    const jumps: { label: string; scene: string; act: number }[] = [
+      { label: "ACT 1 · LAST DAY", scene: "LastDay", act: 1 },
+      { label: "ACT 1 · CROSSING", scene: "Crossing", act: 1 },
+      { label: "ACT 1 · NIGREDO", scene: "Nigredo", act: 1 },
+      { label: "ACT 2 · ALBEDO", scene: "Albedo", act: 2 },
+      { label: "ACT 2 · CITRINITAS", scene: "Citrinitas", act: 2 },
+      { label: "ACT 2 · RUBEDO", scene: "Rubedo", act: 2 },
+      { label: "ACT 2 · ATHANOR", scene: "AthanorThreshold", act: 2 },
+      { label: "ACT 2 · SILVER THR.", scene: "SilverThreshold", act: 2 },
+      { label: "ACT 2 · IMAGINAL", scene: "ImaginalRealm", act: 2 },
+      { label: "ACT 2 · SEALED VESSEL", scene: "SealedVessel", act: 2 },
+      { label: "ACT 3 · CURATED SELF", scene: "CuratedSelf", act: 3 },
+      { label: "ACT 3 · EPILOGUE", scene: "Epilogue", act: 3 },
+    ];
+
+    const dim = this.add
+      .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.88)
+      .setOrigin(0, 0)
+      .setDepth(950)
+      .setInteractive();
+
+    const box = drawGBCBox(this, 6, 8, GBC_W - 12, GBC_H - 16, 951);
+    const title = new GBCText(this, 12, 12, "DEV · SKIP TO SCENE", {
+      color: COLOR.textGold,
+      depth: 952,
+    });
+
+    const lineH = 9;
+    const startY = 24;
+    let pick = 0;
+
+    const items: GBCText[] = jumps.map(
+      (j, i) =>
+        new GBCText(this, 18, startY + i * lineH, j.label, {
+          color: COLOR.textLight,
+          depth: 952,
+        }),
+    );
+    const mark = new GBCText(this, 10, startY, "▶", {
+      color: COLOR.textGold,
+      depth: 953,
+    });
+    const refreshSkip = () => {
+      items.forEach((t, i) => t.setColor(i === pick ? COLOR.textGold : COLOR.textLight));
+      mark.setPosition(10, startY + pick * lineH);
+    };
+    refreshSkip();
+
+    const cleanup = () => {
+      unbindAct();
+      unbindCancel();
+      unbindDir();
+      dim.destroy();
+      box.destroy();
+      title.destroy();
+      items.forEach((t) => t.destroy());
+      mark.destroy();
+    };
+
+    const jumpTo = (idx: number) => {
+      const j = jumps[idx];
+      audio.sfx("confirm");
+      // Fully-stocked save so reactive content (Act 2/3) has something to show.
+      const slot = newSave();
+      slot.act = j.act;
+      slot.scene = j.scene;
+      slot.stats = { clarity: 9, compassion: 9, courage: 9 };
+      slot.verbs = { observe: true, address: true, witness: true, release: true };
+      slot.blackStones = 3;
+      slot.whiteStones = 3;
+      slot.yellowStones = 3;
+      slot.redStones = 3;
+      slot.goldStone = true;
+      slot.weddingType = "strong";
+      slot.act2Inscription = "I AM WHAT I MET";
+      slot.convictions = {
+        ...(slot.convictions ?? {}),
+        i_am_loved: true,
+        i_can_rest: true,
+        i_will_remain: true,
+      };
+      slot.shadesEncountered = {
+        ...(slot.shadesEncountered ?? {}),
+        the_critic: "sat_with",
+        the_orphan: "sat_with",
+        the_lover: "sat_with",
+      };
+      try {
+        cleanup();
+        audio.music.stop();
+        this.scene.start(j.scene, { save: slot });
+      } catch (err) {
+        console.error("[dev-skip] failed to start", j.scene, err);
+      }
+    };
+
+    const unbindAct = onActionDown(this, "action", () => jumpTo(pick));
+    const unbindCancel = onActionDown(this, "cancel", () => {
+      audio.sfx("cursor");
+      cleanup();
+    });
+    const unbindDir = onDirection(this, (d) => {
+      if (d === "up") {
+        pick = (pick - 1 + jumps.length) % jumps.length;
+        audio.sfx("cursor");
+        refreshSkip();
+      } else if (d === "down") {
+        pick = (pick + 1) % jumps.length;
+        audio.sfx("cursor");
+        refreshSkip();
+      }
+    });
+
+    items.forEach((t, i) => {
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerover", () => {
+        pick = i;
+        refreshSkip();
+      });
+      t.obj.on("pointerdown", () => jumpTo(i));
+    });
+  }
 }
 
 /** Cheap proportional-ish measure: 6px per glyph in the GBC bitmap font. */
