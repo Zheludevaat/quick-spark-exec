@@ -121,35 +121,53 @@ export class TitleScene extends Phaser.Scene {
     // ---- Menu options ----
     const primaryLabel = remaining ? "LEAVE THE IMAGINAL" : save ? "CONTINUE" : "BEGIN";
 
-    const options: { label: string; action: "launch" | "erase" }[] = save
+    const options: { label: string; action: "launch" | "erase" | "settings" }[] = save
       ? [
           { label: primaryLabel, action: "launch" },
           { label: "ERASE SAVE", action: "erase" },
+          { label: "SETTINGS (DEV)", action: "settings" },
         ]
-      : [{ label: primaryLabel, action: "launch" }];
+      : [
+          { label: primaryLabel, action: "launch" },
+          { label: "SETTINGS (DEV)", action: "settings" },
+        ];
 
-    const boxH = save ? 28 : 18;
-    const menuY = save ? 100 : 108;
-    drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
+    // Larger menu box that fits 2-3 options comfortably.
+    const lineH = 11;
+    const boxH = 14 + options.length * lineH;
+    const menuY = GBC_H - boxH - 8;
+    drawGBCBox(this, 12, menuY, GBC_W - 24, boxH);
 
     let cursor = 0;
     const labels: GBCText[] = options.map(
       (opt, i) =>
-        new GBCText(this, 30, menuY + 6 + i * 10, opt.label, {
+        new GBCText(this, 26, menuY + 8 + i * lineH, opt.label, {
           color: COLOR.textLight,
           depth: 110,
         }),
     );
-    const cursorMark = new GBCText(this, 22, menuY + 6, "▶", {
+    const cursorMark = new GBCText(this, 18, menuY + 8, "▶", {
       color: COLOR.textGold,
       depth: 111,
     });
     const refresh = () => {
       labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-      cursorMark.setPosition(22, menuY + 6 + cursor * 10);
+      cursorMark.setPosition(18, menuY + 8 + cursor * lineH);
     };
     refresh();
     this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+
+    // ---- Top-right DEV button (opens skip-act menu) ----
+    const devBtnX = GBC_W - 32;
+    const devBtnY = 4;
+    drawGBCBox(this, devBtnX - 2, devBtnY, 32, 12, 120);
+    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 3, "DEV▸", {
+      color: COLOR.textGold,
+      depth: 121,
+    });
+    devBtn.obj
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.openSkipMenu());
 
     // ---- Boot audio on first user gesture ----
     const audio = getAudio();
