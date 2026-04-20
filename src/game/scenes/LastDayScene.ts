@@ -6,6 +6,7 @@ import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud
 import { getAudio, SONG_LASTDAY } from "../audio";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "./lore";
+import { onActionDown, onDirection } from "../controls";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
@@ -154,8 +155,7 @@ export class LastDayScene extends Phaser.Scene {
     this.hint = new GBCText(this, 4, GBC_H - 9, "WALK. PRESS A NEAR THINGS.", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
 
     this.events.on("vinput-action", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
+    onActionDown(this, "action", () => this.tryInteract());
 
     const usedAtLoad = this.items.filter(t => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (usedAtLoad >= 3) this.exitOpen = true;
@@ -393,16 +393,10 @@ export class LastDayScene extends Phaser.Scene {
       const promptT = new GBCText(this, GBC_W / 2 - 28, 38, `STEP 1: ↓`, { color: COLOR.textAccent, depth: 220, scrollFactor: 0 });
       const symbol = (s: string) => s === "down" ? "↓" : s === "left" ? "←" : s === "right" ? "→" : "↑";
 
+      let unbindDir: (() => void) | null = null;
       const cleanup = () => {
         this.events.off("vinput-down", onDir);
-        this.input.keyboard?.off("keydown-DOWN", kbDown);
-        this.input.keyboard?.off("keydown-LEFT", kbLeft);
-        this.input.keyboard?.off("keydown-RIGHT", kbRight);
-        this.input.keyboard?.off("keydown-UP", kbUp);
-        this.input.keyboard?.off("keydown-S", kbDown);
-        this.input.keyboard?.off("keydown-A", kbLeft);
-        this.input.keyboard?.off("keydown-D", kbRight);
-        this.input.keyboard?.off("keydown-W", kbUp);
+        unbindDir?.();
       };
 
       const advance = () => {
@@ -422,20 +416,8 @@ export class LastDayScene extends Phaser.Scene {
         getAudio().sfx("confirm");
       };
       const onDir = (d: string) => { if (finished) return; if (d === seq[step]) advance(); else getAudio().sfx("miss"); };
-      const onKey = (k: string) => () => onDir(k);
-      const kbDown = onKey("down");
-      const kbLeft = onKey("left");
-      const kbRight = onKey("right");
-      const kbUp = onKey("up");
       this.events.on("vinput-down", onDir);
-      this.input.keyboard?.on("keydown-DOWN", kbDown);
-      this.input.keyboard?.on("keydown-LEFT", kbLeft);
-      this.input.keyboard?.on("keydown-RIGHT", kbRight);
-      this.input.keyboard?.on("keydown-UP", kbUp);
-      this.input.keyboard?.on("keydown-S", kbDown);
-      this.input.keyboard?.on("keydown-A", kbLeft);
-      this.input.keyboard?.on("keydown-D", kbRight);
-      this.input.keyboard?.on("keydown-W", kbUp);
+      unbindDir = onDirection(this, onDir);
 
       this.time.delayedCall(15000, () => {
         if (finished) return;
