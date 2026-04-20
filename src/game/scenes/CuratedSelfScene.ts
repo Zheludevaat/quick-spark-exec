@@ -79,7 +79,6 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
-  private preFightDone = false;
 
   constructor() { super("CuratedSelf"); }
   init(data: { save: SaveSlot }) {
@@ -89,7 +88,6 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.state = "composed";
     this.cursor = 0;
     this.busy = false;
-    this.preFightDone = false;
   }
 
   create() {
