@@ -792,6 +792,7 @@ export function bakeSoryn(scene: Phaser.Scene, key = "soryn") {
   const h = ROWAN_FRAME_H;
   const { ctx, tex } = makeTex(scene, key, w, h);
   SORYN_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.soryn, i * ROWAN_FRAME_W, 0));
+  addGridFrames(tex, ROWAN_FRAME_W, ROWAN_FRAME_H, SORYN_FRAMES.length, 1);
   tex.refresh();
   return key;
 }
