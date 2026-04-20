@@ -5,6 +5,7 @@ import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog, shedAccessory, setRowanSkin } from "./hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
+import { onActionDown } from "../controls";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -226,8 +227,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
     this.events.on("vinput-action", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
+    onActionDown(this, "action", () => this.tryInteract());
 
     this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
     this.hint = new GBCText(this, 4, GBC_H - 9, "TOUCH THE 4 CIRCLES", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });

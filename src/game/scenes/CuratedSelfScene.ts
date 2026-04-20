@@ -5,6 +5,7 @@ import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
 import { runInquiry } from "../inquiry";
 import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
+import { onActionDown, onDirection } from "../controls";
 
 type Phase = "composed" | "fractured" | "exposed" | "released";
 
@@ -125,13 +126,13 @@ export class CuratedSelfScene extends Phaser.Scene {
 
     attachHUD(this, () => this.save.stats);
 
-    const kb = this.input.keyboard!;
-    kb.on("keydown-LEFT",  () => this.move(-1));
-    kb.on("keydown-RIGHT", () => this.move(1));
-    kb.on("keydown-UP",    () => this.move(-2));
-    kb.on("keydown-DOWN",  () => this.move(2));
-    kb.on("keydown-ENTER", () => this.choose(this.cursor));
-    kb.on("keydown-SPACE", () => this.choose(this.cursor));
+    onDirection(this, (d) => {
+      if (d === "left")  this.move(-1);
+      if (d === "right") this.move(1);
+      if (d === "up")    this.move(-2);
+      if (d === "down")  this.move(2);
+    });
+    onActionDown(this, "action", () => this.choose(this.cursor));
     this.events.on("vinput-down", (dir: string) => {
       if (dir === "left")  this.move(-1);
       if (dir === "right") this.move(1);
@@ -446,12 +447,8 @@ export class EpilogueScene extends Phaser.Scene {
       getAudio().sfx("cursor");
       this.refreshCursor();
     };
-    this.input.keyboard?.on("keydown-UP", () => move(-1));
-    this.input.keyboard?.on("keydown-DOWN", () => move(1));
-    this.input.keyboard?.on("keydown-W", () => move(-1));
-    this.input.keyboard?.on("keydown-S", () => move(1));
-    this.input.keyboard?.on("keydown-ENTER", () => this.choose());
-    this.input.keyboard?.on("keydown-SPACE", () => this.choose());
+    onDirection(this, (d) => { if (d === "up") move(-1); else if (d === "down") move(1); });
+    onActionDown(this, "action", () => this.choose());
     this.events.on("vinput-down", (dir: string) => {
       if (dir === "up") move(-1);
       if (dir === "down") move(1);

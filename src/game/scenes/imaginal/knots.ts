@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../../gbcArt";
 import { runDialog } from "../hud";
 import { runInquiry } from "../../inquiry";
 import { getAudio } from "../../audio";
+import { onActionDown, onDirection } from "../../controls";
 import type { SaveSlot } from "../../types";
 
 /**
@@ -100,21 +101,21 @@ export function runReflectionKnot(
     ], () => onDone({ cleared: false }));
   };
 
+  let unbindAct: (() => void) | null = null;
+  let unbindCancel: (() => void) | null = null;
   const cleanup = () => {
     timer.remove(false);
     overlapTimer.remove(false);
-    scene.input.keyboard?.off("keydown-SPACE", observe);
-    scene.input.keyboard?.off("keydown-ENTER", observe);
+    unbindAct?.();
+    unbindCancel?.();
     scene.events.off("vinput-action", observe);
-    scene.input.keyboard?.off("keydown-R", release);
     scene.events.off("vinput-cancel", release);
     box.destroy(); label.destroy(); mimic.destroy();
   };
 
-  scene.input.keyboard?.on("keydown-SPACE", observe);
-  scene.input.keyboard?.on("keydown-ENTER", observe);
+  unbindAct = onActionDown(scene, "action", observe);
+  unbindCancel = onActionDown(scene, "cancel", release);
   scene.events.on("vinput-action", observe);
-  scene.input.keyboard?.on("keydown-R", release);
   scene.events.on("vinput-cancel", release);
 
   // Safety auto-end after 30s
@@ -211,34 +212,24 @@ export function runGlitterKnot(
       ], () => onDone({ cleared: true, stats: { courage: 1 } }));
     }
   };
+  let unbindAct: (() => void) | null = null;
+  let unbindDir: (() => void) | null = null;
   const cleanup = () => {
-    scene.input.keyboard?.off("keydown-UP", up);
-    scene.input.keyboard?.off("keydown-DOWN", down);
-    scene.input.keyboard?.off("keydown-LEFT", swapUp);
-    scene.input.keyboard?.off("keydown-RIGHT", swapDown);
-    scene.input.keyboard?.off("keydown-SPACE", confirm);
-    scene.input.keyboard?.off("keydown-ENTER", confirm);
+    unbindAct?.();
+    unbindDir?.();
     scene.events.off("vinput-action", confirm);
     scene.events.off("vinput-down", vmove);
     box.destroy(); title.destroy(); hint.destroy(); cur.destroy();
     items.forEach(i => i.destroy());
   };
-  const up = () => move(-1);
-  const down = () => move(1);
-  const swapUp = () => swap(-1);
-  const swapDown = () => swap(1);
   const vmove = (dir: string) => {
     if (dir === "up") move(-1);
     if (dir === "down") move(1);
     if (dir === "left") swap(-1);
     if (dir === "right") swap(1);
   };
-  scene.input.keyboard?.on("keydown-UP", up);
-  scene.input.keyboard?.on("keydown-DOWN", down);
-  scene.input.keyboard?.on("keydown-LEFT", swapUp);
-  scene.input.keyboard?.on("keydown-RIGHT", swapDown);
-  scene.input.keyboard?.on("keydown-SPACE", confirm);
-  scene.input.keyboard?.on("keydown-ENTER", confirm);
+  unbindAct = onActionDown(scene, "action", confirm);
+  unbindDir = onDirection(scene, vmove);
   scene.events.on("vinput-action", confirm);
   scene.events.on("vinput-down", vmove);
 }

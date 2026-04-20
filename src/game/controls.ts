@@ -211,6 +211,31 @@ export function onActionDown(
   return cleanup;
 }
 
+/**
+ * Bind a directional handler that fires once per keydown for any of up/down/left/right
+ * (whichever bindings the player has set). Returns an unbind function.
+ */
+export function onDirection(
+  scene: Phaser.Scene,
+  handler: (dir: "up" | "down" | "left" | "right") => void,
+): () => void {
+  const kb = scene.input.keyboard;
+  if (!kb) return () => { /* noop */ };
+  const domHandler = (e: KeyboardEvent) => {
+    const name = normalizeKeyEvent(e);
+    if (!name) return;
+    const b = state.bindings;
+    for (const dir of ["up", "down", "left", "right"] as const) {
+      if (name === b[dir].primary || name === b[dir].secondary) { handler(dir); return; }
+    }
+  };
+  window.addEventListener("keydown", domHandler);
+  const cleanup = () => window.removeEventListener("keydown", domHandler);
+  scene.events.once("shutdown", cleanup);
+  scene.events.once("destroy", cleanup);
+  return cleanup;
+}
+
 /** Trigger a short haptic buzz on supported devices, if enabled. */
 export function buzz(ms = 12) {
   if (!state.haptics) return;

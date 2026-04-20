@@ -26,6 +26,17 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   reapplyLcd(scene);
 
+  let loreOpen = false;
+  let settingsOpen = false;
+
+  const openSettingsGuarded = () => {
+    if (settingsOpen) return;
+    settingsOpen = true;
+    openSettings(scene, () => { settingsOpen = false; rebuildPad(); });
+  };
+  // Expose for gear button.
+  scene.data.set("__openSettingsGuarded", openSettingsGuarded);
+
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
@@ -34,7 +45,6 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     const matches = (a: GameAction) =>
       name === c.bindings[a].primary || name === c.bindings[a].secondary;
 
-    // Allow these whether or not the canvas is focused.
     if (matches("lcd")) toggleLcd(scene);
     else if (matches("mute")) {
       const a = getAudio();
@@ -46,13 +56,9 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
       loreOpen = true;
       openLoreLog(scene, s, () => { loreOpen = false; });
     } else if (matches("settings")) {
-      if (settingsOpen) return;
-      settingsOpen = true;
-      openSettings(scene, () => { settingsOpen = false; rebuildPad(); });
+      openSettingsGuarded();
     }
   };
-  let loreOpen = false;
-  let settingsOpen = false;
   window.addEventListener("keydown", onDomKey);
   scene.events.once("shutdown", () => window.removeEventListener("keydown", onDomKey));
   scene.events.once("destroy", () => window.removeEventListener("keydown", onDomKey));
@@ -244,7 +250,11 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
       if (opening) return;
       opening = true;
       buzz(15);
-      openSettings(scene, () => { opening = false; });
+      const guarded = scene.data.get("__openSettingsGuarded") as (() => void) | undefined;
+      if (guarded) guarded();
+      else openSettings(scene, () => { opening = false; });
+      // Reset opening flag shortly so the next tap works after settings closes.
+      scene.time.delayedCall(400, () => { opening = false; });
     });
     created.push(vis, lbl.obj, hit);
   }

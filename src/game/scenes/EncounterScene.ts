@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt"
 import { writeSave } from "../save";
 import type { Command, SaveSlot, Stats } from "../types";
 import { getAudio, SONG_BATTLE } from "../audio";
+import { onActionDown, onDirection } from "../controls";
 
 type EnemyKind = "reflection" | "echo" | "glitter";
 
@@ -156,13 +157,13 @@ export class EncounterScene extends Phaser.Scene {
     this.refreshCursor();
 
     // Input
-    const kb = this.input.keyboard!;
-    kb.on("keydown-LEFT",  () => this.move(-1));
-    kb.on("keydown-RIGHT", () => this.move(1));
-    kb.on("keydown-UP",    () => this.move(-2));
-    kb.on("keydown-DOWN",  () => this.move(2));
-    kb.on("keydown-ENTER", () => this.choose(this.cursor));
-    kb.on("keydown-SPACE", () => this.choose(this.cursor));
+    onDirection(this, (d) => {
+      if (d === "left")  this.move(-1);
+      if (d === "right") this.move(1);
+      if (d === "up")    this.move(-2);
+      if (d === "down")  this.move(2);
+    });
+    onActionDown(this, "action", () => this.choose(this.cursor));
     this.events.on("vinput-down", (dir: string) => {
       if (dir === "left")  this.move(-1);
       if (dir === "right") this.move(1);

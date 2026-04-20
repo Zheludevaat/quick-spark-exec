@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, wrapText } from "./gbcArt";
 import { getAudio } from "./audio";
+import { onActionDown, onDirection } from "./controls";
 
 export type InquiryChoice = "observe" | "ask" | "confess" | "silent";
 
@@ -72,6 +73,9 @@ export function runInquiry(
     refresh();
   };
 
+  let unbindAct: (() => void) | null = null;
+  let unbindDir: (() => void) | null = null;
+
   const pick = () => {
     cleanup();
     const picked = options[cursor];
@@ -95,17 +99,16 @@ export function runInquiry(
     });
     scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
     let dismissed = false;
+    let unbindReplyAct: (() => void) | null = null;
     const dismiss = () => {
       if (dismissed) return; dismissed = true;
       replyBox.destroy(); replyWho.destroy(); replyBody.destroy(); hint.destroy();
-      scene.input.keyboard?.off("keydown-SPACE", dismiss);
-      scene.input.keyboard?.off("keydown-ENTER", dismiss);
+      unbindReplyAct?.();
       scene.events.off("vinput-action", dismiss);
       scene.input.off("pointerdown", dismiss);
       onDone(picked);
     };
-    scene.input.keyboard?.on("keydown-SPACE", dismiss);
-    scene.input.keyboard?.on("keydown-ENTER", dismiss);
+    unbindReplyAct = onActionDown(scene, "action", dismiss);
     scene.events.on("vinput-action", dismiss);
     scene.time.delayedCall(150, () => scene.input.on("pointerdown", dismiss));
   };
@@ -113,30 +116,18 @@ export function runInquiry(
   const cleanup = () => {
     box.destroy(); who.destroy(); text.destroy(); mark.destroy();
     opts.forEach(t => t.destroy());
-    scene.input.keyboard?.off("keydown-LEFT", left);
-    scene.input.keyboard?.off("keydown-RIGHT", right);
-    scene.input.keyboard?.off("keydown-UP", up);
-    scene.input.keyboard?.off("keydown-DOWN", down);
-    scene.input.keyboard?.off("keydown-SPACE", pick);
-    scene.input.keyboard?.off("keydown-ENTER", pick);
+    unbindAct?.();
+    unbindDir?.();
     scene.events.off("vinput-action", pick);
     scene.events.off("vinput-down", vmove);
   };
 
-  const left = () => move(-1);
-  const right = () => move(1);
-  const up = () => move(-1);
-  const down = () => move(1);
   const vmove = (dir: string) => {
     if (dir === "up" || dir === "left") move(-1);
     if (dir === "down" || dir === "right") move(1);
   };
-  scene.input.keyboard?.on("keydown-LEFT", left);
-  scene.input.keyboard?.on("keydown-RIGHT", right);
-  scene.input.keyboard?.on("keydown-UP", up);
-  scene.input.keyboard?.on("keydown-DOWN", down);
-  scene.input.keyboard?.on("keydown-SPACE", pick);
-  scene.input.keyboard?.on("keydown-ENTER", pick);
+  unbindAct = onActionDown(scene, "action", pick);
+  unbindDir = onDirection(scene, (d) => vmove(d));
   scene.events.on("vinput-action", pick);
   scene.events.on("vinput-down", vmove);
 }

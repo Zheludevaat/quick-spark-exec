@@ -5,6 +5,7 @@ import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { getAudio, SONG_CROSSING } from "../audio";
 import { unlockLore, showLoreToast } from "./lore";
+import { onActionDown } from "../controls";
 
 type Whisper = {
   text: string;
@@ -165,12 +166,10 @@ export class CrossingScene extends Phaser.Scene {
 
     // Bind interact + witness
     this.events.on("vinput-action", () => this.tryDoor());
-    this.input.keyboard?.on("keydown-SPACE", () => this.tryDoor());
-    this.input.keyboard?.on("keydown-ENTER", () => this.tryDoor());
+    onActionDown(this, "action", () => this.tryDoor());
     const witness = () => this.witnessNearestWhisper();
     this.events.on("vinput-cancel", witness);
-    this.input.keyboard?.on("keydown-Q", witness);
-    this.input.keyboard?.on("keydown-B", witness);
+    onActionDown(this, "cancel", witness);
   }
 
   update(t: number, dt: number) {

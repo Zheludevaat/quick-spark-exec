@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { COLOR, GBCText, drawGBCBox, GBC_W, GBC_H } from "./gbcArt";
 import { getAudio } from "./audio";
+import { onActionDown } from "./controls";
 
 /**
  * SorynCompanion — the daimon that follows Rowan after the Silver Threshold binding.
@@ -24,7 +25,9 @@ export class SorynCompanion {
   private lastMoveAt = 0;
   private getContext: CompanionContextLines;
   private ambientLines: string[];
-  private dialogState: { box: any; who: GBCText; text: GBCText; hint: GBCText } | null = null;
+  private dialogState: { box: { destroy: () => void }; who: GBCText; text: GBCText; hint: GBCText } | null = null;
+  private unbindCancel: (() => void) | null = null;
+  private unbindAdvance: (() => void) | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -49,9 +52,8 @@ export class SorynCompanion {
     // Subtle bobbing
     scene.tweens.add({ targets: this.container, y: this.container.y - 2, duration: 1600, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
-    // B-key / vinput-cancel opens daimon speak
-    scene.input.keyboard?.on("keydown-Q", this.openSpeak);
-    scene.input.keyboard?.on("keydown-B", this.openSpeak);
+    // B / cancel (rebindable) opens daimon speak
+    this.unbindCancel = onActionDown(scene, "cancel", this.openSpeak);
     scene.events.on("vinput-cancel", this.openSpeak);
 
     // Ambient whisper every ~15s if idle
@@ -139,14 +141,13 @@ export class SorynCompanion {
       this.dialogState.hint.destroy();
       this.dialogState = null;
       this.speaking = false;
-      this.scene.input.keyboard?.off("keydown-SPACE", advance);
-      this.scene.input.keyboard?.off("keydown-ENTER", advance);
+      this.unbindAdvance?.();
+      this.unbindAdvance = null;
       this.scene.events.off("vinput-action", advance);
       this.scene.input.off("pointerdown", advance);
     };
 
-    this.scene.input.keyboard?.on("keydown-SPACE", advance);
-    this.scene.input.keyboard?.on("keydown-ENTER", advance);
+    this.unbindAdvance = onActionDown(this.scene, "action", advance);
     this.scene.events.on("vinput-action", advance);
     this.scene.time.delayedCall(120, () => {
       if (this.speaking) this.scene.input.on("pointerdown", advance);
@@ -161,8 +162,8 @@ export class SorynCompanion {
 
   destroy() {
     this.ambientTimer?.remove(false);
-    this.scene.input.keyboard?.off("keydown-Q", this.openSpeak);
-    this.scene.input.keyboard?.off("keydown-B", this.openSpeak);
+    this.unbindCancel?.();
+    this.unbindAdvance?.();
     this.scene.events.off("vinput-cancel", this.openSpeak);
     this.container.destroy();
     this.halo.destroy();

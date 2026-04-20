@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../../gbcArt";
 import { getAudio } from "../../audio";
+import { onActionDown } from "../../controls";
 
 /**
  * Generic rhythm-tap mini-game.
@@ -76,8 +77,7 @@ export function runRhythmTap(
     }
   };
 
-  scene.input.keyboard?.on("keydown-SPACE", tap);
-  scene.input.keyboard?.on("keydown-ENTER", tap);
+  const unbindTap = onActionDown(scene, "action", tap);
   scene.events.on("vinput-action", tap);
 
   const update = scene.time.addEvent({
@@ -95,8 +95,7 @@ export function runRhythmTap(
     if (!active) return;
     active = false;
     update.remove(false);
-    scene.input.keyboard?.off("keydown-SPACE", tap);
-    scene.input.keyboard?.off("keydown-ENTER", tap);
+    unbindTap();
     scene.events.off("vinput-action", tap);
     let judgment: RhythmJudgment = "miss";
     if (hits === total) judgment = "great";

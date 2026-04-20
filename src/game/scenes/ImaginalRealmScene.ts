@@ -6,6 +6,7 @@ import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud
 import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
 import { dispatchKnot, KNOT_TAGLINE, KNOT_VERB, type KnotKind, type KnotResult } from "./imaginal/knots";
+import { onActionDown } from "../controls";
 
 type Knot = {
   kind: KnotKind;
@@ -108,8 +109,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
     this.events.on("vinput-action", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
-    this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
+    onActionDown(this, "action", () => this.tryInteract());
 
     // Daimon Mark glyph (top-right of HUD bar)
     const bondLabel = this.daimonBondLabel();
