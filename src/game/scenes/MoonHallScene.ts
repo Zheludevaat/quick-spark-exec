@@ -166,9 +166,9 @@ export class MoonHallScene extends Phaser.Scene {
       if (near.cleared) this.hint.setText("THIS MIRROR IS QUIET.");
       else if (near.kind === "boss") {
         const ready = this.totalStats() >= 5 && this.mirrors.filter(m => m.kind !== "boss").every(m => m.cleared);
-        this.hint.setText(ready ? "A: FACE CURATED SELF" : "CLEAR SMALL MIRRORS FIRST");
+        this.hint.setText(ready ? "A: FACE CURATED SELF" : MIRROR_TAGLINE.boss);
       } else {
-        this.hint.setText(`A: ENTER ${near.kind.toUpperCase()}`);
+        this.hint.setText(`A: ${MIRROR_TAGLINE[near.kind]}`);
       }
     } else {
       this.hint.setText("WALK TO A MIRROR.");
