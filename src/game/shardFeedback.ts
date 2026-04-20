@@ -59,7 +59,7 @@ export function showShardToast(
   } else {
     a.sfx("confirm");
     const t = new GBCText(scene, anchor.x - 24, anchor.y - 14, `FRAGMENT ${fragments}/4`, {
-      color: COLOR.textAccent,
+      color: COLOR.textWarn,
       depth: 220,
     });
     scene.tweens.add({

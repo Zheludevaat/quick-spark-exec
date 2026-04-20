@@ -55,9 +55,10 @@ export const PAL = {
 export const COLOR = {
   void: "#0a0e1a",
   textLight: "#dde6f5",
-  textDim: "#7889a8",
+  // Brighter dim so hint bars stay legible on the #0a0e1a footer strip.
+  textDim: "#9fb0cf",
   textAccent: "#a8c8e8",
-  textWarn: "#d89868",
+  textWarn: "#f0a878",
   textGold: "#ffe098",
 };
 

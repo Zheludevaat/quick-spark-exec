@@ -706,7 +706,7 @@ export function runDialog(
         n++;
         text.setText(s.slice(0, n));
         const ch = s[n - 1];
-        if (n % 2 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
+        if (n % 4 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) {
           typing = false;
           hint.setVisible(true);
