@@ -61,10 +61,12 @@ function buildMoonMap(): number[][] {
 export class MoonHallScene extends Phaser.Scene {
   private save!: SaveSlot;
   private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
   private input2!: InputState;
   private mirrors: Mirror[] = [];
   private dialogActive = false;
   private hint!: GBCText;
+  private focusGlow!: Phaser.GameObjects.Arc;
 
   constructor() { super("MoonHall"); }
   init(data: { save: SaveSlot }) {
@@ -120,6 +122,10 @@ export class MoonHallScene extends Phaser.Scene {
 
     // Player at top
     this.rowan = makeRowan(this, 24, 32);
+    // Soft shadow under Rowan (moves with her)
+    this.rowanShadow = this.add.ellipse(24, 38, 10, 3, 0x000000, 0.35).setDepth(2);
+    // Focus glow that follows the nearest mirror
+    this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
     // Title + hint backings so text stays readable over tilemap walls
     this.add.rectangle(0, 13, GBC_W, 9, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
@@ -160,9 +166,14 @@ export class MoonHallScene extends Phaser.Scene {
     this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 12, GBC_W - 12);
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 22, GBC_H - 18);
     animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
     const near = this.nearestMirror();
     if (near && this.dist(near) < 16 * 16) {
+      // Pull a soft halo onto the focused mirror
+      this.focusGlow.setPosition(near.x, near.y);
+      this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : (near.kind === "boss" ? 0xd86a6a : 0xa8c8e8);
+      this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS MIRROR IS QUIET.");
       else if (near.kind === "boss") {
         const ready = this.totalStats() >= 5 && this.mirrors.filter(m => m.kind !== "boss").every(m => m.cleared);
@@ -171,6 +182,7 @@ export class MoonHallScene extends Phaser.Scene {
         this.hint.setText(`A: ${MIRROR_TAGLINE[near.kind]}`);
       }
     } else {
+      this.focusGlow.fillAlpha = 0;
       this.hint.setText("WALK TO A MIRROR.");
     }
   }
