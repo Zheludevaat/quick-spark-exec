@@ -383,18 +383,33 @@ export class LastDayScene extends Phaser.Scene {
 
   private itemCoat(it: Interactable) {
     this.miniActive = true;
-    // Fold sequence: 3 directional inputs in order (DOWN, LEFT, DOWN). Mistakes are forgiven.
     runDialog(this, [
       { who: "?", text: "Your coat by the door. Pockets full of small unfinished things." },
       { who: "?", text: "Fold it: ↓ ← ↓" },
     ], () => {
       const seq = ["down", "left", "down"];
       let step = 0;
+      let finished = false;
       const promptT = new GBCText(this, GBC_W / 2 - 28, 38, `STEP 1: ↓`, { color: COLOR.textAccent, depth: 220, scrollFactor: 0 });
       const symbol = (s: string) => s === "down" ? "↓" : s === "left" ? "←" : s === "right" ? "→" : "↑";
+
+      const cleanup = () => {
+        this.events.off("vinput-down", onDir);
+        this.input.keyboard?.off("keydown-DOWN", kbDown);
+        this.input.keyboard?.off("keydown-LEFT", kbLeft);
+        this.input.keyboard?.off("keydown-RIGHT", kbRight);
+        this.input.keyboard?.off("keydown-UP", kbUp);
+        this.input.keyboard?.off("keydown-S", kbDown);
+        this.input.keyboard?.off("keydown-A", kbLeft);
+        this.input.keyboard?.off("keydown-D", kbRight);
+        this.input.keyboard?.off("keydown-W", kbUp);
+      };
+
       const advance = () => {
         step++;
         if (step >= seq.length) {
+          finished = true;
+          cleanup();
           promptT.destroy();
           this.commitSeed(it);
           runDialog(this, [
@@ -406,10 +421,13 @@ export class LastDayScene extends Phaser.Scene {
         promptT.setText(`STEP ${step + 1}: ${symbol(seq[step])}`);
         getAudio().sfx("confirm");
       };
-      const onDir = (d: string) => { if (d === seq[step]) advance(); else getAudio().sfx("miss"); };
-      this.events.on("vinput-down", onDir);
+      const onDir = (d: string) => { if (finished) return; if (d === seq[step]) advance(); else getAudio().sfx("miss"); };
       const onKey = (k: string) => () => onDir(k);
-      const kbDown = onKey("down"), kbLeft = onKey("left"), kbRight = onKey("right"), kbUp = onKey("up");
+      const kbDown = onKey("down");
+      const kbLeft = onKey("left");
+      const kbRight = onKey("right");
+      const kbUp = onKey("up");
+      this.events.on("vinput-down", onDir);
       this.input.keyboard?.on("keydown-DOWN", kbDown);
       this.input.keyboard?.on("keydown-LEFT", kbLeft);
       this.input.keyboard?.on("keydown-RIGHT", kbRight);
@@ -418,13 +436,14 @@ export class LastDayScene extends Phaser.Scene {
       this.input.keyboard?.on("keydown-A", kbLeft);
       this.input.keyboard?.on("keydown-D", kbRight);
       this.input.keyboard?.on("keydown-W", kbUp);
-      // safety timeout
+
       this.time.delayedCall(15000, () => {
-        if (!it.used) {
-          promptT.destroy();
-          this.commitSeed(it);
-          runDialog(this, [{ who: "?", text: "You give up folding. You let it slump." }], () => { this.miniActive = false; });
-        }
+        if (finished) return;
+        finished = true;
+        cleanup();
+        promptT.destroy();
+        this.commitSeed(it);
+        runDialog(this, [{ who: "?", text: "You give up folding. You let it slump." }], () => { this.miniActive = false; });
       });
     });
   }
