@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { ASSETS, PAL, pixelText, VIEW_W, VIEW_H } from "../shared";
 
 export class BootScene extends Phaser.Scene {
