@@ -1,9 +1,17 @@
 /**
  * 2.3 — CITRINITAS. The Yellowing.
  *
- * Vertical slice: three "books" presented as inquiries. Each accepted truth
- * sets a Conviction flag. Reading all three (vs minimum 2) = bonus yellow stone
- * + chance at hidden Hypatia encounter.
+ * Three books, each a short monologue + binary inquiry. Accept = conviction
+ * + yellow stone; refuse = the book closes itself.
+ *
+ * Reactivity:
+ *  - The Librarian sits at the desk. Asking her TWICE about "more books"
+ *    activates `read_the_fourth_book` and reveals "ON HER LEAVING."
+ *  - Reading all 3 visible books unlocks the hidden Teacher who hands
+ *    Rowan a sentence she'll carry into Rubedo (saved as
+ *    `flags.teachers_sentence`).
+ *  - If the Lantern Mathematician's Act 1 arc completed, he returns here
+ *    as a wandering scribe.
  */
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
@@ -12,45 +20,11 @@ import { attachHUD, runDialog } from "./hud";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardStone } from "../athanor/operations";
+import { awardNamedStone } from "../athanor/operations";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
-
-type Book = {
-  id: string;
-  title: string;
-  prompt: string;
-  conviction: string;
-  accept: string;
-  refuse: string;
-};
-
-const BOOKS: Book[] = [
-  {
-    id: "anger",
-    title: "ON HER ANGER",
-    prompt: "It was not loud. It was a steady refusal to disappear. Yours?",
-    conviction: "accepted_her_anger",
-    accept: "Yes. I was angry the whole time.",
-    refuse: "No. I was patient.",
-  },
-  {
-    id: "dependence",
-    title: "ON HER NEEDING",
-    prompt: "She asked, often, and called it not asking. Yours?",
-    conviction: "accepted_her_dependence",
-    accept: "Yes. I needed them and pretended otherwise.",
-    refuse: "No. I was self-sufficient.",
-  },
-  {
-    id: "ambition",
-    title: "ON HER WANTING",
-    prompt: "She wanted more than she said aloud, and resented who got it. Yours?",
-    conviction: "accepted_her_ambition",
-    accept: "Yes. I wanted to be chosen.",
-    refuse: "No. I never wanted that.",
-  },
-];
+import { BOOKS, TEACHERS_SENTENCE, type Book } from "../athanor/books";
+import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 const OPENING = [
   { who: "SORYN", text: "Sunlight on yellow paper. Three books." },
@@ -61,6 +35,7 @@ export class CitrinitasScene extends Phaser.Scene {
   private save!: SaveSlot;
   private vesselHud!: VesselHud;
   private read = 0;
+  private librarianAsks = 0;
 
   constructor() {
     super("Citrinitas");
@@ -82,31 +57,123 @@ export class CitrinitasScene extends Phaser.Scene {
       depth: 5,
     });
 
-    runDialog(this, OPENING, () => this.runBook(0));
+    runDialog(this, OPENING, () => this.maybeMathematician());
   }
 
-  private runBook(i: number) {
-    if (i >= BOOKS.length) return this.finish();
-    const b = BOOKS[i];
+  /** Lantern Mathematician cameo (if his Act 1 arc completed). */
+  private maybeMathematician() {
+    const completed = (this.save.souls?.["lantern_mathematician"] ?? 0) >= 1000;
+    if (!completed) return this.librarian();
+    runDialog(
+      this,
+      [
+        { who: "SCRIBE", text: "Rowan. I'm copying lanterns now. Quieter work." },
+        { who: "SCRIBE", text: "Books are easier than lanterns. The numbers stay still." },
+      ],
+      () => this.librarian(),
+    );
+  }
+
+  /** Librarian gateway — asking twice opens the fourth book. */
+  private librarian() {
     runInquiry(
       this,
-      { who: b.title, text: b.prompt },
+      { who: "LIBRARIAN", text: "Three books. Begin where you like." },
       [
-        { choice: "confess", label: "ACCEPT", reply: "The page warms. The truth stays." },
-        { choice: "silent", label: "REFUSE", reply: "The book closes itself. Politely." },
-        { choice: "observe", label: "SKIP", reply: "You walk to the next shelf." },
+        { choice: "observe", label: "BEGIN READING", reply: "She nods. The shelves wait." },
+        { choice: "ask", label: "ARE THESE ALL OF THEM?", reply: "These are the ones for you." },
       ],
       (p) => {
-        if (p.choice === "confess") {
-          this.save.convictions[b.conviction] = true;
-          this.read++;
-          awardStone(this.save, "yellow", 1);
-          this.vesselHud.refresh();
+        if (p.choice === "ask") {
+          this.librarianAsks += 1;
+          if (this.librarianAsks >= 2) {
+            // Already asked once and asking again → fourth book.
+            this.openFourthBook();
+            return;
+          }
+          // First ask — let player loop back.
+          this.librarianAgain();
+          return;
         }
-        writeSave(this.save);
-        this.runBook(i + 1);
+        this.runBook(0);
       },
     );
+  }
+
+  private librarianAgain() {
+    runInquiry(
+      this,
+      { who: "LIBRARIAN", text: "Did you have another question?" },
+      [
+        { choice: "observe", label: "NO. I'LL READ.", reply: "She steps aside." },
+        { choice: "ask", label: "ARE THERE MORE?", reply: "...there is one more. Behind these." },
+      ],
+      (p) => {
+        if (p.choice === "ask") {
+          this.librarianAsks += 1;
+          this.openFourthBook();
+          return;
+        }
+        this.runBook(0);
+      },
+    );
+  }
+
+  private openFourthBook() {
+    activateQuest(this, this.save, "read_the_fourth_book");
+    runDialog(
+      this,
+      [
+        { who: "LIBRARIAN", text: "She reaches behind the others. Hands you a torn page." },
+        { who: "LIBRARIAN", text: "I was wrong to hide it. Not wrong to want to." },
+      ],
+      () => {
+        // Insert the fourth book at the front, then continue normal reading.
+        this.runBook(0, true);
+      },
+    );
+  }
+
+  private visibleBooks(includeFourth: boolean): Book[] {
+    return BOOKS.filter((b) => {
+      if (b.gate) return includeFourth || b.gate(this.save);
+      return true;
+    });
+  }
+
+  private runBook(i: number, fourthUnlocked = false) {
+    const list = this.visibleBooks(fourthUnlocked);
+    if (i >= list.length) return this.finish();
+    const b = list[i];
+    runDialog(this, b.monologue, () => {
+      const opts = b.options(this.save);
+      runInquiry(
+        this,
+        b.prompt,
+        opts.map((o) => ({
+          choice: o.kind === "accept" ? "confess" : "silent",
+          label: o.label,
+          reply: o.reply,
+        })),
+        (picked) => {
+          const chosen = opts.find((o) => o.label === picked.label) ?? opts[0];
+          if (chosen.kind === "accept") {
+            this.save.convictions[b.conviction] = true;
+            this.read++;
+            awardNamedStone(this, this.save, "yellow", b.title.toLowerCase());
+            this.vesselHud.refresh();
+            if (b.id === "fourth") {
+              completeQuest(this, this.save, "read_the_fourth_book");
+              unlockLore(this.save, "on_the_fourth_book");
+              showLoreToast(this, "on_the_fourth_book");
+              this.save.stats.clarity += 1;
+            }
+          }
+          writeSave(this.save);
+          this.runBook(i + 1, fourthUnlocked);
+        },
+      );
+    });
   }
 
   private finish() {
@@ -114,17 +181,23 @@ export class CitrinitasScene extends Phaser.Scene {
       unlockLore(this.save, "on_citrinitas");
       showLoreToast(this, "on_citrinitas");
     }
-    if (this.read >= 3) {
-      // Hidden teacher encounter
+    // Hidden teacher: all 3 visible books accepted.
+    const visibleAccepted =
+      (this.save.convictions.accepted_her_anger ? 1 : 0) +
+      (this.save.convictions.accepted_her_dependence ? 1 : 0) +
+      (this.save.convictions.accepted_her_ambition ? 1 : 0);
+    if (visibleAccepted >= 3) {
       runDialog(
         this,
         [
           { who: "TEACHER", text: "All three? Brave. Carry this:" },
-          { who: "TEACHER", text: "WHAT YOU CALL FAILURE IS A METHOD." },
+          { who: "TEACHER", text: TEACHERS_SENTENCE },
         ],
         () => {
+          this.save.flags.teachers_sentence = true;
           unlockLore(this.save, "on_the_torn_teacher");
           showLoreToast(this, "on_the_torn_teacher");
+          writeSave(this.save);
           returnToThreshold(this, this.save, "citrinitas");
         },
       );
