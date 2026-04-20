@@ -85,6 +85,7 @@ export class SilverThresholdScene extends Phaser.Scene {
   private gate!: Phaser.GameObjects.Container;
   private soryn!: Phaser.GameObjects.Sprite;
   private hint!: GBCText;
+  private stone!: Phaser.GameObjects.Rectangle;
 
   constructor() { super("SilverThreshold"); }
   init(data: { save: SaveSlot }) {
@@ -137,6 +138,14 @@ export class SilverThresholdScene extends Phaser.Scene {
     gateImg.setAlpha(this.save.flags.elements_done ? 1 : 0.4);
     this.gate.add([gateImg]);
     this.gate.setData("img", gateImg);
+
+    // Hidden lore stone in the upper-left "void" — easy to miss, rewards exploration
+    const stoneFound = !!this.save.flags.stone_found;
+    this.stone = this.add.rectangle(14, 42, 6, 4, stoneFound ? 0x3a4868 : 0x7889a8, 1);
+    this.add.rectangle(14, 44, 6, 1, 0x1a2030, 1);
+    if (!stoneFound) {
+      this.tweens.add({ targets: this.stone, alpha: 0.5, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
 
     // Player
     this.rowan = makeRowan(this, 16, 70);
