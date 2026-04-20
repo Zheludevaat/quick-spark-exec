@@ -57,6 +57,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private brightestIdx = 0;
   private fragOrderProgress = 0;
   private missIdx = 0;
+  private brightestTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super("CuratedSelf");
