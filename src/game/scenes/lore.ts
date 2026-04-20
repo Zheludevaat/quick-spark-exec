@@ -626,6 +626,56 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
       "THE WORK CARRIES YOU NOW.",
     ],
   },
+  on_the_inquisitor: {
+    id: "on_the_inquisitor",
+    title: "ON THE INQUISITOR",
+    source: "ACT II — HIDDEN",
+    body: [
+      "HE WAS NEVER A STRANGER.",
+      "YOU APPOINTED HIM. YEARS AGO.",
+      "HE CAN BE DISMISSED THE SAME WAY.",
+    ],
+  },
+  on_the_bride_sang: {
+    id: "on_the_bride_sang",
+    title: "THE BRIDE SANG",
+    source: "ACT II — VARIANT",
+    body: [
+      "SHE STOOD IN THE BATH AND FINISHED THE SONG.",
+      "PANSIES ARE FOR THOUGHTS, SHE SAID.",
+      "THE WATER REMEMBERED ALL OF IT.",
+    ],
+  },
+  on_the_fourth_book: {
+    id: "on_the_fourth_book",
+    title: "THE FOURTH BOOK",
+    source: "ACT II — HIDDEN",
+    body: [
+      "ON HER LEAVING. TORN FROM A LONGER VOLUME.",
+      "THE LIBRARIAN HAD HIDDEN IT BEHIND THE OTHERS.",
+      "SHE WAS NOT WRONG TO HIDE IT. ONLY TO LIE.",
+    ],
+  },
+  on_walking_alone: {
+    id: "on_walking_alone",
+    title: "WALKING ALONE",
+    source: "ACT II — VARIANT",
+    body: [
+      "YOU SAID THANK YOU AND GO HOME.",
+      "SHE BECAME A WISP. THE ROOM HELD ITS BREATH.",
+      "ALONE IS A WAY OF BEING ACCOMPANIED.",
+    ],
+  },
+  on_salvage: {
+    id: "on_salvage",
+    title: "WHAT THE WATER GAVE BACK",
+    source: "ACT II — VARIANT",
+    body: [
+      "A SHARD YOU LET BURN HAS COME BACK WET.",
+      "THE BATH-KEEPER DOES NOT EXPLAIN.",
+      "TAKE IT. APOLOGIES ARE NOT ALWAYS SPOKEN.",
+    ],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */
