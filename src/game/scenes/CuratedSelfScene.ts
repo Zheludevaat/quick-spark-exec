@@ -825,6 +825,9 @@ export class EpilogueScene extends Phaser.Scene {
     const opt = this.options[this.cursor];
     if (opt.action === "ngplus") {
       this.save.flags.ng_plus = true;
+      // Reset to start so Continue doesn't dump the player back into the Epilogue.
+      this.save.scene = "LastDay";
+      this.save.flags.curated_progress_exposed = false;
       writeSave(this.save);
       a.music.stop();
       this.scene.start("Title");
@@ -833,6 +836,9 @@ export class EpilogueScene extends Phaser.Scene {
     if (opt.action === "ascend") {
       this.save.flags.ng_plus = true;
       this.save.flags.ng_plus_ascended = true;
+      // Reset to start; ascended NG+ begins from the Last Day with a gold mark.
+      this.save.scene = "LastDay";
+      this.save.flags.curated_progress_exposed = false;
       writeSave(this.save);
       // Brief white closer with single sentence.
       const flash = this.add
