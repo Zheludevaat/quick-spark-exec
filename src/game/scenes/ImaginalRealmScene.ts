@@ -13,6 +13,8 @@ import {
   type KnotResult,
 } from "./imaginal/knots";
 import { onActionDown } from "../controls";
+import { awardShardFragment } from "../shardFeedback";
+import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 type Knot = {
   kind: KnotKind;
@@ -502,16 +504,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private touchSeedEcho(m: SeedEchoMote) {
     m.touched = true;
     this.save.seedEchoes[m.seedRef] = true;
-    this.save.shardFragments = (this.save.shardFragments ?? 0) + 1;
-    let extraShard = false;
-    if (this.save.shardFragments >= 4) {
-      this.save.shardFragments -= 4;
-      const id = `field_${this.save.shards.length}`;
-      this.save.shards.push(id);
-      extraShard = true;
-    }
+    awardShardFragment(this, this.save, () => `field_${this.save.shards.length}`, {
+      x: m.x,
+      y: m.y,
+    });
     writeSave(this.save);
-    getAudio().sfx("confirm");
     const lines: Record<string, string> = {
       seed_call: "MARA. SHE STILL CALLS.",
       seed_window: "THE CHILD IS GROWN. STILL WAVING.",
@@ -544,20 +541,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       duration: 600,
       onComplete: () => m.halo.destroy(),
     });
-    if (extraShard) {
-      this.cameras.main.flash(160, 255, 224, 152);
-      const s = new GBCText(this, m.x - 28, m.y - 22, "MEMORY SHARD +1", {
-        color: COLOR.textGold,
-        depth: 221,
-      });
-      this.tweens.add({
-        targets: s.obj,
-        alpha: 0,
-        y: m.y - 36,
-        duration: 1600,
-        onComplete: () => s.destroy(),
-      });
+    // Side quest: touch every echo in the field
+    if (this.region === "field" && questStatus(this.save, "all_echoes_field") !== "done") {
+      activateQuest(this, this.save, "all_echoes_field");
+      const fieldRefs = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
+      const allTouched = fieldRefs.every((s) => this.save.seedEchoes[s]);
+      if (allTouched) completeQuest(this, this.save, "all_echoes_field");
     }
+    this.events.emit("stats-changed");
   }
 
   private allowExit(_from: ImaginalRegion): boolean {
@@ -657,22 +648,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (r.stats?.compassion) this.save.stats.compassion += r.stats.compassion;
       if (r.stats?.courage) this.save.stats.courage += r.stats.courage;
       if (r.shardFragments) {
-        this.save.shardFragments = (this.save.shardFragments ?? 0) + r.shardFragments;
-        if (this.save.shardFragments >= 4) {
-          this.save.shardFragments -= 4;
-          const id = `imaginal_${this.save.shards.length}`;
-          this.save.shards.push(id);
-          this.cameras.main.flash(160, 255, 224, 152);
-          const t = new GBCText(this, this.rowan.x - 28, this.rowan.y - 18, "MEMORY SHARD +1", {
-            color: COLOR.textGold,
-            depth: 220,
-          });
-          this.tweens.add({
-            targets: t.obj,
-            alpha: 0,
-            y: this.rowan.y - 32,
-            duration: 1600,
-            onComplete: () => t.destroy(),
+        for (let i = 0; i < r.shardFragments; i++) {
+          awardShardFragment(this, this.save, () => `imaginal_${this.save.shards.length}`, {
+            x: this.rowan.x,
+            y: this.rowan.y,
           });
         }
       }
