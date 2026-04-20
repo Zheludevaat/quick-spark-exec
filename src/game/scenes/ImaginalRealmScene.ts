@@ -462,9 +462,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       // Region status
       if (this.region === "corridor") {
         const cleared = this.totalCleared();
-        if (cleared >= 4 && this.rowan.y > GBC_H - 24)
+        const needed = 3;
+        if (cleared >= needed && this.rowan.y > GBC_H - 24)
           this.hint.setText("A: ENTER THE CURATED SELF");
-        else this.hint.setText(`KNOTS QUIETED ${cleared}/4 NEEDED`);
+        else this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
       } else {
         this.hint.setText(
           this.region === "pools" ? "WALK SOUTH TO THE FIELD" : "WALK SOUTH TO THE CORRIDOR",
@@ -578,21 +579,44 @@ export class ImaginalRealmScene extends Phaser.Scene {
     // Boss door (corridor south edge)
     if (this.region === "corridor" && this.rowan.y > GBC_H - 22) {
       const cleared = this.totalCleared();
-      if (cleared >= 4) {
+      if (cleared >= 3) {
         this.save.scene = "CuratedSelf";
         writeSave(this.save);
         const a = getAudio();
         a.sfx("boss");
         a.music.stop();
-        // Hide companion at threshold
         if (this.companion) this.companion.setVisible(false);
         gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
         return;
       }
     }
     const k = this.nearestKnot();
-    if (!k || this.dist(k) > 16 * 16 || k.cleared) return;
+    if (!k || this.dist(k) > 16 * 16) return;
+    if (k.cleared) {
+      // Re-visit reading: short reflection, no state change.
+      this.dialogActive = true;
+      runDialog(this, [{ who: "Soryn", text: this.knotEcho(k.kind) }], () => {
+        this.dialogActive = false;
+      });
+      return;
+    }
     this.launchKnot(k);
+  }
+
+  /** Short reflective line shown when re-touching an already-quieted knot. */
+  private knotEcho(kind: KnotKind): string {
+    switch (kind) {
+      case "reflection":
+        return "THE MIRROR IS QUIET. NO INSIDE TO READ.";
+      case "echo":
+        return "THE LINE BENEATH HOLDS. YOU HEARD IT.";
+      case "glitter":
+        return "THE AFTERNOON IS WHOLE. EVEN THE DULL PARTS.";
+      case "lantern":
+        return "THE LANTERN STAYS DARK. KINDLY.";
+      case "crown":
+        return "PAPER. STILL PAPER.";
+    }
   }
 
   private launchKnot(k: Knot) {

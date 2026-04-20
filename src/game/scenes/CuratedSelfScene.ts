@@ -527,7 +527,7 @@ export class EpilogueScene extends Phaser.Scene {
       color: COLOR.textLight,
       depth: 110,
     });
-    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, {
+    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}`, {
       color: COLOR.textGold,
       depth: 110,
     });
