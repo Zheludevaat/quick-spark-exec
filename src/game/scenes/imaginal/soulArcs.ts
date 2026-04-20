@@ -891,6 +891,30 @@ const ARCS: Record<SoulId, SoulArc> = {
         kind: "react",
         build: (save: SaveSlot) => {
           const completed = soulsCompleted(save);
+          // Cross-soul memory: name the most recent specific event we noticed.
+          if (hasChoice(save, "walking_saint", "forced")) {
+            return [
+              { who: "ECHO", text: "The saint walked off without thanks. I felt it from here." },
+              { who: "ECHO", text: "I think you took something she wasn't offering." },
+            ];
+          }
+          if (hasChoice(save, "cartographer", "witnessed")) {
+            return [
+              { who: "ECHO", text: "The cartographer's last river runs through me now." },
+              { who: "ECHO", text: "It points back at you. I think the country was always you." },
+            ];
+          }
+          if (hasChoice(save, "lantern_mathematician", "witnessed_neither")) {
+            return [
+              { who: "ECHO", text: "Neither. Of course. He was so relieved." },
+              { who: "ECHO", text: "He puts the lanterns down for whole minutes now." },
+            ];
+          }
+          if (anySoulHasChoice(save, "released") || anySoulHasChoice(save, "stayed")) {
+            return [
+              { who: "ECHO", text: "The twin laughs sometimes. Did you hear it on your way?" },
+            ];
+          }
           if (completed >= 4) {
             return [
               { who: "ECHO", text: "You've been busy. Four souls quieter for you, and counting." },
