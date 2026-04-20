@@ -257,7 +257,10 @@ export function awardSoul(
   if (opts.stats?.courage) save.stats.courage += opts.stats.courage;
   if (opts.shardFragments) {
     for (let i = 0; i < opts.shardFragments; i++) {
-      awardShardFragment(scene, save, () => `soul_${save.shards.length}_${i}`, {});
+      awardShardFragment(scene, save, () => `soul_${save.shards.length}_${i}`, {
+        x: GBC_W / 2,
+        y: GBC_H / 2,
+      });
     }
   }
   if (opts.flag) save.flags[opts.flag] = true;

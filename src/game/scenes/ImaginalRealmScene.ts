@@ -15,6 +15,10 @@ import {
 import { onActionDown } from "../controls";
 import { awardShardFragment } from "../shardFeedback";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
+import { soulsForRegion, type SoulDef } from "./imaginal/souls";
+import { buildSoulSprite } from "./imaginal/soulSprites";
+import { runSoul, isSoulDone } from "./imaginal/soulRunner";
+import { getArc } from "./imaginal/soulArcs";
 
 type Knot = {
   kind: KnotKind;
