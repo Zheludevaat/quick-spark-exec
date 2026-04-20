@@ -59,6 +59,8 @@ export class EncounterScene extends Phaser.Scene {
   private cursor = 0;
   private busy = false;
   private enemy!: Phaser.GameObjects.Sprite;
+  private enemyBob?: Phaser.Tweens.Tween;
+  private enemyAura!: Phaser.GameObjects.Arc;
   private cursorMark!: GBCText;
   private misses = 0;
   private intentText?: GBCText;
