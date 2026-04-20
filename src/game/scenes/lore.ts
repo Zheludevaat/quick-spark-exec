@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { getAudio } from "../audio";
+import { onActionDown, onDirection } from "../controls";
 
 export type LoreEntry = {
   id: string;
@@ -143,13 +144,15 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
   };
   render();
 
+  let unbindAction: (() => void) | null = null;
+  let unbindCancel: (() => void) | null = null;
+  let unbindSettings: (() => void) | null = null;
+  let unbindDir: (() => void) | null = null;
   const cleanup = () => {
-    scene.input.keyboard?.off("keydown-UP", up);
-    scene.input.keyboard?.off("keydown-DOWN", down);
-    scene.input.keyboard?.off("keydown-SPACE", close);
-    scene.input.keyboard?.off("keydown-ENTER", close);
-    scene.input.keyboard?.off("keydown-ESC", close);
-    scene.input.keyboard?.off("keydown-Q", close);
+    unbindAction?.();
+    unbindCancel?.();
+    unbindSettings?.();
+    unbindDir?.();
     scene.events.off("vinput-action", close);
     scene.events.off("vinput-cancel", close);
     dim.destroy(); box.destroy(); title.destroy(); counter.destroy();
@@ -160,12 +163,10 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
   const down = () => { if (ids.length === 0) return; idx = (idx + 1) % ids.length; render(); getAudio().sfx("cursor"); };
   const close = () => { getAudio().sfx("cancel"); cleanup(); };
 
-  scene.input.keyboard?.on("keydown-UP", up);
-  scene.input.keyboard?.on("keydown-DOWN", down);
-  scene.input.keyboard?.on("keydown-SPACE", close);
-  scene.input.keyboard?.on("keydown-ENTER", close);
-  scene.input.keyboard?.on("keydown-ESC", close);
-  scene.input.keyboard?.on("keydown-Q", close);
+  unbindAction = onActionDown(scene, "action", close);
+  unbindCancel = onActionDown(scene, "cancel", close);
+  unbindSettings = onActionDown(scene, "settings", close);
+  unbindDir = onDirection(scene, (d) => { if (d === "up") up(); else if (d === "down") down(); });
   scene.events.on("vinput-action", close);
   scene.events.on("vinput-cancel", close);
 }
