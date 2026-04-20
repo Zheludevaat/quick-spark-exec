@@ -643,9 +643,9 @@ export function runDialog(
   onDone?: () => void,
 ) {
   const boxX = 4,
-    boxY = GBC_H - 56,
-    boxW = GBC_W - 8,
-    boxH = 52;
+    boxH = 64,
+    boxY = GBC_H - boxH - 2,
+    boxW = GBC_W - 8;
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
   const who = new GBCText(scene, boxX + 6, boxY + 4, "", {
     color: COLOR.textAccent,
