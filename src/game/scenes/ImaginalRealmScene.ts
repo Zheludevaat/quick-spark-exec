@@ -124,6 +124,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.save = data.save;
     this.knots = [];
     this.seedEchoes = [];
+    this.souls = [];
     this.dialogActive = false;
     this.knotActive = false;
     this.save.act = 1;
