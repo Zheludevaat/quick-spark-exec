@@ -574,6 +574,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       getAudio().sfx("resolve");
       const picked = this.fragments[this.brightestIdx];
       if (picked) {
+        this.sparkBurst(picked.sprite.x, picked.sprite.y, 0xffe098, 10);
         this.tweens.add({ targets: picked.sprite, alpha: 0.15, scale: 0.6, duration: 500 });
       }
       this.logText.setText(
