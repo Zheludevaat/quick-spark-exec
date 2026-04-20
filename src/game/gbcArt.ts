@@ -1153,6 +1153,7 @@ export function bakeBoss(scene: Phaser.Scene, key = "boss") {
       paintGrid(ctx, f, PAL[st.palKey], (si * 2 + fi) * BOSS_W, 0);
     });
   });
+  addGridFrames(tex, BOSS_W, BOSS_H, 10, 1);
   tex.refresh();
   return key;
 }
