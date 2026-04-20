@@ -3,8 +3,10 @@ import { GBC_W, GBC_H } from "./gbcArt";
 import { BootScene } from "./scenes/BootScene";
 import { TitleScene } from "./scenes/TitleScene";
 import { IntroScene } from "./scenes/IntroScene";
+import { LastDayScene } from "./scenes/LastDayScene";
+import { CrossingScene } from "./scenes/CrossingScene";
 import { SilverThresholdScene } from "./scenes/SilverThresholdScene";
-import { MoonHallScene } from "./scenes/MoonHallScene";
+import { ImaginalRealmScene } from "./scenes/ImaginalRealmScene";
 import { EncounterScene } from "./scenes/EncounterScene";
 import { CuratedSelfScene, EpilogueScene } from "./scenes/CuratedSelfScene";
 
@@ -34,8 +36,10 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       BootScene,
       TitleScene,
       IntroScene,
+      LastDayScene,
+      CrossingScene,
       SilverThresholdScene,
-      MoonHallScene,
+      ImaginalRealmScene,
       EncounterScene,
       CuratedSelfScene,
       EpilogueScene,

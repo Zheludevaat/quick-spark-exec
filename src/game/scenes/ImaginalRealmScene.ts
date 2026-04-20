@@ -14,16 +14,16 @@ type Mirror = {
 };
 
 const MIRROR_TAGLINE: Record<Mirror["kind"], string> = {
-  reflection: "A SHAPE THAT MIMICS YOU.",
-  echo:       "A WORD YOU REGRET.",
+  reflection: "AN IMAGE THAT MIMICS YOU.",
+  echo:       "A WORD THE REALM REMEMBERS.",
   glitter:    "A FRAGMENT OF AN AFTERNOON.",
   boss:       "THE FACE YOU OFFERED.",
 };
 
 const SORYN_AFTER_CLEAR: Record<Mirror["kind"], { who: string; text: string }[]> = {
   reflection: [
-    { who: "Soryn", text: "Seeing it plainly is the first kindness." },
-    { who: "Soryn", text: "Most knots are smaller once they are watched." },
+    { who: "Soryn", text: "Seeing the image plainly is the first kindness." },
+    { who: "Soryn", text: "Most knots are smaller once they are witnessed." },
   ],
   echo: [
     { who: "Soryn", text: "Naming what you meant is half of mending." },
@@ -41,7 +41,7 @@ const SORYN_AFTER_CLEAR: Record<Mirror["kind"], { who: string; text: string }[]>
 
 const MAP_W = 10, MAP_H = 9;
 
-function buildMoonMap(): number[][] {
+function buildImaginalMap(): number[][] {
   const T = TILE_INDEX;
   const m: number[][] = [];
   for (let y = 0; y < MAP_H; y++) {
@@ -58,7 +58,7 @@ function buildMoonMap(): number[][] {
   return m;
 }
 
-export class MoonHallScene extends Phaser.Scene {
+export class ImaginalRealmScene extends Phaser.Scene {
   private save!: SaveSlot;
   private rowan!: Phaser.GameObjects.Container;
   private rowanShadow!: Phaser.GameObjects.Ellipse;
@@ -67,12 +67,17 @@ export class MoonHallScene extends Phaser.Scene {
   private dialogActive = false;
   private hint!: GBCText;
   private focusGlow!: Phaser.GameObjects.Arc;
+  private shard?: Phaser.GameObjects.Arc;
+  private shardX = 144;
+  private shardY = 32;
 
-  constructor() { super("MoonHall"); }
+  constructor() { super("ImaginalRealm"); }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.mirrors = [];
     this.dialogActive = false;
+    // Mark act on entry
+    this.save.act = 1;
   }
 
   create() {
@@ -80,19 +85,16 @@ export class MoonHallScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400);
     getAudio().music.play("moon", SONG_MOON);
 
-    // Paint moon hall tilemap
-    const map = buildMoonMap();
+    const map = buildImaginalMap();
     for (let y = 0; y < MAP_H; y++) {
       for (let x = 0; x < MAP_W; x++) {
         this.add.image(x * TILE, y * TILE, "gbc_tiles", map[y][x]).setOrigin(0, 0);
       }
     }
 
-    // Ambient cyan motes drifting across the hall
     spawnMotes(this, { count: 14, color: 0x5a78b8, alpha: 0.5, driftY: 0.006, driftX: 0.004, depth: 30 });
     spawnMotes(this, { count: 6, color: 0xa8c8e8, alpha: 0.7, driftY: -0.004, driftX: -0.003, depth: 30 });
 
-    // Three minor mirrors + boss mirror
     const layout: { x: number; y: number; kind: Mirror["kind"] }[] = [
       { x: 40,  y: 56, kind: "reflection" },
       { x: 80,  y: 56, kind: "echo" },
@@ -104,7 +106,6 @@ export class MoonHallScene extends Phaser.Scene {
       const sprite = this.add.image(m.x, m.y, "gbc_tiles", cleared ? TILE_INDEX.MIRROR_CLEARED : TILE_INDEX.MIRROR_FRAME);
       let glow: Phaser.GameObjects.Arc | undefined;
       if (!cleared) {
-        // All uncleared mirrors get a soft shimmer; boss gets a warmer red one
         const c = m.kind === "boss" ? 0xd86a6a : 0xa8c8e8;
         glow = this.add.circle(m.x, m.y, m.kind === "boss" ? 12 : 9, c, 0.25);
         this.tweens.add({
@@ -114,24 +115,27 @@ export class MoonHallScene extends Phaser.Scene {
           duration: m.kind === "boss" ? 900 : 1200,
           yoyo: true, repeat: -1,
         });
-        // Subtle vertical sprite bob for living feel
         this.tweens.add({ targets: sprite, y: m.y - 1, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
       }
       this.mirrors.push({ x: m.x, y: m.y, kind: m.kind, cleared, sprite, glow });
     }
 
-    // Player at top
+    // Memory Shard (hidden, top-right). Already collected? hide.
+    if (!this.save.shards.includes("imaginal_1")) {
+      this.shard = this.add.circle(this.shardX, this.shardY, 3, 0xffe098, 1).setDepth(20);
+      const halo = this.add.circle(this.shardX, this.shardY, 5, 0xffe098, 0.4).setDepth(19);
+      this.tweens.add({ targets: halo, scale: 1.8, alpha: 0.05, duration: 1100, yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: this.shard, y: this.shardY - 2, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
+
     this.rowan = makeRowan(this, 24, 32);
-    // Soft shadow under Rowan (moves with her)
     this.rowanShadow = this.add.ellipse(24, 38, 10, 3, 0x000000, 0.35).setDepth(2);
-    // Focus glow that follows the nearest mirror
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
-    // Title + hint backings so text stays readable over tilemap walls
     this.add.rectangle(0, 13, GBC_W, 9, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
-    new GBCText(this, 4, 14, "HALL OF MIRRORS", { color: COLOR.textAccent, depth: 200 });
+    new GBCText(this, 4, 14, "THE IMAGINAL REALM", { color: COLOR.textAccent, depth: 200 });
     this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
-    this.hint = new GBCText(this, 4, GBC_H - 9, "WALK TO A MIRROR", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
+    this.hint = new GBCText(this, 4, GBC_H - 9, "WALK TO AN IMAGE-KNOT", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
 
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
@@ -139,14 +143,19 @@ export class MoonHallScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
-    if (!this.save.flags.moonhall_intro) {
-      this.save.flags.moonhall_intro = true;
+    // First entry: Soryn binds + teaches WITNESS
+    if (!this.save.flags.imaginal_intro) {
+      this.save.flags.imaginal_intro = true;
+      this.save.verbs.witness = true;
       writeSave(this.save);
       this.dialogActive = true;
       this.time.delayedCall(400, () => runDialog(this, [
-        { who: "Soryn", text: "Three small mirrors. Each holds a knot you carry." },
-        { who: "Soryn", text: "Try OBSERVE on first, ADDRESS on second, REMEMBER on third." },
-        { who: "Soryn", text: "RELEASE works on anything - but teaches less." },
+        { who: "Soryn", text: "This is the Imaginal Realm. The Moon's first plateau." },
+        { who: "Soryn", text: "Here, thought is landscape. The mirrors are not glass —" },
+        { who: "Soryn", text: "they are images you mistook for self." },
+        { who: "Soryn", text: "I give you a verb: WITNESS. To stand and see without flinching." },
+        { who: "Soryn", text: "OBSERVE a mimic. ADDRESS an echo. REMEMBER a fragment." },
+        { who: "Soryn", text: "And when the Curated Self steps out — WITNESS it." },
       ], () => { this.dialogActive = false; }));
     }
   }
@@ -168,25 +177,40 @@ export class MoonHallScene extends Phaser.Scene {
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
+    // Shard pickup
+    if (this.shard) {
+      const sdx = this.rowan.x - this.shardX, sdy = this.rowan.y - this.shardY;
+      if (sdx * sdx + sdy * sdy < 9 * 9) {
+        this.save.shards.push("imaginal_1");
+        writeSave(this.save);
+        getAudio().sfx("resolve");
+        const sx = this.shardX, sy = this.shardY;
+        this.tweens.add({ targets: this.shard, scale: 3, alpha: 0, duration: 500, onComplete: () => this.shard?.destroy() });
+        this.shard = undefined;
+        this.cameras.main.flash(160, 255, 224, 152);
+        const t = new GBCText(this, sx - 28, sy - 10, "MEMORY SHARD +1", { color: COLOR.textGold, depth: 220 });
+        this.tweens.add({ targets: t.obj, alpha: 0, y: sy - 22, duration: 1400, onComplete: () => t.destroy() });
+      }
+    }
+
     const near = this.nearestMirror();
     if (near && this.dist(near) < 16 * 16) {
-      // Pull a soft halo onto the focused mirror
       this.focusGlow.setPosition(near.x, near.y);
       this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : (near.kind === "boss" ? 0xd86a6a : 0xa8c8e8);
       this.focusGlow.fillAlpha = 0.25;
-      if (near.cleared) this.hint.setText("THIS MIRROR IS QUIET.");
+      if (near.cleared) this.hint.setText("THIS IMAGE IS QUIET.");
       else if (near.kind === "boss") {
         const cleared = this.mirrors.filter(m => m.kind !== "boss" && m.cleared).length;
         const ready = this.totalStats() >= 5 && cleared === 3;
         if (ready) this.hint.setText("A: FACE THE CURATED SELF");
-        else this.hint.setText(`SEALED. CLEAR 3 MIRRORS (${cleared}/3)`);
+        else this.hint.setText(`SEALED. CLEAR 3 IMAGES (${cleared}/3)`);
       } else {
         this.hint.setText(`A: ${MIRROR_TAGLINE[near.kind]}`);
       }
     } else {
       this.focusGlow.fillAlpha = 0;
       const cleared = this.mirrors.filter(m => m.kind !== "boss" && m.cleared).length;
-      this.hint.setText(`MIRRORS CLEARED ${cleared}/3`);
+      this.hint.setText(`IMAGES CLEARED ${cleared}/3`);
     }
   }
 
@@ -246,13 +270,12 @@ export class MoonHallScene extends Phaser.Scene {
       this.scene.pause();
     };
 
-    // First-time mirror tutorial — explains the verb-loop in plain terms
     if (!this.save.flags.tutorial_mirror) {
       this.save.flags.tutorial_mirror = true;
       writeSave(this.save);
       this.dialogActive = true;
       runDialog(this, [
-        { who: "Soryn", text: "A mirror holds a knot. Each fears one verb." },
+        { who: "Soryn", text: "An image-knot. Each fears one verb." },
         { who: "Soryn", text: "OBSERVE a mimic. ADDRESS an echo. REMEMBER a fragment." },
         { who: "Soryn", text: "Guess wrong and it ripples but won't break. Try again." },
         { who: "Soryn", text: "First-try wins teach most. RELEASE always works - but teaches less." },
