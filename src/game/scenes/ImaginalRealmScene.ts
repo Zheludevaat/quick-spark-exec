@@ -174,13 +174,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
       scrollFactor: 0,
     });
 
-    // First entry: Soryn binds + teaches WITNESS
+    // First entry: load the region first so the player can see the world,
+    // THEN Soryn binds + teaches WITNESS over the rendered scene.
     if (!this.save.flags.imaginal_intro) {
       this.save.flags.imaginal_intro = true;
       this.save.verbs.witness = true;
       writeSave(this.save);
+      this.loadRegion(this.region);
       this.dialogActive = true;
-      this.time.delayedCall(400, () =>
+      this.time.delayedCall(500, () =>
         runDialog(
           this,
           [
@@ -199,7 +201,6 @@ export class ImaginalRealmScene extends Phaser.Scene {
           ],
           () => {
             this.dialogActive = false;
-            this.loadRegion(this.region);
           },
         ),
       );
