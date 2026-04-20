@@ -602,8 +602,10 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private endAscend() {
     this.save.flags.act3_ascended = true;
-    this.save.flags.act1_complete = true;
+    this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
+    delete this.save.flags.curated_progress_exposed;
+    this.save.scene = "Epilogue";
     if (!this.save.shards.includes("golden_self")) this.save.shards.push("golden_self");
     unlockLore(this.save, "on_the_ascent");
     writeSave(this.save);
@@ -652,7 +654,7 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private endGame() {
     this.save.scene = "Epilogue";
-    this.save.flags.act1_complete = true;
+    this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
     writeSave(this.save);
     const a = getAudio();
