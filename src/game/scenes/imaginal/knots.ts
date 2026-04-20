@@ -67,6 +67,7 @@ export function runReflectionKnot(
     .setDepth(45);
   let lastX = rowan.x,
     lastY = rowan.y;
+  let stillSinceMs = 0;
   const trail: { x: number; y: number; t: number }[] = [];
   let done = false;
 
@@ -75,19 +76,22 @@ export function runReflectionKnot(
     loop: true,
     callback: () => {
       trail.push({ x: rowan.x, y: rowan.y, t: scene.time.now });
-      // Drop trail older than 1100ms
       while (trail.length && scene.time.now - trail[0].t > 1100) trail.shift();
       const head = trail[0];
       if (head) {
         mimic.x = head.x + 18;
         mimic.y = head.y;
       }
+      // Track stillness
+      const moved = Math.abs(rowan.x - lastX) + Math.abs(rowan.y - lastY);
+      if (moved < 0.4) stillSinceMs += 30;
+      else stillSinceMs = 0;
       lastX = rowan.x;
       lastY = rowan.y;
     },
   });
 
-  // Detect overlap window: mimic within 8px of rowan AND rowan barely moving
+  // Detect overlap window: mimic within 8px AND Rowan still for 600ms.
   let overlapping = false;
   const overlapTimer = scene.time.addEvent({
     delay: 60,
@@ -95,12 +99,15 @@ export function runReflectionKnot(
     callback: () => {
       const dx = mimic.x - rowan.x,
         dy = mimic.y - rowan.y;
-      overlapping = dx * dx + dy * dy < 36;
+      const close = dx * dx + dy * dy < 36;
+      const still = stillSinceMs >= 600;
+      overlapping = close && still;
       mimic.setAlpha(overlapping ? 0.85 : 0.55);
+      if (overlapping) label.setText("NOW. PRESS A.");
+      else if (close && !still) label.setText("HOLD STILL. THE MIMIC IS CATCHING UP.");
+      else label.setText("STAND STILL. WHEN YOUR REFLECTION OVERLAPS, A.");
     },
   });
-  void lastX;
-  void lastY;
 
   const observe = () => {
     if (done) return;
