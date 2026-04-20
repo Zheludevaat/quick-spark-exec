@@ -403,13 +403,6 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.events.on("vinput-action", handler);
   }
 
-  /** FIRE — hold A while a heat bar rises; release at peak. (Auto-resolve after 2.5s.) */
-  private miniFire(c: { x: number; y: number }, onDone: () => void) {
-    const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
-    const label = new GBCText(this, 8, GBC_H - 28, "HOLD A. RELEASE WHEN BRIGHT.", { color: COLOR.textAccent, depth: 251 });
-    const barBg = this.add.rectangle(20, GBC_H - 14, GBC_W - 40, 4, 0x2a1810, 1).setOrigin(0, 0.5).setDepth(251);
-    const bar   = this.add.rectangle(20, GBC_H - 14, 1, 4, 0xf08868, 1).setOrigin(0, 0.5).setDepth(252);
-    const flame = this.add.circle(c.x, c.y, 4, 0xf08868, 0.6).setDepth(40);
   /** FIRE — hold A while a heat bar rises; release at peak (≥40%). */
   private miniFire(c: { x: number; y: number }, onDone: () => void) {
     const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
