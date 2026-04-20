@@ -6,6 +6,18 @@ import { attachHUD } from "./hud";
 import { runInquiry } from "../inquiry";
 import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
+import {
+  openingWhisper,
+  phaseTaunt,
+  addressReply,
+  phase3Plan,
+  endingTier,
+  endingParagraphs,
+  sorynBark,
+  narratorLine,
+  type SorynEvent,
+} from "../act3/harvest";
+import { unlockLore, showLoreToast } from "./lore";
 
 type Phase = "composed" | "fractured" | "exposed" | "released";
 
@@ -14,13 +26,6 @@ const PHASE_LABEL: Record<Phase, string> = {
   fractured: "PHASE 2/3 - FRACTURED",
   exposed: "PHASE 3/3 - EXPOSED",
   released: "RELEASED",
-};
-
-const PHASE_TAUNT: Record<Phase, string> = {
-  composed: "I am the version of you that smiles for cameras. ADDRESS me three times.",
-  fractured: "I am cracked. Find the brightest piece. OBSERVE in order.",
-  exposed: "I have nothing left. Will you stand and see me? WITNESS.",
-  released: "Silence. Then warmth.",
 };
 
 const PHASE_HUE: Record<Phase, number> = {
@@ -39,6 +44,11 @@ const CMDS_BASE: { label: string; cmd: Command }[] = [
   { label: "RELEASE", cmd: "release" },
 ];
 const CMD_WITNESS: { label: string; cmd: Command } = { label: "WITNESS", cmd: "witness" };
+// Hidden ASCEND command — surfaces only if goldStone is held.
+const CMD_ASCEND: { label: string; cmd: Command } = {
+  label: "ASCEND",
+  cmd: "transmute",
+};
 
 export class CuratedSelfScene extends Phaser.Scene {
   private save!: SaveSlot;
@@ -51,13 +61,19 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
+  private shadeLabel!: GBCText;
   private addressHits = 0;
   private witnessHits = 0;
+  private exposedAddressHits = 0;
+  private exposedReleaseHits = 0;
   private fragments: { sprite: Phaser.GameObjects.Arc; brightness: number; idx: number }[] = [];
   private brightestIdx = 0;
   private fragOrderProgress = 0;
   private missIdx = 0;
   private brightestTimer: Phaser.Time.TimerEvent | null = null;
+  private satWithShades: string[] = [];
+  private shadeFaceIdx = 0;
+  private faceTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super("CuratedSelf");
@@ -66,16 +82,20 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save = data.save;
     this.cmdTexts = [];
     this.cmds = [];
-    // If the player previously chose REMAIN, skip composed/fractured and
-    // resume at exposed so they don't redo phases 1-2.
     this.phase = this.save.flags.curated_progress_exposed ? "exposed" : "composed";
     this.cursor = 0;
     this.busy = false;
     this.addressHits = this.phase === "exposed" ? 3 : 0;
     this.witnessHits = 0;
+    this.exposedAddressHits = 0;
+    this.exposedReleaseHits = 0;
     this.fragments = [];
     this.fragOrderProgress = this.phase === "exposed" ? 3 : 0;
     this.missIdx = 0;
+    this.satWithShades = Object.entries(this.save.shadesEncountered ?? {})
+      .filter(([, v]) => v === "sat_with")
+      .map(([k]) => k);
+    this.shadeFaceIdx = 0;
   }
 
   create() {
@@ -135,13 +155,15 @@ export class CuratedSelfScene extends Phaser.Scene {
 
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL.composed, {
+    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL[this.phase], {
       color: COLOR.textGold,
       depth: 101,
     });
 
-    this.boss = this.add.sprite(GBC_W / 2, 46, "boss", PHASE_FRAME.composed).setOrigin(0.5, 0.5);
-    this.boss.play("boss_composed");
+    this.boss = this.add
+      .sprite(GBC_W / 2, 46, "boss", PHASE_FRAME[this.phase])
+      .setOrigin(0.5, 0.5);
+    this.boss.play(`boss_${this.phase === "released" ? "released" : this.phase}`);
     this.tweens.add({
       targets: this.boss,
       y: 44,
@@ -151,8 +173,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       ease: "Sine.inOut",
     });
 
+    // Small label under boss for shade-face cycling readability.
+    this.shadeLabel = new GBCText(this, GBC_W / 2 - 30, 60, "", {
+      color: COLOR.textDim,
+      depth: 101,
+    });
+
     drawGBCBox(this, 0, 76, GBC_W, 36);
-    this.logText = new GBCText(this, 4, 81, PHASE_TAUNT.composed, {
+    this.logText = new GBCText(this, 4, 81, phaseTaunt(this.phase, this.save), {
       color: COLOR.textAccent,
       depth: 102,
       maxWidthPx: GBC_W - 10,
@@ -161,6 +189,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     drawGBCBox(this, 0, 112, GBC_W, 32);
     this.cmds = [...CMDS_BASE];
     if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
+    if (this.save.goldStone) this.cmds.push(CMD_ASCEND);
     this.cmds.forEach((c, i) => {
       const pos = this.cmdPos(i);
       const t = new GBCText(this, pos.x + 8, pos.y, c.label, {
@@ -178,6 +207,10 @@ export class CuratedSelfScene extends Phaser.Scene {
 
     attachHUD(this, () => this.save.stats);
 
+    // Opening whisper — fading inscription line.
+    this.showWhisper(openingWhisper(this.save));
+    this.speak("enter");
+
     onDirection(this, (d) => {
       if (d === "left") this.move(-1);
       if (d === "right") this.move(1);
@@ -194,23 +227,68 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.events.on("vinput-action", () => this.choose(this.cursor));
   }
 
+  /** Floating gold whisper that fades after a few seconds. */
+  private showWhisper(text: string) {
+    const w = new GBCText(this, 4, 30, text, {
+      color: COLOR.textGold,
+      depth: 150,
+      maxWidthPx: GBC_W - 8,
+    });
+    this.tweens.add({
+      targets: w.obj,
+      alpha: 0,
+      duration: 1800,
+      delay: 2400,
+      onComplete: () => w.destroy(),
+    });
+  }
+
+  /** Soryn line, or narrator if released — shown briefly above the log box. */
+  private speak(event: SorynEvent) {
+    const line = sorynBark(this.save, event) ?? narratorLine(event);
+    const isNarrator = this.save.sorynReleased;
+    const t = new GBCText(this, 4, 68, line, {
+      color: isNarrator ? COLOR.textGold : COLOR.textAccent,
+      depth: 160,
+      maxWidthPx: GBC_W - 8,
+    });
+    this.tweens.add({
+      targets: t.obj,
+      alpha: 0,
+      duration: 1400,
+      delay: 1800,
+      onComplete: () => t.destroy(),
+    });
+  }
+
   private cmdPos(i: number) {
     if (i < 4) return { x: 8 + (i % 2) * 70, y: 118 + Math.floor(i / 2) * 11 };
-    return { x: 56, y: 138 };
+    if (i === 4) return { x: 56, y: 138 };
+    return { x: 100, y: 138 }; // ASCEND slot
   }
 
   /** Greys out commands that are not valid in the current phase. */
   private refreshAvailable() {
     const valid = (cmd: Command) => {
+      if (cmd === "transmute") return this.save.goldStone; // ASCEND always available if held
       if (this.phase === "composed") return cmd === "address" || cmd === "release";
       if (this.phase === "fractured") return cmd === "observe" || cmd === "release";
-      if (this.phase === "exposed") return cmd === "witness" || cmd === "release";
+      if (this.phase === "exposed") {
+        const plan = phase3Plan(this.save);
+        if (cmd === "witness") return plan.needs.witness > 0;
+        if (cmd === "address") return plan.needs.address > 0;
+        if (cmd === "release") return true;
+        return false;
+      }
       return false;
     };
     this.cmdTexts.forEach((t, i) => {
       const cmd = this.cmds[i].cmd;
       if (i === this.cursor) return;
-      t.setColor(valid(cmd) ? COLOR.textLight : COLOR.textDim);
+      const isAscend = cmd === "transmute";
+      t.setColor(
+        valid(cmd) ? (isAscend ? COLOR.textGold : COLOR.textLight) : COLOR.textDim,
+      );
     });
   }
 
@@ -231,19 +309,15 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   // ============================================================================
-  // PHASE 1 — COMPOSED: ADDRESS x3
+  // PHASE 1 — COMPOSED: ADDRESS x3 (replies name owned convictions)
   // ============================================================================
   private handleComposed(cmd: Command) {
     if (cmd === "address") {
       this.addressHits++;
       this.cameras.main.flash(140, 200, 220, 255);
       getAudio().sfx("resolve");
-      const replies = [
-        "The smile loosens. One layer of polish drops.",
-        "The pose softens. Another layer goes.",
-        "The mask falls. Cracks open across the surface.",
-      ];
-      this.logText.setText(replies[this.addressHits - 1] ?? replies[2]);
+      this.logText.setText(addressReply(this.save, this.addressHits));
+      this.speak("phase1_hit");
       if (this.addressHits >= 3) {
         this.time.delayedCall(900, () => this.enterPhase("fractured"));
       } else {
@@ -262,12 +336,12 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   // ============================================================================
-  // PHASE 2 — FRACTURED: OBSERVE in brightest-first order
+  // PHASE 2 — FRACTURED: OBSERVE the brightest; boss face cycles through sat-with shades
   // ============================================================================
   private enterPhase(p: Phase) {
     this.phase = p;
     this.stateText.setText(PHASE_LABEL[p]);
-    this.logText.setText(PHASE_TAUNT[p]);
+    this.logText.setText(phaseTaunt(p, this.save));
     this.boss.play(
       `boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`,
     );
@@ -276,9 +350,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.refreshAvailable();
     if (p === "fractured") this.spawnFragments();
     if (p === "exposed") {
-      // The boss kneels and asks
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
+      this.shadeLabel.setText("");
     }
     this.busy = false;
   }
@@ -294,14 +368,31 @@ export class CuratedSelfScene extends Phaser.Scene {
       const sprite = this.add.circle(fx, fy, 4, 0xd88080, 0.7).setDepth(45);
       this.fragments.push({ sprite, brightness: 0.5, idx: i });
     }
-    // Hide the boss sprite during fractured phase
     this.boss.setVisible(false);
     this.cycleBrightest();
+    this.cycleShadeFace();
+  }
+
+  /** Cycles the small label under the boss between sat-with shade names. */
+  private cycleShadeFace() {
+    if (this.phase !== "fractured") return;
+    if (this.satWithShades.length === 0) {
+      this.shadeLabel.setText("(no faces)");
+    } else {
+      const id = this.satWithShades[this.shadeFaceIdx % this.satWithShades.length];
+      const pretty = id.replace(/_/g, " ").toUpperCase();
+      this.shadeLabel.setText(`FACE: ${pretty}`);
+      this.shadeFaceIdx++;
+    }
+    this.faceTimer?.remove(false);
+    this.faceTimer = this.time.delayedCall(1800, () => this.cycleShadeFace());
   }
 
   private cycleBrightest() {
     if (this.phase !== "fractured") return;
     this.brightestIdx = Math.floor(Math.random() * 3);
+    // sat_with shades shine luminous gold; others stay aggressive red.
+    const luminous = this.satWithShades.length > 0;
     this.fragments.forEach((f, i) => {
       f.brightness = i === this.brightestIdx ? 1 : 0.4;
       this.tweens.add({
@@ -310,9 +401,9 @@ export class CuratedSelfScene extends Phaser.Scene {
         scale: i === this.brightestIdx ? 1.6 : 1,
         duration: 400,
       });
-      f.sprite.fillColor = i === this.brightestIdx ? 0xffe098 : 0xd88080;
+      f.sprite.fillColor =
+        i === this.brightestIdx ? (luminous ? 0xffe098 : 0xffb060) : 0xd88080;
     });
-    // Re-arm — but track the timer so phase change can stop it.
     this.brightestTimer?.remove(false);
     this.brightestTimer = this.time.delayedCall(3000, () => this.cycleBrightest());
   }
@@ -320,6 +411,8 @@ export class CuratedSelfScene extends Phaser.Scene {
   private cleanupFragments() {
     this.brightestTimer?.remove(false);
     this.brightestTimer = null;
+    this.faceTimer?.remove(false);
+    this.faceTimer = null;
     this.fragments.forEach((f) => f.sprite.destroy());
     this.fragments = [];
     this.boss.setVisible(true);
@@ -327,12 +420,9 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private handleFractured(cmd: Command) {
     if (cmd === "observe") {
-      // Need to pick the brightest. We auto-pick the brightest fragment as the target.
-      // Since fragments are abstract, we just check: if "observe" called while brightest is set, success.
       this.fragOrderProgress++;
       this.cameras.main.flash(140, 220, 220, 255);
       getAudio().sfx("resolve");
-      // Dim the picked fragment permanently
       const picked = this.fragments[this.brightestIdx];
       if (picked) {
         this.tweens.add({ targets: picked.sprite, alpha: 0.15, scale: 0.6, duration: 500 });
@@ -340,6 +430,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.logText.setText(
         `Fragment ${this.fragOrderProgress} witnessed. ${3 - this.fragOrderProgress} remain.`,
       );
+      this.speak("phase2_hit");
       if (this.fragOrderProgress >= 3) {
         this.time.delayedCall(900, () => this.enterPhase("exposed"));
       } else {
@@ -352,7 +443,6 @@ export class CuratedSelfScene extends Phaser.Scene {
     } else {
       this.logText.setText("They re-merge briefly. OBSERVE the brightest piece.");
       this.cameras.main.shake(80, 0.003);
-      // Re-merge animation
       this.fragments.forEach((f) =>
         this.tweens.add({ targets: f.sprite, alpha: 0.6, scale: 1, duration: 400 }),
       );
@@ -362,40 +452,75 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   // ============================================================================
-  // PHASE 3 — EXPOSED: WITNESS x3, Plateau-Remain offered after first WITNESS
+  // PHASE 3 — EXPOSED: verb plan keyed to weddingType
   // ============================================================================
   private handleExposed(cmd: Command) {
-    if (cmd === "witness") {
+    const plan = phase3Plan(this.save);
+
+    const tally = () => {
+      const w = this.witnessHits >= plan.needs.witness;
+      const a = this.exposedAddressHits >= plan.needs.address;
+      const r = this.exposedReleaseHits >= plan.needs.release;
+      return w && a && r;
+    };
+
+    if (cmd === "witness" && plan.needs.witness > 0) {
       this.witnessHits++;
       this.cameras.main.flash(220, 200, 220, 255);
       getAudio().sfx("resolve");
-      if (this.witnessHits === 1) {
+      this.speak("phase3_hit");
+      if (this.witnessHits === 1)
         this.logText.setText("It exhales for the first time. 'Thank you.'");
-        this.time.delayedCall(1100, () => this.askPlateauRemain());
-      } else if (this.witnessHits === 2) {
-        this.logText.setText("'Will you remember me kindly?'");
-        this.busy = false;
-      } else {
-        this.logText.setText("It dissolves into a Memory Shard. The Curated Self is at peace.");
-        this.save.shards.push("curated_self");
-        writeSave(this.save);
-        this.tweens.add({
-          targets: this.boss,
-          alpha: 0,
-          duration: 900,
-          onComplete: () => this.endGame(),
-        });
+      else if (this.witnessHits === 2) this.logText.setText("'Will you remember me kindly?'");
+      else this.logText.setText("It is seen. It steadies.");
+      if (this.witnessHits === 1 && plan.witnesses === 3) {
+        this.time.delayedCall(900, () => this.askPlateauRemain());
+        return;
       }
+      if (tally()) return this.victory();
+      this.busy = false;
+    } else if (cmd === "address" && plan.needs.address > 0) {
+      this.exposedAddressHits++;
+      getAudio().sfx("resolve");
+      this.logText.setText("You name what it was. The image relaxes.");
+      this.speak("phase3_hit");
+      if (tally()) return this.victory();
+      this.busy = false;
+    } else if (cmd === "release" && plan.needs.release > 0) {
+      this.exposedReleaseHits++;
+      getAudio().sfx("resolve");
+      this.logText.setText("You let go. It does not vanish; it simply rests.");
+      this.speak("phase3_hit");
+      if (tally()) return this.victory();
+      this.busy = false;
     } else if (cmd === "release") {
-      this.logText.setText("You release. It waits, patiently. Try WITNESS.");
+      this.logText.setText(`Plan: ${plan.label}.`);
       getAudio().sfx("cancel");
       this.busy = false;
     } else {
-      this.logText.setText("Words now would be a leash. Stand. WITNESS.");
+      this.logText.setText(`Wrong verb. Plan: ${plan.label}.`);
       this.cameras.main.shake(60, 0.002);
       getAudio().sfx("miss");
       this.busy = false;
     }
+  }
+
+  private victory() {
+    this.logText.setText("It dissolves into a Memory Shard. The Curated Self is at peace.");
+    if (!this.save.shards.includes("curated_self")) this.save.shards.push("curated_self");
+    unlockLore(this.save, "on_the_return");
+    if (this.save.act2Inscription) {
+      unlockLore(this.save, "on_the_inscription_returns");
+      showLoreToast(this, "on_the_inscription_returns");
+    }
+    writeSave(this.save);
+    this.speak("victory");
+    this.tweens.add({
+      targets: this.boss,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => this.endGame(),
+    });
   }
 
   private askPlateauRemain() {
@@ -426,12 +551,61 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   // ============================================================================
+  // ASCEND — short white road, only when goldStone is held
+  // ============================================================================
+  private handleAscend() {
+    runInquiry(
+      this,
+      {
+        who: this.save.sorynReleased ? "Narrator" : "Soryn",
+        text: "The gold burns at your hip. You may walk into the white now. Or finish the long seeing.",
+      },
+      [
+        { choice: "confess", label: "ASCEND", reply: "The white opens." },
+        { choice: "silent", label: "STAY", reply: "Then keep walking. The long road is real too." },
+      ],
+      (picked) => {
+        if (picked.label === "ASCEND") this.endAscend();
+        else this.busy = false;
+      },
+    );
+  }
+
+  private endAscend() {
+    this.save.flags.act3_ascended = true;
+    this.save.flags.act1_complete = true;
+    this.save.flags.plateau_remain = false;
+    if (!this.save.shards.includes("golden_self")) this.save.shards.push("golden_self");
+    unlockLore(this.save, "on_the_ascent");
+    writeSave(this.save);
+    this.speak("ascend");
+    const a = getAudio();
+    a.music.stop();
+    // White-screen closer
+    const flash = this.add
+      .rectangle(0, 0, GBC_W, GBC_H, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setDepth(900);
+    this.tweens.add({
+      targets: flash,
+      alpha: 1,
+      duration: 1400,
+      onComplete: () => {
+        this.time.delayedCall(700, () =>
+          this.scene.start("Epilogue", { save: this.save }),
+        );
+      },
+    });
+  }
+
+  // ============================================================================
   // ROUTER
   // ============================================================================
   private choose(i: number) {
     if (this.busy) return;
     const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     this.busy = true;
+    if (cmd === "transmute" && this.save.goldStone) return this.handleAscend();
     if (this.phase === "composed") return this.handleComposed(cmd);
     if (this.phase === "fractured") return this.handleFractured(cmd);
     if (this.phase === "exposed") return this.handleExposed(cmd);
@@ -466,6 +640,7 @@ export class EpilogueScene extends Phaser.Scene {
   private cursor = 0;
   private optionTexts: GBCText[] = [];
   private cursorMark!: GBCText;
+  private options: { label: string; action: "ngplus" | "ascend" | "erase" }[] = [];
 
   constructor() {
     super("Epilogue");
@@ -518,45 +693,65 @@ export class EpilogueScene extends Phaser.Scene {
 
     this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
-    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ONE", { color: COLOR.textAccent, depth: 10 });
-    new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
-
-    drawGBCBox(this, 12, 44, GBC_W - 24, 64);
-    const ng = this.save.flags.ng_plus ? " ★" : "";
-    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}${ng}`, {
-      color: COLOR.textLight,
-      depth: 110,
-    });
-    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}${ng}`, {
-      color: COLOR.textLight,
-      depth: 110,
-    });
-    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}${ng}`, {
-      color: COLOR.textLight,
-      depth: 110,
-    });
-    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}${ng}`, {
+    const tier = endingTier(this.save);
+    const tierLabel: Record<string, string> = {
+      ascent: "ASCENT",
+      gold: "GOLD",
+      silver: "SILVER",
+      iron: "IRON",
+      brittle: "BRITTLE",
+    };
+    new GBCText(this, GBC_W / 2 - 22, 14, "ACT THREE", { color: COLOR.textAccent, depth: 10 });
+    new GBCText(this, GBC_W / 2 - 26, 24, `ENDING: ${tierLabel[tier]}`, {
       color: COLOR.textGold,
-      depth: 110,
+      depth: 10,
     });
-    new GBCText(this, 18, 92, "THE IMAGINAL IS BEHIND YOU.", {
-      color: COLOR.textAccent,
-      maxWidthPx: GBC_W - 36,
-      depth: 110,
-    });
+
+    drawGBCBox(this, 8, 36, GBC_W - 16, 70);
+    const paragraphs = endingParagraphs(this.save);
+    let y = 40;
+    for (const para of paragraphs.slice(0, 4)) {
+      new GBCText(this, 12, y, para, {
+        color: COLOR.textLight,
+        depth: 110,
+        maxWidthPx: GBC_W - 24,
+      });
+      y += 16;
+    }
+
+    // Stats strip
+    const ng = this.save.flags.ng_plus ? " ★" : "";
+    new GBCText(
+      this,
+      8,
+      108,
+      `C:${this.save.stats.clarity} K:${this.save.stats.compassion} V:${this.save.stats.courage} ◆${this.save.shards.length}${ng}`,
+      { color: COLOR.textDim, depth: 110 },
+    );
+
+    // Build option list per tier
+    this.options = [];
+    if (tier === "ascent" || this.save.goldStone) {
+      this.options.push({ label: "ASCEND (NG+ ★)", action: "ascend" });
+    }
+    this.options.push({ label: "WALK AGAIN (NG+)", action: "ngplus" });
+    this.options.push({ label: "ERASE RESTART", action: "erase" });
 
     this.add
-      .rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92)
+      .rectangle(0, GBC_H - 40, GBC_W, 40, 0x05070d, 0.92)
       .setOrigin(0, 0)
       .setDepth(199);
-    this.optionTexts = [
-      new GBCText(this, 18, GBC_H - 24, "WALK AGAIN (NG+)", {
-        color: COLOR.textGold,
-        depth: 200,
-      }),
-      new GBCText(this, 18, GBC_H - 14, "ERASE RESTART", { color: COLOR.textDim, depth: 200 }),
-    ];
-    this.cursorMark = new GBCText(this, 8, GBC_H - 24, "▶", { color: COLOR.textGold, depth: 200 });
+    this.optionTexts = this.options.map(
+      (o, i) =>
+        new GBCText(this, 18, GBC_H - 36 + i * 11, o.label, {
+          color: i === 0 ? COLOR.textGold : COLOR.textDim,
+          depth: 200,
+        }),
+    );
+    this.cursorMark = new GBCText(this, 8, GBC_H - 36, "▶", {
+      color: COLOR.textGold,
+      depth: 200,
+    });
     this.optionTexts.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => {
@@ -570,7 +765,7 @@ export class EpilogueScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
 
     const move = (d: number) => {
-      this.cursor = (this.cursor + d + 2) % 2;
+      this.cursor = (this.cursor + d + this.options.length) % this.options.length;
       getAudio().sfx("cursor");
       this.refreshCursor();
     };
@@ -590,21 +785,50 @@ export class EpilogueScene extends Phaser.Scene {
     this.optionTexts.forEach((t, i) =>
       t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim),
     );
-    this.cursorMark.setPosition(8, this.cursor === 0 ? GBC_H - 24 : GBC_H - 14);
+    this.cursorMark.setPosition(8, GBC_H - 36 + this.cursor * 11);
   }
 
   private choose() {
     const a = getAudio();
     a.sfx("confirm");
-    if (this.cursor === 0) {
-      // NG+: keep stats and shards, mark flag, return to title.
+    const opt = this.options[this.cursor];
+    if (opt.action === "ngplus") {
       this.save.flags.ng_plus = true;
       writeSave(this.save);
       a.music.stop();
       this.scene.start("Title");
       return;
     }
-    // 2-step erase confirm via inquiry — single A press should never wipe a save.
+    if (opt.action === "ascend") {
+      this.save.flags.ng_plus = true;
+      this.save.flags.ng_plus_ascended = true;
+      writeSave(this.save);
+      // Brief white closer with single sentence.
+      const flash = this.add
+        .rectangle(0, 0, GBC_W, GBC_H, 0xffffff, 0)
+        .setOrigin(0, 0)
+        .setDepth(900);
+      const line = new GBCText(this, GBC_W / 2 - 60, GBC_H / 2 - 4, "AND BEGIN AGAIN, GOLDEN.", {
+        color: 0x000000 as unknown as string,
+        depth: 901,
+      });
+      line.obj.setAlpha(0);
+      this.tweens.add({ targets: flash, alpha: 1, duration: 1200 });
+      this.tweens.add({
+        targets: line.obj,
+        alpha: 1,
+        duration: 1200,
+        delay: 600,
+        onComplete: () => {
+          this.time.delayedCall(1400, () => {
+            a.music.stop();
+            this.scene.start("Title");
+          });
+        },
+      });
+      return;
+    }
+    // ERASE — 2-step confirm
     runInquiry(
       this,
       { who: "Soryn", text: "Erase the entire journey? This cannot be undone." },
