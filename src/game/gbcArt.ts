@@ -363,11 +363,8 @@ export function bakeTileset(scene: Phaser.Scene, key = "gbc_tiles") {
   const h = TILE;
   const { ctx, tex } = makeTex(scene, key, w, h);
   TILE_DEFS.forEach((t, i) => paintGrid(ctx, t.rows, PAL[t.pal], i * TILE, 0));
+  addGridFrames(tex, TILE, TILE, TILE_DEFS.length, 1);
   tex.refresh();
-  // Register each tile as a numbered frame so `add.image(..., key, idx)` works.
-  TILE_DEFS.forEach((_t, i) => {
-    tex.add(i, 0, i * TILE, 0, TILE, TILE);
-  });
   return key;
 }
 
