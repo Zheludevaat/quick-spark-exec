@@ -204,6 +204,180 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
       "IT WAS NEVER THE SAME WALK.",
     ],
   },
+
+  // ===== Act 1 — Plateau Souls (revealed by completing arcs) =====
+  soul_cartographer: {
+    id: "soul_cartographer",
+    title: "THE CARTOGRAPHER",
+    source: "POOLS — SOUL ARC",
+    body: [
+      "HE MAPPED A COUNTRY THAT WAS NOT THERE.",
+      "HE FINISHED IT WHEN A WALKER STAYED.",
+      "THE LAST RIVER WAS A QUESTION MARK.",
+    ],
+  },
+  soul_weeping_twin: {
+    id: "soul_weeping_twin",
+    title: "THE WEEPING TWIN",
+    source: "POOLS — SOUL ARC",
+    body: [
+      "SHE WEPT AT HER REFLECTION.",
+      "THE REFLECTION WEPT BACK, SLIGHTLY LATE.",
+      "NEITHER REMEMBERED WHICH WAS FIRST.",
+    ],
+  },
+  soul_drowned_poet: {
+    id: "soul_drowned_poet",
+    title: "OPHELIA",
+    source: "POOLS — SOUL ARC (NAMED)",
+    body: [
+      '"PANSIES, THAT\'S FOR THOUGHTS."',
+      "SHE FORGOT THE WORD. THE WATER FORGOT.",
+      "A WALKER REMEMBERED. SHE COULD STOP.",
+    ],
+  },
+  soul_mirror_philosopher: {
+    id: "soul_mirror_philosopher",
+    title: "NARCISSUS, READING PLOTINUS",
+    source: "POOLS — SOUL ARC (NAMED)",
+    body: [
+      "HE INSISTED THE POOL WAS THE TRUER WORLD.",
+      "HE WAS HALF RIGHT, WHICH IS THE WORST",
+      "AMOUNT OF RIGHT TO BE.",
+    ],
+  },
+  soul_collector: {
+    id: "soul_collector",
+    title: "THE COLLECTOR",
+    source: "FIELD — SOUL ARC",
+    body: [
+      "JAR OF MOTES. EYES TOO BRIGHT.",
+      "HE TRADES YOU A FRAGMENT FOR THREE.",
+      "THE JAR IS NEVER QUITE FULL.",
+    ],
+  },
+  soul_sleeper: {
+    id: "soul_sleeper",
+    title: "ON SLEEP",
+    source: "FIELD — SOUL ARC",
+    body: [
+      "HE WILL NOT WAKE.",
+      "HE WAS NEVER GOING TO.",
+      "BEING SEEN, IT TURNED OUT, WAS ENOUGH.",
+    ],
+  },
+  soul_walking_saint: {
+    id: "soul_walking_saint",
+    title: "SIMONE",
+    source: "FIELD — SOUL ARC (NAMED)",
+    body: [
+      "SHE REFUSED EVERY GIFT, KINDLY.",
+      '"AFFLICTION IS THE ONLY HONEST',
+      'POSSESSION." SHE THANKED YOU FOR STAYING.',
+    ],
+  },
+  soul_composer: {
+    id: "soul_composer",
+    title: "LUDWIG, LATE",
+    source: "FIELD — SOUL ARC (NAMED)",
+    body: [
+      "HE COULD NOT HEAR THE FIELD'S MUSIC.",
+      "A WALKER TAPPED IT FOR HIM.",
+      "HE HEARD IT ONCE. THAT WAS ENOUGH.",
+    ],
+  },
+  soul_crowned_one: {
+    id: "soul_crowned_one",
+    title: "THE CROWNED ONE",
+    source: "CORRIDOR — SOUL ARC",
+    body: [
+      "ALREADY COMPOSED. FAINTLY SMUG.",
+      "THE CROWN WAS PAPER ALL ALONG.",
+      "PAPER FELT LIGHTER ONCE WITNESSED.",
+    ],
+  },
+  soul_stonechild: {
+    id: "soul_stonechild",
+    title: "ON NAMING",
+    source: "CORRIDOR — SOUL ARC",
+    body: [
+      "HE FORGOT HIS NAME.",
+      "THREE LANTERNS HELD ITS SYLLABLES.",
+      "ELIAS. HE THANKED YOU. HE WAITED WELL.",
+    ],
+  },
+  soul_lantern_mathematician: {
+    id: "soul_lantern_mathematician",
+    title: "PASCAL, COUNTING",
+    source: "CORRIDOR — SOUL ARC (NAMED)",
+    body: [
+      "HE COUNTED INFINITIES BY LAMPLIGHT.",
+      "ALL. NONE. BOTH. NEITHER.",
+      "THE QUESTION WAS THE LANTERN.",
+    ],
+  },
+  soul_weighed_heart: {
+    id: "soul_weighed_heart",
+    title: "MA'AT'S FEATHER",
+    source: "CORRIDOR — SOUL ARC (NAMED)",
+    body: [
+      "SHE ASKED YOU TO HOLD A FEATHER.",
+      "YOU STOOD STILL. THE WEIGHT DID NOT CHANGE.",
+      "SHE FEARED IT WOULD. IT NEVER DID.",
+    ],
+  },
+  soul_echo: {
+    id: "soul_echo",
+    title: "THE WANDERER",
+    source: "ANY REGION — SOUL ARC",
+    body: [
+      "A FAINT VERSION OF SOMEONE.",
+      "POSSIBLY YOU. POSSIBLY EARLIER.",
+      "WE NOT-KNEW TOGETHER. IT HELPED.",
+    ],
+  },
+
+  // ===== Act 1 — World Expansion (unlocked by quest chains) =====
+  on_the_plateau: {
+    id: "on_the_plateau",
+    title: "ON THE PLATEAU",
+    source: "GATHERED FROM TWO SOULS",
+    body: [
+      "THE PLATEAU IS NOT A PLACE.",
+      "IT IS WHAT WAITING LOOKS LIKE",
+      "WHEN THE WAITER FORGETS WHY.",
+    ],
+  },
+  on_the_imaginal: {
+    id: "on_the_imaginal",
+    title: "ON THE IMAGINAL",
+    source: "MARGIN OF A LATE BOOK",
+    body: [
+      "BETWEEN SENSE AND IDEA.",
+      "NOT IMAGINARY. NOT LITERAL.",
+      "A REALER THIRD COUNTRY. — H.C.",
+    ],
+  },
+  on_the_shades: {
+    id: "on_the_shades",
+    title: "ON THE SHADES",
+    source: "SORYN, OFFHAND",
+    body: [
+      "FAME IS A LANTERN.",
+      "THE PLATEAU NOTICES LANTERNS.",
+      "THE LANTERN-HOLDER, RARELY, NOTICES BACK.",
+    ],
+  },
+  on_witnessing: {
+    id: "on_witnessing",
+    title: "ON WITNESSING",
+    source: "EARNED BY THE VERB",
+    body: [
+      "TO STAND AND SEE WITHOUT FLINCHING.",
+      "TO ADD NOTHING. TO TAKE NOTHING.",
+      "THE HARDEST KINDNESS. ALSO THE LIGHTEST.",
+    ],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */

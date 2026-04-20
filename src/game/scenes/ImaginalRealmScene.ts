@@ -15,6 +15,10 @@ import {
 import { onActionDown } from "../controls";
 import { awardShardFragment } from "../shardFeedback";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
+import { soulsForRegion, type SoulDef } from "./imaginal/souls";
+import { buildSoulSprite } from "./imaginal/soulSprites";
+import { runSoul, isSoulDone } from "./imaginal/soulRunner";
+import { getArc } from "./imaginal/soulArcs";
 
 type Knot = {
   kind: KnotKind;
@@ -105,6 +109,13 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
   private knotTracker!: GBCText;
+  private souls: {
+    def: SoulDef;
+    container: Phaser.GameObjects.Container;
+    halo: Phaser.GameObjects.Arc;
+    nameLabel?: GBCText;
+    hookLabel?: GBCText;
+  }[] = [];
 
   constructor() {
     super("ImaginalRealm");
@@ -113,6 +124,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.save = data.save;
     this.knots = [];
     this.seedEchoes = [];
+    this.souls = [];
     this.dialogActive = false;
     this.knotActive = false;
     this.save.act = 1;
@@ -217,6 +229,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (this.regionRoot) this.regionRoot.destroy();
     this.knots = [];
     this.seedEchoes = [];
+    // Tear down any souls from the previous region.
+    this.souls.forEach((s) => {
+      s.container.destroy();
+      s.halo.destroy();
+      s.nameLabel?.destroy();
+      s.hookLabel?.destroy();
+    });
+    this.souls = [];
     this.region = region;
     this.save.region = region;
     writeSave(this.save);
@@ -323,7 +343,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Place rowan at the entry side. We track which region they came from
+    // Spawn souls for this region (skip those already finished — keep the world
+    // feeling alive but uncluttered; finished souls return as faint statues).
+    for (const def of soulsForRegion(this.save, region)) {
+      const built = buildSoulSprite(this, def.archetype, def.x, def.y);
+      if (isSoulDone(this.save, def.id)) {
+        built.container.setAlpha(0.45);
+      }
+      this.regionRoot.add(built.container);
+      this.regionRoot.add(built.halo);
+      this.souls.push({ def, container: built.container, halo: built.halo });
+    }
     // so a "go back north" flow lands them at the south edge instead of
     // teleporting back to the original entry.
     const from = this.lastRegion;
@@ -478,9 +508,38 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
+    // Soul proximity: pulse halo + show name/hook label.
+    const nearSoul = this.nearestSoul();
+    for (const s of this.souls) {
+      const isNear = s === nearSoul;
+      s.halo.fillAlpha = isNear ? (isSoulDone(this.save, s.def.id) ? 0.15 : 0.3) : 0;
+      if (isNear) {
+        if (!s.nameLabel) {
+          s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
+            color: COLOR.textGold,
+            depth: 22,
+          });
+          s.hookLabel = new GBCText(this, 4, GBC_H - 9, s.def.hook, {
+            color: COLOR.textWarn,
+            depth: 200,
+            scrollFactor: 0,
+            maxWidthPx: GBC_W - 8,
+          });
+        }
+      } else if (s.nameLabel) {
+        s.nameLabel.destroy();
+        s.nameLabel = undefined;
+        s.hookLabel?.destroy();
+        s.hookLabel = undefined;
+      }
+    }
+
     // Hint + focus
     const near = this.nearestKnot();
-    if (near && this.dist(near) < 16 * 16) {
+    if (nearSoul) {
+      // Soul takes hint priority — its hookLabel is already showing.
+      this.focusGlow.fillAlpha = 0;
+    } else if (near && this.dist(near) < 16 * 16) {
       this.focusGlow.setPosition(near.x, near.y);
       this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : 0xa8c8e8;
       this.focusGlow.fillAlpha = 0.25;
@@ -501,6 +560,21 @@ export class ImaginalRealmScene extends Phaser.Scene {
         );
       }
     }
+  }
+
+  private nearestSoul() {
+    let best: (typeof this.souls)[number] | null = null;
+    let bd = 18 * 18;
+    for (const s of this.souls) {
+      const dx = this.rowan.x - s.def.x;
+      const dy = this.rowan.y - s.def.y;
+      const d = dx * dx + dy * dy;
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return best;
   }
 
   private touchSeedEcho(m: SeedEchoMote) {
@@ -607,6 +681,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
         gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
         return;
       }
+    }
+    // Soul takes priority over knot when both are in range.
+    const soul = this.nearestSoul();
+    if (soul) {
+      this.dialogActive = true;
+      runSoul(this, this.save, getArc(soul.def.id), () => {
+        this.dialogActive = false;
+        // Soul may have completed — refresh visual state on next frame.
+        if (isSoulDone(this.save, soul.def.id)) soul.container.setAlpha(0.45);
+      });
+      return;
     }
     const k = this.nearestKnot();
     if (!k || this.dist(k) > 16 * 16) return;
