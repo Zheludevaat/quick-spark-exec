@@ -124,7 +124,7 @@ export class TitleScene extends Phaser.Scene {
       : [{ label: primaryLabel, action: "launch" }];
 
     const boxH = save ? 28 : 18;
-    const menuY = 124;
+    const menuY = 112;
     drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
 
     let cursor = 0;
