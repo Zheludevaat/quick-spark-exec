@@ -160,6 +160,7 @@ export class SilverThresholdScene extends Phaser.Scene {
         c.visited = true;
         this.save.flags[`elem_${c.kind}`] = true;
         c.sprite.setAlpha(0.35);
+        getAudio().sfx("resolve");
         if (c.kind === "air")   this.save.stats.clarity++;
         if (c.kind === "fire")  this.save.stats.courage++;
         if (c.kind === "water") this.save.stats.compassion++;
