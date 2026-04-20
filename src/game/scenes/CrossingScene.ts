@@ -263,11 +263,11 @@ export class CrossingScene extends Phaser.Scene {
       const fromLeft = Math.random() < 0.5;
       const y = 36 + Math.random() * (GBC_H - 60);
       const obj = new GBCText(this, fromLeft ? -40 : GBC_W + 8, y, text, {
-        color: COLOR.textDim,
+        color: COLOR.textLight,
         depth: 60,
       });
-      obj.obj.setAlpha(0.65);
-      const vx = (fromLeft ? 1 : -1) * (0.012 + Math.random() * 0.008);
+      obj.obj.setAlpha(0.85);
+      const vx = (fromLeft ? 1 : -1) * (0.007 + Math.random() * 0.005);
       this.whispers.push({
         text,
         x: fromLeft ? -40 : GBC_W + 8,
