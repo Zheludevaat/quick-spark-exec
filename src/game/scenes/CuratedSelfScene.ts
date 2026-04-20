@@ -165,14 +165,21 @@ export class CuratedSelfScene extends Phaser.Scene {
 
 export class EpilogueScene extends Phaser.Scene {
   private save!: SaveSlot;
+  private cursor = 0;
+  private optionTexts: GBCText[] = [];
+  private cursorMark!: GBCText;
+
   constructor() { super("Epilogue"); }
-  init(data: { save: SaveSlot }) { this.save = data.save; }
+  init(data: { save: SaveSlot }) {
+    this.save = data.save;
+    this.cursor = 0;
+    this.optionTexts = [];
+  }
 
   create() {
     this.cameras.main.setBackgroundColor("#0a0e1a");
     this.cameras.main.fadeIn(700);
 
-    // Quiet starfield
     for (let i = 0; i < 40; i++) {
       this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
         1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
@@ -187,26 +194,52 @@ export class EpilogueScene extends Phaser.Scene {
     new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 18, 84, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
 
-    // Action prompts with backing strip for legibility
-    this.add.rectangle(0, GBC_H - 26, GBC_W, 26, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
-    new GBCText(this, 6, GBC_H - 22, "A: WALK AGAIN",      { color: COLOR.textGold, depth: 200 });
-    new GBCText(this, 6, GBC_H - 12, "B: ERASE  RESTART",  { color: COLOR.textDim,  depth: 200 });
+    this.add.rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
+    this.optionTexts = [
+      new GBCText(this, 18, GBC_H - 24, "WALK AGAIN", { color: COLOR.textGold, depth: 200 }),
+      new GBCText(this, 18, GBC_H - 14, "ERASE RESTART", { color: COLOR.textDim, depth: 200 }),
+    ];
+    this.cursorMark = new GBCText(this, 8, GBC_H - 24, "▶", { color: COLOR.textGold, depth: 200 });
+    this.optionTexts.forEach((t, i) => {
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerdown", () => {
+        this.cursor = i;
+        this.refreshCursor();
+        this.choose();
+      });
+    });
+    this.refreshCursor();
 
-    // Attach HUD so touch users get virtual A/B buttons
     attachHUD(this, () => this.save.stats);
 
-    const walk  = () => this.scene.start("Title");
-    const erase = () => { clearSave(); this.scene.start("Title"); };
+    const move = (d: number) => {
+      this.cursor = (this.cursor + d + 2) % 2;
+      this.refreshCursor();
+    };
+    this.input.keyboard?.on("keydown-UP", () => move(-1));
+    this.input.keyboard?.on("keydown-DOWN", () => move(1));
+    this.input.keyboard?.on("keydown-W", () => move(-1));
+    this.input.keyboard?.on("keydown-S", () => move(1));
+    this.input.keyboard?.on("keydown-ENTER", () => this.choose());
+    this.input.keyboard?.on("keydown-SPACE", () => this.choose());
+    this.events.on("vinput-down", (dir: string) => {
+      if (dir === "up") move(-1);
+      if (dir === "down") move(1);
+    });
+    this.events.on("vinput-action", () => this.choose());
+  }
 
-    this.input.keyboard?.on("keydown-ENTER",     walk);
-    this.input.keyboard?.on("keydown-SPACE",     walk);
-    this.input.keyboard?.on("keydown-A",         walk);
-    this.input.keyboard?.on("keydown-B",         erase);
-    this.input.keyboard?.on("keydown-BACKSPACE", erase);
-    this.events.on("vinput-action", walk);
-    this.events.on("vinput-cancel", erase);
-    // Tap-to-walk-again as a safety net (deferred so the click that opened
-    // this scene doesn't immediately advance it)
-    this.time.delayedCall(200, () => this.input.on("pointerdown", walk));
+  private refreshCursor() {
+    this.optionTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim));
+    this.cursorMark.setPosition(8, this.cursor === 0 ? GBC_H - 24 : GBC_H - 14);
+  }
+
+  private choose() {
+    if (this.cursor === 0) {
+      this.scene.start("Title");
+      return;
+    }
+    clearSave();
+    this.scene.start("Title");
   }
 }
