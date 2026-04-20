@@ -143,6 +143,7 @@ export class EncounterScene extends Phaser.Scene {
   private move(d: number) {
     if (this.busy) return;
     this.cursor = (this.cursor + d + 4) % 4;
+    getAudio().sfx("cursor");
     this.refreshCursor();
   }
   private refreshCursor() {
@@ -156,11 +157,13 @@ export class EncounterScene extends Phaser.Scene {
     if (this.busy) return;
     const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     this.busy = true;
+    const audio = getAudio();
     if (cmd === this.def.weakness) {
       this.hp = 0;
       this.drawHp();
       this.logText.setText(this.def.resolved);
       this.cameras.main.flash(180, 220, 230, 255);
+      audio.sfx("resolve");
       this.tweens.add({ targets: this.enemy, alpha: 0, duration: 800 });
       // Apply base reward
       if (this.def.reward.clarity)    this.save.stats.clarity    += this.def.reward.clarity;
@@ -174,12 +177,14 @@ export class EncounterScene extends Phaser.Scene {
         this.time.delayedCall(400, () => {
           new GBCText(this, GBC_W / 2 - 28, 50, "FIRST-TRY +1!", { color: COLOR.textGold, depth: 300 });
           this.cameras.main.flash(120, 255, 224, 152);
+          audio.sfx("confirm");
         });
       }
       writeSave(this.save);
       this.time.delayedCall(1700, () => { this.onDone(true); this.scene.stop(); });
     } else if (cmd === "release") {
       this.logText.setText("You release without seeing. The shape lingers, gentler.");
+      audio.sfx("cancel");
       this.tweens.add({ targets: this.enemy, alpha: 0.3, duration: 700 });
       this.time.delayedCall(1300, () => { this.onDone(false); this.scene.stop(); });
     } else {
@@ -188,6 +193,7 @@ export class EncounterScene extends Phaser.Scene {
       this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
       this.cameras.main.shake(120, 0.004);
+      audio.sfx("miss");
       // Telegraph the weakness after the first miss
       if (this.misses === 1 && !this.intentText) {
         this.intentText = new GBCText(this, 4, 14, `FEARS:${this.def.weakness.toUpperCase()}`, {
@@ -199,6 +205,7 @@ export class EncounterScene extends Phaser.Scene {
       if (this.hp <= 0) {
         this.logText.setText("It dissolves anyway - you wore it out by trying.");
         this.busy = true;
+        audio.sfx("hit");
         this.tweens.add({ targets: this.enemy, alpha: 0, duration: 700 });
         this.time.delayedCall(1300, () => { this.onDone(true); this.scene.stop(); });
       }
