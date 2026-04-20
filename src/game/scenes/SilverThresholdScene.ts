@@ -139,10 +139,10 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.gate.add([gateImg]);
     this.gate.setData("img", gateImg);
 
-    // Hidden lore stone in the upper-left "void" — easy to miss, rewards exploration
+    // Hidden lore stone tucked at the far end of the path — rewards exploration
     const stoneFound = !!this.save.flags.stone_found;
-    this.stone = this.add.rectangle(14, 42, 6, 4, stoneFound ? 0x3a4868 : 0x7889a8, 1);
-    this.add.rectangle(14, 44, 6, 1, 0x1a2030, 1);
+    this.stone = this.add.rectangle(14, 58, 6, 4, stoneFound ? 0x3a4868 : 0x7889a8, 1);
+    this.add.rectangle(14, 60, 6, 1, 0x1a2030, 1);
     if (!stoneFound) {
       this.tweens.add({ targets: this.stone, alpha: 0.5, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
