@@ -116,7 +116,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     // Title plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, "COMPOSED", { color: COLOR.textAccent, depth: 101 });
+    this.stateText = new GBCText(this, 4, 14, STATE_LINES.composed.phaseLabel, { color: COLOR.textGold, depth: 101 });
 
     // Boss sprite + subtle hover bob
     this.boss = this.add.sprite(GBC_W / 2, 46, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
