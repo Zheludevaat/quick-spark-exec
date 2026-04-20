@@ -489,6 +489,192 @@ export class ImaginalRealmScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Three syllable lanterns for the Stonechild's name quest. Each lights when
+   * Rowan stands within ~12px (no button press — passive OBSERVE). When all 3
+   * are lit, save.flags.stonechild_name_known is set so the Stonechild's
+   * "EL · I · AS" inquiry option becomes available.
+   */
+  private spawnSyllableLanterns() {
+    const positions: { syllable: string; x: number; y: number }[] = [
+      { syllable: "EL", x: 24, y: 48 },
+      { syllable: "I", x: 80, y: 112 },
+      { syllable: "AS", x: 144, y: 48 },
+    ];
+    const litFlags = this.save.flags;
+    for (const p of positions) {
+      const flagKey = `lantern_lit_${p.syllable}`;
+      const lit = !!litFlags[flagKey];
+      const halo = this.add
+        .circle(p.x, p.y, 6, 0xffe098, lit ? 0.45 : 0.15)
+        .setDepth(18);
+      const flame = this.add
+        .circle(p.x, p.y - 3, 2, lit ? 0xffe098 : 0x4a4a3a, lit ? 1 : 0.5)
+        .setDepth(19);
+      // Lantern body
+      const body = this.add.rectangle(p.x, p.y, 4, 6, 0x584830, 1).setDepth(18);
+      this.regionRoot.add(body);
+      this.regionRoot.add(halo);
+      this.regionRoot.add(flame);
+      if (lit) {
+        this.tweens.add({
+          targets: halo,
+          scale: 1.5,
+          alpha: 0.2,
+          duration: 1100,
+          yoyo: true,
+          repeat: -1,
+        });
+      }
+      this.syllableLanterns.push({
+        syllable: p.syllable,
+        x: p.x,
+        y: p.y,
+        flame,
+        halo,
+        lit,
+      });
+    }
+  }
+
+  /** Light a lantern (idempotent). Updates save + checks the all-3 milestone. */
+  private litLantern(l: (typeof this.syllableLanterns)[number]) {
+    if (l.lit) return;
+    l.lit = true;
+    this.save.flags[`lantern_lit_${l.syllable}`] = true;
+    l.flame.setFillStyle(0xffe098, 1);
+    l.halo.setFillStyle(0xffe098, 0.45);
+    this.tweens.add({
+      targets: l.halo,
+      scale: 1.5,
+      alpha: 0.2,
+      duration: 1100,
+      yoyo: true,
+      repeat: -1,
+    });
+    // Floating syllable text
+    const t = new GBCText(this, l.x - 6, l.y - 18, l.syllable, {
+      color: COLOR.textGold,
+      depth: 220,
+    });
+    this.tweens.add({
+      targets: t.obj,
+      alpha: 0,
+      y: l.y - 30,
+      duration: 1800,
+      onComplete: () => t.destroy(),
+    });
+    getAudio().sfx("confirm");
+    // All 3 lit?
+    if (this.syllableLanterns.every((x) => x.lit)) {
+      this.save.flags.stonechild_name_known = true;
+    }
+    writeSave(this.save);
+  }
+
+  /**
+   * Spawn the Echo as a permanent follower once the Walking Saint has been
+   * witnessed (echo_follower_unlocked flag). She trails Rowan one step
+   * behind on the opposite side from Soryn (Soryn left → Echo right).
+   */
+  private spawnEchoFollower() {
+    if (this.echoFollower) return;
+    if (!this.save.flags.echo_follower_unlocked) return;
+    const c = this.add.container(this.rowan.x + 14, this.rowan.y - 4).setDepth(4);
+    // Tiny robed figure — pale blue
+    const robe = this.add.rectangle(0, 2, 6, 8, 0x586878, 0.85);
+    const head = this.add.rectangle(0, -3, 5, 4, 0xa8c8e8, 0.9);
+    c.add(robe);
+    c.add(head);
+    const halo = this.add.circle(this.rowan.x + 14, this.rowan.y - 4, 6, 0xa8c8e8, 0.18).setDepth(3);
+    this.tweens.add({
+      targets: halo,
+      scale: 1.3,
+      alpha: 0.05,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+    });
+    // Drifting bob
+    this.tweens.add({
+      targets: c,
+      y: c.y - 1.5,
+      duration: 1700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    // Ambient bark every ~22s when idle
+    const barkLines = [
+      "I AM A FAINTER VERSION.",
+      "YOU OUTPACE ME, KINDLY.",
+      "THE SAINT WALKED ON. SO DID I.",
+      "TWO SHADOWS. NEITHER FULL.",
+    ];
+    const barkTimer = this.time.addEvent({
+      delay: 22000,
+      loop: true,
+      callback: () => {
+        if (this.dialogActive || this.knotActive) return;
+        const line = barkLines[Math.floor(Math.random() * barkLines.length)];
+        const t = new GBCText(this, c.x - 24, c.y - 18, line, {
+          color: COLOR.textDim,
+          depth: 220,
+        });
+        this.tweens.add({
+          targets: t.obj,
+          alpha: 0,
+          y: c.y - 32,
+          duration: 2400,
+          onComplete: () => t.destroy(),
+        });
+      },
+    });
+    this.echoFollower = { container: c, halo, barkTimer };
+  }
+
+  private updateEchoFollower() {
+    if (!this.echoFollower) return;
+    // Mirror Soryn: she sits opposite the player's facing direction.
+    const dir = this.rowan.getData("dir") as string | undefined;
+    let ox = 14,
+      oy = -4;
+    switch (dir) {
+      case "up":
+        ox = 0;
+        oy = 10;
+        break;
+      case "down":
+        ox = 0;
+        oy = -16;
+        break;
+      case "left":
+        ox = -16;
+        oy = -4;
+        break;
+      case "right":
+        ox = 16;
+        oy = -4;
+        break;
+    }
+    const tx = this.rowan.x + ox;
+    const ty = this.rowan.y + oy;
+    this.echoFollower.container.x = Phaser.Math.Linear(this.echoFollower.container.x, tx, 0.06);
+    this.echoFollower.container.y = Phaser.Math.Linear(this.echoFollower.container.y, ty, 0.06);
+    this.echoFollower.halo.setPosition(
+      this.echoFollower.container.x,
+      this.echoFollower.container.y,
+    );
+  }
+
+  private destroyEchoFollower() {
+    if (!this.echoFollower) return;
+    this.echoFollower.barkTimer?.remove(false);
+    this.echoFollower.container.destroy();
+    this.echoFollower.halo.destroy();
+    this.echoFollower = undefined;
+  }
+
   private regionIntro(region: ImaginalRegion): { who: string; text: string }[] {
     if (region === "pools")
       return [
