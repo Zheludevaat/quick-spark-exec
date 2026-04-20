@@ -203,7 +203,7 @@ export class EncounterScene extends Phaser.Scene {
   private drawHp() {
     this.hpBar.clear();
     // Plate at top: 50px wide bar
-    const x = 60, y = 12, w = 30, h = 3;
+    const x = GBC_W - 80, y = 24, w = 72, h = 2;
     this.hpBar.fillStyle(0x2a3550, 1); this.hpBar.fillRect(x, y, w, h);
     const pct = this.hp / this.def.hp;
     const color = pct > 0.6 ? 0x6ab84a : pct > 0.3 ? 0xe0c060 : 0xd84a4a;
