@@ -201,6 +201,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 22, GBC_H - 18);
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+    if (this.companion) {
+      this.companion.update();
+      if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) this.companion.pingMovement();
+    }
 
     // Shard pickup
     if (this.shard) {
