@@ -70,6 +70,7 @@ const STATE_FRAME: Record<State, number> = {
 export class CuratedSelfScene extends Phaser.Scene {
   private save!: SaveSlot;
   private state: State = "composed";
+  private cmds: { label: string; cmd: Command }[] = [];
   private cmdTexts: GBCText[] = [];
   private cursor = 0;
   private busy = false;
@@ -77,14 +78,17 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
+  private preFightDone = false;
 
   constructor() { super("CuratedSelf"); }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.cmdTexts = [];
+    this.cmds = [];
     this.state = "composed";
     this.cursor = 0;
     this.busy = false;
+    this.preFightDone = false;
   }
 
   create() {
