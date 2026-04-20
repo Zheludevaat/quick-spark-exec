@@ -101,6 +101,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     const c = getControls();
     if (page === "main") {
       title.setText("SETTINGS · DISPLAY & TOUCH");
+      const audio = getAudio();
+      const volPct = Math.round(audio.volume * 100);
       const rows: { label: string; value: string }[] = [
         { label: "TOUCH LAYOUT", value: c.touchLayout.toUpperCase() },
         { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
@@ -110,12 +112,14 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
           label: "DIALOG AUTO-ADV",
           value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
         },
+        { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
+        { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
         { label: "REBIND KEYS →", value: "" },
         { label: "RESET DEFAULTS", value: "" },
       ];
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
       rows.forEach((r, idx) => {
-        const y = 30 + idx * 11;
+        const y = 26 + idx * 10;
         const isCur = idx === cursor;
         const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
           color: COLOR.textAccent,
@@ -219,6 +223,18 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       case 4:
         cycleAuto(dir);
         break;
+      case 5: {
+        const a = getAudio();
+        // 10% steps; if muted, unmute first.
+        if (a.muted) a.setMuted(false);
+        a.setVolume(a.volume + dir * 0.1);
+        break;
+      }
+      case 6: {
+        const a = getAudio();
+        a.setMuted(!a.muted);
+        break;
+      }
     }
     getAudio().sfx("cursor");
     render();
@@ -226,11 +242,11 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
 
   const activateMain = () => {
     switch (cursor) {
-      case 5:
+      case 7:
         page = "keys";
         cursor = 0;
         break;
-      case 6:
+      case 8:
         resetControls();
         break;
       default:
@@ -277,7 +293,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     }
     if (page === "keys") {
       page = "main";
-      cursor = 5;
+      cursor = 7;
       render();
       return;
     }
@@ -290,7 +306,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       getAudio().sfx("cursor");
       render();
     } else if (d === "down") {
-      const max = page === "main" ? 6 : ACTION_ORDER.length - 1;
+      const max = page === "main" ? 8 : ACTION_ORDER.length - 1;
       cursor = Math.min(max, cursor + 1);
       getAudio().sfx("cursor");
       render();

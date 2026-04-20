@@ -59,29 +59,38 @@ export class TitleScene extends Phaser.Scene {
     const spacing = 22;
     const totalW = spacing * (spheres.length - 1);
     const startX = GBC_W / 2 - totalW / 2;
+    const saveForSpheres = loadSave();
+    const actReached = saveForSpheres?.act ?? 0;
     spheres.forEach((sp, i) => {
       const sx = startX + i * spacing;
+      // Spheres at or below the player's current Act glow at full strength;
+      // unreached spheres are dimmer to hint at the road ahead.
+      const reached = i <= actReached;
+      const haloAlpha = reached ? 0.28 : 0.12;
+      const bodyAlpha = reached ? 1 : 0.35;
       // Soft halo
-      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, 0.28);
+      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, haloAlpha);
       this.tweens.add({
         targets: halo,
         scale: 1.3,
-        alpha: 0.08,
+        alpha: haloAlpha * 0.3,
         duration: 1800 + i * 140,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",
       });
       // Sphere body — concentric discs for a pixel-shaded ball
-      g.fillStyle(sp.halo, 1);
+      g.fillStyle(sp.halo, bodyAlpha);
       g.fillCircle(sx, sphereCY, sp.r);
-      g.fillStyle(sp.mid, 1);
+      g.fillStyle(sp.mid, bodyAlpha);
       g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 1));
-      g.fillStyle(sp.core, 1);
+      g.fillStyle(sp.core, bodyAlpha);
       g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 2));
-      // Specular highlight
-      g.fillStyle(0xffffff, 0.55);
-      g.fillCircle(sx - 1, sphereCY - 1, 1);
+      // Specular highlight (only on reached spheres)
+      if (reached) {
+        g.fillStyle(0xffffff, 0.55);
+        g.fillCircle(sx - 1, sphereCY - 1, 1);
+      }
     });
 
     spawnMotes(this, {
@@ -164,9 +173,84 @@ export class TitleScene extends Phaser.Scene {
       this.scene.start(next, { save: slot });
     };
     const erase = () => {
-      audio.sfx("cancel");
-      clearSave();
-      this.scene.restart();
+      // Two-step gate: show a confirmation overlay before wiping the save.
+      audio.sfx("cursor");
+      const dim = this.add
+        .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.82)
+        .setOrigin(0, 0)
+        .setDepth(950)
+        .setInteractive();
+      const box = drawGBCBox(this, 16, 50, GBC_W - 32, 44, 951);
+      const q1 = new GBCText(this, 24, 56, "ERASE THE SAVE?", {
+        color: COLOR.textGold,
+        depth: 952,
+      });
+      const q2 = new GBCText(this, 24, 66, "THIS CANNOT BE UNDONE.", {
+        color: COLOR.textDim,
+        depth: 952,
+      });
+      const yes = new GBCText(this, 24, 80, "▶ YES, ERASE", {
+        color: COLOR.textLight,
+        depth: 952,
+      });
+      const no = new GBCText(this, 92, 80, "  NO", {
+        color: COLOR.textLight,
+        depth: 952,
+      });
+      let pick = 0; // 0 = YES, 1 = NO (default cursor on YES; user must move)
+      const refreshConfirm = () => {
+        yes.setText(pick === 0 ? "▶ YES, ERASE" : "  YES, ERASE");
+        no.setText(pick === 1 ? "▶ NO" : "  NO");
+        yes.setColor(pick === 0 ? COLOR.textGold : COLOR.textLight);
+        no.setColor(pick === 1 ? COLOR.textGold : COLOR.textLight);
+      };
+      refreshConfirm();
+      const cleanupConfirm = () => {
+        unbindAct();
+        unbindCancel();
+        unbindDir();
+        dim.destroy();
+        box.destroy();
+        q1.destroy();
+        q2.destroy();
+        yes.destroy();
+        no.destroy();
+      };
+      const unbindAct = onActionDown(this, "action", () => {
+        if (pick === 0) {
+          audio.sfx("cancel");
+          cleanupConfirm();
+          clearSave();
+          this.scene.restart();
+        } else {
+          audio.sfx("cursor");
+          cleanupConfirm();
+        }
+      });
+      const unbindCancel = onActionDown(this, "cancel", () => {
+        audio.sfx("cursor");
+        cleanupConfirm();
+      });
+      const unbindDir = onDirection(this, (d) => {
+        if (d === "left" || d === "right") {
+          pick = pick === 0 ? 1 : 0;
+          audio.sfx("cursor");
+          refreshConfirm();
+        }
+      });
+      // Pointer support
+      yes.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        pick = 0;
+        refreshConfirm();
+        audio.sfx("cancel");
+        cleanupConfirm();
+        clearSave();
+        this.scene.restart();
+      });
+      no.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        audio.sfx("cursor");
+        cleanupConfirm();
+      });
     };
     const confirm = () => {
       const opt = options[cursor];
