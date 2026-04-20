@@ -420,14 +420,13 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
       .setDepth(padDepth + 5)
       .setInteractive();
     hit.on("pointerdown", () => {
-      if (loreOpen || settingsOpen) return;
-      const s = loadSave();
-      if (!s) return;
       buzz(8);
-      loreOpen = true;
-      openLoreLog(scene, s, () => {
-        loreOpen = false;
-      });
+      const guarded = scene.data.get("__openLoreGuarded") as (() => void) | undefined;
+      if (guarded) guarded();
+      else {
+        const s = loadSave();
+        if (s) openLoreLog(scene, s);
+      }
     });
     created.push(vis, hit);
   }
