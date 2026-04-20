@@ -323,6 +323,17 @@ export class CuratedSelfScene extends Phaser.Scene {
       } else {
         this.busy = false;
       }
+    } else if (cmd === "remember") {
+      // REMEMBER softens the room — names a sat-with shade if you have any.
+      const sat = this.satWithShades[0];
+      if (sat) {
+        const pretty = sat.replace(/_/g, " ").toUpperCase();
+        this.logText.setText(`You remember: ${pretty}. The image flickers, less sure.`);
+      } else {
+        this.logText.setText("You remember nothing in particular. The pose holds.");
+      }
+      getAudio().sfx("confirm");
+      this.busy = false;
     } else if (cmd === "release") {
       this.logText.setText("You step back. The image only steadies. ADDRESS to crack it.");
       getAudio().sfx("cancel");
@@ -352,7 +363,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
-      this.shadeLabel.setText("");
+      // Persistent plan hint under the boss so the player knows what to do.
+      const plan = phase3Plan(this.save);
+      this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
     this.busy = false;
   }
@@ -809,7 +822,7 @@ export class EpilogueScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(900);
       const line = new GBCText(this, GBC_W / 2 - 60, GBC_H / 2 - 4, "AND BEGIN AGAIN, GOLDEN.", {
-        color: 0x000000 as unknown as string,
+        color: "#1a1a1a",
         depth: 901,
       });
       line.obj.setAlpha(0);
