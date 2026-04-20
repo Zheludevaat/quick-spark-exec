@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
-import { attachHUD, InputState, makeRowan } from "./hud";
+import { attachHUD, InputState, makeRowan, animateRowan } from "./hud";
 
 type Dialog = { who: string; text: string };
 
@@ -125,12 +125,16 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (this.dialogActive) return;
     const speed = 0.06 * dt;
     const i = this.input2.poll();
-    if (i.left)  this.rowan.x -= speed;
-    if (i.right) this.rowan.x += speed;
-    if (i.up)    this.rowan.y -= speed;
-    if (i.down)  this.rowan.y += speed;
+    let dx = 0, dy = 0;
+    if (i.left)  dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up)    dy -= speed;
+    if (i.down)  dy += speed;
+    this.rowan.x += dx;
+    this.rowan.y += dy;
     this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 24, VIEW_W - 24);
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 90, VIEW_H - 20);
+    animateRowan(this.rowan, dx, dy);
 
     // Auto-trigger element circles on touch
     for (const c of this.circles) {
