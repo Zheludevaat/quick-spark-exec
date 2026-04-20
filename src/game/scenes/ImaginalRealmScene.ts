@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { ImaginalRegion, SaveSlot } from "../types";
-import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { attachHUD, mountImaginalProgressBadge, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./imaginal/knots";
 import { onActionDown } from "../controls";
 import { awardShardFragment } from "../shardFeedback";
+import { emitHudStatChanged } from "../ui/hudSignals";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite } from "./imaginal/soulSprites";
