@@ -200,6 +200,16 @@ export class SilverThresholdScene extends Phaser.Scene {
         this.save.flags[`elem_${c.kind}`] = true;
         c.sprite.setAlpha(0.35);
         getAudio().sfx("resolve");
+        // Burst ring + sparkle on activation
+        const burstColor = c.kind === "air" ? 0xdde6f5 : c.kind === "fire" ? 0xf08868 : c.kind === "water" ? 0x88c0f0 : 0xa8c890;
+        const ring = this.add.circle(c.x, c.y, 4, burstColor, 0.6).setDepth(40);
+        this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 600, ease: "Sine.out", onComplete: () => ring.destroy() });
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2;
+          const sp = this.add.rectangle(c.x, c.y, 1, 1, burstColor, 1).setDepth(41);
+          this.tweens.add({ targets: sp, x: c.x + Math.cos(ang) * 14, y: c.y + Math.sin(ang) * 14, alpha: 0, duration: 500, onComplete: () => sp.destroy() });
+        }
+        this.cameras.main.flash(120, 240, 240, 255);
         if (c.kind === "air")   this.save.stats.clarity++;
         if (c.kind === "fire")  this.save.stats.courage++;
         if (c.kind === "water") this.save.stats.compassion++;
