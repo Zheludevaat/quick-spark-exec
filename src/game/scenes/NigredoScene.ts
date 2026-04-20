@@ -104,7 +104,7 @@ export class NigredoScene extends Phaser.Scene {
         else this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
         writeSave(this.save);
         this.vesselHud.refresh();
-        this.runShades(picked, i + 1, sat ? sat + 1 : sat);
+        this.runShades(picked, i + 1, sit ? sat + 1 : sat);
       },
     );
   }
