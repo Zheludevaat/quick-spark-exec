@@ -351,12 +351,18 @@ export class ImaginalRealmScene extends Phaser.Scene {
     // feeling alive but uncluttered; finished souls return as faint statues).
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
-      if (isSoulDone(this.save, def.id)) {
-        built.container.setAlpha(0.45);
-      }
+      const done = isSoulDone(this.save, def.id);
+      built.setMood(done ? "resolved" : "waiting");
       this.regionRoot.add(built.container);
       this.regionRoot.add(built.halo);
-      this.souls.push({ def, container: built.container, halo: built.halo });
+      this.souls.push({
+        def,
+        container: built.container,
+        halo: built.halo,
+        setMood: built.setMood,
+        nearTime: 0,
+        barkShown: false,
+      });
     }
     // so a "go back north" flow lands them at the south edge instead of
     // teleporting back to the original entry.
