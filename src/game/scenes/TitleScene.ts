@@ -3,7 +3,16 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt"
 import { loadSave, newSave, clearSave } from "../save";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
+import { ACT_BY_SCENE, ACT_TITLES, SCENE_LABEL } from "../types";
 
+/**
+ * Multi-act title screen.
+ *
+ * The game is structured as a series of acts (Prelude, I, II, III, …).
+ * The title scene reflects the player's current progress: it shows the
+ * act they're currently in, the scene/chapter name, and a tagline. New
+ * players see the Prelude framing.
+ */
 export class TitleScene extends Phaser.Scene {
   constructor() {
     super("Title");
@@ -12,14 +21,13 @@ export class TitleScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(COLOR.void);
 
-    // Tile-painted starfield
+    // ---- Starfield ----
     const g = this.add.graphics();
     for (let i = 0; i < 80; i++) {
       const c = Phaser.Math.RND.pick(["#2a3550", "#7889a8", "#dde6f5"]);
       g.fillStyle(Phaser.Display.Color.HexStringToColor(c).color, 1);
       g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H), 1, 1);
     }
-    // Twinkling foreground stars
     for (let i = 0; i < 12; i++) {
       const s = this.add.rectangle(
         Phaser.Math.Between(0, GBC_W),
@@ -39,10 +47,10 @@ export class TitleScene extends Phaser.Scene {
       });
     }
 
-    // Moon disc with halo + craters
-    const cx = GBC_W / 2,
-      cy = 50;
-    const halo = this.add.circle(cx, cy, 30, 0xa8c8e8, 0.18);
+    // ---- Moon disc + halo ----
+    const cx = GBC_W / 2;
+    const cy = 42;
+    const halo = this.add.circle(cx, cy, 28, 0xa8c8e8, 0.18);
     this.tweens.add({
       targets: halo,
       scale: 1.18,
@@ -53,21 +61,20 @@ export class TitleScene extends Phaser.Scene {
       ease: "Sine.inOut",
     });
     g.fillStyle(0x243058, 1);
-    g.fillCircle(cx, cy, 26);
+    g.fillCircle(cx, cy, 24);
     g.fillStyle(0x3a5078, 1);
-    g.fillCircle(cx, cy, 22);
+    g.fillCircle(cx, cy, 20);
     g.fillStyle(0x7898c0, 1);
-    g.fillCircle(cx, cy, 18);
+    g.fillCircle(cx, cy, 16);
     g.fillStyle(0xa8c8e8, 1);
-    g.fillCircle(cx, cy, 14);
+    g.fillCircle(cx, cy, 12);
     g.fillStyle(0xdde6f5, 0.4);
-    g.fillCircle(cx - 4, cy - 4, 6);
+    g.fillCircle(cx - 3, cy - 3, 5);
     g.fillStyle(0x7898c0, 0.6);
-    g.fillCircle(cx + 5, cy + 3, 2);
+    g.fillCircle(cx + 4, cy + 2, 2);
     g.fillStyle(0x7898c0, 0.6);
-    g.fillCircle(cx - 6, cy + 6, 1);
+    g.fillCircle(cx - 5, cy + 5, 1);
 
-    // Drifting silver motes upward
     spawnMotes(this, {
       count: 18,
       color: 0xdde6f5,
@@ -77,19 +84,40 @@ export class TitleScene extends Phaser.Scene {
       depth: 30,
     });
 
-    // Title
-    new GBCText(this, GBC_W / 2 - 38, 86, "HERMETIC", {
+    // ---- Title block ----
+    new GBCText(this, GBC_W / 2 - 38, 76, "HERMETIC", {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
-    new GBCText(this, GBC_W / 2 - 24, 96, "COMEDY", { color: COLOR.textLight, shadow: "#1a2030" });
-    new GBCText(this, GBC_W / 2 - 44, 108, "ACT ZERO", { color: COLOR.textAccent });
+    new GBCText(this, GBC_W / 2 - 24, 86, "COMEDY", {
+      color: COLOR.textLight,
+      shadow: "#1a2030",
+    });
 
     const save = loadSave();
     const remaining = save?.flags?.plateau_remain;
-    const primaryLabel = remaining ? "LEAVE THE IMAGINAL" : save ? "CONTINUE" : "NEW GAME";
 
-    // Menu: one option if no save, two if save exists.
+    // ---- Act / chapter banner (always shown — frames the journey) ----
+    const act = save ? (ACT_BY_SCENE[save.scene] ?? save.act ?? 0) : 0;
+    const actTitle = ACT_TITLES[act] ?? `ACT ${act}`;
+    const chapter = save ? SCENE_LABEL[save.scene] : "Begin";
+
+    // Subtle banner above the menu, centered.
+    const bannerY = 100;
+    new GBCText(this, GBC_W / 2 - measure(actTitle) / 2, bannerY, actTitle, {
+      color: COLOR.textAccent,
+    });
+    new GBCText(this, GBC_W / 2 - measure(chapter.toUpperCase()) / 2, bannerY + 8, chapter.toUpperCase(), {
+      color: COLOR.textLight,
+    });
+
+    // ---- Menu options ----
+    const primaryLabel = remaining
+      ? "LEAVE THE IMAGINAL"
+      : save
+      ? "CONTINUE"
+      : "BEGIN";
+
     const options: { label: string; action: "launch" | "erase" }[] = save
       ? [
           { label: primaryLabel, action: "launch" },
@@ -98,24 +126,29 @@ export class TitleScene extends Phaser.Scene {
       : [{ label: primaryLabel, action: "launch" }];
 
     const boxH = save ? 28 : 18;
-    drawGBCBox(this, 18, 118, GBC_W - 36, boxH);
+    const menuY = 120;
+    drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
 
     let cursor = 0;
     const labels: GBCText[] = options.map(
       (opt, i) =>
-        new GBCText(this, 30, 124 + i * 10, opt.label, { color: COLOR.textLight, depth: 110 }),
+        new GBCText(this, 30, menuY + 6 + i * 10, opt.label, {
+          color: COLOR.textLight,
+          depth: 110,
+        }),
     );
-    const cursorMark = new GBCText(this, 22, 124, "▶", { color: COLOR.textGold, depth: 111 });
+    const cursorMark = new GBCText(this, 22, menuY + 6, "▶", {
+      color: COLOR.textGold,
+      depth: 111,
+    });
     const refresh = () => {
       labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-      cursorMark.setPosition(22, 124 + cursor * 10);
+      cursorMark.setPosition(22, menuY + 6 + cursor * 10);
     };
     refresh();
-
-    // Blink only the active row
     this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
-    // Boot audio on first user gesture (browsers require it)
+    // ---- Boot audio on first user gesture ----
     const audio = getAudio();
     const startMusic = () => {
       audio.resume();
@@ -149,7 +182,6 @@ export class TitleScene extends Phaser.Scene {
       refresh();
     };
 
-    // Make rows clickable
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
@@ -175,10 +207,15 @@ export class TitleScene extends Phaser.Scene {
         erase();
       }
     });
-    this.events.on("vinput-down", (dir: string) => {
-      if (dir === "up") move(-1);
-      if (dir === "down") move(1);
+
+    // ---- Footer hint ----
+    new GBCText(this, 4, GBC_H - 7, "≡ SETTINGS  ·  ENTER", {
+      color: COLOR.textAccent,
     });
-    this.events.on("vinput-action", confirm);
   }
+}
+
+/** Cheap proportional-ish measure: 6px per glyph in the GBC bitmap font. */
+function measure(text: string): number {
+  return text.length * 6;
 }

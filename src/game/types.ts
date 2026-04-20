@@ -10,9 +10,37 @@ export type SceneKey =
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
 
+/** Canonical act number per scene. Extend as new acts ship. */
+export const ACT_BY_SCENE: Record<SceneKey, number> = {
+  LastDay: 0,
+  Crossing: 0,
+  SilverThreshold: 0,
+  ImaginalRealm: 1,
+  CuratedSelf: 1,
+  Epilogue: 1,
+};
+
+/** Roman numeral + chapter title shown on the title screen. */
+export const ACT_TITLES: Record<number, string> = {
+  0: "PRELUDE — THE LAST DAY",
+  1: "I — THE IMAGINAL",
+  2: "II — THE GREAT WORK",
+  3: "III — THE RETURN",
+};
+
+/** Per-scene short label for the Continue row. */
+export const SCENE_LABEL: Record<SceneKey, string> = {
+  LastDay: "The Last Day",
+  Crossing: "The Crossing",
+  SilverThreshold: "Silver Threshold",
+  ImaginalRealm: "Imaginal Realm",
+  CuratedSelf: "Curated Self",
+  Epilogue: "Epilogue",
+};
+
 export type SaveSlot = {
   scene: SceneKey;
-  act: 0 | 1;
+  act: number;
   stats: Stats;
   flags: Record<string, boolean>;
   fragments: number;
@@ -56,15 +84,14 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     "Epilogue",
   ];
   if (!allowed.includes(scene as SceneKey)) scene = "SilverThreshold";
-  const act: 0 | 1 =
-    scene === "ImaginalRealm" || scene === "CuratedSelf" || scene === "Epilogue" ? 1 : 0;
+  const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
   const region =
     (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
   const shardFrags = r.shardFragments;
   const loreList = r.lore;
   return {
     scene: scene as SceneKey,
-    act: (r.act as 0 | 1) ?? act,
+    act: typeof r.act === "number" ? r.act : act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
     flags: r.flags ?? {},
     fragments: r.fragments ?? 0,
