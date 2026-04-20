@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
+import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 
@@ -121,35 +122,53 @@ export class TitleScene extends Phaser.Scene {
     // ---- Menu options ----
     const primaryLabel = remaining ? "LEAVE THE IMAGINAL" : save ? "CONTINUE" : "BEGIN";
 
-    const options: { label: string; action: "launch" | "erase" }[] = save
+    const options: { label: string; action: "launch" | "erase" | "settings" }[] = save
       ? [
           { label: primaryLabel, action: "launch" },
           { label: "ERASE SAVE", action: "erase" },
+          { label: "SETTINGS (DEV)", action: "settings" },
         ]
-      : [{ label: primaryLabel, action: "launch" }];
+      : [
+          { label: primaryLabel, action: "launch" },
+          { label: "SETTINGS (DEV)", action: "settings" },
+        ];
 
-    const boxH = save ? 28 : 18;
-    const menuY = save ? 100 : 108;
-    drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
+    // Larger menu box that fits 2-3 options comfortably.
+    const lineH = 11;
+    const boxH = 14 + options.length * lineH;
+    const menuY = GBC_H - boxH - 8;
+    drawGBCBox(this, 12, menuY, GBC_W - 24, boxH);
 
     let cursor = 0;
     const labels: GBCText[] = options.map(
       (opt, i) =>
-        new GBCText(this, 30, menuY + 6 + i * 10, opt.label, {
+        new GBCText(this, 26, menuY + 8 + i * lineH, opt.label, {
           color: COLOR.textLight,
           depth: 110,
         }),
     );
-    const cursorMark = new GBCText(this, 22, menuY + 6, "▶", {
+    const cursorMark = new GBCText(this, 18, menuY + 8, "▶", {
       color: COLOR.textGold,
       depth: 111,
     });
     const refresh = () => {
       labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-      cursorMark.setPosition(22, menuY + 6 + cursor * 10);
+      cursorMark.setPosition(18, menuY + 8 + cursor * lineH);
     };
     refresh();
     this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+
+    // ---- Top-right DEV button (opens skip-act menu) ----
+    const devBtnX = GBC_W - 32;
+    const devBtnY = 4;
+    drawGBCBox(this, devBtnX - 2, devBtnY, 32, 12, 120);
+    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 3, "DEV▸", {
+      color: COLOR.textGold,
+      depth: 121,
+    });
+    devBtn.obj
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.openSkipMenu());
 
     // ---- Boot audio on first user gesture ----
     const audio = getAudio();
@@ -266,7 +285,8 @@ export class TitleScene extends Phaser.Scene {
     const confirm = () => {
       const opt = options[cursor];
       if (opt.action === "launch") launch();
-      else erase();
+      else if (opt.action === "erase") erase();
+      else this.openSkipMenu();
     };
     const move = (d: number) => {
       if (options.length < 2) return;
@@ -302,6 +322,137 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // (Footer hint omitted — the HTML footer below the canvas already lists controls.)
+  }
+
+  /**
+   * DEV-only skip menu — jumps to any scene with a fresh maxed save so the
+   * player can spot-check Act 2/3 work without replaying the whole game.
+   */
+  private openSkipMenu() {
+    const audio = getAudio();
+    audio.sfx("cursor");
+
+    const jumps: { label: string; scene: SceneKey; act: number }[] = [
+      { label: "ACT 1 · LAST DAY", scene: "LastDay", act: 1 },
+      { label: "ACT 1 · CROSSING", scene: "Crossing", act: 1 },
+      { label: "ACT 1 · NIGREDO", scene: "Nigredo", act: 1 },
+      { label: "ACT 2 · ALBEDO", scene: "Albedo", act: 2 },
+      { label: "ACT 2 · CITRINITAS", scene: "Citrinitas", act: 2 },
+      { label: "ACT 2 · RUBEDO", scene: "Rubedo", act: 2 },
+      { label: "ACT 2 · ATHANOR", scene: "AthanorThreshold", act: 2 },
+      { label: "ACT 2 · SILVER THR.", scene: "SilverThreshold", act: 2 },
+      { label: "ACT 2 · IMAGINAL", scene: "ImaginalRealm", act: 2 },
+      { label: "ACT 2 · SEALED VESSEL", scene: "SealedVessel", act: 2 },
+      { label: "ACT 3 · CURATED SELF", scene: "CuratedSelf", act: 3 },
+      { label: "ACT 3 · EPILOGUE", scene: "Epilogue", act: 3 },
+    ];
+
+    const dim = this.add
+      .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.88)
+      .setOrigin(0, 0)
+      .setDepth(950)
+      .setInteractive();
+
+    const box = drawGBCBox(this, 6, 8, GBC_W - 12, GBC_H - 16, 951);
+    const title = new GBCText(this, 12, 12, "DEV · SKIP TO SCENE", {
+      color: COLOR.textGold,
+      depth: 952,
+    });
+
+    const lineH = 9;
+    const startY = 24;
+    let pick = 0;
+
+    const items: GBCText[] = jumps.map(
+      (j, i) =>
+        new GBCText(this, 18, startY + i * lineH, j.label, {
+          color: COLOR.textLight,
+          depth: 952,
+        }),
+    );
+    const mark = new GBCText(this, 10, startY, "▶", {
+      color: COLOR.textGold,
+      depth: 953,
+    });
+    const refreshSkip = () => {
+      items.forEach((t, i) => t.setColor(i === pick ? COLOR.textGold : COLOR.textLight));
+      mark.setPosition(10, startY + pick * lineH);
+    };
+    refreshSkip();
+
+    const cleanup = () => {
+      unbindAct();
+      unbindCancel();
+      unbindDir();
+      dim.destroy();
+      box.destroy();
+      title.destroy();
+      items.forEach((t) => t.destroy());
+      mark.destroy();
+    };
+
+    const jumpTo = (idx: number) => {
+      const j = jumps[idx];
+      audio.sfx("confirm");
+      // Fully-stocked save so reactive content (Act 2/3) has something to show.
+      const slot = newSave();
+      slot.act = j.act;
+      slot.scene = j.scene;
+      slot.stats = { clarity: 9, compassion: 9, courage: 9 };
+      slot.verbs = { witness: true, transmute: true };
+      slot.blackStones = 3;
+      slot.whiteStones = 3;
+      slot.yellowStones = 3;
+      slot.redStones = 3;
+      slot.goldStone = true;
+      slot.weddingType = "strong";
+      slot.act2Inscription = "I AM WHAT I MET";
+      slot.convictions = {
+        ...(slot.convictions ?? {}),
+        i_am_loved: true,
+        i_can_rest: true,
+        i_will_remain: true,
+      };
+      slot.shadesEncountered = {
+        ...(slot.shadesEncountered ?? {}),
+        the_critic: "sat_with",
+        the_orphan: "sat_with",
+        the_lover: "sat_with",
+      };
+      try {
+        cleanup();
+        audio.music.stop();
+        this.scene.start(j.scene, { save: slot });
+      } catch (err) {
+        console.error("[dev-skip] failed to start", j.scene, err);
+      }
+    };
+
+    const unbindAct = onActionDown(this, "action", () => jumpTo(pick));
+    const unbindCancel = onActionDown(this, "cancel", () => {
+      audio.sfx("cursor");
+      cleanup();
+    });
+    const unbindDir = onDirection(this, (d) => {
+      if (d === "up") {
+        pick = (pick - 1 + jumps.length) % jumps.length;
+        audio.sfx("cursor");
+        refreshSkip();
+      } else if (d === "down") {
+        pick = (pick + 1) % jumps.length;
+        audio.sfx("cursor");
+        refreshSkip();
+      }
+    });
+
+    items.forEach((t, i) => {
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerover", () => {
+        pick = i;
+        refreshSkip();
+      });
+      t.obj.on("pointerdown", () => jumpTo(i));
+    });
   }
 }
 
