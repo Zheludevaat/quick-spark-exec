@@ -47,13 +47,13 @@ export class TitleScene extends Phaser.Scene {
     // ---- Seven Planetary Spheres (Hermetic order, traditional colors) ----
     // Moon · Mercury · Venus · Sun · Mars · Jupiter · Saturn
     const spheres: { name: string; core: number; mid: number; halo: number; r: number }[] = [
-      { name: "Moon",    core: 0xdde6f5, mid: 0xa8c8e8, halo: 0x7898c0, r: 5 }, // silver
+      { name: "Moon", core: 0xdde6f5, mid: 0xa8c8e8, halo: 0x7898c0, r: 5 }, // silver
       { name: "Mercury", core: 0xf0e0a8, mid: 0xc8a868, halo: 0x886838, r: 4 }, // quicksilver/amber
-      { name: "Venus",   core: 0xf0c8d8, mid: 0xc88898, halo: 0x885868, r: 5 }, // rose-copper
-      { name: "Sun",     core: 0xfff0a8, mid: 0xf0b048, halo: 0xc06820, r: 7 }, // gold (largest)
-      { name: "Mars",    core: 0xf0a888, mid: 0xc85838, halo: 0x782818, r: 5 }, // iron red
+      { name: "Venus", core: 0xf0c8d8, mid: 0xc88898, halo: 0x885868, r: 5 }, // rose-copper
+      { name: "Sun", core: 0xfff0a8, mid: 0xf0b048, halo: 0xc06820, r: 7 }, // gold (largest)
+      { name: "Mars", core: 0xf0a888, mid: 0xc85838, halo: 0x782818, r: 5 }, // iron red
       { name: "Jupiter", core: 0xc8d8f0, mid: 0x6890c8, halo: 0x305078, r: 6 }, // royal blue / tin
-      { name: "Saturn",  core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5 }, // lead
+      { name: "Saturn", core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5 }, // lead
     ];
     const sphereCY = 44;
     const spacing = 22;
@@ -119,11 +119,7 @@ export class TitleScene extends Phaser.Scene {
     const remaining = save?.flags?.plateau_remain;
 
     // ---- Menu options ----
-    const primaryLabel = remaining
-      ? "LEAVE THE IMAGINAL"
-      : save
-      ? "CONTINUE"
-      : "BEGIN";
+    const primaryLabel = remaining ? "LEAVE THE IMAGINAL" : save ? "CONTINUE" : "BEGIN";
 
     const options: { label: string; action: "launch" | "erase" }[] = save
       ? [
