@@ -27,6 +27,12 @@ export const ASSETS: Record<string, string> = {
   touch_controls: `${ASSET_BASE}/touch_controls.png`,
 };
 
+// Spritesheets (frame-based)
+export const SHEETS = {
+  rowan_walk:   { key: "rowan_walk",   url: `${ASSET_BASE}/rowan_walk_sheet.png`,   frameWidth: 16, frameHeight: 24 },
+  curated_self: { key: "curated_self", url: `${ASSET_BASE}/curated_self_sheet.png`, frameWidth: 64, frameHeight: 64 },
+};
+
 // GBC-style palette
 export const PAL = {
   void: 0x0a0e1a,

@@ -87,19 +87,34 @@ export class InputState {
   }
 }
 
-/** Build a small Rowan sprite (placeholder body since the sheet isn't grid-aligned). */
+/** Build an animated Rowan sprite using the rowan_walk sheet. */
 export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
   const c = scene.add.container(x, y);
-  // robe
-  const body = scene.add.rectangle(0, 2, 8, 12, PAL.silverDark).setStrokeStyle(1, PAL.silverLight);
-  // head
-  const head = scene.add.rectangle(0, -7, 7, 7, PAL.pearl).setStrokeStyle(1, PAL.silverDark);
-  // hair tuft
-  const hair = scene.add.rectangle(0, -10, 7, 2, PAL.silverLight);
-  // soul glow
-  const glow = scene.add.circle(0, 0, 11, PAL.moonCyan, 0.18);
+  const glow = scene.add.circle(0, 2, 11, PAL.moonCyan, 0.18);
   scene.tweens.add({ targets: glow, alpha: 0.32, scale: 1.15, duration: 1200, yoyo: true, repeat: -1 });
-  c.add([glow, body, head, hair]);
-  c.setSize(10, 18);
+  const sprite = scene.add.sprite(0, 0, "rowan_walk", 0);
+  sprite.play("rowan_down_idle");
+  c.add([glow, sprite]);
+  c.setSize(16, 24);
+  c.setData("sprite", sprite);
+  c.setData("dir", "down");
   return c;
+}
+
+/** Update Rowan's facing/animation based on movement input. */
+export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: number) {
+  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
+  if (!sprite) return;
+  let dir = c.getData("dir") as string;
+  const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+  if (moving) {
+    if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
+    else dir = dy > 0 ? "down" : "up";
+    c.setData("dir", dir);
+    const key = `rowan_${dir}`;
+    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+  } else {
+    const key = `rowan_${dir}_idle`;
+    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+  }
 }
