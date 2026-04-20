@@ -353,7 +353,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
   private spawnSeedEchoes() {
     const all = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
-    let seeds = all.filter((s) => this.save.seeds[s] && !this.save.seedEchoes[s]);
+    const seeds = all.filter((s) => this.save.seeds[s] && !this.save.seedEchoes[s]);
     // Fallback: if the player set few/no seeds in Act 0, spawn 2 generic echoes
     // so the field is never empty. They become "an echo" in copy.
     if (seeds.length < 2) {

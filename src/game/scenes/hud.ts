@@ -200,9 +200,10 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
   const abCx = c.leftHanded ? 22 : GBC_W - 18;
   const abCy = GBC_H - 22;
 
-  // Settings gear top-right
+  // Settings gear top-right (sits just below the stats bar so its hit zone
+  // never collides with the SAVED indicator or the stats text).
   const gearX = GBC_W - 8,
-    gearY = 6;
+    gearY = 18;
 
   const showDpad =
     c.touchLayout === "dpad" ||
@@ -429,8 +430,10 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
 
   // ----- Lore button (small, top-left of HUD strip) -----
   {
+    // Lore button — sits just below the stats bar to keep the bar's text
+    // (and the SAVED indicator) free of the touch hit zone.
     const lx = 4,
-      ly = 6;
+      ly = 18;
     const w = 14,
       h = 8;
     const vis = scene.add
