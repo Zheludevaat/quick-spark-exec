@@ -63,11 +63,11 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     });
     const total = save.shardInventory.length;
     const conv = Object.values(save.convictions).filter(Boolean).length;
-    let line = `SHARDS ${total}`;
-    if (conv > 0) line += `  CONV ${conv}/3`;
-    if (save.goldStone) line += `  *GOLD*`;
-    if (save.sorynReleased) line += `  ALONE`;
-    shardChip.setText(line);
+    const parts: string[] = [`SHD ${total}`];
+    if (conv > 0) parts.push(`CNV ${conv}/3`);
+    if (save.goldStone) parts.push(`GOLD`);
+    if (save.sorynReleased) parts.push(`ALONE`);
+    shardChip.setText(parts.join(" "));
 
     // Stains: show pip row only if stains have ever been carried.
     if (save.stainsCarried > 0) {
