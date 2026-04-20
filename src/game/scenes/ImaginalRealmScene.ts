@@ -113,8 +113,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
     halo: Phaser.GameObjects.Arc;
+    setMood: (m: "waiting" | "engaged" | "resolved") => void;
     nameLabel?: GBCText;
     hookLabel?: GBCText;
+    nearTime: number;
+    barkShown: boolean;
+    bark?: GBCText;
   }[] = [];
 
   constructor() {
