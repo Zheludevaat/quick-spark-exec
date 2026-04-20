@@ -55,8 +55,14 @@ export type SaveSlot = {
   seedEchoes: Record<string, boolean>;
   /** Unlocked lore entry IDs (see scenes/lore.ts). */
   lore: string[];
-  /** Per-NPC arc state (0 = not met, 1+ = arc steps). */
+  /** Per-NPC arc state (0 = not met, 1+ = arc steps, >=1000 = done). */
   souls: Record<string, number>;
+  /** Per-soul ledger of choices made (keyed by soul id → ordered list of choice tags). */
+  soulChoices: Record<string, string[]>;
+  /** How many souls' arcs have completed — fast read for chained unlocks. */
+  soulsCompleted: number;
+  /** How many times the WITNESS verb has been used in the realm. */
+  witnessUses: number;
   /** Side-quest tracker. */
   sideQuests: Record<string, "todo" | "active" | "done">;
   updatedAt: number;
@@ -104,6 +110,9 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     seedEchoes: (r.seedEchoes as Record<string, boolean> | undefined) ?? {},
     lore: Array.isArray(loreList) ? (loreList as string[]) : [],
     souls: (r.souls as Record<string, number> | undefined) ?? {},
+    soulChoices: (r.soulChoices as Record<string, string[]> | undefined) ?? {},
+    soulsCompleted: typeof r.soulsCompleted === "number" ? r.soulsCompleted : 0,
+    witnessUses: typeof r.witnessUses === "number" ? r.witnessUses : 0,
     sideQuests: (r.sideQuests as Record<string, "todo" | "active" | "done"> | undefined) ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
