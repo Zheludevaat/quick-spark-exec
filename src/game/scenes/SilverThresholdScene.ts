@@ -79,6 +79,7 @@ type ElemKind = "air" | "fire" | "water" | "earth";
 export class SilverThresholdScene extends Phaser.Scene {
   private save!: SaveSlot;
   private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
   private input2!: InputState;
   private dialogActive = false;
   private circles: { kind: ElemKind; sprite: Phaser.GameObjects.Sprite; x: number; y: number; visited: boolean }[] = [];
@@ -147,7 +148,8 @@ export class SilverThresholdScene extends Phaser.Scene {
       this.tweens.add({ targets: this.stone, alpha: 0.5, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
 
-    // Player
+    // Player + soft shadow
+    this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
     this.rowan = makeRowan(this, 16, 70);
 
     // HUD + input
