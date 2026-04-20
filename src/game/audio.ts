@@ -172,6 +172,8 @@ class AudioEngine {
   noise: NoiseChannel;
   music: Music;
   muted = false;
+  /** Master volume 0..1 (independent of mute). Persisted to localStorage. */
+  volume = 0.5;
 
   constructor() {
     const Ctor =
@@ -179,7 +181,15 @@ class AudioEngine {
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
+    // Restore persisted volume / mute
+    try {
+      const v = parseFloat(localStorage.getItem("hermetic_volume_v1") || "");
+      if (!Number.isNaN(v) && v >= 0 && v <= 1) this.volume = v;
+      this.muted = localStorage.getItem("hermetic_muted_v1") === "1";
+    } catch {
+      /* ignore */
+    }
+    this.master.gain.value = this.muted ? 0 : this.volume;
     // gentle low-pass to soften the harshness
     const lp = this.ctx.createBiquadFilter();
     lp.type = "lowpass";
