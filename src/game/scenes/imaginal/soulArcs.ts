@@ -244,11 +244,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "guessed",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
-          { who: "ONE WHO SANG", text: "She trails off. The water finishes it for her, badly." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (hasChoice(save, "mirror_philosopher", "argued")) {
+            return [
+              { who: "ONE WHO SANG", text: "You argued the man at the pool. He'll thank you, eventually." },
+              { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
+            ];
+          }
+          return [
+            { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
+            { who: "ONE WHO SANG", text: "She trails off. The water finishes it for her, badly." },
+          ];
+        },
       },
       {
         kind: "inquiry",
