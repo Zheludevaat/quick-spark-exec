@@ -131,13 +131,13 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
-  const boxX = 4, boxY = GBC_H - 50, boxW = GBC_W - 8, boxH = 46;
+  const boxX = 4, boxY = GBC_H - 56, boxW = GBC_W - 8, boxH = 52;
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
   const who = new GBCText(scene, boxX + 6, boxY + 4, "", { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
   const text = new GBCText(scene, boxX + 6, boxY + 14, "", {
-    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 12,
+    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 16,
   });
-  const hint = new GBCText(scene, boxX + boxW - 14, boxY + boxH - 9, "▼", {
+  const hint = new GBCText(scene, boxX + boxW - 10, boxY + boxH - 8, "▼", {
     color: COLOR.textAccent, depth: 251, scrollFactor: 0,
   });
   scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
