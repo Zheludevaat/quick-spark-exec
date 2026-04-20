@@ -161,12 +161,27 @@ export class TitleScene extends Phaser.Scene {
     this.input.once("pointerdown", startMusic);
     this.events.once("vinput-action", startMusic);
 
+    let launching = false;
     const launch = () => {
+      if (launching) return;
+      launching = true;
       audio.sfx("confirm");
       const slot = save ?? newSave();
-      const next = save ? save.scene : "LastDay";
+      let next = save ? save.scene : "LastDay";
+      // Guard: if the saved scene key is not registered in this build, fall back.
+      if (!this.scene.manager.keys[next]) {
+        console.warn("[title] saved scene not registered:", next, "— falling back to LastDay");
+        next = "LastDay";
+        slot.scene = "LastDay";
+      }
       audio.music.stop();
-      this.scene.start(next, { save: slot });
+      try {
+        console.log("[title] starting scene:", next);
+        this.scene.start(next, { save: slot });
+      } catch (err) {
+        console.error("[title] scene.start failed:", err);
+        launching = false;
+      }
     };
     const erase = () => {
       // Two-step gate: show a confirmation overlay before wiping the save.
