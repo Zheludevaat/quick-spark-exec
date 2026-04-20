@@ -593,11 +593,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "tried",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE WHO LISTENS", text: "Is there a tune here? I keep almost hearing one." },
-          { who: "ONE WHO LISTENS", text: "Tap it for me. I'll trust your hands." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (anySoulHasChoice(save, "forced")) {
+            return [
+              { who: "ONE WHO LISTENS", text: "I heard a hand close where one was offered. Loud." },
+              { who: "ONE WHO LISTENS", text: "Make a softer sound for me. Just four taps." },
+            ];
+          }
+          return [
+            { who: "ONE WHO LISTENS", text: "Is there a tune here? I keep almost hearing one." },
+            { who: "ONE WHO LISTENS", text: "Tap it for me. I'll trust your hands." },
+          ];
+        },
       },
       {
         kind: "rhythm",
@@ -640,11 +648,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "witnessed",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "CROWNED ONE", text: "You're new. You may bow. Briefly." },
-          { who: "CROWNED ONE", text: "The crown is paper. Don't tell anyone." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (anySoulHasChoice(save, "forced")) {
+            return [
+              { who: "CROWNED ONE", text: "You. The forcing one. I've heard." },
+              { who: "CROWNED ONE", text: "Don't bow. The crown is paper and prefers honesty." },
+            ];
+          }
+          return [
+            { who: "CROWNED ONE", text: "You're new. You may bow. Briefly." },
+            { who: "CROWNED ONE", text: "The crown is paper. Don't tell anyone." },
+          ];
+        },
       },
       {
         kind: "witness",
