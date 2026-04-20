@@ -17,6 +17,11 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   // Global LCD toggle: backslash key
   scene.input.keyboard?.on("keydown-BACKSLASH", () => toggleLcd(scene));
+  // Global mute toggle: M key
+  scene.input.keyboard?.on("keydown-M", () => {
+    const a = getAudio();
+    a.setMuted(!a.muted);
+  });
 
   // Top stats bar (compact for 160-wide screen)
   const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
