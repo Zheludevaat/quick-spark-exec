@@ -175,6 +175,16 @@ export class EncounterScene extends Phaser.Scene {
       this.cameras.main.flash(180, 220, 230, 255);
       audio.sfx("resolve");
       this.tweens.add({ targets: this.enemy, alpha: 0, duration: 800 });
+      this.tweens.add({ targets: this.enemyAura, scale: 2.4, alpha: 0, duration: 700 });
+      // Sparkle burst
+      for (let k = 0; k < 8; k++) {
+        const ang = (k / 8) * Math.PI * 2;
+        const sp = this.add.rectangle(GBC_W / 2, 46, 1, 1, 0xffffff, 1).setDepth(120);
+        this.tweens.add({
+          targets: sp, x: GBC_W / 2 + Math.cos(ang) * 22, y: 46 + Math.sin(ang) * 22,
+          alpha: 0, duration: 600, ease: "Sine.out",
+        });
+      }
       // Apply base reward
       if (this.def.reward.clarity)    this.save.stats.clarity    += this.def.reward.clarity;
       if (this.def.reward.compassion) this.save.stats.compassion += this.def.reward.compassion;
@@ -203,6 +213,12 @@ export class EncounterScene extends Phaser.Scene {
       this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
       this.cameras.main.shake(120, 0.004);
+      this.enemy.setTintFill(0xd84a4a);
+      this.time.delayedCall(110, () => this.enemy.clearTint());
+      // bob faster as wounded
+      if (this.enemyBob) {
+        this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
+      }
       audio.sfx("miss");
       // Telegraph the weakness after the first miss
       if (this.misses === 1 && !this.intentText) {
