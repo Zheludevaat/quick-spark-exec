@@ -385,4 +385,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   scene.events.on("vinput-action", onAction);
   scene.events.on("vinput-cancel", onCancel);
   scene.events.on("vinput-down", onDir);
+
+  // Safety net: if the scene shuts down (e.g. user triggers a scene change
+  // via a touch button while settings is open), make sure we drop the DOM
+  // listener so it doesn't leak across scenes.
+  const safetyCleanup = () => {
+    window.removeEventListener("keydown", onKey);
+  };
+  scene.events.once("shutdown", safetyCleanup);
+  scene.events.once("destroy", safetyCleanup);
 }
