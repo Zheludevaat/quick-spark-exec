@@ -19,6 +19,7 @@ import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
+import { openQuestLog } from "../questLog";
 
 type Knot = {
   kind: KnotKind;
@@ -147,6 +148,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
     attachHUD(this, () => this.save.stats);
+    // Quest-log on J (DOM listener — simple, doesn't conflict with rebindable actions)
+    const onJ = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "j" && !this.dialogActive && !this.knotActive) {
+        this.dialogActive = true;
+        openQuestLog(this, this.save, () => {
+          this.dialogActive = false;
+        });
+      }
+    };
+    window.addEventListener("keydown", onJ);
+    this.events.once("shutdown", () => window.removeEventListener("keydown", onJ));
     this.input2 = new InputState(this);
     this.events.on("vinput-action", () => this.tryInteract());
     onActionDown(this, "action", () => this.tryInteract());
