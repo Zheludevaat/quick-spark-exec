@@ -203,7 +203,7 @@ export class LastDayScene extends Phaser.Scene {
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
     const near = this.nearest();
-    const used = this.items.filter(t => t.used).length;
+    const usedMain = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80, dyg = this.rowan.y - (GBC_H - 8);
       if (dxg * dxg + dyg * dyg < 14 * 14) this.hint.setText("A: STEP THROUGH THE DOOR");
@@ -211,13 +211,24 @@ export class LastDayScene extends Phaser.Scene {
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
     } else {
-      this.hint.setText(`TOUCH WHAT CALLS YOU  ${used}/4`);
+      this.hint.setText(`TOUCH WHAT CALLS YOU  ${usedMain}/4`);
     }
 
-    if (!this.exitOpen && used >= 3) {
+    if (!this.exitOpen && usedMain >= 3) {
       this.exitOpen = true;
-      this.tweens.add({ targets: this.cameras.main, duration: 600, alpha: 1 });
+      this.playChestPain();
     }
+  }
+
+  private playChestPain() {
+    // Brief, wordless: a soft red pulse over Rowan, screen vignette, audio thump.
+    const pulse = this.add.circle(this.rowan.x, this.rowan.y - 4, 4, 0xd84a4a, 0.45).setDepth(40);
+    this.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 1200, ease: "Sine.out", onComplete: () => pulse.destroy() });
+    this.cameras.main.shake(180, 0.0035);
+    getAudio().sfx("boss");
+    // Subtle vignette flash via a brief red overlay
+    const vig = this.add.rectangle(0, 0, GBC_W, GBC_H, 0x501818, 0.0).setOrigin(0, 0).setDepth(195);
+    this.tweens.add({ targets: vig, alpha: 0.35, duration: 300, yoyo: true, onComplete: () => vig.destroy() });
   }
 
   private nearest(): Interactable | null {
