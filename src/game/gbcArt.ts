@@ -1574,6 +1574,134 @@ export function drawGBCBox(
 }
 
 // ============================================================================
+// Soryn v2 — mystical glyph-being daimon (16x24, 4 frames for ring rotation)
+// Drawn at center as a vertical sliver of light wrapped in 3 concentric rings
+// with a single eye-mote at center. Frames cycle through ring rotations.
+// ============================================================================
+
+const DAIMON_W = 16, DAIMON_H = 24;
+
+function bakeDaimon(scene: Phaser.Scene, key = "soryn_v2") {
+  const FRAMES = 4;
+  const { ctx, tex } = makeTex(scene, key, DAIMON_W * FRAMES, DAIMON_H);
+  const pal = PAL.daimon;
+  const cx = DAIMON_W / 2;
+  const cy = DAIMON_H / 2;
+
+  for (let f = 0; f < FRAMES; f++) {
+    const ox = f * DAIMON_W;
+    // Outer ring (largest, slowest)
+    const phase = f * Math.PI * 0.5;
+    const drawRing = (radius: number, palIdx: 1 | 2 | 3, dotPhase: number, dotCount: number) => {
+      // Faint full ring
+      for (let a = 0; a < Math.PI * 2; a += 0.4) {
+        const px = Math.round(cx + Math.cos(a) * radius);
+        const py = Math.round(cy + Math.sin(a) * radius);
+        if (px >= 0 && px < DAIMON_W && py >= 0 && py < DAIMON_H) {
+          ctx.fillStyle = pal[palIdx];
+          ctx.fillRect(ox + px, py, 1, 1);
+        }
+      }
+      // Brighter "node" dots that rotate per frame
+      for (let n = 0; n < dotCount; n++) {
+        const a = dotPhase + (n / dotCount) * Math.PI * 2;
+        const px = Math.round(cx + Math.cos(a) * radius);
+        const py = Math.round(cy + Math.sin(a) * radius);
+        if (px >= 0 && px < DAIMON_W && py >= 0 && py < DAIMON_H) {
+          ctx.fillStyle = pal[3];
+          ctx.fillRect(ox + px, py, 1, 1);
+        }
+      }
+    };
+    drawRing(7, 1, phase * 0.5, 2);          // outer, slow
+    drawRing(5, 2, -phase, 3);                // mid, reverse
+    drawRing(3, 2, phase * 1.5, 2);           // inner, fast
+    // Vertical sliver of light at center
+    ctx.fillStyle = pal[3];
+    ctx.fillRect(ox + cx, cy - 4, 1, 8);
+    ctx.fillStyle = pal[2];
+    ctx.fillRect(ox + cx - 1, cy - 3, 1, 6);
+    ctx.fillRect(ox + cx + 1, cy - 3, 1, 6);
+    // Single eye-mote at exact center (blinks on frame 3)
+    if (f !== 3) {
+      ctx.fillStyle = pal[3];
+      ctx.fillRect(ox + cx, cy, 1, 1);
+      ctx.fillStyle = pal[2];
+      ctx.fillRect(ox + cx - 1, cy, 1, 1);
+      ctx.fillRect(ox + cx + 1, cy, 1, 1);
+    }
+  }
+  addGridFrames(tex, DAIMON_W, DAIMON_H, FRAMES, 1);
+  tex.refresh();
+  return key;
+}
+
+// ============================================================================
+// Living-world accessory overlays for Rowan (16x24, 4 frames: scarf, coat, boots, satchel)
+// Each frame is the same size as a rowan walk frame so it overlays cleanly.
+// We draw the accessory only — transparent everywhere else.
+// ============================================================================
+
+function bakeAccessories(scene: Phaser.Scene, key = "rowan_acc") {
+  const W = 16, H = 24, FRAMES = 4;
+  const { ctx, tex } = makeTex(scene, key, W * FRAMES, H);
+
+  // Frame 0 — SCARF (around neck/upper chest, ~y 8-11)
+  const scarfPal = PAL.scarf;
+  const ox0 = 0;
+  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 5, 8, 6, 1);
+  ctx.fillStyle = scarfPal[2]; ctx.fillRect(ox0 + 5, 9, 6, 2);
+  ctx.fillStyle = scarfPal[3]; ctx.fillRect(ox0 + 6, 9, 4, 1);
+  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 5, 11, 6, 1);
+  // Tail
+  ctx.fillStyle = scarfPal[2]; ctx.fillRect(ox0 + 10, 11, 1, 3);
+  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 10, 14, 1, 1);
+
+  // Frame 1 — COAT (torso ~y 11-18, draped sides)
+  const coatPal = PAL.coat;
+  const ox1 = W;
+  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 4, 11, 8, 1);
+  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 4, 12, 8, 6);
+  ctx.fillStyle = coatPal[3]; ctx.fillRect(ox1 + 5, 12, 1, 5);
+  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 7, 12, 1, 6); // center seam
+  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 4, 18, 8, 1);
+  // Coat tails
+  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 3, 13, 1, 5);
+  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 12, 13, 1, 5);
+
+  // Frame 2 — BOOTS (feet, ~y 20-23)
+  const bootsPal = PAL.boots;
+  const ox2 = W * 2;
+  ctx.fillStyle = bootsPal[1]; ctx.fillRect(ox2 + 5, 20, 2, 4);
+  ctx.fillStyle = bootsPal[1]; ctx.fillRect(ox2 + 9, 20, 2, 4);
+  ctx.fillStyle = bootsPal[2]; ctx.fillRect(ox2 + 5, 21, 2, 2);
+  ctx.fillStyle = bootsPal[2]; ctx.fillRect(ox2 + 9, 21, 2, 2);
+  ctx.fillStyle = bootsPal[3]; ctx.fillRect(ox2 + 5, 22, 1, 1);
+  ctx.fillStyle = bootsPal[3]; ctx.fillRect(ox2 + 9, 22, 1, 1);
+
+  // Frame 3 — SATCHEL (slung at hip ~y 14-18, side)
+  const satPal = PAL.satchel;
+  const ox3 = W * 3;
+  // Strap diagonal
+  ctx.fillStyle = satPal[1];
+  ctx.fillRect(ox3 + 5, 8, 1, 1);
+  ctx.fillRect(ox3 + 6, 9, 1, 1);
+  ctx.fillRect(ox3 + 7, 10, 1, 1);
+  ctx.fillRect(ox3 + 8, 11, 1, 1);
+  ctx.fillRect(ox3 + 9, 12, 1, 1);
+  ctx.fillRect(ox3 + 10, 13, 1, 1);
+  // Bag
+  ctx.fillStyle = satPal[1]; ctx.fillRect(ox3 + 10, 14, 4, 1);
+  ctx.fillStyle = satPal[2]; ctx.fillRect(ox3 + 10, 15, 4, 3);
+  ctx.fillStyle = satPal[3]; ctx.fillRect(ox3 + 11, 16, 2, 1);
+  ctx.fillStyle = satPal[1]; ctx.fillRect(ox3 + 10, 18, 4, 1);
+
+  addGridFrames(tex, W, H, FRAMES, 1);
+  tex.refresh();
+  return key;
+}
+
+// ============================================================================
 // Bake everything in one call
 // ============================================================================
 
@@ -1581,6 +1709,8 @@ export function bakeAll(scene: Phaser.Scene) {
   bakeTileset(scene);
   bakeRowan(scene);
   bakeSoryn(scene);
+  bakeDaimon(scene);
+  bakeAccessories(scene);
   bakeEnemies(scene);
   bakeBoss(scene);
   bakeElements(scene);
