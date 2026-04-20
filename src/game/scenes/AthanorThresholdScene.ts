@@ -19,6 +19,8 @@ import { getAudio, SONG_MOON } from "../audio";
 import { deriveInventory, shardName } from "../athanor/shards";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
+import { runInquiry } from "../inquiry";
+import { hasChoice } from "./imaginal/soulRunner";
 
 type Door = {
   key: "nigredo" | "albedo" | "citrinitas" | "rubedo";
