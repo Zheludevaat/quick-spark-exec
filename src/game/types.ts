@@ -5,6 +5,12 @@ export type SceneKey =
   | "Crossing"
   | "SilverThreshold"
   | "ImaginalRealm"
+  | "AthanorThreshold"
+  | "Nigredo"
+  | "Albedo"
+  | "Citrinitas"
+  | "Rubedo"
+  | "SealedVessel"
   | "CuratedSelf"
   | "Epilogue";
 
@@ -16,9 +22,32 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   Crossing: 0,
   SilverThreshold: 0,
   ImaginalRealm: 1,
-  CuratedSelf: 1,
-  Epilogue: 1,
+  AthanorThreshold: 2,
+  Nigredo: 2,
+  Albedo: 2,
+  Citrinitas: 2,
+  Rubedo: 2,
+  SealedVessel: 2,
+  CuratedSelf: 3,
+  Epilogue: 3,
 };
+
+/** Stable shard ID — derived from Act 1 quest completions + 2 prelude defaults. */
+export type ShardId =
+  | "breath"
+  | "name"
+  | "mothers_apron"
+  | "unfinished_song"
+  | "the_feather"
+  | "stonechild_name"
+  | "refused_gift"
+  | "pools_chart"
+  | "collectors_jar"
+  | "plateaus_weight";
+
+export type StoneColor = "black" | "white" | "yellow" | "red";
+
+export type WeddingType = "strong" | "gentle" | "fractured";
 
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
@@ -34,6 +63,12 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   Crossing: "The Crossing",
   SilverThreshold: "Silver Threshold",
   ImaginalRealm: "Imaginal Realm",
+  AthanorThreshold: "Threshold of the Athanor",
+  Nigredo: "Nigredo",
+  Albedo: "Albedo",
+  Citrinitas: "Citrinitas",
+  Rubedo: "Rubedo",
+  SealedVessel: "The Sealed Vessel",
   CuratedSelf: "Curated Self",
   Epilogue: "Epilogue",
 };
