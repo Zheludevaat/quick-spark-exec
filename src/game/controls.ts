@@ -12,14 +12,17 @@
 import * as Phaser from "phaser";
 
 export type GameAction =
-  | "up" | "down" | "left" | "right"
-  | "action"   // A — confirm / interact / advance dialog
-  | "cancel"   // B — witness / back / daimon
-  | "lore"     // L — open lore log
-  | "mute"     // M — toggle audio
-  | "lcd"      // \ — CRT overlay
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "action" // A — confirm / interact / advance dialog
+  | "cancel" // B — witness / back / daimon
+  | "lore" // L — open lore log
+  | "mute" // M — toggle audio
+  | "lcd" // \ — CRT overlay
   | "settings" // P / Esc — open settings
-  | "skip";    // Tab — skip current dialog (advance fast)
+  | "skip"; // Tab — skip current dialog (advance fast)
 
 /** A single binding can have up to 2 keys (e.g. ARROWUP + W). */
 export type Binding = { primary: string; secondary?: string };
@@ -42,17 +45,17 @@ const STORAGE_KEY = "hermetic_controls_v1";
 
 const DEFAULTS: ControlsState = {
   bindings: {
-    up:       { primary: "UP",        secondary: "W" },
-    down:     { primary: "DOWN",      secondary: "S" },
-    left:     { primary: "LEFT",      secondary: "A" },
-    right:    { primary: "RIGHT",     secondary: "D" },
-    action:   { primary: "SPACE",     secondary: "ENTER" },
-    cancel:   { primary: "B",         secondary: "Q" },
-    lore:     { primary: "L" },
-    mute:     { primary: "M" },
-    lcd:      { primary: "BACKSLASH" },
-    settings: { primary: "P",         secondary: "ESC" },
-    skip:     { primary: "TAB" },
+    up: { primary: "UP", secondary: "W" },
+    down: { primary: "DOWN", secondary: "S" },
+    left: { primary: "LEFT", secondary: "A" },
+    right: { primary: "RIGHT", secondary: "D" },
+    action: { primary: "SPACE", secondary: "ENTER" },
+    cancel: { primary: "B", secondary: "Q" },
+    lore: { primary: "L" },
+    mute: { primary: "M" },
+    lcd: { primary: "BACKSLASH" },
+    settings: { primary: "P", secondary: "ESC" },
+    skip: { primary: "TAB" },
   },
   touchLayout: "hybrid",
   buttonSize: "l",
@@ -91,8 +94,12 @@ export function getControls(): ControlsState {
 
 export function saveControls() {
   if (typeof window === "undefined") return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore */ }
-  subscribers.forEach(fn => fn());
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* ignore */
+  }
+  subscribers.forEach((fn) => fn());
 }
 
 export function setBinding(action: GameAction, primary: string, secondary?: string) {
@@ -143,10 +150,18 @@ export function subscribeControls(fn: () => void): () => void {
 export function keyLabel(k: string): string {
   if (!k) return "—";
   const map: Record<string, string> = {
-    UP: "↑", DOWN: "↓", LEFT: "←", RIGHT: "→",
-    SPACE: "SPACE", ENTER: "ENTER", ESC: "ESC", TAB: "TAB",
+    UP: "↑",
+    DOWN: "↓",
+    LEFT: "←",
+    RIGHT: "→",
+    SPACE: "SPACE",
+    ENTER: "ENTER",
+    ESC: "ESC",
+    TAB: "TAB",
     BACKSLASH: "\\",
-    SHIFT: "SHIFT", CTRL: "CTRL", ALT: "ALT",
+    SHIFT: "SHIFT",
+    CTRL: "CTRL",
+    ALT: "ALT",
   };
   return map[k] ?? k;
 }
@@ -156,8 +171,8 @@ export function normalizeKeyEvent(e: KeyboardEvent): string | null {
   // Use e.code for letters/arrows so it's layout-stable.
   if (!e.code && !e.key) return null;
   const code = e.code;
-  if (code.startsWith("Key")) return code.slice(3);                  // KeyA → A
-  if (code.startsWith("Digit")) return code.slice(5);                 // Digit1 → 1
+  if (code.startsWith("Key")) return code.slice(3); // KeyA → A
+  if (code.startsWith("Digit")) return code.slice(5); // Digit1 → 1
   if (code === "ArrowUp") return "UP";
   if (code === "ArrowDown") return "DOWN";
   if (code === "ArrowLeft") return "LEFT";
@@ -193,7 +208,10 @@ export function onActionDown(
   handler: () => void,
 ): () => void {
   const kb = scene.input.keyboard;
-  if (!kb) return () => { /* noop */ };
+  if (!kb)
+    return () => {
+      /* noop */
+    };
   const wrap = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
@@ -220,13 +238,19 @@ export function onDirection(
   handler: (dir: "up" | "down" | "left" | "right") => void,
 ): () => void {
   const kb = scene.input.keyboard;
-  if (!kb) return () => { /* noop */ };
+  if (!kb)
+    return () => {
+      /* noop */
+    };
   const domHandler = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
     const b = state.bindings;
     for (const dir of ["up", "down", "left", "right"] as const) {
-      if (name === b[dir].primary || name === b[dir].secondary) { handler(dir); return; }
+      if (name === b[dir].primary || name === b[dir].secondary) {
+        handler(dir);
+        return;
+      }
     }
   };
   window.addEventListener("keydown", domHandler);
@@ -241,5 +265,9 @@ export function buzz(ms = 12) {
   if (!state.haptics) return;
   if (typeof navigator === "undefined") return;
   const v = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
-  try { v?.call(navigator, [ms]); } catch { /* ignore */ }
+  try {
+    v?.call(navigator, [ms]);
+  } catch {
+    /* ignore */
+  }
 }

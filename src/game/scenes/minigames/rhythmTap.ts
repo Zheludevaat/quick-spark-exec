@@ -36,16 +36,27 @@ export function runRhythmTap(
 
   const boxW = GBC_W - 24;
   const box = drawGBCBox(scene, 12, 50, boxW, 44, 800);
-  const title = new GBCText(scene, 16, 54, opts.title, { color: COLOR.textAccent, depth: 801, scrollFactor: 0 });
+  const title = new GBCText(scene, 16, 54, opts.title, {
+    color: COLOR.textAccent,
+    depth: 801,
+    scrollFactor: 0,
+  });
   const result = new GBCText(scene, 16, 64, "PRESS A ON THE BEAT", {
-    color: COLOR.textLight, depth: 801, scrollFactor: 0, maxWidthPx: boxW - 8,
+    color: COLOR.textLight,
+    depth: 801,
+    scrollFactor: 0,
+    maxWidthPx: boxW - 8,
   });
 
   // Beat markers along a line
   const trackY = 82;
   const trackX0 = 18;
   const trackX1 = GBC_W - 18;
-  scene.add.rectangle(trackX0, trackY, trackX1 - trackX0, 1, 0x586878, 1).setOrigin(0, 0.5).setScrollFactor(0).setDepth(801);
+  scene.add
+    .rectangle(trackX0, trackY, trackX1 - trackX0, 1, 0x586878, 1)
+    .setOrigin(0, 0.5)
+    .setScrollFactor(0)
+    .setDepth(801);
   const lastBeat = opts.beats[opts.beats.length - 1] + win;
   const xForT = (t: number) => trackX0 + (t / lastBeat) * (trackX1 - trackX0);
   const beatMarks: Phaser.GameObjects.Arc[] = opts.beats.map((bt) =>
@@ -59,11 +70,15 @@ export function runRhythmTap(
   const tap = () => {
     if (!active) return;
     const t = scene.time.now - startedAt;
-    let bestI = -1; let bestD = Infinity;
+    let bestI = -1;
+    let bestD = Infinity;
     for (let i = 0; i < total; i++) {
       if (used[i]) continue;
       const d = Math.abs(opts.beats[i] - t);
-      if (d < bestD) { bestD = d; bestI = i; }
+      if (d < bestD) {
+        bestD = d;
+        bestI = i;
+      }
     }
     if (bestI >= 0 && bestD <= win) {
       used[bestI] = true;
@@ -100,8 +115,11 @@ export function runRhythmTap(
     let judgment: RhythmJudgment = "miss";
     if (hits === total) judgment = "great";
     else if (hits >= Math.ceil(total / 2)) judgment = "ok";
-    box.destroy(); title.destroy(); result.destroy();
-    beatMarks.forEach(m => m.destroy()); cursor.destroy();
+    box.destroy();
+    title.destroy();
+    result.destroy();
+    beatMarks.forEach((m) => m.destroy());
+    cursor.destroy();
     onDone({ hits, total, judgment });
   };
   void GBC_H;

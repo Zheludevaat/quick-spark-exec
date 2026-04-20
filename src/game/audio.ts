@@ -160,7 +160,7 @@ class AudioEngine {
   muted = false;
 
   constructor() {
-    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.5;

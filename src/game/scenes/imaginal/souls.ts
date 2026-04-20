@@ -31,13 +31,55 @@ export type SoulDef = {
 };
 
 export const SOULS: SoulDef[] = [
-  { id: "cartographer",    region: "pools",    name: "CARTOGRAPHER", x: 130, y: 70, hook: "HE IS MAPPING NOTHING." },
-  { id: "weeping_twin",    region: "pools",    name: "WEEPING TWIN", x: 60,  y: 90, hook: "SHE WEEPS AT HER REFLECTION." },
-  { id: "collector",       region: "field",    name: "COLLECTOR",    x: 30,  y: 70, hook: "JAR OF MOTES. EYES TOO BRIGHT." },
-  { id: "sleeper",         region: "field",    name: "SLEEPER",      x: 110, y: 95, hook: "HE WILL NOT WAKE." },
-  { id: "crowned_one",     region: "corridor", name: "CROWNED ONE",  x: 40,  y: 70, hook: "ALREADY COMPOSED. FAINTLY SMUG." },
-  { id: "stonechild",      region: "corridor", name: "STONECHILD",   x: 120, y: 80, hook: "HE FORGOT HIS NAME. ASKS POLITELY." },
-  { id: "lampkeeper_echo", region: "all",      name: "ECHO",         x: 80,  y: 60, hook: "A FAINT VERSION OF SOMEONE." },
+  {
+    id: "cartographer",
+    region: "pools",
+    name: "CARTOGRAPHER",
+    x: 130,
+    y: 70,
+    hook: "HE IS MAPPING NOTHING.",
+  },
+  {
+    id: "weeping_twin",
+    region: "pools",
+    name: "WEEPING TWIN",
+    x: 60,
+    y: 90,
+    hook: "SHE WEEPS AT HER REFLECTION.",
+  },
+  {
+    id: "collector",
+    region: "field",
+    name: "COLLECTOR",
+    x: 30,
+    y: 70,
+    hook: "JAR OF MOTES. EYES TOO BRIGHT.",
+  },
+  { id: "sleeper", region: "field", name: "SLEEPER", x: 110, y: 95, hook: "HE WILL NOT WAKE." },
+  {
+    id: "crowned_one",
+    region: "corridor",
+    name: "CROWNED ONE",
+    x: 40,
+    y: 70,
+    hook: "ALREADY COMPOSED. FAINTLY SMUG.",
+  },
+  {
+    id: "stonechild",
+    region: "corridor",
+    name: "STONECHILD",
+    x: 120,
+    y: 80,
+    hook: "HE FORGOT HIS NAME. ASKS POLITELY.",
+  },
+  {
+    id: "lampkeeper_echo",
+    region: "all",
+    name: "ECHO",
+    x: 80,
+    y: 60,
+    hook: "A FAINT VERSION OF SOMEONE.",
+  },
 ];
 
 export function soulState(save: SaveSlot, id: SoulId): number {

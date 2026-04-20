@@ -47,10 +47,19 @@ export function migrateSave(raw: unknown): SaveSlot | null {
   let scene = (r.scene ?? "SilverThreshold") as string;
   // Legacy scene names → new
   if (scene === "MoonHall" || scene === "MoonGate") scene = "ImaginalRealm";
-  const allowed: SceneKey[] = ["LastDay", "Crossing", "SilverThreshold", "ImaginalRealm", "CuratedSelf", "Epilogue"];
+  const allowed: SceneKey[] = [
+    "LastDay",
+    "Crossing",
+    "SilverThreshold",
+    "ImaginalRealm",
+    "CuratedSelf",
+    "Epilogue",
+  ];
   if (!allowed.includes(scene as SceneKey)) scene = "SilverThreshold";
-  const act: 0 | 1 = scene === "ImaginalRealm" || scene === "CuratedSelf" || scene === "Epilogue" ? 1 : 0;
-  const region = (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
+  const act: 0 | 1 =
+    scene === "ImaginalRealm" || scene === "CuratedSelf" || scene === "Epilogue" ? 1 : 0;
+  const region =
+    (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
   const shardFrags = r.shardFragments;
   const loreList = r.lore;
   return {

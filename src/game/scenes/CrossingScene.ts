@@ -9,8 +9,8 @@ import { onActionDown } from "../controls";
 
 type Whisper = {
   text: string;
-  x: number;          // current world x
-  y: number;          // spawn y (fixed)
+  x: number; // current world x
+  y: number; // spawn y (fixed)
   vx: number;
   obj: GBCText;
   alive: boolean;
@@ -19,7 +19,8 @@ type Whisper = {
 
 type RefusalDoor = {
   id: "kitchen" | "phone" | "window";
-  x: number; y: number;
+  x: number;
+  y: number;
   rect: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Arc;
   used: boolean;
@@ -63,7 +64,9 @@ export class CrossingScene extends Phaser.Scene {
   private wanderer?: Phaser.GameObjects.Container;
   private wandererSpoken = false;
 
-  constructor() { super("Crossing"); }
+  constructor() {
+    super("Crossing");
+  }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.dim = 0;
@@ -89,47 +92,90 @@ export class CrossingScene extends Phaser.Scene {
       const c = Phaser.Display.Color.Interpolate.ColorWithColor(
         Phaser.Display.Color.ValueToColor(0x2a3550),
         Phaser.Display.Color.ValueToColor(0x080a12),
-        8, i,
+        8,
+        i,
       );
       g.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), 1);
       g.fillRect(inset, 14 + inset * 0.6, GBC_W - inset * 2, GBC_H - 28 - inset * 1.2);
     }
     for (let y = 30; y < GBC_H; y += 10) {
-      const a = (1 - (y / GBC_H)) * 0.4 + 0.1;
-      g.fillStyle(0x3a4868, a); g.fillRect(20, y, GBC_W - 40, 1);
+      const a = (1 - y / GBC_H) * 0.4 + 0.1;
+      g.fillStyle(0x3a4868, a);
+      g.fillRect(20, y, GBC_W - 40, 1);
     }
-    spawnMotes(this, { count: 10, color: 0xdde6f5, alpha: 0.4, driftY: -0.006, driftX: 0.002, depth: 25 });
+    spawnMotes(this, {
+      count: 10,
+      color: 0xdde6f5,
+      alpha: 0.4,
+      driftY: -0.006,
+      driftX: 0.002,
+      depth: 25,
+    });
 
     this.rowan = makeRowan(this, GBC_W / 2, 24, "living");
-    this.overlay = this.add.rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0).setOrigin(0, 0).setDepth(190);
+    this.overlay = this.add
+      .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0)
+      .setOrigin(0, 0)
+      .setDepth(190);
 
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
 
     // Refusal doors — side-recessed in the wall, at three depths.
-    const doorDefs: { id: RefusalDoor["id"]; y: number; side: "left" | "right"; loreId: string; lines: { who: string; text: string }[] }[] = [
-      { id: "kitchen", y: 50, side: "left", loreId: "refusal_kitchen", lines: [
-        { who: "DOOR I", text: "Through the door: your kitchen. The kettle still whistling." },
-        { who: "DOOR I", text: "Two cups on the counter. Your hand is on one of them." },
-        { who: "DOOR I", text: "You can't remember which one is yours. It feels important." },
-      ] },
-      { id: "phone", y: 80, side: "right", loreId: "refusal_phone", lines: [
-        { who: "DOOR II", text: "Through the door: a voicemail playing on a loop." },
-        { who: "DOOR II", text: "Mara is saying your name like a question." },
-        { who: "DOOR II", text: "You stand still and listen. Then again. Then again." },
-      ] },
-      { id: "window", y: 110, side: "left", loreId: "refusal_window", lines: [
-        { who: "DOOR III", text: "Through the door: the window. The child has grown." },
-        { who: "DOOR III", text: "Still waving. At no one now. Or at everyone." },
-        { who: "DOOR III", text: "You can't tell from this side." },
-      ] },
+    const doorDefs: {
+      id: RefusalDoor["id"];
+      y: number;
+      side: "left" | "right";
+      loreId: string;
+      lines: { who: string; text: string }[];
+    }[] = [
+      {
+        id: "kitchen",
+        y: 50,
+        side: "left",
+        loreId: "refusal_kitchen",
+        lines: [
+          { who: "DOOR I", text: "Through the door: your kitchen. The kettle still whistling." },
+          { who: "DOOR I", text: "Two cups on the counter. Your hand is on one of them." },
+          { who: "DOOR I", text: "You can't remember which one is yours. It feels important." },
+        ],
+      },
+      {
+        id: "phone",
+        y: 80,
+        side: "right",
+        loreId: "refusal_phone",
+        lines: [
+          { who: "DOOR II", text: "Through the door: a voicemail playing on a loop." },
+          { who: "DOOR II", text: "Mara is saying your name like a question." },
+          { who: "DOOR II", text: "You stand still and listen. Then again. Then again." },
+        ],
+      },
+      {
+        id: "window",
+        y: 110,
+        side: "left",
+        loreId: "refusal_window",
+        lines: [
+          { who: "DOOR III", text: "Through the door: the window. The child has grown." },
+          { who: "DOOR III", text: "Still waving. At no one now. Or at everyone." },
+          { who: "DOOR III", text: "You can't tell from this side." },
+        ],
+      },
     ];
     for (const d of doorDefs) {
       const x = d.side === "left" ? 12 : GBC_W - 12;
       const rect = this.add.rectangle(x, d.y, 8, 14, 0x2a1810, 1).setDepth(3);
       this.add.rectangle(x, d.y, 9, 15, 0x584030, 0).setStrokeStyle(1, 0x584030).setDepth(3);
       const glow = this.add.circle(x, d.y, 5, 0xd89868, 0.25).setDepth(2);
-      this.tweens.add({ targets: glow, scale: 1.5, alpha: 0.05, duration: 1400, yoyo: true, repeat: -1 });
+      this.tweens.add({
+        targets: glow,
+        scale: 1.5,
+        alpha: 0.05,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+      });
       const used = !!this.save.lore.includes(d.loreId);
       if (used) glow.setVisible(false);
       this.doors.push({ id: d.id, x, y: d.y, rect, glow, used, loreId: d.loreId, lines: d.lines });
@@ -158,10 +204,20 @@ export class CrossingScene extends Phaser.Scene {
     this.nextWhisperAt = 1500;
 
     // Hints
-    this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
-    this.hint = new GBCText(this, 4, GBC_H - 9, "WALK SOUTH", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
+    this.add
+      .rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(199);
+    this.hint = new GBCText(this, 4, GBC_H - 9, "WALK SOUTH", {
+      color: COLOR.textDim,
+      depth: 200,
+      scrollFactor: 0,
+    });
     this.witnessHint = new GBCText(this, 4, 14, "B/Q: WITNESS WHISPERS", {
-      color: COLOR.textDim, depth: 200, scrollFactor: 0,
+      color: COLOR.textDim,
+      depth: 200,
+      scrollFactor: 0,
     });
 
     // Bind interact + witness
@@ -177,7 +233,8 @@ export class CrossingScene extends Phaser.Scene {
     const slowed = t < this.slowUntil;
     const baseSpeed = 0.035 * dt * (slowed ? 0.4 : 1);
     const i = this.input2.poll();
-    let dx = 0, dy = 0;
+    let dx = 0,
+      dy = 0;
     if (i.left) dx -= baseSpeed * 0.5;
     if (i.right) dx += baseSpeed * 0.5;
     if (i.up) dy -= baseSpeed * 0.4;
@@ -193,15 +250,12 @@ export class CrossingScene extends Phaser.Scene {
     this.overlay.fillAlpha = this.dim;
 
     // Milestone voices
-    if (!this.milestones[0] && progress > 0.25) this.speak(0, [
-      { who: "?", text: "Do not be afraid. This is not punishment." },
-    ]);
-    else if (!this.milestones[1] && progress > 0.55) this.speak(1, [
-      { who: "?", text: "It is only a doorway you have always walked toward." },
-    ]);
-    else if (!this.milestones[2] && progress > 0.85) this.speak(2, [
-      { who: "?", text: "I will meet you on the other side. Keep walking." },
-    ]);
+    if (!this.milestones[0] && progress > 0.25)
+      this.speak(0, [{ who: "?", text: "Do not be afraid. This is not punishment." }]);
+    else if (!this.milestones[1] && progress > 0.55)
+      this.speak(1, [{ who: "?", text: "It is only a doorway you have always walked toward." }]);
+    else if (!this.milestones[2] && progress > 0.85)
+      this.speak(2, [{ who: "?", text: "I will meet you on the other side. Keep walking." }]);
 
     // Whispers — spawn over time, drift sideways, collide with player.
     if (t > this.nextWhisperAt && this.whispers.length < 3 && progress < 0.95) {
@@ -209,23 +263,39 @@ export class CrossingScene extends Phaser.Scene {
       const fromLeft = Math.random() < 0.5;
       const y = 36 + Math.random() * (GBC_H - 60);
       const obj = new GBCText(this, fromLeft ? -40 : GBC_W + 8, y, text, {
-        color: COLOR.textDim, depth: 60,
+        color: COLOR.textDim,
+        depth: 60,
       });
       obj.obj.setAlpha(0.65);
       const vx = (fromLeft ? 1 : -1) * (0.012 + Math.random() * 0.008);
-      this.whispers.push({ text, x: fromLeft ? -40 : GBC_W + 8, y, vx, obj, alive: true, witnessed: false });
+      this.whispers.push({
+        text,
+        x: fromLeft ? -40 : GBC_W + 8,
+        y,
+        vx,
+        obj,
+        alive: true,
+        witnessed: false,
+      });
       this.nextWhisperAt = t + 1400 + Math.random() * 1400;
     }
     for (const w of this.whispers) {
       if (!w.alive) continue;
       w.x += w.vx * dt;
       w.obj.setPosition(w.x, w.y);
-      const px = this.rowan.x, py = this.rowan.y;
-      const dxw = w.x + 16 - px, dyw = w.y + 4 - py;
+      const px = this.rowan.x,
+        py = this.rowan.y;
+      const dxw = w.x + 16 - px,
+        dyw = w.y + 4 - py;
       if (!w.witnessed && dxw * dxw + dyw * dyw < 10 * 10) {
         // Collided — small slow penalty, brief cam shake
         w.alive = false;
-        this.tweens.add({ targets: w.obj.obj, alpha: 0, duration: 250, onComplete: () => w.obj.destroy() });
+        this.tweens.add({
+          targets: w.obj.obj,
+          alpha: 0,
+          duration: 250,
+          onComplete: () => w.obj.destroy(),
+        });
         this.cameras.main.shake(120, 0.0025);
         getAudio().sfx("hit");
         this.slowUntil = t + 600;
@@ -240,7 +310,7 @@ export class CrossingScene extends Phaser.Scene {
         w.obj.destroy();
       }
     }
-    this.whispers = this.whispers.filter(w => w.alive || w.obj);
+    this.whispers = this.whispers.filter((w) => w.alive || w.obj);
 
     // Wanderer — appear around 50% progress, walk past Rowan, then disappear.
     if (this.wanderer && !this.wandererSpoken && progress > 0.5) {
@@ -251,14 +321,23 @@ export class CrossingScene extends Phaser.Scene {
       if (Math.abs(dyw) < 8 && Math.abs(dxw) < 30) {
         this.wandererSpoken = true;
         this.dialogActive = true;
-        runDialog(this, [
-          { who: "WANDERER", text: "You're the second one today." },
-          { who: "WANDERER", text: "(They do not clarify the first.)" },
-        ], () => {
-          this.dialogActive = false;
-          if (unlockLore(this.save, "wanderer_brief")) showLoreToast(this, "wanderer_brief");
-          this.tweens.add({ targets: this.wanderer, alpha: 0, duration: 1200, onComplete: () => this.wanderer?.destroy() });
-        });
+        runDialog(
+          this,
+          [
+            { who: "WANDERER", text: "You're the second one today." },
+            { who: "WANDERER", text: "(They do not clarify the first.)" },
+          ],
+          () => {
+            this.dialogActive = false;
+            if (unlockLore(this.save, "wanderer_brief")) showLoreToast(this, "wanderer_brief");
+            this.tweens.add({
+              targets: this.wanderer,
+              alpha: 0,
+              duration: 1200,
+              onComplete: () => this.wanderer?.destroy(),
+            });
+          },
+        );
       }
     }
 
@@ -279,22 +358,34 @@ export class CrossingScene extends Phaser.Scene {
       }
       this.save.scene = "SilverThreshold";
       writeSave(this.save);
-      const a = getAudio(); a.music.stop(); a.sfx("open");
+      const a = getAudio();
+      a.music.stop();
+      a.sfx("open");
       this.cameras.main.fadeOut(900, 220, 230, 245);
-      this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("SilverThreshold", { save: this.save }));
+      this.cameras.main.once("camerafadeoutcomplete", () =>
+        this.scene.start("SilverThreshold", { save: this.save }),
+      );
     }
   }
 
   private witnessNearestWhisper() {
     if (this.dialogActive) return;
-    let best: Whisper | null = null; let bd = Infinity;
+    let best: Whisper | null = null;
+    let bd = Infinity;
     for (const w of this.whispers) {
       if (!w.alive || w.witnessed) continue;
-      const dx = w.x + 16 - this.rowan.x, dy = w.y + 4 - this.rowan.y;
+      const dx = w.x + 16 - this.rowan.x,
+        dy = w.y + 4 - this.rowan.y;
       const d = dx * dx + dy * dy;
-      if (d < bd) { bd = d; best = w; }
+      if (d < bd) {
+        bd = d;
+        best = w;
+      }
     }
-    if (!best || bd > 60 * 60) { getAudio().sfx("miss"); return; }
+    if (!best || bd > 60 * 60) {
+      getAudio().sfx("miss");
+      return;
+    }
     best.witnessed = true;
     this.witnessedCount++;
     this.save.stats.clarity = Math.min(99, this.save.stats.clarity + 1);
@@ -302,24 +393,35 @@ export class CrossingScene extends Phaser.Scene {
     this.events.emit("stats-changed");
     getAudio().sfx("confirm");
     // Visual: flash + drift up + fade
-    this.tweens.add({ targets: best.obj.obj, alpha: 0, y: best.y - 12, duration: 700, onComplete: () => {
-      best!.alive = false;
-      best!.obj.destroy();
-    } });
+    this.tweens.add({
+      targets: best.obj.obj,
+      alpha: 0,
+      y: best.y - 12,
+      duration: 700,
+      onComplete: () => {
+        best!.alive = false;
+        best!.obj.destroy();
+      },
+    });
   }
 
   private nearestDoor(): RefusalDoor | null {
-    let best: RefusalDoor | null = null; let bd = Infinity;
+    let best: RefusalDoor | null = null;
+    let bd = Infinity;
     for (const d of this.doors) {
-      const dx = d.x - this.rowan.x, dy = d.y - this.rowan.y;
+      const dx = d.x - this.rowan.x,
+        dy = d.y - this.rowan.y;
       const dist = dx * dx + dy * dy;
-      if (dist < bd) { bd = dist; best = d; }
+      if (dist < bd) {
+        bd = dist;
+        best = d;
+      }
     }
     return bd < 12 * 12 ? best : null;
   }
 
   private doorsRead(): number {
-    return this.doors.filter(d => d.used || this.save.lore.includes(d.loreId)).length;
+    return this.doors.filter((d) => d.used || this.save.lore.includes(d.loreId)).length;
   }
 
   private tryDoor() {
@@ -330,12 +432,16 @@ export class CrossingScene extends Phaser.Scene {
     d.glow.setVisible(false);
     this.dialogActive = true;
     if (unlockLore(this.save, d.loreId)) showLoreToast(this, d.loreId);
-    runDialog(this, d.lines, () => { this.dialogActive = false; });
+    runDialog(this, d.lines, () => {
+      this.dialogActive = false;
+    });
   }
 
   private speak(idx: number, lines: { who: string; text: string }[]) {
     this.milestones[idx] = true;
     this.dialogActive = true;
-    runDialog(this, lines, () => { this.dialogActive = false; });
+    runDialog(this, lines, () => {
+      this.dialogActive = false;
+    });
   }
 }

@@ -20,45 +20,45 @@ export type Palette4 = [string, string, string, string];
 
 export const PAL = {
   // Silver / liminal
-  silver:    ["#0a0e1a", "#2a3550", "#7889a8", "#dde6f5"] as Palette4, // bg→pearl
-  silverBg:  ["#1a2030", "#3a4868", "#7889a8", "#c8d4e8"] as Palette4,
+  silver: ["#0a0e1a", "#2a3550", "#7889a8", "#dde6f5"] as Palette4, // bg→pearl
+  silverBg: ["#1a2030", "#3a4868", "#7889a8", "#c8d4e8"] as Palette4,
   // Moon / hall
-  moon:      ["#0a0f20", "#243058", "#5a78b8", "#a8c8e8"] as Palette4,
-  moonBg:    ["#0e1428", "#1f2a48", "#3a5078", "#7898c0"] as Palette4,
+  moon: ["#0a0f20", "#243058", "#5a78b8", "#a8c8e8"] as Palette4,
+  moonBg: ["#0e1428", "#1f2a48", "#3a5078", "#7898c0"] as Palette4,
   // Rowan (player)
-  rowan:     ["#0a0e1a", "#3a3050", "#88a0c8", "#eef3ff"] as Palette4, // robe pale
+  rowan: ["#0a0e1a", "#3a3050", "#88a0c8", "#eef3ff"] as Palette4, // robe pale
   // Soryn (guide)
-  soryn:     ["#0a0e1a", "#1f3858", "#5a90c8", "#c8e0f0"] as Palette4,
+  soryn: ["#0a0e1a", "#1f3858", "#5a90c8", "#c8e0f0"] as Palette4,
   // Mirror enemies
-  reflection:["#0a0e1a", "#3a4868", "#a8b8d0", "#eef3ff"] as Palette4,
-  echo:      ["#0a0e1a", "#1a3868", "#4a78c8", "#a8c8e8"] as Palette4,
-  glitter:   ["#0a0e1a", "#7060a0", "#d8c878", "#fff8c8"] as Palette4,
+  reflection: ["#0a0e1a", "#3a4868", "#a8b8d0", "#eef3ff"] as Palette4,
+  echo: ["#0a0e1a", "#1a3868", "#4a78c8", "#a8c8e8"] as Palette4,
+  glitter: ["#0a0e1a", "#7060a0", "#d8c878", "#fff8c8"] as Palette4,
   // Curated Self
-  boss:      ["#0a0e1a", "#3a3858", "#a8a0c0", "#fff0e8"] as Palette4,
-  bossWarm:  ["#0a0e1a", "#684838", "#d89858", "#ffe098"] as Palette4,
+  boss: ["#0a0e1a", "#3a3858", "#a8a0c0", "#fff0e8"] as Palette4,
+  bossWarm: ["#0a0e1a", "#684838", "#d89858", "#ffe098"] as Palette4,
   // UI
-  ui:        ["#0a0e1a", "#2a3550", "#7889a8", "#eef3ff"] as Palette4,
+  ui: ["#0a0e1a", "#2a3550", "#7889a8", "#eef3ff"] as Palette4,
   // Element circles
-  air:       ["#0a0e1a", "#3a5868", "#a8d0d8", "#f0fafa"] as Palette4,
-  fire:      ["#0a0e1a", "#683828", "#d86848", "#ffc888"] as Palette4,
-  water:     ["#0a0e1a", "#1a3868", "#4a90d8", "#a8d8f0"] as Palette4,
-  earth:     ["#0a0e1a", "#384828", "#688838", "#b8d088"] as Palette4,
+  air: ["#0a0e1a", "#3a5868", "#a8d0d8", "#f0fafa"] as Palette4,
+  fire: ["#0a0e1a", "#683828", "#d86848", "#ffc888"] as Palette4,
+  water: ["#0a0e1a", "#1a3868", "#4a90d8", "#a8d8f0"] as Palette4,
+  earth: ["#0a0e1a", "#384828", "#688838", "#b8d088"] as Palette4,
   // Daimon (mystical glyph-being): deep void, silver-blue ring, pale glow, white core
-  daimon:    ["#0a0e1a", "#3a5878", "#88c0e8", "#f0fcff"] as Palette4,
+  daimon: ["#0a0e1a", "#3a5878", "#88c0e8", "#f0fcff"] as Palette4,
   // Living-world Rowan accessories
-  scarf:     ["#0a0e1a", "#481818", "#a83838", "#f0a888"] as Palette4, // muted red
-  coat:      ["#0a0e1a", "#2a1810", "#684030", "#a87858"] as Palette4, // brown
-  boots:     ["#0a0e1a", "#1a1410", "#3a2820", "#684838"] as Palette4, // dark leather
-  satchel:   ["#0a0e1a", "#3a2818", "#785838", "#b89868"] as Palette4, // tan
+  scarf: ["#0a0e1a", "#481818", "#a83838", "#f0a888"] as Palette4, // muted red
+  coat: ["#0a0e1a", "#2a1810", "#684030", "#a87858"] as Palette4, // brown
+  boots: ["#0a0e1a", "#1a1410", "#3a2820", "#684838"] as Palette4, // dark leather
+  satchel: ["#0a0e1a", "#3a2818", "#785838", "#b89868"] as Palette4, // tan
 };
 
 export const COLOR = {
-  void:        "#0a0e1a",
-  textLight:   "#dde6f5",
-  textDim:     "#7889a8",
-  textAccent:  "#a8c8e8",
-  textWarn:    "#d89868",
-  textGold:    "#ffe098",
+  void: "#0a0e1a",
+  textLight: "#dde6f5",
+  textDim: "#7889a8",
+  textAccent: "#a8c8e8",
+  textWarn: "#d89868",
+  textGold: "#ffe098",
 };
 
 /** Paint a pixel grid (rows of digits 0-3 or '.') onto a canvas. */
@@ -344,24 +344,33 @@ const T_GATE = [
 // Tile registry: index → (rows, palette key on the global PAL)
 type TileDef = { rows: string[]; pal: keyof typeof PAL };
 const TILE_DEFS: TileDef[] = [
-  { rows: T_VOID,             pal: "silver" },     // 0
-  { rows: T_SILVER_FLOOR,     pal: "silver" },     // 1
-  { rows: T_SILVER_PATH,      pal: "silver" },     // 2
-  { rows: T_SILVER_EDGE_N,    pal: "silver" },     // 3
-  { rows: T_SILVER_VOID,      pal: "silver" },     // 4
-  { rows: T_MOON_FLOOR,       pal: "moon" },       // 5
-  { rows: T_MOON_FLOOR_REFLECT, pal: "moon" },     // 6
-  { rows: T_MOON_WALL,        pal: "moon" },       // 7
-  { rows: T_MOON_PILLAR,      pal: "moon" },       // 8
-  { rows: T_MIRROR_FRAME,     pal: "silver" },     // 9
-  { rows: T_MIRROR_CLEARED,   pal: "silver" },     // 10
-  { rows: T_GATE,             pal: "moon" },       // 11
+  { rows: T_VOID, pal: "silver" }, // 0
+  { rows: T_SILVER_FLOOR, pal: "silver" }, // 1
+  { rows: T_SILVER_PATH, pal: "silver" }, // 2
+  { rows: T_SILVER_EDGE_N, pal: "silver" }, // 3
+  { rows: T_SILVER_VOID, pal: "silver" }, // 4
+  { rows: T_MOON_FLOOR, pal: "moon" }, // 5
+  { rows: T_MOON_FLOOR_REFLECT, pal: "moon" }, // 6
+  { rows: T_MOON_WALL, pal: "moon" }, // 7
+  { rows: T_MOON_PILLAR, pal: "moon" }, // 8
+  { rows: T_MIRROR_FRAME, pal: "silver" }, // 9
+  { rows: T_MIRROR_CLEARED, pal: "silver" }, // 10
+  { rows: T_GATE, pal: "moon" }, // 11
 ];
 
 export const TILE_INDEX = {
-  VOID: 0, SILVER_FLOOR: 1, SILVER_PATH: 2, SILVER_EDGE_N: 3, SILVER_VOID: 4,
-  MOON_FLOOR: 5, MOON_FLOOR_REFLECT: 6, MOON_WALL: 7, MOON_PILLAR: 8,
-  MIRROR_FRAME: 9, MIRROR_CLEARED: 10, GATE: 11,
+  VOID: 0,
+  SILVER_FLOOR: 1,
+  SILVER_PATH: 2,
+  SILVER_EDGE_N: 3,
+  SILVER_VOID: 4,
+  MOON_FLOOR: 5,
+  MOON_FLOOR_REFLECT: 6,
+  MOON_WALL: 7,
+  MOON_PILLAR: 8,
+  MIRROR_FRAME: 9,
+  MIRROR_CLEARED: 10,
+  GATE: 11,
 };
 
 /** Bake all tiles into one horizontal strip texture suitable for Phaser tilemaps. */
@@ -715,12 +724,13 @@ const ROWAN_SIDE: string[][] = [
 ];
 
 function flipRowsHorizontal(rows: string[]): string[] {
-  return rows.map(r => r.split("").reverse().join(""));
+  return rows.map((r) => r.split("").reverse().join(""));
 }
 
 /** Bake Rowan walk sheet: 4 columns × 4 rows. Rows: 0=down, 1=left, 2=right, 3=up. */
 export function bakeRowan(scene: Phaser.Scene, key = "rowan") {
-  const cols = 4, rows = 4;
+  const cols = 4,
+    rows = 4;
   const w = ROWAN_FRAME_W * cols;
   const h = ROWAN_FRAME_H * rows;
   const { ctx, tex } = makeTex(scene, key, w, h);
@@ -808,7 +818,8 @@ export function bakeSoryn(scene: Phaser.Scene, key = "soryn") {
 // Encounter enemies (32x32) — 3 enemies × 2 frames
 // ============================================================================
 
-const ENEMY_W = 32, ENEMY_H = 32;
+const ENEMY_W = 32,
+  ENEMY_H = 32;
 
 const REFLECTION_FRAMES: string[][] = [
   [
@@ -1039,15 +1050,16 @@ export function bakeEnemies(scene: Phaser.Scene, key = "enemies") {
 // Frame indices into the enemies sheet
 export const ENEMY_FRAMES = {
   reflection: [0, 1],
-  echo:       [2, 3],
-  glitter:    [4, 5],
+  echo: [2, 3],
+  glitter: [4, 5],
 };
 
 // ============================================================================
 // Curated Self boss (48x48) — 5 states, 2 frames each
 // ============================================================================
 
-const BOSS_W = 48, BOSS_H = 48;
+const BOSS_W = 48,
+  BOSS_H = 48;
 
 function bossFrame(opts: {
   cracked?: boolean;
@@ -1064,7 +1076,7 @@ function bossFrame(opts: {
   fill("................................................");
   fill("................................................");
   fill("................................................");
-  fill("...............3333333333333................"  + "....");
+  fill("...............3333333333333................" + "....");
   fill(".............33333333333333333.............." + "....");
   fill("............333333111111133333.............." + "....");
   fill("...........3333111111111113333.............." + "....");
@@ -1113,7 +1125,7 @@ function bossFrame(opts: {
   fill("................................................");
 
   // Normalize to 48 chars
-  let out = rows.map(r => (r + "................................................").slice(0, W));
+  let out = rows.map((r) => (r + "................................................").slice(0, W));
 
   if (opts.alt) {
     // Subtle bob: shift down by 1
@@ -1125,7 +1137,9 @@ function bossFrame(opts: {
     const crackRows = [10, 11, 12, 13, 14];
     for (const ri of crackRows) {
       const arr = out[ri].split("");
-      arr[20] = "1"; arr[24] = "1"; arr[28] = "1";
+      arr[20] = "1";
+      arr[24] = "1";
+      arr[28] = "1";
       out[ri] = arr.join("");
     }
   }
@@ -1145,11 +1159,11 @@ function bossFrame(opts: {
 export function bakeBoss(scene: Phaser.Scene, key = "boss") {
   // 5 states × 2 frames
   const states = [
-    { palKey: "boss" as const,    opts: {} },
-    { palKey: "boss" as const,    opts: { ornaments: true } },
-    { palKey: "boss" as const,    opts: { cracked: true } },
+    { palKey: "boss" as const, opts: {} },
+    { palKey: "boss" as const, opts: { ornaments: true } },
+    { palKey: "boss" as const, opts: { cracked: true } },
     { palKey: "bossWarm" as const, opts: { cracked: true, exposed: true } },
-    { palKey: "boss" as const,    opts: { released: true } },
+    { palKey: "boss" as const, opts: { released: true } },
   ];
   const w = BOSS_W * 10;
   const h = BOSS_H;
@@ -1166,7 +1180,11 @@ export function bakeBoss(scene: Phaser.Scene, key = "boss") {
 }
 
 export const BOSS_STATES = {
-  composed: 0, flattering: 1, fractured: 2, exposed: 3, released: 4,
+  composed: 0,
+  flattering: 1,
+  fractured: 2,
+  exposed: 3,
+  released: 4,
 } as const;
 
 // ============================================================================
@@ -1218,7 +1236,7 @@ export function bakeElements(scene: Phaser.Scene, key = "elements") {
   const h = TILE;
   const { ctx, tex } = makeTex(scene, key, w, h);
   elems.forEach((p, ei) => {
-    paintGrid(ctx, ELEM_BASE[0], PAL[p], (ei * 2) * TILE, 0);
+    paintGrid(ctx, ELEM_BASE[0], PAL[p], ei * 2 * TILE, 0);
     paintGrid(ctx, ELEM_BASE[1], PAL[p], (ei * 2 + 1) * TILE, 0);
   });
   addGridFrames(tex, TILE, TILE, 8, 1);
@@ -1233,69 +1251,71 @@ export const ELEMENT_FRAMES = { air: 0, fire: 2, water: 4, earth: 6 };
 // ============================================================================
 
 const FONT: Record<string, string[]> = {
-  "A": ["01110","10001","10001","11111","10001","10001","10001"],
-  "B": ["11110","10001","10001","11110","10001","10001","11110"],
-  "C": ["01110","10001","10000","10000","10000","10001","01110"],
-  "D": ["11110","10001","10001","10001","10001","10001","11110"],
-  "E": ["11111","10000","10000","11110","10000","10000","11111"],
-  "F": ["11111","10000","10000","11110","10000","10000","10000"],
-  "G": ["01110","10001","10000","10111","10001","10001","01110"],
-  "H": ["10001","10001","10001","11111","10001","10001","10001"],
-  "I": ["01110","00100","00100","00100","00100","00100","01110"],
-  "J": ["00111","00010","00010","00010","00010","10010","01100"],
-  "K": ["10001","10010","10100","11000","10100","10010","10001"],
-  "L": ["10000","10000","10000","10000","10000","10000","11111"],
-  "M": ["10001","11011","10101","10001","10001","10001","10001"],
-  "N": ["10001","11001","10101","10011","10001","10001","10001"],
-  "O": ["01110","10001","10001","10001","10001","10001","01110"],
-  "P": ["11110","10001","10001","11110","10000","10000","10000"],
-  "Q": ["01110","10001","10001","10001","10101","10010","01101"],
-  "R": ["11110","10001","10001","11110","10100","10010","10001"],
-  "S": ["01111","10000","10000","01110","00001","00001","11110"],
-  "T": ["11111","00100","00100","00100","00100","00100","00100"],
-  "U": ["10001","10001","10001","10001","10001","10001","01110"],
-  "V": ["10001","10001","10001","10001","10001","01010","00100"],
-  "W": ["10001","10001","10001","10001","10101","10101","01010"],
-  "X": ["10001","10001","01010","00100","01010","10001","10001"],
-  "Y": ["10001","10001","01010","00100","00100","00100","00100"],
-  "Z": ["11111","00001","00010","00100","01000","10000","11111"],
-  "0": ["01110","10001","10011","10101","11001","10001","01110"],
-  "1": ["00100","01100","00100","00100","00100","00100","01110"],
-  "2": ["01110","10001","00001","00010","00100","01000","11111"],
-  "3": ["11110","00001","00001","01110","00001","00001","11110"],
-  "4": ["00010","00110","01010","10010","11111","00010","00010"],
-  "5": ["11111","10000","11110","00001","00001","10001","01110"],
-  "6": ["00110","01000","10000","11110","10001","10001","01110"],
-  "7": ["11111","00001","00010","00100","01000","01000","01000"],
-  "8": ["01110","10001","10001","01110","10001","10001","01110"],
-  "9": ["01110","10001","10001","01111","00001","00010","01100"],
-  ".": ["00000","00000","00000","00000","00000","00000","00100"],
-  ",": ["00000","00000","00000","00000","00000","00100","01000"],
-  "!": ["00100","00100","00100","00100","00100","00000","00100"],
-  "?": ["01110","10001","00001","00010","00100","00000","00100"],
-  "'": ["00100","00100","00000","00000","00000","00000","00000"],
-  '"': ["01010","01010","00000","00000","00000","00000","00000"],
-  ":": ["00000","00100","00000","00000","00000","00100","00000"],
-  ";": ["00000","00100","00000","00000","00000","00100","01000"],
-  "-": ["00000","00000","00000","11111","00000","00000","00000"],
-  "_": ["00000","00000","00000","00000","00000","00000","11111"],
-  "/": ["00001","00010","00010","00100","01000","01000","10000"],
-  "(": ["00010","00100","01000","01000","01000","00100","00010"],
-  ")": ["01000","00100","00010","00010","00010","00100","01000"],
-  " ": ["00000","00000","00000","00000","00000","00000","00000"],
-  "·": ["00000","00000","00000","00100","00000","00000","00000"],
-  "→": ["00000","00100","00010","11111","00010","00100","00000"],
-  "▶": ["10000","11000","11100","11110","11100","11000","10000"],
-  "▼": ["00000","11111","11111","01110","00100","00000","00000"],
-  "✦": ["00100","10101","01110","11111","01110","10101","00100"],
-  "♥": ["00000","01010","11111","11111","01110","00100","00000"],
-  "○": ["01110","10001","10001","10001","10001","10001","01110"],
-  "◯": ["01110","10001","10001","10001","10001","10001","01110"],
-  "✓": ["00000","00001","00010","10100","11000","10000","00000"],
-  "❤": ["00000","01010","11111","11111","01110","00100","00000"],
+  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+  B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+  C: ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
+  D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+  F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
+  G: ["01110", "10001", "10000", "10111", "10001", "10001", "01110"],
+  H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
+  I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
+  J: ["00111", "00010", "00010", "00010", "00010", "10010", "01100"],
+  K: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
+  L: ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
+  M: ["10001", "11011", "10101", "10001", "10001", "10001", "10001"],
+  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  P: ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
+  Q: ["01110", "10001", "10001", "10001", "10101", "10010", "01101"],
+  R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+  S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+  U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+  V: ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
+  W: ["10001", "10001", "10001", "10001", "10101", "10101", "01010"],
+  X: ["10001", "10001", "01010", "00100", "01010", "10001", "10001"],
+  Y: ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+  Z: ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
+  "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
+  "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+  "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
+  "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
+  "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
+  "5": ["11111", "10000", "11110", "00001", "00001", "10001", "01110"],
+  "6": ["00110", "01000", "10000", "11110", "10001", "10001", "01110"],
+  "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
+  "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
+  "9": ["01110", "10001", "10001", "01111", "00001", "00010", "01100"],
+  ".": ["00000", "00000", "00000", "00000", "00000", "00000", "00100"],
+  ",": ["00000", "00000", "00000", "00000", "00000", "00100", "01000"],
+  "!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
+  "?": ["01110", "10001", "00001", "00010", "00100", "00000", "00100"],
+  "'": ["00100", "00100", "00000", "00000", "00000", "00000", "00000"],
+  '"': ["01010", "01010", "00000", "00000", "00000", "00000", "00000"],
+  ":": ["00000", "00100", "00000", "00000", "00000", "00100", "00000"],
+  ";": ["00000", "00100", "00000", "00000", "00000", "00100", "01000"],
+  "-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
+  _: ["00000", "00000", "00000", "00000", "00000", "00000", "11111"],
+  "/": ["00001", "00010", "00010", "00100", "01000", "01000", "10000"],
+  "(": ["00010", "00100", "01000", "01000", "01000", "00100", "00010"],
+  ")": ["01000", "00100", "00010", "00010", "00010", "00100", "01000"],
+  " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
+  "·": ["00000", "00000", "00000", "00100", "00000", "00000", "00000"],
+  "→": ["00000", "00100", "00010", "11111", "00010", "00100", "00000"],
+  "▶": ["10000", "11000", "11100", "11110", "11100", "11000", "10000"],
+  "▼": ["00000", "11111", "11111", "01110", "00100", "00000", "00000"],
+  "✦": ["00100", "10101", "01110", "11111", "01110", "10101", "00100"],
+  "♥": ["00000", "01010", "11111", "11111", "01110", "00100", "00000"],
+  "○": ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  "◯": ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  "✓": ["00000", "00001", "00010", "10100", "11000", "10000", "00000"],
+  "❤": ["00000", "01010", "11111", "11111", "01110", "00100", "00000"],
 };
 
-const CHAR_W = 5, CHAR_H = 7, CHAR_GAP = 1;
+const CHAR_W = 5,
+  CHAR_H = 7,
+  CHAR_GAP = 1;
 
 /** Draw GBC-style bitmap text into a CanvasTexture, returning the texture key. */
 export function drawBitmapText(
@@ -1342,7 +1362,10 @@ export function wrapText(text: string, maxPx: number): string[] {
   for (const w of words) {
     const trial = cur ? cur + " " + w : w;
     if (measureText(trial) <= maxPx) cur = trial;
-    else { if (cur) lines.push(cur); cur = w; }
+    else {
+      if (cur) lines.push(cur);
+      cur = w;
+    }
   }
   if (cur) lines.push(cur);
   return lines;
@@ -1365,7 +1388,13 @@ export class GBCText {
     x: number,
     y: number,
     text: string,
-    opts: { color?: string; shadow?: string; maxWidthPx?: number; depth?: number; scrollFactor?: number } = {},
+    opts: {
+      color?: string;
+      shadow?: string;
+      maxWidthPx?: number;
+      depth?: number;
+      scrollFactor?: number;
+    } = {},
   ) {
     this.scene = scene;
     this.color = opts.color ?? COLOR.textLight;
@@ -1374,10 +1403,17 @@ export class GBCText {
     this.key = `gbctext_${Math.random().toString(36).slice(2, 9)}`;
     this._lastText = text;
     const lines = wrapText(text, this.maxWidthPx);
-    const w = Math.max(1, ...lines.map(l => measureText(l)));
+    const w = Math.max(1, ...lines.map((l) => measureText(l)));
     const h = Math.max(1, lines.length * (CHAR_H + 2) - 2);
-    const { ctx, tex } = makeTex(scene, this.key, w + (this.shadow ? 1 : 0), h + (this.shadow ? 1 : 0));
-    lines.forEach((line, i) => drawBitmapText(ctx, line, 0, i * (CHAR_H + 2), this.color, this.shadow));
+    const { ctx, tex } = makeTex(
+      scene,
+      this.key,
+      w + (this.shadow ? 1 : 0),
+      h + (this.shadow ? 1 : 0),
+    );
+    lines.forEach((line, i) =>
+      drawBitmapText(ctx, line, 0, i * (CHAR_H + 2), this.color, this.shadow),
+    );
     tex.refresh();
     this.obj = scene.add.image(x, y, this.key).setOrigin(0, 0);
     if (opts.depth !== undefined) this.obj.setDepth(opts.depth);
@@ -1388,16 +1424,29 @@ export class GBCText {
     this._lastText = text;
     if (this.scene.textures.exists(this.key)) this.scene.textures.remove(this.key);
     const lines = wrapText(text, this.maxWidthPx);
-    const w = Math.max(1, ...lines.map(l => measureText(l)));
+    const w = Math.max(1, ...lines.map((l) => measureText(l)));
     const h = Math.max(1, lines.length * (CHAR_H + 2) - 2);
-    const { ctx, tex } = makeTex(this.scene, this.key, w + (this.shadow ? 1 : 0), h + (this.shadow ? 1 : 0));
-    lines.forEach((line, i) => drawBitmapText(ctx, line, 0, i * (CHAR_H + 2), this.color, this.shadow));
+    const { ctx, tex } = makeTex(
+      this.scene,
+      this.key,
+      w + (this.shadow ? 1 : 0),
+      h + (this.shadow ? 1 : 0),
+    );
+    lines.forEach((line, i) =>
+      drawBitmapText(ctx, line, 0, i * (CHAR_H + 2), this.color, this.shadow),
+    );
     tex.refresh();
     this.obj.setTexture(this.key);
   }
-  setColor(color: string) { this.setText(this._lastText ?? "", color); }
-  setVisible(v: boolean) { this.obj.setVisible(v); }
-  setPosition(x: number, y: number) { this.obj.setPosition(x, y); }
+  setColor(color: string) {
+    this.setText(this._lastText ?? "", color);
+  }
+  setVisible(v: boolean) {
+    this.obj.setVisible(v);
+  }
+  setPosition(x: number, y: number) {
+    this.obj.setPosition(x, y);
+  }
   destroy() {
     this.obj.destroy();
     if (this.scene.textures.exists(this.key)) this.scene.textures.remove(this.key);
@@ -1418,21 +1467,33 @@ export function gbcWipe(scene: Phaser.Scene, onMid: () => void, durMs = 280) {
   const bandH = Math.ceil(GBC_H / bands);
   const rects: Phaser.GameObjects.Rectangle[] = [];
   for (let i = 0; i < bands; i++) {
-    const r = scene.add.rectangle(0, i * bandH, 0, bandH, 0x0a0e1a, 1)
-      .setOrigin(0, 0).setScrollFactor(0).setDepth(9999);
+    const r = scene.add
+      .rectangle(0, i * bandH, 0, bandH, 0x0a0e1a, 1)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(9999);
     rects.push(r);
   }
   const step = durMs / bands;
   rects.forEach((r, i) => {
-    scene.tweens.add({ targets: r, width: GBC_W, duration: durMs * 0.6, delay: i * (step * 0.4), ease: "Sine.in" });
+    scene.tweens.add({
+      targets: r,
+      width: GBC_W,
+      duration: durMs * 0.6,
+      delay: i * (step * 0.4),
+      ease: "Sine.in",
+    });
   });
   scene.time.delayedCall(durMs, () => {
     onMid();
     scene.time.delayedCall(60, () => {
       rects.forEach((r, i) => {
         scene.tweens.add({
-          targets: r, width: 0, duration: durMs * 0.6,
-          delay: (bands - 1 - i) * (step * 0.4), ease: "Sine.out",
+          targets: r,
+          width: 0,
+          duration: durMs * 0.6,
+          delay: (bands - 1 - i) * (step * 0.4),
+          ease: "Sine.out",
           onComplete: () => r.destroy(),
         });
       });
@@ -1468,12 +1529,18 @@ export function toggleLcd(scene: Phaser.Scene) {
     lcdEnabled = false;
     return false;
   }
-  lcdOverlay = scene.add.image(0, 0, "lcd_overlay").setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
+  lcdOverlay = scene.add
+    .image(0, 0, "lcd_overlay")
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setDepth(10000);
   lcdEnabled = true;
   return true;
 }
 
-export function isLcdOn() { return lcdEnabled; }
+export function isLcdOn() {
+  return lcdEnabled;
+}
 
 // ============================================================================
 // Ambient particle layer — drifting motes (silver dust, cyan ripples, etc.)
@@ -1500,17 +1567,26 @@ export function spawnMotes(scene: Phaser.Scene, opts: MoteOpts = {}) {
   const depth = opts.depth ?? 50;
   const dots: Phaser.GameObjects.Rectangle[] = [];
   for (let i = 0; i < count; i++) {
-    const d = scene.add.rectangle(
-      Phaser.Math.Between(b.x, b.x + b.w),
-      Phaser.Math.Between(b.y, b.y + b.h),
-      1, 1, color, alpha,
-    ).setOrigin(0, 0).setScrollFactor(0).setDepth(depth);
+    const d = scene.add
+      .rectangle(
+        Phaser.Math.Between(b.x, b.x + b.w),
+        Phaser.Math.Between(b.y, b.y + b.h),
+        1,
+        1,
+        color,
+        alpha,
+      )
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(depth);
     d.setData("vx", driftX * Phaser.Math.FloatBetween(0.5, 1.5));
     d.setData("vy", driftY * Phaser.Math.FloatBetween(0.5, 1.5));
     dots.push(d);
   }
   const ev = scene.time.addEvent({
-    delay: 16, loop: true, callback: () => {
+    delay: 16,
+    loop: true,
+    callback: () => {
       for (const d of dots) {
         d.x += d.getData("vx");
         d.y += d.getData("vy");
@@ -1521,12 +1597,19 @@ export function spawnMotes(scene: Phaser.Scene, opts: MoteOpts = {}) {
       }
     },
   });
-  return () => { ev.remove(false); dots.forEach(d => d.destroy()); };
+  return () => {
+    ev.remove(false);
+    dots.forEach((d) => d.destroy());
+  };
 }
 export function reapplyLcd(scene: Phaser.Scene) {
   if (!lcdEnabled) return;
   ensureLcdOverlay(scene);
-  lcdOverlay = scene.add.image(0, 0, "lcd_overlay").setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
+  lcdOverlay = scene.add
+    .image(0, 0, "lcd_overlay")
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setDepth(10000);
 }
 
 // ============================================================================
@@ -1570,7 +1653,14 @@ export function drawGBCBox(
   ctx.fillRect(w - 2, h - 2, 1, 1);
   tex.refresh();
   const img = scene.add.image(x, y, key).setOrigin(0, 0).setDepth(depth).setScrollFactor(0);
-  return { img, key, destroy: () => { img.destroy(); if (scene.textures.exists(key)) scene.textures.remove(key); } };
+  return {
+    img,
+    key,
+    destroy: () => {
+      img.destroy();
+      if (scene.textures.exists(key)) scene.textures.remove(key);
+    },
+  };
 }
 
 // ============================================================================
@@ -1579,7 +1669,8 @@ export function drawGBCBox(
 // with a single eye-mote at center. Frames cycle through ring rotations.
 // ============================================================================
 
-const DAIMON_W = 16, DAIMON_H = 24;
+const DAIMON_W = 16,
+  DAIMON_H = 24;
 
 function bakeDaimon(scene: Phaser.Scene, key = "soryn_v2") {
   const FRAMES = 4;
@@ -1613,9 +1704,9 @@ function bakeDaimon(scene: Phaser.Scene, key = "soryn_v2") {
         }
       }
     };
-    drawRing(7, 1, phase * 0.5, 2);          // outer, slow
-    drawRing(5, 2, -phase, 3);                // mid, reverse
-    drawRing(3, 2, phase * 1.5, 2);           // inner, fast
+    drawRing(7, 1, phase * 0.5, 2); // outer, slow
+    drawRing(5, 2, -phase, 3); // mid, reverse
+    drawRing(3, 2, phase * 1.5, 2); // inner, fast
     // Vertical sliver of light at center
     ctx.fillStyle = pal[3];
     ctx.fillRect(ox + cx, cy - 4, 1, 8);
@@ -1643,41 +1734,62 @@ function bakeDaimon(scene: Phaser.Scene, key = "soryn_v2") {
 // ============================================================================
 
 function bakeAccessories(scene: Phaser.Scene, key = "rowan_acc") {
-  const W = 16, H = 24, FRAMES = 4;
+  const W = 16,
+    H = 24,
+    FRAMES = 4;
   const { ctx, tex } = makeTex(scene, key, W * FRAMES, H);
 
   // Frame 0 — SCARF (around neck/upper chest, ~y 8-11)
   const scarfPal = PAL.scarf;
   const ox0 = 0;
-  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 5, 8, 6, 1);
-  ctx.fillStyle = scarfPal[2]; ctx.fillRect(ox0 + 5, 9, 6, 2);
-  ctx.fillStyle = scarfPal[3]; ctx.fillRect(ox0 + 6, 9, 4, 1);
-  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 5, 11, 6, 1);
+  ctx.fillStyle = scarfPal[1];
+  ctx.fillRect(ox0 + 5, 8, 6, 1);
+  ctx.fillStyle = scarfPal[2];
+  ctx.fillRect(ox0 + 5, 9, 6, 2);
+  ctx.fillStyle = scarfPal[3];
+  ctx.fillRect(ox0 + 6, 9, 4, 1);
+  ctx.fillStyle = scarfPal[1];
+  ctx.fillRect(ox0 + 5, 11, 6, 1);
   // Tail
-  ctx.fillStyle = scarfPal[2]; ctx.fillRect(ox0 + 10, 11, 1, 3);
-  ctx.fillStyle = scarfPal[1]; ctx.fillRect(ox0 + 10, 14, 1, 1);
+  ctx.fillStyle = scarfPal[2];
+  ctx.fillRect(ox0 + 10, 11, 1, 3);
+  ctx.fillStyle = scarfPal[1];
+  ctx.fillRect(ox0 + 10, 14, 1, 1);
 
   // Frame 1 — COAT (torso ~y 11-18, draped sides)
   const coatPal = PAL.coat;
   const ox1 = W;
-  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 4, 11, 8, 1);
-  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 4, 12, 8, 6);
-  ctx.fillStyle = coatPal[3]; ctx.fillRect(ox1 + 5, 12, 1, 5);
-  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 7, 12, 1, 6); // center seam
-  ctx.fillStyle = coatPal[1]; ctx.fillRect(ox1 + 4, 18, 8, 1);
+  ctx.fillStyle = coatPal[1];
+  ctx.fillRect(ox1 + 4, 11, 8, 1);
+  ctx.fillStyle = coatPal[2];
+  ctx.fillRect(ox1 + 4, 12, 8, 6);
+  ctx.fillStyle = coatPal[3];
+  ctx.fillRect(ox1 + 5, 12, 1, 5);
+  ctx.fillStyle = coatPal[1];
+  ctx.fillRect(ox1 + 7, 12, 1, 6); // center seam
+  ctx.fillStyle = coatPal[1];
+  ctx.fillRect(ox1 + 4, 18, 8, 1);
   // Coat tails
-  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 3, 13, 1, 5);
-  ctx.fillStyle = coatPal[2]; ctx.fillRect(ox1 + 12, 13, 1, 5);
+  ctx.fillStyle = coatPal[2];
+  ctx.fillRect(ox1 + 3, 13, 1, 5);
+  ctx.fillStyle = coatPal[2];
+  ctx.fillRect(ox1 + 12, 13, 1, 5);
 
   // Frame 2 — BOOTS (feet, ~y 20-23)
   const bootsPal = PAL.boots;
   const ox2 = W * 2;
-  ctx.fillStyle = bootsPal[1]; ctx.fillRect(ox2 + 5, 20, 2, 4);
-  ctx.fillStyle = bootsPal[1]; ctx.fillRect(ox2 + 9, 20, 2, 4);
-  ctx.fillStyle = bootsPal[2]; ctx.fillRect(ox2 + 5, 21, 2, 2);
-  ctx.fillStyle = bootsPal[2]; ctx.fillRect(ox2 + 9, 21, 2, 2);
-  ctx.fillStyle = bootsPal[3]; ctx.fillRect(ox2 + 5, 22, 1, 1);
-  ctx.fillStyle = bootsPal[3]; ctx.fillRect(ox2 + 9, 22, 1, 1);
+  ctx.fillStyle = bootsPal[1];
+  ctx.fillRect(ox2 + 5, 20, 2, 4);
+  ctx.fillStyle = bootsPal[1];
+  ctx.fillRect(ox2 + 9, 20, 2, 4);
+  ctx.fillStyle = bootsPal[2];
+  ctx.fillRect(ox2 + 5, 21, 2, 2);
+  ctx.fillStyle = bootsPal[2];
+  ctx.fillRect(ox2 + 9, 21, 2, 2);
+  ctx.fillStyle = bootsPal[3];
+  ctx.fillRect(ox2 + 5, 22, 1, 1);
+  ctx.fillStyle = bootsPal[3];
+  ctx.fillRect(ox2 + 9, 22, 1, 1);
 
   // Frame 3 — SATCHEL (slung at hip ~y 14-18, side)
   const satPal = PAL.satchel;
@@ -1691,10 +1803,14 @@ function bakeAccessories(scene: Phaser.Scene, key = "rowan_acc") {
   ctx.fillRect(ox3 + 9, 12, 1, 1);
   ctx.fillRect(ox3 + 10, 13, 1, 1);
   // Bag
-  ctx.fillStyle = satPal[1]; ctx.fillRect(ox3 + 10, 14, 4, 1);
-  ctx.fillStyle = satPal[2]; ctx.fillRect(ox3 + 10, 15, 4, 3);
-  ctx.fillStyle = satPal[3]; ctx.fillRect(ox3 + 11, 16, 2, 1);
-  ctx.fillStyle = satPal[1]; ctx.fillRect(ox3 + 10, 18, 4, 1);
+  ctx.fillStyle = satPal[1];
+  ctx.fillRect(ox3 + 10, 14, 4, 1);
+  ctx.fillStyle = satPal[2];
+  ctx.fillRect(ox3 + 10, 15, 4, 3);
+  ctx.fillStyle = satPal[3];
+  ctx.fillRect(ox3 + 11, 16, 2, 1);
+  ctx.fillStyle = satPal[1];
+  ctx.fillRect(ox3 + 10, 18, 4, 1);
 
   addGridFrames(tex, W, H, FRAMES, 1);
   tex.refresh();

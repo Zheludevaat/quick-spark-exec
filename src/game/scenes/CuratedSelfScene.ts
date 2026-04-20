@@ -10,33 +10,33 @@ import { onActionDown, onDirection } from "../controls";
 type Phase = "composed" | "fractured" | "exposed" | "released";
 
 const PHASE_LABEL: Record<Phase, string> = {
-  composed:  "PHASE 1/3 - COMPOSED",
+  composed: "PHASE 1/3 - COMPOSED",
   fractured: "PHASE 2/3 - FRACTURED",
-  exposed:   "PHASE 3/3 - EXPOSED",
-  released:  "RELEASED",
+  exposed: "PHASE 3/3 - EXPOSED",
+  released: "RELEASED",
 };
 
 const PHASE_TAUNT: Record<Phase, string> = {
-  composed:  "I am the version of you that smiles for cameras. ADDRESS me three times.",
+  composed: "I am the version of you that smiles for cameras. ADDRESS me three times.",
   fractured: "I am cracked. Find the brightest piece. OBSERVE in order.",
-  exposed:   "I have nothing left. Will you stand and see me? WITNESS.",
-  released:  "Silence. Then warmth.",
+  exposed: "I have nothing left. Will you stand and see me? WITNESS.",
+  released: "Silence. Then warmth.",
 };
 
 const PHASE_HUE: Record<Phase, number> = {
-  composed:  0xffffff,
+  composed: 0xffffff,
   fractured: 0xd88080,
-  exposed:   0xc0c8e8,
-  released:  0xa8e8c8,
+  exposed: 0xc0c8e8,
+  released: 0xa8e8c8,
 };
 
 const PHASE_FRAME: Record<Phase, number> = { composed: 0, fractured: 4, exposed: 6, released: 8 };
 
 const CMDS_BASE: { label: string; cmd: Command }[] = [
-  { label: "OBSERVE",  cmd: "observe" },
-  { label: "ADDRESS",  cmd: "address" },
+  { label: "OBSERVE", cmd: "observe" },
+  { label: "ADDRESS", cmd: "address" },
   { label: "REMEMBER", cmd: "remember" },
-  { label: "RELEASE",  cmd: "release" },
+  { label: "RELEASE", cmd: "release" },
 ];
 const CMD_WITNESS: { label: string; cmd: Command } = { label: "WITNESS", cmd: "witness" };
 
@@ -58,7 +58,9 @@ export class CuratedSelfScene extends Phaser.Scene {
   private fragOrderProgress = 0;
   private missIdx = 0;
 
-  constructor() { super("CuratedSelf"); }
+  constructor() {
+    super("CuratedSelf");
+  }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.cmdTexts = [];
@@ -85,28 +87,72 @@ export class CuratedSelfScene extends Phaser.Scene {
       g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
     for (let i = 0; i < 6; i++) {
-      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 50), 1, 1, 0xffffff, 1);
-      this.tweens.add({ targets: s, alpha: 0.2, duration: Phaser.Math.Between(600, 1400), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1200) });
+      const s = this.add.rectangle(
+        Phaser.Math.Between(0, GBC_W),
+        Phaser.Math.Between(14, 50),
+        1,
+        1,
+        0xffffff,
+        1,
+      );
+      this.tweens.add({
+        targets: s,
+        alpha: 0.2,
+        duration: Phaser.Math.Between(600, 1400),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1200),
+      });
     }
-    g.fillStyle(0x1a2030, 1); g.fillRect(0, 64, GBC_W, 2);
-    g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
-    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 70, 64, 8);
+    g.fillStyle(0x1a2030, 1);
+    g.fillRect(0, 64, GBC_W, 2);
+    g.fillStyle(0x243058, 1);
+    g.fillRect(0, 66, GBC_W, 10);
+    g.fillStyle(0x1a2238, 0.7);
+    g.fillEllipse(GBC_W / 2, 70, 64, 8);
 
     const aura = this.add.circle(GBC_W / 2, 46, 18, 0xd84a4a, 0.18);
-    this.tweens.add({ targets: aura, scale: 1.4, alpha: 0.05, duration: 1100, yoyo: true, repeat: -1, ease: "Sine.inOut" });
-    spawnMotes(this, { count: 10, color: 0xd86a6a, alpha: 0.45, driftY: -0.01, driftX: 0.002, depth: 30 });
+    this.tweens.add({
+      targets: aura,
+      scale: 1.4,
+      alpha: 0.05,
+      duration: 1100,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    spawnMotes(this, {
+      count: 10,
+      color: 0xd86a6a,
+      alpha: 0.45,
+      driftY: -0.01,
+      driftX: 0.002,
+      depth: 30,
+    });
 
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL.composed, { color: COLOR.textGold, depth: 101 });
+    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL.composed, {
+      color: COLOR.textGold,
+      depth: 101,
+    });
 
     this.boss = this.add.sprite(GBC_W / 2, 46, "boss", PHASE_FRAME.composed).setOrigin(0.5, 0.5);
     this.boss.play("boss_composed");
-    this.tweens.add({ targets: this.boss, y: 44, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    this.tweens.add({
+      targets: this.boss,
+      y: 44,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
     drawGBCBox(this, 0, 76, GBC_W, 36);
     this.logText = new GBCText(this, 4, 81, PHASE_TAUNT.composed, {
-      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 10,
+      color: COLOR.textAccent,
+      depth: 102,
+      maxWidthPx: GBC_W - 10,
     });
 
     drawGBCBox(this, 0, 112, GBC_W, 32);
@@ -114,7 +160,10 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
     this.cmds.forEach((c, i) => {
       const pos = this.cmdPos(i);
-      const t = new GBCText(this, pos.x + 8, pos.y, c.label, { color: COLOR.textLight, depth: 101 });
+      const t = new GBCText(this, pos.x + 8, pos.y, c.label, {
+        color: COLOR.textLight,
+        depth: 101,
+      });
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => this.choose(i));
       t.obj.setData("cmd", c.cmd);
@@ -127,17 +176,17 @@ export class CuratedSelfScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
 
     onDirection(this, (d) => {
-      if (d === "left")  this.move(-1);
+      if (d === "left") this.move(-1);
       if (d === "right") this.move(1);
-      if (d === "up")    this.move(-2);
-      if (d === "down")  this.move(2);
+      if (d === "up") this.move(-2);
+      if (d === "down") this.move(2);
     });
     onActionDown(this, "action", () => this.choose(this.cursor));
     this.events.on("vinput-down", (dir: string) => {
-      if (dir === "left")  this.move(-1);
+      if (dir === "left") this.move(-1);
       if (dir === "right") this.move(1);
-      if (dir === "up")    this.move(-2);
-      if (dir === "down")  this.move(2);
+      if (dir === "up") this.move(-2);
+      if (dir === "down") this.move(2);
     });
     this.events.on("vinput-action", () => this.choose(this.cursor));
   }
@@ -150,9 +199,9 @@ export class CuratedSelfScene extends Phaser.Scene {
   /** Greys out commands that are not valid in the current phase. */
   private refreshAvailable() {
     const valid = (cmd: Command) => {
-      if (this.phase === "composed")  return cmd === "address" || cmd === "release";
+      if (this.phase === "composed") return cmd === "address" || cmd === "release";
       if (this.phase === "fractured") return cmd === "observe" || cmd === "release";
-      if (this.phase === "exposed")   return cmd === "witness" || cmd === "release";
+      if (this.phase === "exposed") return cmd === "witness" || cmd === "release";
       return false;
     };
     this.cmdTexts.forEach((t, i) => {
@@ -171,7 +220,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.refreshAvailable();
   }
   private refreshCursor() {
-    this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
+    this.cmdTexts.forEach((t, i) =>
+      t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight),
+    );
     const pos = this.cmdPos(this.cursor);
     this.cursorMark.setPosition(pos.x, pos.y);
   }
@@ -214,7 +265,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.phase = p;
     this.stateText.setText(PHASE_LABEL[p]);
     this.logText.setText(PHASE_TAUNT[p]);
-    this.boss.play(`boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`);
+    this.boss.play(
+      `boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`,
+    );
     this.boss.setTint(PHASE_HUE[p]);
     this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
     this.refreshAvailable();
@@ -229,7 +282,8 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private spawnFragments() {
     this.cleanupFragments();
-    const cx = GBC_W / 2, cy = 46;
+    const cx = GBC_W / 2,
+      cy = 46;
     for (let i = 0; i < 3; i++) {
       const ang = (i / 3) * Math.PI * 2;
       const fx = cx + Math.cos(ang) * 16;
@@ -247,7 +301,12 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.brightestIdx = Math.floor(Math.random() * 3);
     this.fragments.forEach((f, i) => {
       f.brightness = i === this.brightestIdx ? 1 : 0.4;
-      this.tweens.add({ targets: f.sprite, alpha: f.brightness, scale: i === this.brightestIdx ? 1.6 : 1, duration: 400 });
+      this.tweens.add({
+        targets: f.sprite,
+        alpha: f.brightness,
+        scale: i === this.brightestIdx ? 1.6 : 1,
+        duration: 400,
+      });
       f.sprite.fillColor = i === this.brightestIdx ? 0xffe098 : 0xd88080;
     });
     // Auto-cycle every 3s if player doesn't act
@@ -255,7 +314,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   private cleanupFragments() {
-    this.fragments.forEach(f => f.sprite.destroy());
+    this.fragments.forEach((f) => f.sprite.destroy());
     this.fragments = [];
     this.boss.setVisible(true);
   }
@@ -272,7 +331,9 @@ export class CuratedSelfScene extends Phaser.Scene {
       if (picked) {
         this.tweens.add({ targets: picked.sprite, alpha: 0.15, scale: 0.6, duration: 500 });
       }
-      this.logText.setText(`Fragment ${this.fragOrderProgress} witnessed. ${3 - this.fragOrderProgress} remain.`);
+      this.logText.setText(
+        `Fragment ${this.fragOrderProgress} witnessed. ${3 - this.fragOrderProgress} remain.`,
+      );
       if (this.fragOrderProgress >= 3) {
         this.time.delayedCall(900, () => this.enterPhase("exposed"));
       } else {
@@ -286,7 +347,9 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.logText.setText("They re-merge briefly. OBSERVE the brightest piece.");
       this.cameras.main.shake(80, 0.003);
       // Re-merge animation
-      this.fragments.forEach(f => this.tweens.add({ targets: f.sprite, alpha: 0.6, scale: 1, duration: 400 }));
+      this.fragments.forEach((f) =>
+        this.tweens.add({ targets: f.sprite, alpha: 0.6, scale: 1, duration: 400 }),
+      );
       getAudio().sfx("miss");
       this.busy = false;
     }
@@ -310,7 +373,12 @@ export class CuratedSelfScene extends Phaser.Scene {
         this.logText.setText("It dissolves into a Memory Shard. The Curated Self is at peace.");
         this.save.shards.push("curated_self");
         writeSave(this.save);
-        this.tweens.add({ targets: this.boss, alpha: 0, duration: 900, onComplete: () => this.endGame() });
+        this.tweens.add({
+          targets: this.boss,
+          alpha: 0,
+          duration: 900,
+          onComplete: () => this.endGame(),
+        });
       }
     } else if (cmd === "release") {
       this.logText.setText("You release. It waits, patiently. Try WITNESS.");
@@ -330,7 +398,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       { who: "Soryn", text: "You may stay here in the image. Comfortable. Or finish." },
       [
         { choice: "confess", label: "FINISH", reply: "Then witness twice more." },
-        { choice: "silent",  label: "REMAIN", reply: "The image is comfortable. We will wait." },
+        { choice: "silent", label: "REMAIN", reply: "The image is comfortable. We will wait." },
       ],
       (picked) => {
         if (picked.label === "REMAIN") this.endRemain();
@@ -344,7 +412,8 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save.region = "corridor";
     this.save.flags.plateau_remain = true;
     writeSave(this.save);
-    const a = getAudio(); a.music.stop();
+    const a = getAudio();
+    a.music.stop();
     this.cameras.main.fadeOut(900, 80, 100, 140);
     this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Title"));
   }
@@ -356,9 +425,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (this.busy) return;
     const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     this.busy = true;
-    if (this.phase === "composed")  return this.handleComposed(cmd);
+    if (this.phase === "composed") return this.handleComposed(cmd);
     if (this.phase === "fractured") return this.handleFractured(cmd);
-    if (this.phase === "exposed")   return this.handleExposed(cmd);
+    if (this.phase === "exposed") return this.handleExposed(cmd);
     this.busy = false;
   }
 
@@ -368,7 +437,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       "The mask is lacquered. Words crack it. Yours.",
       "Release without sight is a shrug.",
     ];
-    return quips[(this.missIdx++) % quips.length];
+    return quips[this.missIdx++ % quips.length];
   }
 
   private endGame() {
@@ -376,9 +445,12 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save.flags.act1_complete = true;
     this.save.flags.plateau_remain = false;
     writeSave(this.save);
-    const a = getAudio(); a.music.stop();
+    const a = getAudio();
+    a.music.stop();
     this.cameras.main.fadeOut(700, 0, 0, 0);
-    this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Epilogue", { save: this.save }));
+    this.cameras.main.once("camerafadeoutcomplete", () =>
+      this.scene.start("Epilogue", { save: this.save }),
+    );
   }
 }
 
@@ -388,7 +460,9 @@ export class EpilogueScene extends Phaser.Scene {
   private optionTexts: GBCText[] = [];
   private cursorMark!: GBCText;
 
-  constructor() { super("Epilogue"); }
+  constructor() {
+    super("Epilogue");
+  }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.cursor = 0;
@@ -401,15 +475,38 @@ export class EpilogueScene extends Phaser.Scene {
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
     for (let i = 0; i < 50; i++) {
-      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
-        1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
-      this.tweens.add({ targets: s, alpha: 0.15, duration: Phaser.Math.Between(700, 1800), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1500) });
+      const s = this.add.rectangle(
+        Phaser.Math.Between(0, GBC_W),
+        Phaser.Math.Between(0, GBC_H),
+        1,
+        1,
+        0xdde6f5,
+        Phaser.Math.FloatBetween(0.3, 1),
+      );
+      this.tweens.add({
+        targets: s,
+        alpha: 0.15,
+        duration: Phaser.Math.Between(700, 1800),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1500),
+      });
     }
 
     for (let b = 0; b < 3; b++) {
       const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
-      const band = this.add.rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18).setDepth(2);
-      this.tweens.add({ targets: band, x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12), alpha: 0.06, duration: 3200 + b * 800, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+      const band = this.add
+        .rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18)
+        .setDepth(2);
+      this.tweens.add({
+        targets: band,
+        x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12),
+        alpha: 0.06,
+        duration: 3200 + b * 800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
     }
 
     this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
@@ -418,13 +515,32 @@ export class EpilogueScene extends Phaser.Scene {
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
 
     drawGBCBox(this, 12, 44, GBC_W - 24, 64);
-    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}`, { color: COLOR.textLight, depth: 110 });
-    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight, depth: 110 });
-    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight, depth: 110 });
-    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, { color: COLOR.textGold, depth: 110 });
-    new GBCText(this, 18, 92, "THE IMAGINAL IS BEHIND YOU.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
+    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}`, {
+      color: COLOR.textLight,
+      depth: 110,
+    });
+    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, {
+      color: COLOR.textLight,
+      depth: 110,
+    });
+    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, {
+      color: COLOR.textLight,
+      depth: 110,
+    });
+    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, {
+      color: COLOR.textGold,
+      depth: 110,
+    });
+    new GBCText(this, 18, 92, "THE IMAGINAL IS BEHIND YOU.", {
+      color: COLOR.textAccent,
+      maxWidthPx: GBC_W - 36,
+      depth: 110,
+    });
 
-    this.add.rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
+    this.add
+      .rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92)
+      .setOrigin(0, 0)
+      .setDepth(199);
     this.optionTexts = [
       new GBCText(this, 18, GBC_H - 24, "WALK AGAIN", { color: COLOR.textGold, depth: 200 }),
       new GBCText(this, 18, GBC_H - 14, "ERASE RESTART", { color: COLOR.textDim, depth: 200 }),
@@ -447,7 +563,10 @@ export class EpilogueScene extends Phaser.Scene {
       getAudio().sfx("cursor");
       this.refreshCursor();
     };
-    onDirection(this, (d) => { if (d === "up") move(-1); else if (d === "down") move(1); });
+    onDirection(this, (d) => {
+      if (d === "up") move(-1);
+      else if (d === "down") move(1);
+    });
     onActionDown(this, "action", () => this.choose());
     this.events.on("vinput-down", (dir: string) => {
       if (dir === "up") move(-1);
@@ -457,7 +576,9 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   private refreshCursor() {
-    this.optionTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim));
+    this.optionTexts.forEach((t, i) =>
+      t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim),
+    );
     this.cursorMark.setPosition(8, this.cursor === 0 ? GBC_H - 24 : GBC_H - 14);
   }
 
