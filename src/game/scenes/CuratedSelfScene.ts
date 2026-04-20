@@ -597,6 +597,9 @@ export class EpilogueScene extends Phaser.Scene {
     const a = getAudio();
     a.sfx("confirm");
     if (this.cursor === 0) {
+      // NG+: keep stats and shards, mark flag, return to title.
+      this.save.flags.ng_plus = true;
+      writeSave(this.save);
       a.music.stop();
       this.scene.start("Title");
       return;
