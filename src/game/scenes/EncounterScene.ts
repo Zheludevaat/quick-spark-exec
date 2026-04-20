@@ -167,7 +167,7 @@ export class EncounterScene extends Phaser.Scene {
         if (this.def.reward.compassion) this.save.stats.compassion += 1;
         if (this.def.reward.courage)    this.save.stats.courage    += 1;
         this.time.delayedCall(400, () => {
-          new GBCText(this, GBC_W / 2 - 28, 60, "FIRST-TRY +1!", { color: COLOR.textGold, depth: 300 });
+          new GBCText(this, GBC_W / 2 - 28, 50, "FIRST-TRY +1!", { color: COLOR.textGold, depth: 300 });
           this.cameras.main.flash(120, 255, 224, 152);
         });
       }
