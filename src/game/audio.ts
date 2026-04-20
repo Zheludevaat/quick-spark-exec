@@ -209,7 +209,23 @@ class AudioEngine {
 
   setMuted(m: boolean) {
     this.muted = m;
-    this.master.gain.value = m ? 0 : 0.5;
+    this.master.gain.value = m ? 0 : this.volume;
+    try {
+      localStorage.setItem("hermetic_muted_v1", m ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Set master volume 0..1. Applied immediately unless muted. */
+  setVolume(v: number) {
+    this.volume = Math.max(0, Math.min(1, v));
+    if (!this.muted) this.master.gain.value = this.volume;
+    try {
+      localStorage.setItem("hermetic_volume_v1", String(this.volume));
+    } catch {
+      /* ignore */
+    }
   }
 
   /** SFX: tiny one-shot sounds. */
