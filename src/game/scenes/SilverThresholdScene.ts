@@ -438,7 +438,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     // For touch: vinput-action triggers a brief auto-hold
     this.events.on("vinput-action", () => { held = true; this.time.delayedCall(1800, () => { held = false; if (progress >= 0.4) finish(); }); });
     // Safety auto-finish after 6s
-    this.time.delayedCall(6000, () => { if (tick && !tick.hasDispatched) { progress = 1; held = true; finish(); } });
+    this.time.delayedCall(6000, () => { if (!done) { progress = 1; held = true; finish(); } });
   }
 
   /** WATER — Rowan's reflection appears below the circle. Pick which to keep. */
