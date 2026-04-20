@@ -80,7 +80,7 @@ function GamePage() {
         id="phaser-host"
         style={{
           width: "min(96vw, 720px)",
-          aspectRatio: "320 / 240",
+          aspectRatio: "160 / 144",
           imageRendering: "pixelated",
           border: "1px solid #2a3550",
           background: "#05070d",
