@@ -617,6 +617,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (cmd === "witness" && plan.needs.witness > 0) {
       this.witnessHits++;
       this.cameras.main.flash(220, 200, 220, 255);
+      this.sparkBurst(GBC_W / 2, 46, 0xc8e0ff, 12);
       getAudio().sfx("resolve");
       this.speak("phase3_hit");
       if (this.witnessHits === 1)
@@ -631,6 +632,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.busy = false;
     } else if (cmd === "address" && plan.needs.address > 0) {
       this.exposedAddressHits++;
+      this.sparkBurst(GBC_W / 2, 46, 0xffd070, 8);
       getAudio().sfx("resolve");
       this.logText.setText("You name what it was. The image relaxes.");
       this.speak("phase3_hit");
@@ -638,6 +640,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.busy = false;
     } else if (cmd === "release" && plan.needs.release > 0) {
       this.exposedReleaseHits++;
+      this.sparkBurst(GBC_W / 2, 46, 0xa8e8c8, 8);
       getAudio().sfx("resolve");
       this.logText.setText("You let go. It does not vanish; it simply rests.");
       this.speak("phase3_hit");
