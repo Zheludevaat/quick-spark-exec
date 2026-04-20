@@ -148,5 +148,13 @@ function questHint(id: SideQuestId, save: SaveSlot): string {
       return "STAND STILL FOR HER. EIGHT SECONDS WITHOUT MOVING.";
     case "witness_the_saint":
       return "REFUSE HER GIFT. THEN STAY. WITNESS, NOT GIVE.";
+    case "salvage_a_shard":
+      return "RETURN TO THE BATH. THE SHARD STILL FLOATS.";
+    case "read_the_fourth_book":
+      return "ASK THE LIBRARIAN AGAIN. SHE LIES BY OMISSION.";
+    case "meet_the_thirteenth":
+      return "TWELVE SOULS WALKED IN. ONE STILL WAITS.";
+    case "release_soryn":
+      return "AT THE WEDDING TABLE. THANK HER. LET HER GO.";
   }
 }
