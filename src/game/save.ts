@@ -32,6 +32,8 @@ export function newSave(): SaveSlot {
     shards: [],
     shardFragments: 0,
     seeds: {},
+    region: null,
+    seedEchoes: {},
     updatedAt: Date.now(),
   };
 }
