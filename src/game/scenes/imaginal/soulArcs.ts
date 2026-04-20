@@ -690,7 +690,9 @@ const ARCS: Record<SoulId, SoulArc> = {
             label: "EL · I · AS",
             reply: "...yes. Yes. That's me. Thank you, walker.",
             tag: "named",
-            branch: { to: "end", ending: "named" },
+            // Only resolves to NAMED if all 3 syllable lanterns have been lit.
+            // Otherwise: a polite half-recognition that defers the arc.
+            branch: { to: "name_check" },
           },
           {
             choice: "confess",
@@ -700,6 +702,22 @@ const ARCS: Record<SoulId, SoulArc> = {
             branch: { to: "end", ending: "waited" },
           },
         ],
+      },
+      {
+        label: "name_check",
+        kind: "gate",
+        check: (s: SaveSlot) => !!s.flags.stonechild_name_known,
+        pass: { to: "end", ending: "named" },
+        fail: { to: "name_unknown" },
+      },
+      {
+        label: "name_unknown",
+        kind: "dialog",
+        lines: [
+          { who: "STONECHILD", text: "...close. The shape is right. But the lanterns are dark." },
+          { who: "STONECHILD", text: "Find them. Stand near each. They will speak." },
+        ],
+        next: { to: "end", ending: "deferred" },
       },
     ],
     endings: {

@@ -434,6 +434,9 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
     // Corridor: companion hides at south edge before boss door
     if (this.companion) this.companion.setVisible(true);
+    // Spawn / refresh Echo follower if she's been unlocked.
+    this.destroyEchoFollower();
+    this.spawnEchoFollower();
   }
 
   private spawnSeedEchoes() {
