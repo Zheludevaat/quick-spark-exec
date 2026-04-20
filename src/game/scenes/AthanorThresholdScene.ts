@@ -389,4 +389,47 @@ export class AthanorThresholdScene extends Phaser.Scene {
     const h = Math.max(1, Math.min(16, total * 1.5));
     this.vesselFill.height = h;
   }
+
+  /** Pick the right opening lines based on save state (Soryn-released, etc.). */
+  private openingLines(): { who: string; text: string }[] {
+    if (this.save.sorynReleased) {
+      return [
+        { who: "ROWAN", text: "Down the stair. The Plateau ends here." },
+        { who: "ROWAN", text: "An Athanor. The vessel that won't break what it transmutes." },
+        { who: "ROWAN", text: "Into the glass with all of it." },
+      ];
+    }
+    return OPENING_LINES;
+  }
+
+  /** Soryn refuses to descend until Rowan sits with what she did to the Saint. */
+  private runApologyGate() {
+    runInquiry(
+      this,
+      { who: "SORYN", text: "Before the stair — the saint. You forced her hand." },
+      [
+        {
+          choice: "confess",
+          label: "I KNOW. I'M SORRY.",
+          reply: "Good. Carry that down with you.",
+        },
+        {
+          choice: "ask",
+          label: "SHE'LL FORGET.",
+          reply: "She won't. Neither will you. Bring it anyway.",
+        },
+        {
+          choice: "silent",
+          label: "(SAY NOTHING. STEP DOWN.)",
+          reply: "...as you like. The stair holds no opinions.",
+        },
+      ],
+      (p) => {
+        this.save.flags.act2_apology = true;
+        if (p.choice === "confess") this.save.stats.compassion += 1;
+        writeSave(this.save);
+        this.busy = false;
+      },
+    );
+  }
 }
