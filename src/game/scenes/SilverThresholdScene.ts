@@ -750,9 +750,14 @@ export class SilverThresholdScene extends Phaser.Scene {
     };
     const pick = () => {
       cleanup();
-      // Either choice resolves; "TRUE" gives a small clarity bonus, "BRIGHT" gives compassion.
-      if (cursor === 0) this.save.stats.clarity += 1;
-      else this.save.stats.compassion += 1;
+      // TRUE = +clarity (the harder, less flattering reflection).
+      // BRIGHT = +compassion to others, but costs 1 clarity to self.
+      if (cursor === 0) {
+        this.save.stats.clarity += 1;
+      } else {
+        this.save.stats.compassion += 1;
+        this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
+      }
       this.events.emit("stats-changed");
       onDone();
     };
