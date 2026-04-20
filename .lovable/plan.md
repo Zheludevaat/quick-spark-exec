@@ -1,117 +1,84 @@
 
 
-# Act 2 — Sophistication Pass
+# Act 3 — The Return: Full Reactive Harvest
 
-Bring the Athanor up to the density and reactivity of Acts 0–1: named encounters, branching inquiries, save-driven reactivity, side quests, lore depth, and tactile feedback. No new scenes — the existing six get filled out.
-
----
-
-## Gap analysis (current state vs. plan-act2.md)
-
-| Area | Current | Target |
-|---|---|---|
-| Nigredo shades | 1 generic shade reused 3× | 3 named shades, each with unique 4-option inquiry |
-| Albedo | Rhythm tap, generic beats | Beats keyed to specific Act 1 souls; Bath-Keeper line; Drowned Bride return tied to `the_unfinished_song` |
-| Citrinitas | 3 books, generic accept/refuse | 3 books with branching monologues; Librarian; Lantern Mathematician return; hidden Hypatia (4th read) |
-| Rubedo | 2 unions, Soryn release option | Soryn actively pushes back per pairing; Thirteenth Soul if 12 souls; gold stone wired |
-| Sealed Vessel | 4 inscription options | Filtered to 3 by `weddingType`; reactive to `sorynReleased` and `stainsCarried` |
-| Side quests | None | 4 Act 2 quests wired (`salvage_a_shard`, `read_the_fourth_book`, `meet_the_thirteenth`, `release_soryn`) |
-| Cross-act reactivity | Shards derive from Act 1; little else | Shades, books, Bride, Mathematician all read `soulChoices` / `soulEventLog` / `convictions` |
-| Soryn voice | Static | Per-scene barks; rebellious in Rubedo; absent if released |
-| HUD | Stones + shards | + Stains pip in Albedo+; + conviction count in Citrinitas+; + "alone" indicator if Soryn released |
-| Lore | ~14 entries | + 6 hidden/conditional entries (fourth book, thirteenth, releasing daimon, the bride sang, the inquisitor, the teacher who was torn) |
-| Threshold | Door gating works | + Soryn refuses descent if Walking Saint forced (apology inquiry); + Echo remains at threshold if follower |
+Act 3 is the harvest of every seed Act 2 planted. The Curated Self isn't a generic boss anymore — its taunts, its weakness, the available verbs, the ending tier, and Soryn's presence all branch on Act 2 state.
 
 ---
 
-## Files to edit / add
+## What Act 2 hands us
+
+| Save field | Drives in Act 3 |
+|---|---|
+| `act2Inscription` (string) | Opening whisper; final epilogue line |
+| `weddingType` ("strong" / "gentle" / "fractured") | Phase-3 verb requirement |
+| `sorynReleased` (bool) | Soryn voice → narrator voice if true |
+| `convictions` (record) | Each owned conviction = accept-line variant in Phase 1 |
+| `blackStones` / `whiteStones` / `yellowStones` / `redStones` | Ending tier + per-color epilogue paragraph |
+| `goldStone` (bool) | Unlocks "ASCEND" command (skip Phase 3) |
+| `stainsCarried` (number) | Phase-1 taunt variant; ending tone |
+| `shadesEncountered` | Boss face cycles between sat-with shades in Phase 2 |
+| `soulChoices` / `soulEventLog` | Soryn's barks |
+
+---
+
+## Files
 
 **New**
-- `src/game/athanor/shades.ts` — declarative registry: `{ id, name, opening: DialogLine[], inquiry: { prompt, options[4] }, rightAnswerTag }`. Three shades: `mother_who_did_her_best`, `self_who_said_yes`, `inquisitor`.
-- `src/game/athanor/books.ts` — declarative registry: `{ id, title, monologue: DialogLine[], inquiry, conviction, refuseTag }`. Four books (3 visible + 1 hidden `the_fourth_book`).
-- `src/game/athanor/wedding.ts` — pairing logic: 2 unions, Soryn rebuttal lines per pairing, `holds`/`yields` counter → `weddingType`.
+- `src/game/act3/harvest.ts` — Pure helpers reading `SaveSlot`:
+  - `openingWhisper(save) → string`
+  - `phaseTaunt(phase, save) → string`
+  - `endingTier(save) → "ascent"|"gold"|"silver"|"iron"|"brittle"`
+  - `endingParagraphs(save) → string[]`
+  - `sorynBark(save, event) → string|null` (null when released → caller renders narrator)
 
 **Edited**
-- `src/game/types.ts` — add `convictions` keys union (documentation only); add `stainsCarried` already present; add `act2_apology` flag note.
-- `src/game/athanor/shards.ts` — add `salvage` flow helper.
-- `src/game/scenes/AthanorThresholdScene.ts` — Walking-Saint apology gate; Echo presence at threshold; Soryn-released barks; salvage offer if a shard was wasted.
-- `src/game/scenes/NigredoScene.ts` — replace generic loop with `runShade(shadeId)`; pick which 3 of the 3 (or random subset if more authored later); track `shadesEncountered[id] = "fled"|"sat_with"|"destroyed"`; if a shard was fully wasted, register `salvage_a_shard` quest.
-- `src/game/scenes/AlbedoScene.ts` — beat schedule generated from `soulChoices` (one beat per resolved soul, max 8); Bath-Keeper closing line; Drowned Bride encounter conditional on `the_unfinished_song` quest done; murky-water modifier if no shards dissolved in Nigredo (`shardsConsumed.length === 0`); stains visualized in HUD.
-- `src/game/scenes/CitrinitasScene.ts` — switch to `books.ts` registry; Librarian NPC with "ask twice" trigger for `read_the_fourth_book`; Lantern Mathematician cameo if his Act 1 arc completed; hidden Hypatia if all 3 books accepted; sentence carried into Rubedo via `save.flags.teachers_sentence`.
-- `src/game/scenes/RubedoScene.ts` — use `wedding.ts`; Soryn pushes back per pairing with arc-aware lines; Thirteenth Soul appears if `soulsCompleted >= 12` → `goldStone = true`, registers `meet_the_thirteenth`; Soryn release moved to mid-scene inquiry (registers `release_soryn`).
-- `src/game/scenes/SealedVesselScene.ts` — filter inscription options to the 1 canonical for the wedding type plus 2 reactive variants (e.g., "AND I WALKED ALONE" if `sorynReleased`; "STAINS AND ALL" if `stainsCarried > 0`); show `teachers_sentence` as a top-of-scene whisper if set.
-- `src/game/sideQuests.ts` — add 4 Act 2 IDs + titles + hint chain: `salvage_a_shard → read_the_fourth_book`, `meet_the_thirteenth → release_soryn`.
-- `src/game/scenes/lore.ts` — add 6 entries: `on_the_inquisitor`, `on_the_bride_sang`, `on_the_fourth_book`, `on_the_torn_teacher`, `on_the_thirteenth`, `on_walking_alone`.
-- `src/game/athanor/vessel.ts` — add stains pip + "ALONE" chip when `sorynReleased`.
-- `src/game/companion.ts` — add Athanor barks (per scene + per stone awarded); short-circuit if `sorynReleased`.
+- `src/game/scenes/CuratedSelfScene.ts`:
+  - Render `act2Inscription` as fading whisper on enter (mirrors SealedVessel's teacher's-sentence pattern).
+  - Phase 1 — taunt from `phaseTaunt`; ADDRESS replies name owned convictions.
+  - Phase 2 — boss face cycles through `shadesEncountered`; "destroyed" shades aggressive, "sat_with" luminous; small label under boss for readability.
+  - Phase 3 — verb requirement keyed to `weddingType`:
+    - strong → WITNESS x3 (current)
+    - gentle → WITNESS x2 + ADDRESS x1
+    - fractured → WITNESS x1 + RELEASE x1
+  - If `sorynReleased`: suppress Soryn UI, use narrator (gold italic-equivalent text).
+  - Hidden ASCEND command appears only if `goldStone`; selecting it dissolves boss to `golden_self` shard.
+- `EpilogueScene` (same file):
+  - Render whisper + 2-4 `endingParagraphs` via runDialog.
+  - Tiered final option set:
+    - `ascent` (goldStone): WALK AGAIN / ASCEND / ERASE — ASCEND triggers white-screen closer with single sentence; sets `flags.ng_plus_ascended`.
+    - `gold` (stones >= 10): default trio.
+    - `silver` (6-9): trio + bonus quiet line.
+    - `iron` (3-5): trio + "you carried what you could".
+    - `brittle` (<3): trio + replay invitation.
+- `src/game/scenes/lore.ts` — 3 hidden entries: `on_the_return`, `on_the_ascent`, `on_the_inscription_returns`.
 
 ---
 
-## Cross-act reactivity matrix
+## Pacing
 
-```text
-Act 1 signal                       → Act 2 reaction
------------------------------------------------------
-walking_saint:forced               → Threshold: Soryn apology gate; Inquisitor harsher
-the_unfinished_song done           → Albedo: Bride sings the song back
-mirror_philosopher:argued          → Citrinitas Book of Anger: extra accept line
-weighed_heart (cartographer)       → Citrinitas Book of Ambition: extra option
-stonechild named (lanterns lit)    → Albedo beat keyed to "EL·I·AS"
-soulsCompleted >= 12               → Rubedo: Thirteenth Soul + gold stone
-soulsCompleted >= 8                → Threshold: auto-shard "PLATEAU'S WEIGHT"
-echo_follower_unlocked             → Threshold: Echo waits at top of stairs
-lantern_mathematician done         → Citrinitas: he returns as scribe
-shardsConsumed.length === 0 (Nig)  → Albedo: murky water, +30% beat speed
-shadesEncountered any "destroyed"  → Albedo: registers salvage_a_shard
-weddingType                        → SealedVessel: inscription palette
-sorynReleased                      → SealedVessel + Threshold: solo barks
-```
-
----
-
-## Side-quest wiring
-
-| ID | Trigger location | Completion location | Reward |
-|---|---|---|---|
-| `salvage_a_shard` | NigredoScene when shard destroyed | AlbedoScene side-encounter | restore shard, +1 compassion, lore `on_salvage` |
-| `read_the_fourth_book` | CitrinitasScene Librarian asked 2× | CitrinitasScene hidden stack | lore `on_the_fourth_book`, +1 clarity |
-| `meet_the_thirteenth` | RubedoScene if `soulsCompleted >= 12` | RubedoScene table | `goldStone = true`, lore `on_the_thirteenth` |
-| `release_soryn` | RubedoScene release inquiry | SealedVesselScene completion | lore `on_walking_alone`, alters Act 3 opening |
-
----
-
-## HUD additions
-
-- `VesselHud.refresh()` extended: stains pip (○/●×stainsCarried, capped at 3), "ALONE" chip when `sorynReleased`, conviction count `CONV n/3`.
-- Toast on every stone awarded, named ("BLACK STONE — sat with the Mother").
-
----
-
-## Tone & length budget
-
-- Each shade: ≤ 8 lines opening + 4-option inquiry + ≤ 3 lines reply per branch.
-- Each book: ≤ 6 lines monologue + 2-option inquiry.
-- Soryn rebuttal in Rubedo: ≤ 2 lines per pairing.
-- Total new dialog: ~120 lines. Authoring is the bottleneck.
+- ~5-7 min total, unchanged.
+- Soryn-released runs feel quieter, not shorter — narrator replaces Soryn 1:1.
+- ASCEND path ~2 min, framed as a *choice* (no shard, no Phase 3 grind), not a shortcut.
 
 ---
 
 ## Implementation order
 
-1. `shades.ts` + Nigredo rewrite (template for the others).
-2. `books.ts` + Citrinitas rewrite + Librarian + hidden Hypatia.
-3. `wedding.ts` + Rubedo rewrite + Thirteenth Soul.
-4. Albedo: soul-keyed beats + Bride conditional + murky-water modifier.
-5. Threshold: apology gate + Echo presence + salvage offer.
-6. SealedVessel: reactive inscription palette + teacher's sentence.
-7. Side quests + lore entries + HUD pips + Soryn barks.
-8. Tone pass; verify a save with 0 shards still completes Act 2; verify a 12-soul perfect run earns the gold stone.
+1. `harvest.ts` (pure, no Phaser).
+2. CuratedSelf opening whisper + phase taunts.
+3. Phase 2 shade cycling.
+4. Phase 3 weddingType branching + ASCEND.
+5. Soryn-released narrator path.
+6. Epilogue rewrite with `endingTier`.
+7. Lore entries + Soryn barks pass.
+8. Smoke test: `goldStone=true, weddingType=fractured, sorynReleased=true` hits every branch.
 
 ---
 
 ## Risks
 
-- **Authoring volume.** ~120 lines of dialog; keep each beat tight.
-- **Conditional Bride / Hypatia / Thirteenth.** Easy to ship and never see them — add a debug-flag bypass during dev.
-- **Soryn release timing.** If released in Rubedo mid-pairing, the second pairing must work solo — wedding.ts must handle a null companion.
+- **Branch explosion.** 3 wedding × 2 Soryn × 5 tiers × goldStone = 60 leaves. Mitigation: 90% dialog shared; only 4 branches swap.
+- **Boss readability.** Phase-2 shade cycling needs the small label or it's just a flicker.
+- **ASCEND framing.** Long road vs. short road must feel like a *trade*, not a cheat — the lore entry makes the trade explicit.
 
