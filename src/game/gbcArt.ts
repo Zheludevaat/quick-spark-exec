@@ -723,6 +723,7 @@ export function bakeRowan(scene: Phaser.Scene, key = "rowan") {
       paintGrid(ctx, dir[r][c], PAL.rowan, c * ROWAN_FRAME_W, r * ROWAN_FRAME_H);
     }
   }
+  addGridFrames(tex, ROWAN_FRAME_W, ROWAN_FRAME_H, cols, rows);
   tex.refresh();
   return key;
 }
