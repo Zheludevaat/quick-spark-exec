@@ -474,21 +474,18 @@ export class SilverThresholdScene extends Phaser.Scene {
       onDone();
     };
     const cleanup = () => {
-      this.input.keyboard?.off("keydown-LEFT", left);
-      this.input.keyboard?.off("keydown-RIGHT", right);
-      this.input.keyboard?.off("keydown-SPACE", pick);
-      this.input.keyboard?.off("keydown-ENTER", pick);
+      window.removeEventListener("keydown", domKey);
       this.events.off("vinput-action", pick);
       this.events.off("vinput-down", vmove);
       refTrue.destroy(); refMask.destroy(); labelL.destroy(); labelR.destroy(); box.destroy(); prompt.destroy();
     };
-    const left = () => move(-1);
-    const right = () => move(1);
     const vmove = (dir: string) => { if (dir === "left") move(-1); if (dir === "right") move(1); };
-    this.input.keyboard?.on("keydown-LEFT", left);
-    this.input.keyboard?.on("keydown-RIGHT", right);
-    this.input.keyboard?.on("keydown-SPACE", pick);
-    this.input.keyboard?.on("keydown-ENTER", pick);
+    const domKey = (e: KeyboardEvent) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); move(-1); }
+      else if (e.code === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); move(1); }
+      else if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter") { e.preventDefault(); pick(); }
+    };
+    window.addEventListener("keydown", domKey);
     this.events.on("vinput-action", pick);
     this.events.on("vinput-down", vmove);
   }
