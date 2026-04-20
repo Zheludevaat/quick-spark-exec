@@ -239,10 +239,22 @@ export class EpilogueScene extends Phaser.Scene {
     this.cameras.main.fadeIn(700);
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
-    for (let i = 0; i < 40; i++) {
-      this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
+    // Twinkling starfield
+    for (let i = 0; i < 50; i++) {
+      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
         1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+      this.tweens.add({ targets: s, alpha: 0.15, duration: Phaser.Math.Between(700, 1800), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1500) });
     }
+
+    // Aurora bands gently sliding across the upper area
+    for (let b = 0; b < 3; b++) {
+      const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+      const band = this.add.rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18).setDepth(2);
+      this.tweens.add({ targets: band, x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12), alpha: 0.06, duration: 3200 + b * 800, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
+
+    // Slow camera breath
+    this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
     new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent, depth: 10 });
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
