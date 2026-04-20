@@ -127,7 +127,11 @@ export class SorynCompanion {
     if (this.ambientLines.length === 0) return;
     if (this.scene.time.now - this.lastMoveAt < 4000) return; // only if recently idle
     const line = this.ambientLines[Math.floor(Math.random() * this.ambientLines.length)];
-    const t = new GBCText(this.scene, this.follow.x - 24, this.follow.y - 22, line.toUpperCase(), {
+    // Clamp y so we never collide with the bottom hint row (drawn at GBC_H - 9).
+    // Whisper rises ~16px during the tween, so start no lower than GBC_H - 30.
+    const startY = Math.min(this.follow.y - 22, GBC_H - 30);
+    const endY = Math.max(startY - 16, 14);
+    const t = new GBCText(this.scene, this.follow.x - 24, startY, line.toUpperCase(), {
       color: COLOR.textAccent,
       depth: 220,
       scrollFactor: 0,
@@ -135,7 +139,7 @@ export class SorynCompanion {
     this.scene.tweens.add({
       targets: t.obj,
       alpha: 0,
-      y: this.follow.y - 38,
+      y: endY,
       duration: 2400,
       onComplete: () => t.destroy(),
     });
