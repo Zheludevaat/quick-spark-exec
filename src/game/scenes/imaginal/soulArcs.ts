@@ -1,6 +1,6 @@
 import type { SoulId } from "./souls";
 import type { SoulArc, SoulEnding } from "./soulRunner";
-import { soulsCompleted } from "./soulRunner";
+import { soulsCompleted, hasChoice, anySoulHasChoice } from "./soulRunner";
 import { unlockLore, showLoreToast } from "../lore";
 import { activateQuest, completeQuest, questStatus } from "../../sideQuests";
 import type { SaveSlot } from "../../types";
