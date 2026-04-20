@@ -143,7 +143,7 @@ export class EncounterScene extends Phaser.Scene {
   private refreshCursor() {
     this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
     const x = 8 + (this.cursor % 2) * 70;
-    const y = 121 + Math.floor(this.cursor / 2) * 11;
+    const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
   }
 
