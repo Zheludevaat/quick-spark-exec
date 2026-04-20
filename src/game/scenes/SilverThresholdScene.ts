@@ -281,10 +281,10 @@ export class SilverThresholdScene extends Phaser.Scene {
     // Gate enter
     const gx = this.rowan.x - this.gate.x, gy = this.rowan.y - this.gate.y;
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
-      this.save.scene = "MoonHall";
+      this.save.scene = "ImaginalRealm";
       writeSave(this.save);
       const a = getAudio(); a.sfx("wipe"); a.music.stop();
-      gbcWipe(this, () => this.scene.start("MoonHall", { save: this.save }));
+      gbcWipe(this, () => this.scene.start("ImaginalRealm", { save: this.save }));
     }
   }
 }

@@ -329,6 +329,38 @@ export const SONG_BOSS: Song = {
   noise: [2,N,N,N, N,N,1,N, 2,N,N,N, N,N,1,1, 2,N,N,N, N,N,1,N, 2,N,N,N, 1,N,1,1],
 };
 
+/** Last Day — muted, piano-like, melancholy minor. */
+export const SONG_LASTDAY: Song = {
+  bpm: 60,
+  loop: true,
+  steps: [
+    ["A4", N, "A2"],   [N, N, N], [N, N, N], [N, N, N],
+    ["C5", N, N],     [N, N, N], [N, N, N], [N, N, N],
+    ["E4", N, "E2"],   [N, N, N], [N, N, N], [N, N, N],
+    ["G4", N, N],     [N, N, N], [N, N, N], [N, N, N],
+    ["F4", N, "F2"],   [N, N, N], [N, N, N], [N, N, N],
+    ["A4", N, N],     [N, N, N], [N, N, N], [N, N, N],
+    ["E4", N, "C2"],   [N, N, N], [N, N, N], [N, N, N],
+    ["D4", N, N],     [N, N, N], [N, N, N], [N, N, N],
+  ],
+};
+
+/** Crossing — held drone with sparse high tones. Almost music. */
+export const SONG_CROSSING: Song = {
+  bpm: 50,
+  loop: true,
+  steps: [
+    [N, N, "A2"], [N, N, N], [N, N, N], [N, N, N],
+    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
+    ["A5", N, N], [N, N, N], [N, N, N], [N, N, N],
+    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
+    [N, N, "G2"], [N, N, N], [N, N, N], [N, N, N],
+    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
+    ["E5", N, N], [N, N, N], [N, N, N], [N, N, N],
+    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
+  ],
+};
+
 /** Epilogue — major-key resolution, gentle. */
 export const SONG_EPILOGUE: Song = {
   bpm: 72,
