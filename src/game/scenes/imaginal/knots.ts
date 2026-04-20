@@ -58,7 +58,9 @@ export function runReflectionKnot(
     },
   );
 
-  // Spawn a mimic sprite copying Rowan with a delay
+  // Spawn a mimic sprite copying Rowan with a delay. Starts offset, but
+  // converges onto Rowan's exact position once you stand still long enough
+  // for the trail to drain.
   const mimic = scene.add
     .sprite(rowan.x + 24, rowan.y, "rowan", 0)
     .setOrigin(0.5, 0.7)
@@ -79,7 +81,8 @@ export function runReflectionKnot(
       while (trail.length && scene.time.now - trail[0].t > 1100) trail.shift();
       const head = trail[0];
       if (head) {
-        mimic.x = head.x + 18;
+        // No horizontal offset — the mimic is meant to overlap Rowan exactly.
+        mimic.x = head.x;
         mimic.y = head.y;
       }
       // Track stillness
