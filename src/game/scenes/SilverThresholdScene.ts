@@ -99,7 +99,7 @@ const NAMING: Record<ElemKind, { who: string; text: string }[]> = {
     { who: "Earth", text: "You are no longer the one who carries. You are the one who is carried." },
     { who: "Earth", text: "Carry this. CLARITY +1. The satchel is mine now." },
   ],
-];
+};
 
 const SORYN_OPENING = [
   { who: "?",     text: "Welcome, Rowan. Take a breath you no longer need." },
