@@ -363,7 +363,9 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
-      this.shadeLabel.setText("");
+      // Persistent plan hint under the boss so the player knows what to do.
+      const plan = phase3Plan(this.save);
+      this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
     this.busy = false;
   }
