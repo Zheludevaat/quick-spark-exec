@@ -1354,6 +1354,7 @@ export class GBCText {
   }
   setText(text: string, color?: string) {
     if (color) this.color = color;
+    this._lastText = text;
     if (this.scene.textures.exists(this.key)) this.scene.textures.remove(this.key);
     const lines = wrapText(text, this.maxWidthPx);
     const w = Math.max(1, ...lines.map(l => measureText(l)));
@@ -1363,7 +1364,7 @@ export class GBCText {
     tex.refresh();
     this.obj.setTexture(this.key);
   }
-  setColor(color: string) { this.setText(this.lastText() ?? "", color); }
+  setColor(color: string) { this.setText(this._lastText ?? "", color); }
   setVisible(v: boolean) { this.obj.setVisible(v); }
   setPosition(x: number, y: number) { this.obj.setPosition(x, y); }
   destroy() {
@@ -1371,7 +1372,81 @@ export class GBCText {
     if (this.scene.textures.exists(this.key)) this.scene.textures.remove(this.key);
   }
   private _lastText?: string;
-  private lastText() { return this._lastText; }
+}
+
+// ============================================================================
+// GBC screen-wipe transitions (vertical band fade like Pokemon Crystal)
+// ============================================================================
+
+/**
+ * Run a Pokemon-style screen wipe. Plays out (cover) then calls onMid, then
+ * plays in (reveal). Use for scene changes.
+ */
+export function gbcWipe(scene: Phaser.Scene, onMid: () => void, durMs = 280) {
+  const bands = 8;
+  const bandH = Math.ceil(GBC_H / bands);
+  const rects: Phaser.GameObjects.Rectangle[] = [];
+  for (let i = 0; i < bands; i++) {
+    const r = scene.add.rectangle(0, i * bandH, 0, bandH, 0x0a0e1a, 1)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(9999);
+    rects.push(r);
+  }
+  const step = durMs / bands;
+  rects.forEach((r, i) => {
+    scene.tweens.add({ targets: r, width: GBC_W, duration: durMs * 0.6, delay: i * (step * 0.4), ease: "Sine.in" });
+  });
+  scene.time.delayedCall(durMs, () => {
+    onMid();
+    scene.time.delayedCall(60, () => {
+      rects.forEach((r, i) => {
+        scene.tweens.add({
+          targets: r, width: 0, duration: durMs * 0.6,
+          delay: (bands - 1 - i) * (step * 0.4), ease: "Sine.out",
+          onComplete: () => r.destroy(),
+        });
+      });
+    });
+  });
+}
+
+// ============================================================================
+// LCD scanline overlay (toggleable retro filter)
+// ============================================================================
+
+let lcdOverlay: Phaser.GameObjects.Image | null = null;
+let lcdEnabled = false;
+
+export function ensureLcdOverlay(scene: Phaser.Scene) {
+  const key = "lcd_overlay";
+  if (!scene.textures.exists(key)) {
+    const { ctx, tex } = makeTex(scene, key, GBC_W, GBC_H);
+    // Faint horizontal scanlines + subtle vertical pixel grid
+    ctx.fillStyle = "rgba(10,14,26,0.18)";
+    for (let y = 1; y < GBC_H; y += 2) ctx.fillRect(0, y, GBC_W, 1);
+    ctx.fillStyle = "rgba(10,14,26,0.08)";
+    for (let x = 1; x < GBC_W; x += 2) ctx.fillRect(x, 0, 1, GBC_H);
+    tex.refresh();
+  }
+}
+
+export function toggleLcd(scene: Phaser.Scene) {
+  ensureLcdOverlay(scene);
+  if (lcdEnabled && lcdOverlay) {
+    lcdOverlay.destroy();
+    lcdOverlay = null;
+    lcdEnabled = false;
+    return false;
+  }
+  lcdOverlay = scene.add.image(0, 0, "lcd_overlay").setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
+  lcdEnabled = true;
+  return true;
+}
+
+export function isLcdOn() { return lcdEnabled; }
+export function reapplyLcd(scene: Phaser.Scene) {
+  if (!lcdEnabled) return;
+  ensureLcdOverlay(scene);
+  lcdOverlay = scene.add.image(0, 0, "lcd_overlay").setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
 }
 
 // ============================================================================

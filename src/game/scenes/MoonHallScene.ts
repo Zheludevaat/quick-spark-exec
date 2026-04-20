@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX } from "../gbcArt";
+import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
@@ -151,8 +151,7 @@ export class MoonHallScene extends Phaser.Scene {
       if (!ready) return;
       this.save.scene = "CuratedSelf";
       writeSave(this.save);
-      this.cameras.main.fadeOut(400, 0, 0, 0);
-      this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("CuratedSelf", { save: this.save }));
+      gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
       return;
     }
 

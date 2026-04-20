@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
 import type { Stats } from "../types";
 
 /**
@@ -10,6 +10,12 @@ import type { Stats } from "../types";
 export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const cam = scene.cameras.main;
   cam.setRoundPixels(true);
+
+  // Re-apply LCD overlay if it was toggled on in a previous scene
+  reapplyLcd(scene);
+
+  // Global LCD toggle: backslash key
+  scene.input.keyboard?.on("keydown-BACKSLASH", () => toggleLcd(scene));
 
   // Top stats bar (compact for 160-wide screen)
   const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
@@ -137,10 +143,41 @@ export function runDialog(
 
   let i = 0;
   let active = true;
+  let typing = false;
+  let fullText = "";
+  let typeTimer: Phaser.Time.TimerEvent | null = null;
+
+  const finishTyping = () => {
+    if (typeTimer) { typeTimer.remove(false); typeTimer = null; }
+    text.setText(fullText);
+    typing = false;
+    hint.setVisible(true);
+  };
+
+  const startTyping = (s: string) => {
+    fullText = s;
+    typing = true;
+    hint.setVisible(false);
+    let n = 0;
+    text.setText("");
+    if (typeTimer) typeTimer.remove(false);
+    typeTimer = scene.time.addEvent({
+      delay: 28,
+      repeat: s.length - 1,
+      callback: () => {
+        n++;
+        text.setText(s.slice(0, n));
+        if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; }
+      },
+    });
+  };
+
   const next = () => {
     if (!active) return;
+    if (typing) { finishTyping(); return; }
     if (i >= lines.length) {
       active = false;
+      if (typeTimer) typeTimer.remove(false);
       box.destroy(); who.destroy(); text.destroy(); hint.destroy();
       scene.input.keyboard?.off("keydown-SPACE", next);
       scene.input.keyboard?.off("keydown-ENTER", next);
@@ -150,7 +187,7 @@ export function runDialog(
       return;
     }
     who.setText(lines[i].who.toUpperCase());
-    text.setText(lines[i].text.toUpperCase());
+    startTyping(lines[i].text.toUpperCase());
     i++;
   };
   next();
