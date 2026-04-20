@@ -174,6 +174,9 @@ export function runDialog(
       callback: () => {
         n++;
         text.setText(s.slice(0, n));
+        // Tick a soft blip every other glyph (skip spaces) so it doesn't get noisy
+        const ch = s[n - 1];
+        if (n % 2 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; }
       },
     });
