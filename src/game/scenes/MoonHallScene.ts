@@ -54,6 +54,10 @@ export class MoonHallScene extends Phaser.Scene {
       }
     }
 
+    // Ambient cyan motes drifting across the hall
+    spawnMotes(this, { count: 14, color: 0x5a78b8, alpha: 0.5, driftY: 0.006, driftX: 0.004, depth: 30 });
+    spawnMotes(this, { count: 6, color: 0xa8c8e8, alpha: 0.7, driftY: -0.004, driftX: -0.003, depth: 30 });
+
     // Three minor mirrors + boss mirror
     const layout: { x: number; y: number; kind: Mirror["kind"] }[] = [
       { x: 40,  y: 56, kind: "reflection" },
