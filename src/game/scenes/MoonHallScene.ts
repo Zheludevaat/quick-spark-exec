@@ -217,6 +217,14 @@ export class MoonHallScene extends Phaser.Scene {
           writeSave(this.save);
           m.sprite.setFrame(TILE_INDEX.MIRROR_CLEARED);
           this.events.emit("stats-changed");
+          // Soryn comments after each clear, once
+          const flag = `soryn_after_${m.kind}`;
+          if (!this.save.flags[flag]) {
+            this.save.flags[flag] = true;
+            writeSave(this.save);
+            this.dialogActive = true;
+            this.time.delayedCall(400, () => runDialog(this, SORYN_AFTER_CLEAR[m.kind], () => { this.dialogActive = false; }));
+          }
         }
       },
     });
