@@ -102,7 +102,7 @@ export function runReflectionKnot(
     callback: () => {
       const dx = mimic.x - rowan.x,
         dy = mimic.y - rowan.y;
-      const close = dx * dx + dy * dy < 36;
+      const close = dx * dx + dy * dy < 100;
       const still = stillSinceMs >= 600;
       overlapping = close && still;
       mimic.setAlpha(overlapping ? 0.85 : 0.55);
