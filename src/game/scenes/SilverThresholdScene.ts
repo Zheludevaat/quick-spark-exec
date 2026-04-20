@@ -785,29 +785,58 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.events.on("vinput-down", vmove);
   }
 
-  /** EARTH — auto-walk Rowan in a slow spiral around the circle. Player just watches. */
+  /** EARTH — circle the guardian. Hold any direction to keep walking; if you
+   *  let go for too long, the path stalls and you must restart the lap. */
   private miniEarth(c: { x: number; y: number }, onDone: () => void) {
     const box = drawGBCBox(this, 4, GBC_H - 26, GBC_W - 8, 22, 250);
-    const prompt = new GBCText(this, 8, GBC_H - 22, "WALK THE CIRCLE.", {
+    const prompt = new GBCText(this, 8, GBC_H - 22, "HOLD A DIRECTION. WALK THE CIRCLE.", {
       color: COLOR.textAccent,
       depth: 251,
+      maxWidthPx: GBC_W - 16,
     });
     const startX = this.rowan.x,
       startY = this.rowan.y;
     let angle = 0;
+    let stallMs = 0;
+    let restarts = 0;
     const radius = 14;
     const tick = this.time.addEvent({
       delay: 30,
       loop: true,
       callback: () => {
-        angle += 0.05;
-        this.rowan.x = c.x + Math.cos(angle) * radius;
-        this.rowan.y = c.y + Math.sin(angle) * radius;
-        animateRowan(this.rowan, Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2));
+        const i = this.input2.poll();
+        const moving = i.up || i.down || i.left || i.right;
+        if (moving) {
+          stallMs = 0;
+          angle += 0.05;
+          this.rowan.x = c.x + Math.cos(angle) * radius;
+          this.rowan.y = c.y + Math.sin(angle) * radius;
+          animateRowan(
+            this.rowan,
+            Math.cos(angle + Math.PI / 2),
+            Math.sin(angle + Math.PI / 2),
+          );
+        } else {
+          stallMs += 30;
+          if (stallMs > 900 && angle > 0.4) {
+            // Stalled too long mid-lap — the circle resets you to its start.
+            stallMs = 0;
+            angle = 0;
+            restarts++;
+            getAudio().sfx("miss");
+            prompt.setText("THE EARTH WAITS. AGAIN. KEEP WALKING.");
+            this.cameras.main.shake(60, 0.001);
+          }
+        }
         if (angle >= Math.PI * 2.2) {
           tick.remove(false);
           this.rowan.x = startX;
           this.rowan.y = startY;
+          // Reward scales: 1 lap clean = +1 courage; with restarts = no bonus.
+          if (restarts === 0) {
+            this.save.stats.courage += 1;
+            this.events.emit("stats-changed");
+          }
           box.destroy();
           prompt.destroy();
           onDone();
