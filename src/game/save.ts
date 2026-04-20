@@ -30,6 +30,7 @@ export function newSave(): SaveSlot {
     fragments: 0,
     verbs: { witness: false },
     shards: [],
+    shardFragments: 0,
     seeds: {},
     updatedAt: Date.now(),
   };

@@ -16,6 +16,8 @@ export type SaveSlot = {
   fragments: number;
   verbs: { witness: boolean };
   shards: string[];
+  /** Memory-shard sub-fragments (4 = 1 shard). */
+  shardFragments: number;
   seeds: Record<string, boolean>;
   updatedAt: number;
 };
@@ -44,6 +46,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     fragments: r.fragments ?? 0,
     verbs: { witness: r.verbs?.witness ?? false },
     shards: Array.isArray(r.shards) ? r.shards : [],
+    shardFragments: typeof (r as any).shardFragments === "number" ? (r as any).shardFragments : 0,
     seeds: r.seeds ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
