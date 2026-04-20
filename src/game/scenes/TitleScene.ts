@@ -284,7 +284,8 @@ export class TitleScene extends Phaser.Scene {
     const confirm = () => {
       const opt = options[cursor];
       if (opt.action === "launch") launch();
-      else erase();
+      else if (opt.action === "erase") erase();
+      else this.openSkipMenu();
     };
     const move = (d: number) => {
       if (options.length < 2) return;
