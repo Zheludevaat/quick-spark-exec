@@ -216,30 +216,46 @@ export class MoonHallScene extends Phaser.Scene {
       return;
     }
 
-    getAudio().sfx("confirm");
-    this.scene.launch("Encounter", {
-      save: this.save,
-      kind: m.kind,
-      onDone: (won: boolean) => {
-        this.scene.resume();
-        getAudio().music.play("moon", SONG_MOON);
-        if (won) {
-          m.cleared = true;
-          this.save.flags[`m_${m.kind}`] = true;
-          writeSave(this.save);
-          m.sprite.setFrame(TILE_INDEX.MIRROR_CLEARED);
-          this.events.emit("stats-changed");
-          // Soryn comments after each clear, once
-          const flag = `soryn_after_${m.kind}`;
-          if (!this.save.flags[flag]) {
-            this.save.flags[flag] = true;
+    const launchEncounter = () => {
+      getAudio().sfx("confirm");
+      this.scene.launch("Encounter", {
+        save: this.save,
+        kind: m.kind,
+        onDone: (won: boolean) => {
+          this.scene.resume();
+          getAudio().music.play("moon", SONG_MOON);
+          if (won) {
+            m.cleared = true;
+            this.save.flags[`m_${m.kind}`] = true;
             writeSave(this.save);
-            this.dialogActive = true;
-            this.time.delayedCall(400, () => runDialog(this, SORYN_AFTER_CLEAR[m.kind], () => { this.dialogActive = false; }));
+            m.sprite.setFrame(TILE_INDEX.MIRROR_CLEARED);
+            this.events.emit("stats-changed");
+            const flag = `soryn_after_${m.kind}`;
+            if (!this.save.flags[flag]) {
+              this.save.flags[flag] = true;
+              writeSave(this.save);
+              this.dialogActive = true;
+              this.time.delayedCall(400, () => runDialog(this, SORYN_AFTER_CLEAR[m.kind], () => { this.dialogActive = false; }));
+            }
           }
-        }
-      },
-    });
-    this.scene.pause();
+        },
+      });
+      this.scene.pause();
+    };
+
+    // First-time mirror tutorial — explains the verb-loop in plain terms
+    if (!this.save.flags.tutorial_mirror) {
+      this.save.flags.tutorial_mirror = true;
+      writeSave(this.save);
+      this.dialogActive = true;
+      runDialog(this, [
+        { who: "Soryn", text: "A mirror holds a knot. Each fears one verb." },
+        { who: "Soryn", text: "OBSERVE a mimic. ADDRESS an echo. REMEMBER a fragment." },
+        { who: "Soryn", text: "Guess wrong and it ripples but won't break. Try again." },
+        { who: "Soryn", text: "First-try wins teach most. RELEASE always works - but teaches less." },
+      ], () => { this.dialogActive = false; launchEncounter(); });
+    } else {
+      launchEncounter();
+    }
   }
 }
