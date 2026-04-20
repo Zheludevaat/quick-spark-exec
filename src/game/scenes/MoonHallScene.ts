@@ -39,6 +39,8 @@ const SORYN_AFTER_CLEAR: Record<Mirror["kind"], { who: string; text: string }[]>
   ],
 };
 
+const MAP_W = 10, MAP_H = 9;
+
 function buildMoonMap(): number[][] {
   const T = TILE_INDEX;
   const m: number[][] = [];
