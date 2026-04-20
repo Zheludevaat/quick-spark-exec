@@ -722,11 +722,26 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "wrong",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE COUNTING", text: "Do all infinities end? Do none? Do both? Do neither?" },
-          { who: "ONE COUNTING", text: "I have lit a lantern for each answer. One is correct." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          // Cross-soul nods: react if you forced the Saint or named the Stonechild.
+          if (hasChoice(save, "walking_saint", "forced")) {
+            return [
+              { who: "ONE COUNTING", text: "I heard about the saint. You forced her hand." },
+              { who: "ONE COUNTING", text: "Don't force this. The lanterns notice force." },
+            ];
+          }
+          if (hasChoice(save, "stonechild", "named")) {
+            return [
+              { who: "ONE COUNTING", text: "You returned the stonechild's name. Word travels." },
+              { who: "ONE COUNTING", text: "Then you might bear a fourth lantern. Listen." },
+            ];
+          }
+          return [
+            { who: "ONE COUNTING", text: "Do all infinities end? Do none? Do both? Do neither?" },
+            { who: "ONE COUNTING", text: "I have lit a lantern for each answer. One is correct." },
+          ];
+        },
       },
       {
         kind: "inquiry",
