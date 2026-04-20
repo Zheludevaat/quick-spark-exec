@@ -756,8 +756,11 @@ export class SilverThresholdScene extends Phaser.Scene {
       this.events.emit("stats-changed");
       onDone();
     };
+    let unbindAct: (() => void) | null = null;
+    let unbindDir: (() => void) | null = null;
     const cleanup = () => {
-      window.removeEventListener("keydown", domKey);
+      unbindAct?.();
+      unbindDir?.();
       this.events.off("vinput-action", pick);
       this.events.off("vinput-down", vmove);
       refTrue.destroy();
@@ -771,19 +774,8 @@ export class SilverThresholdScene extends Phaser.Scene {
       if (dir === "left") move(-1);
       if (dir === "right") move(1);
     };
-    const domKey = (e: KeyboardEvent) => {
-      if (e.code === "ArrowLeft" || e.code === "KeyA") {
-        e.preventDefault();
-        move(-1);
-      } else if (e.code === "ArrowRight" || e.code === "KeyD") {
-        e.preventDefault();
-        move(1);
-      } else if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter") {
-        e.preventDefault();
-        pick();
-      }
-    };
-    window.addEventListener("keydown", domKey);
+    unbindAct = onActionDown(this, "action", pick);
+    unbindDir = onDirection(this, vmove);
     this.events.on("vinput-action", pick);
     this.events.on("vinput-down", vmove);
   }
