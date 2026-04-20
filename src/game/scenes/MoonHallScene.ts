@@ -173,15 +173,18 @@ export class MoonHallScene extends Phaser.Scene {
       if (!ready) return;
       this.save.scene = "CuratedSelf";
       writeSave(this.save);
+      const a = getAudio(); a.sfx("boss"); a.music.stop();
       gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
       return;
     }
 
+    getAudio().sfx("confirm");
     this.scene.launch("Encounter", {
       save: this.save,
       kind: m.kind,
       onDone: (won: boolean) => {
         this.scene.resume();
+        getAudio().music.play("moon", SONG_MOON);
         if (won) {
           m.cleared = true;
           this.save.flags[`m_${m.kind}`] = true;
