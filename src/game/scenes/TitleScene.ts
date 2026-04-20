@@ -1,68 +1,53 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
 
 export class TitleScene extends Phaser.Scene {
-  constructor() {
-    super("Title");
-  }
+  constructor() { super("Title"); }
+
   create() {
-    this.cameras.main.setBackgroundColor(PAL.void);
+    this.cameras.main.setBackgroundColor(COLOR.void);
 
-    // Painted moon backdrop using Silver Threshold base + moon gate
-    const base = this.add.image(VIEW_W / 2, VIEW_H / 2, "silver_threshold_base")
-      .setDisplaySize(VIEW_W, VIEW_H)
-      .setAlpha(0.35);
-    void base;
-    this.add.image(VIEW_W / 2, VIEW_H / 2 + 12, "moon_gate_threshold")
-      .setDisplaySize(180, 180)
-      .setAlpha(0.55);
-
-    // Falling silver dust
-    for (let i = 0; i < 40; i++) {
-      const d = this.add.rectangle(
-        Phaser.Math.Between(0, VIEW_W),
-        Phaser.Math.Between(0, VIEW_H),
-        1, 1,
-        PAL.silverLight,
-        Phaser.Math.FloatBetween(0.3, 1),
-      );
-      this.tweens.add({
-        targets: d,
-        y: d.y + Phaser.Math.Between(40, 100),
-        alpha: 0,
-        duration: Phaser.Math.Between(2000, 5000),
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 3000),
-      });
+    // Tile-painted starfield using the silver_void tile look (cheap: random dots)
+    const g = this.add.graphics();
+    for (let i = 0; i < 80; i++) {
+      const c = Phaser.Math.RND.pick(["#2a3550", "#7889a8", "#dde6f5"]);
+      g.fillStyle(Phaser.Display.Color.HexStringToColor(c).color, 1);
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H), 1, 1);
     }
 
-    pixelText(this, VIEW_W / 2 - 64, 40, "HERMETIC COMEDY", 14, "#eef3ff");
-    pixelText(this, VIEW_W / 2 - 38, 60, "act 0 · the silver threshold", 7, "#8ec8e8");
+    // Moon disc (concentric circles)
+    const cx = GBC_W / 2, cy = 50;
+    g.fillStyle(0x243058, 1); g.fillCircle(cx, cy, 26);
+    g.fillStyle(0x3a5078, 1); g.fillCircle(cx, cy, 22);
+    g.fillStyle(0x7898c0, 1); g.fillCircle(cx, cy, 18);
+    g.fillStyle(0xa8c8e8, 1); g.fillCircle(cx, cy, 14);
+    g.fillStyle(0xdde6f5, 0.4); g.fillCircle(cx - 4, cy - 4, 6);
+
+    // Title
+    new GBCText(this, GBC_W / 2 - 38, 86, "HERMETIC", { color: COLOR.textLight, shadow: "#1a2030" });
+    new GBCText(this, GBC_W / 2 - 24, 96, "COMEDY", { color: COLOR.textLight, shadow: "#1a2030" });
+    new GBCText(this, GBC_W / 2 - 44, 108, "ACT ZERO", { color: COLOR.textAccent });
 
     const save = loadSave();
-    drawDialogBox(this, 60, 150, 200, 70);
+    drawGBCBox(this, 18, 118, GBC_W - 36, 22);
+    const startLabel = save ? "PRESS A: CONTINUE" : "PRESS A: NEW GAME";
+    const start = new GBCText(this, 26, 124, startLabel, { color: COLOR.textLight });
+    new GBCText(this, 26, 132, save ? "B: ERASE SAVE" : "", { color: COLOR.textDim });
 
-    const continueBtn = pixelText(this, 80, 162, save ? "▶  CONTINUE" : "▶  CONTINUE  (no save)", 9,
-      save ? "#eef3ff" : "#6a7a9c").setInteractive({ useHandCursor: !!save });
-    const newBtn = pixelText(this, 80, 180, "✦  NEW JOURNEY", 9, "#eef3ff").setInteractive({ useHandCursor: true });
-    const wipeBtn = pixelText(this, 80, 198, "✕  ERASE SAVE", 8, "#d86a6a").setInteractive({ useHandCursor: true });
+    // Blink the prompt
+    this.tweens.add({ targets: start.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
-    if (save) {
-      continueBtn.on("pointerdown", () => this.scene.start(save.scene, { save }));
-    }
-    newBtn.on("pointerdown", () => {
-      clearSave();
-      this.scene.start("Intro", { save: newSave() });
-    });
-    wipeBtn.on("pointerdown", () => {
-      clearSave();
-      this.scene.restart();
-    });
+    const launch = () => {
+      const next = save ? save.scene : "Intro";
+      const slot = save ?? newSave();
+      this.scene.start(next === "Title" ? "Intro" : next, { save: slot });
+    };
+    const erase = () => { clearSave(); this.scene.restart(); };
 
-    // Keyboard: Enter to start
-    this.input.keyboard?.on("keydown-ENTER", () => {
-      this.scene.start("Intro", { save: save ?? newSave() });
-    });
+    this.input.keyboard?.on("keydown-ENTER", launch);
+    this.input.keyboard?.on("keydown-SPACE", launch);
+    this.input.on("pointerdown", launch);
+    this.input.keyboard?.on("keydown-BACKSPACE", erase);
   }
 }
