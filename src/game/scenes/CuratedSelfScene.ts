@@ -822,7 +822,7 @@ export class EpilogueScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(900);
       const line = new GBCText(this, GBC_W / 2 - 60, GBC_H / 2 - 4, "AND BEGIN AGAIN, GOLDEN.", {
-        color: 0x000000 as unknown as string,
+        color: "#1a1a1a",
         depth: 901,
       });
       line.obj.setAlpha(0);
