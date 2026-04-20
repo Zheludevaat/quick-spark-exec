@@ -55,7 +55,7 @@ export class TitleScene extends Phaser.Scene {
       { name: "Jupiter", core: 0xc8d8f0, mid: 0x6890c8, halo: 0x305078, r: 6 }, // royal blue / tin
       { name: "Saturn",  core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5 }, // lead
     ];
-    const sphereCY = 38;
+    const sphereCY = 44;
     const spacing = 22;
     const totalW = spacing * (spheres.length - 1);
     const startX = GBC_W / 2 - totalW / 2;
@@ -94,7 +94,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // ---- Title block — centered, just the name. ----
-    const titleY = 92;
+    const titleY = 70;
     const t1 = "HERMETIC";
     const t2 = "COMEDY";
     new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY, t1, {
@@ -124,7 +124,7 @@ export class TitleScene extends Phaser.Scene {
       : [{ label: primaryLabel, action: "launch" }];
 
     const boxH = save ? 28 : 18;
-    const menuY = save ? 104 : 114;
+    const menuY = save ? 100 : 108;
     drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
 
     let cursor = 0;
@@ -206,10 +206,7 @@ export class TitleScene extends Phaser.Scene {
       }
     });
 
-    // ---- Footer hint ----
-    new GBCText(this, 4, GBC_H - 7, "≡ SETTINGS  ·  ENTER", {
-      color: COLOR.textAccent,
-    });
+    // (Footer hint omitted — the HTML footer below the canvas already lists controls.)
   }
 }
 
