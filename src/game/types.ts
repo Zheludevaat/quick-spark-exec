@@ -56,15 +56,14 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     "Epilogue",
   ];
   if (!allowed.includes(scene as SceneKey)) scene = "SilverThreshold";
-  const act: 0 | 1 =
-    scene === "ImaginalRealm" || scene === "CuratedSelf" || scene === "Epilogue" ? 1 : 0;
+  const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
   const region =
     (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
   const shardFrags = r.shardFragments;
   const loreList = r.lore;
   return {
     scene: scene as SceneKey,
-    act: (r.act as 0 | 1) ?? act,
+    act: typeof r.act === "number" ? r.act : act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
     flags: r.flags ?? {},
     fragments: r.fragments ?? 0,
