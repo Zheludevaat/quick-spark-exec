@@ -332,7 +332,7 @@ export class TitleScene extends Phaser.Scene {
     const audio = getAudio();
     audio.sfx("cursor");
 
-    const jumps: { label: string; scene: string; act: number }[] = [
+    const jumps: { label: string; scene: SceneKey; act: number }[] = [
       { label: "ACT 1 · LAST DAY", scene: "LastDay", act: 1 },
       { label: "ACT 1 · CROSSING", scene: "Crossing", act: 1 },
       { label: "ACT 1 · NIGREDO", scene: "Nigredo", act: 1 },
