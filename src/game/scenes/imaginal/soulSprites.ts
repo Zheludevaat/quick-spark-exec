@@ -187,5 +187,11 @@ export function buildSoulSprite(
     ease: "Sine.inOut",
   });
 
-  return { container: c, halo };
+  const setMood = (m: SoulMood) => {
+    halo.fillColor = MOOD_COLOR[m];
+    if (m === "resolved") c.setAlpha(0.6);
+  };
+
+  return { container: c, halo, setMood, archetype };
 }
+
