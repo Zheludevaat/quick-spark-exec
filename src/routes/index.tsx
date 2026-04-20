@@ -25,12 +25,17 @@ function GamePage() {
     let cancelled = false;
     (async () => {
       try {
-        const { createGame } = await import("@/game/createGame");
+        console.log("[game] importing createGame…");
+        const mod = await import("@/game/createGame");
+        console.log("[game] import resolved", Object.keys(mod));
         if (cancelled || !hostRef.current) return;
-        game = createGame(hostRef.current);
+        console.log("[game] calling createGame()");
+        game = mod.createGame(hostRef.current);
+        console.log("[game] createGame returned", game);
         setBooted(true);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        console.error("[game] boot failed", e);
+        setError(e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e));
       }
     })();
     return () => {
