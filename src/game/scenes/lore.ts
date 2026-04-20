@@ -676,6 +676,38 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
       "TAKE IT. APOLOGIES ARE NOT ALWAYS SPOKEN.",
     ],
   },
+
+  // ===== Act 3 — The Return =====
+  on_the_return: {
+    id: "on_the_return",
+    title: "ON THE RETURN",
+    source: "ACT III — INSCRIPTION",
+    body: [
+      "THE WORK IS NOT THE GOLD.",
+      "THE WORK IS WALKING BACK CARRYING IT,",
+      "AND HANDING IT TO THE PERSON WHO LEFT.",
+    ],
+  },
+  on_the_ascent: {
+    id: "on_the_ascent",
+    title: "ON THE ASCENT",
+    source: "ACT III — HIDDEN",
+    body: [
+      "THE GOLDEN ROAD IS SHORT.",
+      "IT TRADES THE LONG SEEING FOR A WHITE DOOR.",
+      "BOTH ARE REAL. NEITHER IS FREE.",
+    ],
+  },
+  on_the_inscription_returns: {
+    id: "on_the_inscription_returns",
+    title: "THE SENTENCE RETURNS",
+    source: "ACT III — EPILOGUE",
+    body: [
+      "THE SENTENCE YOU SEALED WALKS BACK INTO YOU.",
+      "IT WAS NEVER A LESSON. IT WAS A KEY.",
+      "YOU UNLOCK YOURSELF WITH IT.",
+    ],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */
