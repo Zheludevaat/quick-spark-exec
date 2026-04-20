@@ -216,5 +216,5 @@ export function buzz(ms = 12) {
   if (!state.haptics) return;
   if (typeof navigator === "undefined") return;
   const v = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
-  try { v?.call(navigator, ms); } catch { /* ignore */ }
+  try { v?.call(navigator, [ms]); } catch { /* ignore */ }
 }
