@@ -184,6 +184,7 @@ export class SilverThresholdScene extends Phaser.Scene {
       writeSave(this.save);
       (this.gate.getData("img") as Phaser.GameObjects.Image).setAlpha(1);
       this.tweens.add({ targets: this.gate, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
+      getAudio().sfx("open");
       this.dialogActive = true;
       runDialog(this, SORYN_AFTER, () => { this.dialogActive = false; });
     }
@@ -195,6 +196,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     const sdx = this.rowan.x - this.soryn.x, sdy = this.rowan.y - this.soryn.y;
     if (sdx * sdx + sdy * sdy < 14 * 14) {
       this.dialogActive = true;
+      getAudio().sfx("confirm");
       const lines = this.save.flags.elements_done ? SORYN_AFTER : SORYN_OPENING;
       runDialog(this, lines, () => { this.dialogActive = false; });
       return;
@@ -204,6 +206,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
       this.save.scene = "MoonHall";
       writeSave(this.save);
+      const a = getAudio(); a.sfx("wipe"); a.music.stop();
       gbcWipe(this, () => this.scene.start("MoonHall", { save: this.save }));
     }
   }
