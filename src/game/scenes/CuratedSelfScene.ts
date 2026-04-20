@@ -190,7 +190,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.missIdx = 0;
       this.time.delayedCall(800, () => {
         this.state = stage.next;
-        this.stateText.setText(this.state.toUpperCase());
+        this.stateText.setText(STATE_LINES[this.state].phaseLabel);
         this.boss.play(`boss_${this.state}`);
         this.boss.setTint(STATE_HUE[this.state]);
         this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
