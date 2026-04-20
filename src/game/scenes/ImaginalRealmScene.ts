@@ -310,12 +310,20 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Place rowan at the entry side
+    // Place rowan at the entry side. We track which region they came from
+    // so a "go back north" flow lands them at the south edge instead of
+    // teleporting back to the original entry.
+    const from = this.lastRegion;
     if (region === "pools") {
-      this.rowan.setPosition(24, 56);
+      if (from === "field") this.rowan.setPosition(80, GBC_H - 24);
+      else this.rowan.setPosition(24, 56);
+    } else if (region === "field") {
+      if (from === "corridor") this.rowan.setPosition(80, GBC_H - 24);
+      else this.rowan.setPosition(80, 32);
     } else {
       this.rowan.setPosition(80, 32);
-    } // entered from north
+    }
+    this.lastRegion = region;
 
     // Region-specific intros (one-shot)
     const introFlag = `intro_${region}`;
