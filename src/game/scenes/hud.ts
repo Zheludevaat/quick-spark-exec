@@ -430,8 +430,10 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
 
   // ----- Lore button (small, top-left of HUD strip) -----
   {
+    // Lore button — sits just below the stats bar to keep the bar's text
+    // (and the SAVED indicator) free of the touch hit zone.
     const lx = 4,
-      ly = 6;
+      ly = 18;
     const w = 14,
       h = 8;
     const vis = scene.add
