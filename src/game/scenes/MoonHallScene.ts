@@ -65,9 +65,19 @@ export class MoonHallScene extends Phaser.Scene {
       const cleared = !!this.save.flags[`m_${m.kind}`];
       const sprite = this.add.image(m.x, m.y, "gbc_tiles", cleared ? TILE_INDEX.MIRROR_CLEARED : TILE_INDEX.MIRROR_FRAME);
       let glow: Phaser.GameObjects.Arc | undefined;
-      if (m.kind === "boss" && !cleared) {
-        glow = this.add.circle(m.x, m.y, 12, 0xd86a6a, 0.3);
-        this.tweens.add({ targets: glow, scale: 1.5, alpha: 0.15, duration: 900, yoyo: true, repeat: -1 });
+      if (!cleared) {
+        // All uncleared mirrors get a soft shimmer; boss gets a warmer red one
+        const c = m.kind === "boss" ? 0xd86a6a : 0xa8c8e8;
+        glow = this.add.circle(m.x, m.y, m.kind === "boss" ? 12 : 9, c, 0.25);
+        this.tweens.add({
+          targets: glow,
+          scale: m.kind === "boss" ? 1.5 : 1.3,
+          alpha: 0.1,
+          duration: m.kind === "boss" ? 900 : 1200,
+          yoyo: true, repeat: -1,
+        });
+        // Subtle vertical sprite bob for living feel
+        this.tweens.add({ targets: sprite, y: m.y - 1, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
       }
       this.mirrors.push({ x: m.x, y: m.y, kind: m.kind, cleared, sprite, glow });
     }
