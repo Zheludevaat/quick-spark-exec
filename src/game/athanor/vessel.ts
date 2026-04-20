@@ -1,8 +1,7 @@
 /**
  * Vessel HUD widget: shows the four stone counts as small colored pips
- * along the bottom-left of the screen, plus a tiny shard-count chip.
- *
- * Mounted by Act 2 scenes via `mountVesselHud(scene, save)`.
+ * along the bottom-left of the screen, plus shard/stains/conviction chips
+ * and an "ALONE" indicator if Soryn has been released.
  */
 import * as Phaser from "phaser";
 import { GBCText, COLOR } from "../gbcArt";
@@ -26,8 +25,20 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   const pips: Phaser.GameObjects.Arc[] = [];
   const labels: GBCText[] = [];
   const shardChip = new GBCText(scene, baseX, baseY - 8, "", { color: COLOR.textDim, depth: 220 });
+  // Stains pip row — small open circles that fill as stains accumulate.
+  const stainsLabel = new GBCText(scene, baseX + 70, baseY - 8, "", {
+    color: COLOR.textDim,
+    depth: 220,
+  });
+  const stainDots: Phaser.GameObjects.Arc[] = [];
+  for (let i = 0; i < 3; i++) {
+    const d = scene.add
+      .circle(baseX + 88 + i * 4, baseY - 6, 1.5, 0xffffff, 0)
+      .setStrokeStyle(0.5, 0x88a0b8)
+      .setDepth(220);
+    stainDots.push(d);
+  }
 
-  // 4 colors × max 3 pips = 12 small circles
   const colors: StoneColor[] = ["black", "white", "yellow", "red"];
   colors.forEach((c, ci) => {
     for (let i = 0; i < 3; i++) {
@@ -51,8 +62,23 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
       for (let i = 0; i < 3; i++) pips[ci * 3 + i].setVisible(i < n);
     });
     const total = save.shardInventory.length;
-    shardChip.setText(`SHARDS ${total}`);
-    if (save.goldStone) shardChip.setText(`SHARDS ${total}  *GOLD*`);
+    const conv = Object.values(save.convictions).filter(Boolean).length;
+    let line = `SHARDS ${total}`;
+    if (conv > 0) line += `  CONV ${conv}/3`;
+    if (save.goldStone) line += `  *GOLD*`;
+    if (save.sorynReleased) line += `  ALONE`;
+    shardChip.setText(line);
+
+    // Stains: show pip row only if stains have ever been carried.
+    if (save.stainsCarried > 0) {
+      stainsLabel.setText("STAIN");
+      for (let i = 0; i < 3; i++) {
+        stainDots[i].setFillStyle(0x88a0b8, i < save.stainsCarried ? 1 : 0);
+      }
+    } else {
+      stainsLabel.setText("");
+      for (const d of stainDots) d.setFillStyle(0xffffff, 0);
+    }
   };
 
   refresh();
@@ -62,6 +88,8 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     destroy: () => {
       pips.forEach((p) => p.destroy());
       labels.forEach((l) => l.destroy());
+      stainDots.forEach((d) => d.destroy());
+      stainsLabel.destroy();
       shardChip.destroy();
     },
   };

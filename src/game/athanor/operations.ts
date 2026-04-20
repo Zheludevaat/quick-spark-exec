@@ -4,9 +4,19 @@
  * The pattern: pick N shards → run a per-operation interaction →
  * award stones (and sometimes lore / stat shifts).
  */
+import * as Phaser from "phaser";
+import { GBCText, COLOR, GBC_W } from "../gbcArt";
+import { getAudio } from "../audio";
 import type { SaveSlot, ShardId, StoneColor } from "../types";
 import { writeSave } from "../save";
 import { consumeShard } from "./shards";
+
+const STONE_LABEL: Record<StoneColor, string> = {
+  black: "BLACK STONE",
+  white: "WHITE STONE",
+  yellow: "YELLOW STONE",
+  red: "RED STONE",
+};
 
 export function awardStone(save: SaveSlot, color: StoneColor, n = 1): void {
   switch (color) {
@@ -56,3 +66,34 @@ export function markOperationDone(save: SaveSlot, key: string): void {
   save.flags[key] = true;
   writeSave(save);
 }
+
+/**
+ * Award a stone with a named toast at the top-center of the screen.
+ * Use this from operation scenes when narration warrants it
+ * (e.g. "BLACK STONE — sat with the Mother").
+ */
+export function awardNamedStone(
+  scene: Phaser.Scene,
+  save: SaveSlot,
+  color: StoneColor,
+  reason: string,
+  n = 1,
+): void {
+  awardStone(save, color, n);
+  const t = new GBCText(scene, GBC_W / 2 - 48, 32, `+ ${STONE_LABEL[color]} - ${reason}`, {
+    color: COLOR.textGold,
+    depth: 240,
+    scrollFactor: 0,
+    maxWidthPx: GBC_W - 12,
+  });
+  scene.tweens.add({
+    targets: t.obj,
+    y: 22,
+    alpha: 0,
+    duration: 2000,
+    delay: 700,
+    onComplete: () => t.destroy(),
+  });
+  getAudio().sfx("resolve");
+}
+

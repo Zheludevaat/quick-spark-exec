@@ -19,6 +19,8 @@ import { getAudio, SONG_MOON } from "../audio";
 import { deriveInventory, shardName } from "../athanor/shards";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
+import { runInquiry } from "../inquiry";
+import { hasChoice } from "./imaginal/soulRunner";
 
 type Door = {
   key: "nigredo" | "albedo" | "citrinitas" | "rubedo";
@@ -123,13 +125,57 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.refreshVesselFill();
     this.vesselHud.refresh();
 
-    // First visit only — opening dialog
+    // Echo at top of stair if she's been unlocked.
+    if (this.save.flags.echo_follower_unlocked) {
+      const echo = this.add
+        .circle(GBC_W - 14, GBC_H - 28, 3, 0xa0c8e8, 0.85)
+        .setStrokeStyle(0.5, 0xffffff);
+      this.tweens.add({
+        targets: echo,
+        alpha: 0.4,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+      });
+      new GBCText(this, GBC_W - 24, GBC_H - 22, "ECHO", {
+        color: COLOR.textAccent,
+        depth: 5,
+      });
+    }
+
+    // First visit only — opening dialog (with apology gate variant).
     if (!this.save.flags.athanor_visited) {
       this.save.flags.athanor_visited = true;
       writeSave(this.save);
       this.busy = true;
-      runDialog(this, OPENING_LINES, () => {
-        this.busy = false;
+      const intro = this.openingLines();
+      runDialog(this, intro, () => {
+        if (hasChoice(this.save, "walking_saint", "forced") && !this.save.flags.act2_apology) {
+          this.runApologyGate();
+        } else {
+          this.busy = false;
+        }
+      });
+    }
+
+    // Salvage hint on return: if quest is active and we're back at threshold,
+    // the bath remembers — point them at Albedo.
+    if (
+      this.save.sideQuests["salvage_a_shard"] === "active" &&
+      !this.save.flags.salvage_hinted_athanor
+    ) {
+      this.save.flags.salvage_hinted_athanor = true;
+      writeSave(this.save);
+      this.time.delayedCall(900, () => {
+        if (this.busy) return;
+        this.busy = true;
+        runDialog(
+          this,
+          [
+            { who: "SORYN", text: "The bath kept something. The water always does." },
+          ],
+          () => (this.busy = false),
+        );
       });
     }
 
@@ -146,7 +192,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = true;
         runDialog(
           this,
-          [{ who: "SORYN", text: "All four are done. The vessel waits to be sealed." }],
+          [{ who: this.save.sorynReleased ? "ROWAN" : "SORYN", text: "All four are done. The vessel waits to be sealed." }],
           () => {
             this.busy = false;
             this.gotoSealedVessel();
@@ -342,5 +388,48 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.save.blackStones + this.save.whiteStones + this.save.yellowStones + this.save.redStones;
     const h = Math.max(1, Math.min(16, total * 1.5));
     this.vesselFill.height = h;
+  }
+
+  /** Pick the right opening lines based on save state (Soryn-released, etc.). */
+  private openingLines(): { who: string; text: string }[] {
+    if (this.save.sorynReleased) {
+      return [
+        { who: "ROWAN", text: "Down the stair. The Plateau ends here." },
+        { who: "ROWAN", text: "An Athanor. The vessel that won't break what it transmutes." },
+        { who: "ROWAN", text: "Into the glass with all of it." },
+      ];
+    }
+    return OPENING_LINES;
+  }
+
+  /** Soryn refuses to descend until Rowan sits with what she did to the Saint. */
+  private runApologyGate() {
+    runInquiry(
+      this,
+      { who: "SORYN", text: "Before the stair — the saint. You forced her hand." },
+      [
+        {
+          choice: "confess",
+          label: "I KNOW. I'M SORRY.",
+          reply: "Good. Carry that down with you.",
+        },
+        {
+          choice: "ask",
+          label: "SHE'LL FORGET.",
+          reply: "She won't. Neither will you. Bring it anyway.",
+        },
+        {
+          choice: "silent",
+          label: "(SAY NOTHING. STEP DOWN.)",
+          reply: "...as you like. The stair holds no opinions.",
+        },
+      ],
+      (p) => {
+        this.save.flags.act2_apology = true;
+        if (p.choice === "confess") this.save.stats.compassion += 1;
+        writeSave(this.save);
+        this.busy = false;
+      },
+    );
   }
 }

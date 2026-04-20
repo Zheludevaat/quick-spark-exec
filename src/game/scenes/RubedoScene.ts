@@ -1,11 +1,16 @@
 /**
  * 2.4 — RUBEDO. The Reddening.
  *
- * Vertical slice: two pairings (Black↔White, Yellow↔Red). Soryn pushes
- * back on each. Holding = strong. Yielding = gentle. Mixing = fractured.
+ * Two pairings (Black↔White, Yellow↔Red). For each, Soryn pushes back with
+ * an arc-aware rebuttal — HOLD your pairing, YIELD to her, or (if released)
+ * walk it through ALONE.
  *
- * Awards red stones as part of the pairing (you forge red here).
- * Releases Soryn if the player chooses it during the second pairing.
+ * Mid-scene, the player may RELEASE Soryn (registers `release_soryn` quest;
+ * the second pairing then loses the YIELD option and replaces it with WALK
+ * ALONE, which counts as a hold).
+ *
+ * Thirteenth Soul appears at the table if `soulsCompleted >= 12` →
+ * `goldStone = true`, registers `meet_the_thirteenth`.
  */
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
@@ -14,13 +19,20 @@ import { attachHUD, runDialog } from "./hud";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardStone } from "../athanor/operations";
+import { awardNamedStone } from "../athanor/operations";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
+import { PAIRINGS, tallyWedding } from "../athanor/wedding";
+import { activateQuest, completeQuest } from "../sideQuests";
 
 const OPENING = [
   { who: "SORYN", text: "Two thrones. A long table." },
   { who: "SORYN", text: "Marry the opposites. I will argue with you." },
+];
+
+const OPENING_ALONE = [
+  { who: "ROWAN", text: "Two thrones. A long table. No daimon." },
+  { who: "ROWAN", text: "Pair the opposites. Argue with myself." },
 ];
 
 export class RubedoScene extends Phaser.Scene {
@@ -28,6 +40,7 @@ export class RubedoScene extends Phaser.Scene {
   private vesselHud!: VesselHud;
   private holds = 0;
   private yields = 0;
+  private alones = 0;
 
   constructor() {
     super("Rubedo");
@@ -48,87 +61,136 @@ export class RubedoScene extends Phaser.Scene {
       color: COLOR.textWarn,
       depth: 5,
     });
-    runDialog(this, OPENING, () => this.firstUnion());
+    if (this.save.flags.teachers_sentence) {
+      const t = new GBCText(this, 6, 22, '"WHAT YOU CALL FAILURE IS A METHOD."', {
+        color: COLOR.textGold,
+        depth: 5,
+        scrollFactor: 0,
+      });
+      this.tweens.add({
+        targets: t.obj,
+        alpha: 0,
+        duration: 4000,
+        delay: 1500,
+        onComplete: () => t.destroy(),
+      });
+    }
+    const intro = this.save.sorynReleased ? OPENING_ALONE : OPENING;
+    runDialog(this, intro, () => this.runPairing(0));
   }
 
-  private firstUnion() {
+  private runPairing(idx: number) {
+    if (idx >= PAIRINGS.length) return this.maybeThirteenth();
+    const p = PAIRINGS[idx];
+    // First, Soryn (or memory of her) prompts.
+    const lead = this.save.sorynReleased
+      ? { who: "ROWAN", text: p.prompt.text }
+      : p.prompt;
     runInquiry(
       this,
-      { who: "SORYN", text: "Black and white. Pair them?" },
-      [
-        { choice: "confess", label: "HOLD: SHADOW WEDS PURITY", reply: "She presses. You hold." },
-        { choice: "silent", label: "YIELD TO HER ALTERNATIVE", reply: "She nods. The pairing softens." },
-      ],
-      (p) => {
-        if (p.choice === "confess") this.holds++;
-        else this.yields++;
-        awardStone(this.save, "red", 1);
-        this.vesselHud.refresh();
-        this.secondUnion();
-      },
-    );
-  }
-
-  private secondUnion() {
-    runInquiry(
-      this,
-      { who: "SORYN", text: "Yellow and red. Mind and heart. Pair them?" },
-      [
-        { choice: "confess", label: "HOLD: MIND WEDS HEART", reply: "Steady. The room warms." },
-        { choice: "silent", label: "YIELD TO HER", reply: "She is pleased. Too pleased?" },
-        {
-          choice: "ask",
-          label: "RELEASE SORYN",
-          reply: "THANK YOU. GO HOME. — She becomes a wisp.",
-        },
-      ],
-      (p) => {
-        if (p.choice === "ask") {
+      lead,
+      this.optionsFor(idx, p),
+      (picked) => {
+        if (picked.label === "RELEASE SORYN") {
           this.save.sorynReleased = true;
+          activateQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_releasing_the_daimon");
           showLoreToast(this, "on_releasing_the_daimon");
-        } else if (p.choice === "confess") this.holds++;
-        else this.yields++;
-        awardStone(this.save, "red", 1);
-        this.vesselHud.refresh();
-        this.finish();
+          writeSave(this.save);
+          this.vesselHud.refresh();
+          // Re-prompt this same pairing solo.
+          runDialog(
+            this,
+            [
+              { who: "SORYN", text: "THANK YOU. GO HOME. — She becomes a wisp." },
+              { who: "ROWAN", text: "(The room is quieter. So am I.)" },
+            ],
+            () => this.runPairing(idx),
+          );
+          return;
+        }
+        if (picked.label === p.hold.label) {
+          this.holds += 1;
+          this.tally(idx, p, "hold", picked.reply);
+          return;
+        }
+        if (picked.label === p.yield.label) {
+          this.yields += 1;
+          this.tally(idx, p, "yield", picked.reply);
+          return;
+        }
+        // WALK ALONE
+        this.alones += 1;
+        this.tally(idx, p, "alone", picked.reply);
       },
     );
   }
 
-  private finish() {
-    let wedding: WeddingType;
-    if (this.holds === 2) wedding = "strong";
-    else if (this.yields === 2) wedding = "gentle";
-    else wedding = "fractured";
-    this.save.weddingType = wedding;
-    writeSave(this.save);
+  private optionsFor(idx: number, p: typeof PAIRINGS[number]) {
+    const opts: { choice: "confess" | "silent" | "ask"; label: string; reply: string }[] = [];
+    opts.push({ choice: "confess", label: p.hold.label, reply: p.hold.reply });
+    if (this.save.sorynReleased) {
+      opts.push({
+        choice: "ask",
+        label: "WALK IT ALONE",
+        reply: "You hold both ends of the thread. The wax sets.",
+      });
+    } else {
+      // Soryn's rebuttal as flavor before the YIELD option.
+      const reb = p.rebuttal(this.save);
+      opts.push({ choice: "silent", label: p.yield.label, reply: `${reb.text} ${p.yield.reply}` });
+    }
+    // Mid-scene release option, only on the second pairing and only if Soryn present.
+    if (idx === 1 && !this.save.sorynReleased) {
+      opts.push({
+        choice: "ask",
+        label: "RELEASE SORYN",
+        reply: "THANK YOU. GO HOME.",
+      });
+    }
+    return opts;
+  }
 
-    // Thirteenth Soul — gold stone
-    if (this.save.soulsCompleted >= 12) {
+  private tally(idx: number, _p: typeof PAIRINGS[number], _kind: string, reply: string) {
+    awardNamedStone(this, this.save, "red", `the ${idx === 0 ? "first" : "second"} union`);
+    writeSave(this.save);
+    this.vesselHud.refresh();
+    runDialog(this, [{ who: "SORYN", text: reply }], () => this.runPairing(idx + 1));
+  }
+
+  private maybeThirteenth() {
+    if (this.save.soulsCompleted >= 12 && !this.save.goldStone) {
+      activateQuest(this, this.save, "meet_the_thirteenth");
       this.save.goldStone = true;
       writeSave(this.save);
+      this.vesselHud.refresh();
       runDialog(
         this,
         [
-          { who: "GUEST", text: "(They sit at the table. No face.)" },
-          { who: "SORYN", text: "The thirteenth came. That is rare." },
+          { who: "GUEST", text: "(They sit at the table. No face. No need.)" },
+          { who: "SORYN", text: this.save.sorynReleased ? "(silence)" : "The thirteenth came. That is rare." },
         ],
-        () => this.closing(wedding),
+        () => {
+          completeQuest(this, this.save, "meet_the_thirteenth");
+          unlockLore(this.save, "on_the_thirteenth");
+          showLoreToast(this, "on_the_thirteenth");
+          this.finish();
+        },
       );
-      unlockLore(this.save, "on_the_thirteenth");
       return;
     }
-    this.closing(wedding);
+    this.finish();
   }
 
-  private closing(wedding: WeddingType) {
+  private finish() {
+    const wedding: WeddingType = tallyWedding(this.holds, this.yields, this.alones);
+    this.save.weddingType = wedding;
+    writeSave(this.save);
     unlockLore(this.save, "on_rubedo");
     showLoreToast(this, "on_rubedo");
-    runDialog(
-      this,
-      [{ who: "SORYN", text: `The wedding was ${wedding}. Seal the vessel.` }],
-      () => returnToThreshold(this, this.save, "rubedo"),
-    );
+    const closer = this.save.sorynReleased
+      ? { who: "ROWAN", text: `The wedding was ${wedding}. Time to seal the vessel.` }
+      : { who: "SORYN", text: `The wedding was ${wedding}. Seal the vessel.` };
+    runDialog(this, [closer], () => returnToThreshold(this, this.save, "rubedo"));
   }
 }
