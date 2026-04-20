@@ -125,8 +125,9 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
   create() {
     getAudio().music.play("moon", SONG_MOON);
-    this.rowanShadow = this.add.ellipse(24, 38, 10, 3, 0x000000, 0.35).setDepth(2);
+    this.rowanShadow = this.add.ellipse(24, 38, 10, 3, 0x000000, 0.35).setDepth(9);
     this.rowan = makeRowan(this, 24, 32, "soul");
+    this.rowan.setDepth(10);
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
     attachHUD(this, () => this.save.stats);
