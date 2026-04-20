@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
 import { getAudio, SONG_TITLE } from "../audio";
+import { onActionDown, onDirection } from "../controls";
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super("Title"); }
@@ -104,12 +105,8 @@ export class TitleScene extends Phaser.Scene {
       t.obj.on("pointerdown", () => { cursor = i; refresh(); confirm(); });
     });
 
-    this.input.keyboard?.on("keydown-UP", () => move(-1));
-    this.input.keyboard?.on("keydown-DOWN", () => move(1));
-    this.input.keyboard?.on("keydown-W", () => move(-1));
-    this.input.keyboard?.on("keydown-S", () => move(1));
-    this.input.keyboard?.on("keydown-ENTER", confirm);
-    this.input.keyboard?.on("keydown-SPACE", confirm);
+    onDirection(this, (d) => { if (d === "up") move(-1); else if (d === "down") move(1); });
+    onActionDown(this, "action", confirm);
     this.input.keyboard?.on("keydown-BACKSPACE", () => { if (save) { cursor = 1; refresh(); erase(); } });
     this.events.on("vinput-down", (dir: string) => {
       if (dir === "up") move(-1);
