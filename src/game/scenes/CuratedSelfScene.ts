@@ -243,21 +243,30 @@ export class CuratedSelfScene extends Phaser.Scene {
     });
   }
 
-  /** Soryn line, or narrator if released — shown briefly above the log box. */
+  /** Soryn line, or narrator if released — shown briefly above the boss area. */
   private speak(event: SorynEvent) {
     const line = sorynBark(this.save, event) ?? narratorLine(event);
     const isNarrator = this.save.sorynReleased;
-    const t = new GBCText(this, 4, 68, line, {
+    // Position above stateText/boss; keep clear of the log box (y=76+).
+    const t = new GBCText(this, 4, 4, line, {
       color: isNarrator ? COLOR.textGold : COLOR.textAccent,
       depth: 160,
-      maxWidthPx: GBC_W - 8,
+      maxWidthPx: GBC_W - 100,
     });
+    // Draw a subtle backdrop so the line is readable over stars.
+    const bg = this.add
+      .rectangle(2, 2, GBC_W - 96, 10, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(159);
     this.tweens.add({
-      targets: t.obj,
+      targets: [t.obj, bg],
       alpha: 0,
       duration: 1400,
       delay: 1800,
-      onComplete: () => t.destroy(),
+      onComplete: () => {
+        t.destroy();
+        bg.destroy();
+      },
     });
   }
 
@@ -526,6 +535,8 @@ export class CuratedSelfScene extends Phaser.Scene {
       unlockLore(this.save, "on_the_inscription_returns");
       showLoreToast(this, "on_the_inscription_returns");
     }
+    // Clear the mid-fight checkpoint so a future Continue doesn't reload Phase 3.
+    delete this.save.flags.curated_progress_exposed;
     writeSave(this.save);
     this.speak("victory");
     this.tweens.add({
@@ -536,6 +547,11 @@ export class CuratedSelfScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * The plateau "REMAIN" branch is only offered on the long-form (3-witness)
+   * plan — fractured/gentle weddings already represent a kind of yielding,
+   * so we don't ask the player to yield twice.
+   */
   private askPlateauRemain() {
     runInquiry(
       this,
@@ -586,8 +602,10 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private endAscend() {
     this.save.flags.act3_ascended = true;
-    this.save.flags.act1_complete = true;
+    this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
+    delete this.save.flags.curated_progress_exposed;
+    this.save.scene = "Epilogue";
     if (!this.save.shards.includes("golden_self")) this.save.shards.push("golden_self");
     unlockLore(this.save, "on_the_ascent");
     writeSave(this.save);
@@ -636,7 +654,7 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   private endGame() {
     this.save.scene = "Epilogue";
-    this.save.flags.act1_complete = true;
+    this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
     writeSave(this.save);
     const a = getAudio();
@@ -807,6 +825,9 @@ export class EpilogueScene extends Phaser.Scene {
     const opt = this.options[this.cursor];
     if (opt.action === "ngplus") {
       this.save.flags.ng_plus = true;
+      // Reset to start so Continue doesn't dump the player back into the Epilogue.
+      this.save.scene = "LastDay";
+      this.save.flags.curated_progress_exposed = false;
       writeSave(this.save);
       a.music.stop();
       this.scene.start("Title");
@@ -815,6 +836,9 @@ export class EpilogueScene extends Phaser.Scene {
     if (opt.action === "ascend") {
       this.save.flags.ng_plus = true;
       this.save.flags.ng_plus_ascended = true;
+      // Reset to start; ascended NG+ begins from the Last Day with a gold mark.
+      this.save.scene = "LastDay";
+      this.save.flags.curated_progress_exposed = false;
       writeSave(this.save);
       // Brief white closer with single sentence.
       const flash = this.add

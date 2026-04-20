@@ -46,7 +46,7 @@ export function phaseTaunt(phase: Phase, save: SaveSlot): string {
   return "Silence. Then warmth.";
 }
 
-/** ADDRESS reply — names a conviction if any are owned. */
+/** ADDRESS reply — names a conviction if any are owned, varied per hit. */
 export function addressReply(save: SaveSlot, hit: number): string {
   const owned = Object.entries(save.convictions)
     .filter(([, v]) => v)
@@ -58,6 +58,11 @@ export function addressReply(save: SaveSlot, hit: number): string {
   ];
   const line = base[Math.min(hit - 1, 2)];
   if (owned.length === 0) return line;
+  // Cycle through convictions; if only one is owned, vary the verb instead.
+  if (owned.length === 1) {
+    const verbs = ["You name it", "You speak it", "You hold it up"];
+    return `${line} ${verbs[(hit - 1) % verbs.length]}: ${owned[0]}.`;
+  }
   const c = owned[(hit - 1) % owned.length];
   return `${line} You name it: ${c}.`;
 }
