@@ -35,14 +35,14 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "Words are too late here. Where did this begin?",
                   "Seeing alone won't mend it. Remember.",
                 ] },
-  exposed:    { phaseLabel: "PHASE 4/4 - LET GO",
-                taunt: "And now? Will you keep me, or let me go?",
-                weakness: "release",  next: "released",
-                success: "You release. The figure exhales for the first time.",
+  exposed:    { phaseLabel: "PHASE 4/4 - WITNESS",
+                taunt: "And now? Will you keep me, or stand and see me whole?",
+                weakness: "witness", next: "released",
+                success: "You witness. The figure exhales for the first time.",
                 misses: [
-                  "It has nothing left to hide. Let it go.",
-                  "More looking only stretches the moment. Release.",
-                  "Speech now would be a leash. Open your hand.",
+                  "It has nothing left to hide. Stand and witness.",
+                  "More looking only stretches the moment. WITNESS.",
+                  "Speech now would be a leash. See it whole.",
                 ] },
   released:   { phaseLabel: "RELEASED", taunt: "", weakness: "release", next: "released", success: "", misses: [] },
 };
@@ -55,12 +55,13 @@ const STATE_HUE: Record<State, number> = {
   released:   0xa8e8c8,
 };
 
-const CMDS: { label: string; cmd: Command }[] = [
+const CMDS_BASE: { label: string; cmd: Command }[] = [
   { label: "OBSERVE",  cmd: "observe" },
   { label: "ADDRESS",  cmd: "address" },
   { label: "REMEMBER", cmd: "remember" },
   { label: "RELEASE",  cmd: "release" },
 ];
+const CMD_WITNESS: { label: string; cmd: Command } = { label: "WITNESS", cmd: "witness" };
 
 const STATE_FRAME: Record<State, number> = {
   composed: 0, flattering: 2, fractured: 4, exposed: 6, released: 8,
