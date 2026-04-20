@@ -323,6 +323,17 @@ export class CuratedSelfScene extends Phaser.Scene {
       } else {
         this.busy = false;
       }
+    } else if (cmd === "remember") {
+      // REMEMBER softens the room — names a sat-with shade if you have any.
+      const sat = this.satWithShades[0];
+      if (sat) {
+        const pretty = sat.replace(/_/g, " ").toUpperCase();
+        this.logText.setText(`You remember: ${pretty}. The image flickers, less sure.`);
+      } else {
+        this.logText.setText("You remember nothing in particular. The pose holds.");
+      }
+      getAudio().sfx("confirm");
+      this.busy = false;
     } else if (cmd === "release") {
       this.logText.setText("You step back. The image only steadies. ADDRESS to crack it.");
       getAudio().sfx("cancel");
