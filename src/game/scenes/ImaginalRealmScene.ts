@@ -1013,9 +1013,18 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (!r.cleared) return;
       k.cleared = true;
       this.save.flags[`knot_${k.kind}`] = true;
-      if (r.stats?.clarity) this.save.stats.clarity += r.stats.clarity;
-      if (r.stats?.compassion) this.save.stats.compassion += r.stats.compassion;
-      if (r.stats?.courage) this.save.stats.courage += r.stats.courage;
+      if (r.stats?.clarity) {
+        this.save.stats.clarity += r.stats.clarity;
+        emitHudStatChanged(this, "clarity", this.save.stats.clarity);
+      }
+      if (r.stats?.compassion) {
+        this.save.stats.compassion += r.stats.compassion;
+        emitHudStatChanged(this, "compassion", this.save.stats.compassion);
+      }
+      if (r.stats?.courage) {
+        this.save.stats.courage += r.stats.courage;
+        emitHudStatChanged(this, "courage", this.save.stats.courage);
+      }
       if (r.shardFragments) {
         for (let i = 0; i < r.shardFragments; i++) {
           awardShardFragment(this, this.save, () => `imaginal_${this.save.shards.length}`, {
