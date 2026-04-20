@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt"
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
+import { runInquiry } from "../inquiry";
 import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
@@ -35,14 +36,14 @@ const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State
                   "Words are too late here. Where did this begin?",
                   "Seeing alone won't mend it. Remember.",
                 ] },
-  exposed:    { phaseLabel: "PHASE 4/4 - LET GO",
-                taunt: "And now? Will you keep me, or let me go?",
-                weakness: "release",  next: "released",
-                success: "You release. The figure exhales for the first time.",
+  exposed:    { phaseLabel: "PHASE 4/4 - WITNESS",
+                taunt: "And now? Will you keep me, or stand and see me whole?",
+                weakness: "witness", next: "released",
+                success: "You witness. The figure exhales for the first time.",
                 misses: [
-                  "It has nothing left to hide. Let it go.",
-                  "More looking only stretches the moment. Release.",
-                  "Speech now would be a leash. Open your hand.",
+                  "It has nothing left to hide. Stand and witness.",
+                  "More looking only stretches the moment. WITNESS.",
+                  "Speech now would be a leash. See it whole.",
                 ] },
   released:   { phaseLabel: "RELEASED", taunt: "", weakness: "release", next: "released", success: "", misses: [] },
 };
@@ -55,12 +56,13 @@ const STATE_HUE: Record<State, number> = {
   released:   0xa8e8c8,
 };
 
-const CMDS: { label: string; cmd: Command }[] = [
+const CMDS_BASE: { label: string; cmd: Command }[] = [
   { label: "OBSERVE",  cmd: "observe" },
   { label: "ADDRESS",  cmd: "address" },
   { label: "REMEMBER", cmd: "remember" },
   { label: "RELEASE",  cmd: "release" },
 ];
+const CMD_WITNESS: { label: string; cmd: Command } = { label: "WITNESS", cmd: "witness" };
 
 const STATE_FRAME: Record<State, number> = {
   composed: 0, flattering: 2, fractured: 4, exposed: 6, released: 8,
@@ -69,6 +71,7 @@ const STATE_FRAME: Record<State, number> = {
 export class CuratedSelfScene extends Phaser.Scene {
   private save!: SaveSlot;
   private state: State = "composed";
+  private cmds: { label: string; cmd: Command }[] = [];
   private cmdTexts: GBCText[] = [];
   private cursor = 0;
   private busy = false;
@@ -76,14 +79,17 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
+  private preFightDone = false;
 
   constructor() { super("CuratedSelf"); }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.cmdTexts = [];
+    this.cmds = [];
     this.state = "composed";
     this.cursor = 0;
     this.busy = false;
+    this.preFightDone = false;
   }
 
   create() {
@@ -131,10 +137,11 @@ export class CuratedSelfScene extends Phaser.Scene {
 
     // Command panel — y 112..144
     drawGBCBox(this, 0, 112, GBC_W, 32);
-    CMDS.forEach((c, i) => {
-      const x = 16 + (i % 2) * 70;
-      const y = 118 + Math.floor(i / 2) * 11;
-      const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
+    this.cmds = [...CMDS_BASE];
+    if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
+    this.cmds.forEach((c, i) => {
+      const pos = this.cmdPos(i);
+      const t = new GBCText(this, pos.x + 8, pos.y, c.label, { color: COLOR.textLight, depth: 101 });
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => this.choose(i));
       t.obj.setData("cmd", c.cmd);
@@ -159,19 +166,59 @@ export class CuratedSelfScene extends Phaser.Scene {
       if (dir === "down")  this.move(2);
     });
     this.events.on("vinput-action", () => this.choose(this.cursor));
+
+    // Pre-fight Plateau-Remain prompt: shown once on first arrival.
+    if (!this.save.flags.curated_prefight) {
+      this.save.flags.curated_prefight = true;
+      writeSave(this.save);
+      this.busy = true;
+      this.time.delayedCall(700, () => this.askPlateauRemain());
+    }
+  }
+
+  private cmdPos(i: number) {
+    if (i < 4) return { x: 8 + (i % 2) * 70, y: 118 + Math.floor(i / 2) * 11 };
+    return { x: 56, y: 138 };
+  }
+
+  private askPlateauRemain() {
+    runInquiry(
+      this,
+      { who: "Soryn", text: "Stay here in the image, or face the Curated Self?" },
+      [
+        { choice: "observe", label: "FACE", reply: "Then we begin. Phase one: SEE." },
+        { choice: "silent",  label: "REMAIN", reply: "The image is comfortable. I will wait." },
+      ],
+      (picked) => {
+        if (picked.label === "REMAIN") this.endRemain();
+        else { this.busy = false; }
+      },
+    );
   }
 
   private move(d: number) {
     if (this.busy) return;
-    this.cursor = (this.cursor + d + 4) % 4;
+    const n = this.cmds.length;
+    this.cursor = (this.cursor + d + n) % n;
     getAudio().sfx("cursor");
     this.refreshCursor();
   }
   private refreshCursor() {
     this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
-    const x = 8 + (this.cursor % 2) * 70;
-    const y = 118 + Math.floor(this.cursor / 2) * 11;
-    this.cursorMark.setPosition(x, y);
+    const pos = this.cmdPos(this.cursor);
+    this.cursorMark.setPosition(pos.x, pos.y);
+  }
+
+  private endRemain() {
+    // Plateau-Remain ending. Save preserved (player can resume from Imaginal Realm).
+    this.save.scene = "ImaginalRealm";
+    this.save.flags.plateau_remain = true;
+    writeSave(this.save);
+    const a = getAudio(); a.music.stop();
+    this.cameras.main.fadeOut(900, 80, 100, 140);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.start("Title");
+    });
   }
 
   private missIdx = 0;

@@ -53,6 +53,7 @@ const VERB_HINT: Record<Command, string> = {
   address:  "Speak the unsaid thing.",
   remember: "Recall the whole afternoon.",
   release:  "Let it go - you learn less.",
+  witness:  "Stand. See without flinching.",
 };
 
 const KIND_GOAL: Record<EnemyKind, string> = {

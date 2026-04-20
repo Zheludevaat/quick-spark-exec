@@ -1,11 +1,11 @@
-import { DEFAULT_STATS, SAVE_KEY, type SaveSlot } from "./types";
+import { DEFAULT_STATS, SAVE_KEY, migrateSave, type SaveSlot } from "./types";
 
 export function loadSave(): SaveSlot | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as SaveSlot;
+    return migrateSave(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -23,10 +23,14 @@ export function clearSave() {
 
 export function newSave(): SaveSlot {
   return {
-    scene: "SilverThreshold",
+    scene: "LastDay",
+    act: 0,
     stats: { ...DEFAULT_STATS },
     flags: {},
     fragments: 0,
+    verbs: { witness: false },
+    shards: [],
+    seeds: {},
     updatedAt: Date.now(),
   };
 }

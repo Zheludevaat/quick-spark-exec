@@ -32,10 +32,10 @@ const ELEMENT_LINES: Record<string, { who: string; text: string }[]> = {
 };
 
 const SORYN_AFTER = [
-  { who: "Soryn", text: "Beyond the arch is the Moon - your mirrors wait." },
-  { who: "Soryn", text: "There you will learn four small verbs:" },
-  { who: "Soryn", text: "Observe. Address. Remember. Release." },
-  { who: "Soryn", text: "Press A at the gate when you are ready." },
+  { who: "Soryn", text: "I will walk one sphere with you. Then you walk alone." },
+  { who: "Soryn", text: "Beyond the arch lies the Imaginal Realm — the Moon's first plateau." },
+  { who: "Soryn", text: "There you will learn four small verbs: Observe. Address. Remember. Release." },
+  { who: "Soryn", text: "And one more, when the time comes. Press A at the gate." },
 ];
 
 const SORYN_REPEAT = [
@@ -240,6 +240,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     const all = this.circles.every(c => c.visited);
     if (all && !this.save.flags.elements_done) {
       this.save.flags.elements_done = true;
+      this.save.flags.daimon_bound = true;
       writeSave(this.save);
       (this.gate.getData("img") as Phaser.GameObjects.Image).setAlpha(1);
       this.tweens.add({ targets: this.gate, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
@@ -281,10 +282,10 @@ export class SilverThresholdScene extends Phaser.Scene {
     // Gate enter
     const gx = this.rowan.x - this.gate.x, gy = this.rowan.y - this.gate.y;
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
-      this.save.scene = "MoonHall";
+      this.save.scene = "ImaginalRealm";
       writeSave(this.save);
       const a = getAudio(); a.sfx("wipe"); a.music.stop();
-      gbcWipe(this, () => this.scene.start("MoonHall", { save: this.save }));
+      gbcWipe(this, () => this.scene.start("ImaginalRealm", { save: this.save }));
     }
   }
 }
