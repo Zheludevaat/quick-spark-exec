@@ -1024,6 +1024,7 @@ export function bakeEnemies(scene: Phaser.Scene, key = "enemies") {
   REFLECTION_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.reflection, i * ENEMY_W, 0));
   ECHO_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.echo, (2 + i) * ENEMY_W, 0));
   GLITTER_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.glitter, (4 + i) * ENEMY_W, 0));
+  addGridFrames(tex, ENEMY_W, ENEMY_H, 6, 1);
   tex.refresh();
   return key;
 }
