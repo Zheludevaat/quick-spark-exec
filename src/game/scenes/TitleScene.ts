@@ -59,29 +59,38 @@ export class TitleScene extends Phaser.Scene {
     const spacing = 22;
     const totalW = spacing * (spheres.length - 1);
     const startX = GBC_W / 2 - totalW / 2;
+    const saveForSpheres = loadSave();
+    const actReached = saveForSpheres?.act ?? 0;
     spheres.forEach((sp, i) => {
       const sx = startX + i * spacing;
+      // Spheres at or below the player's current Act glow at full strength;
+      // unreached spheres are dimmer to hint at the road ahead.
+      const reached = i <= actReached;
+      const haloAlpha = reached ? 0.28 : 0.12;
+      const bodyAlpha = reached ? 1 : 0.35;
       // Soft halo
-      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, 0.28);
+      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, haloAlpha);
       this.tweens.add({
         targets: halo,
         scale: 1.3,
-        alpha: 0.08,
+        alpha: haloAlpha * 0.3,
         duration: 1800 + i * 140,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",
       });
       // Sphere body — concentric discs for a pixel-shaded ball
-      g.fillStyle(sp.halo, 1);
+      g.fillStyle(sp.halo, bodyAlpha);
       g.fillCircle(sx, sphereCY, sp.r);
-      g.fillStyle(sp.mid, 1);
+      g.fillStyle(sp.mid, bodyAlpha);
       g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 1));
-      g.fillStyle(sp.core, 1);
+      g.fillStyle(sp.core, bodyAlpha);
       g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 2));
-      // Specular highlight
-      g.fillStyle(0xffffff, 0.55);
-      g.fillCircle(sx - 1, sphereCY - 1, 1);
+      // Specular highlight (only on reached spheres)
+      if (reached) {
+        g.fillStyle(0xffffff, 0.55);
+        g.fillCircle(sx - 1, sphereCY - 1, 1);
+      }
     });
 
     spawnMotes(this, {
