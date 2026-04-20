@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { Command, SaveSlot, Stats } from "../types";
 import { getAudio, SONG_BATTLE } from "../audio";
