@@ -57,6 +57,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#05070d");
     this.cameras.main.fadeIn(500);
+    getAudio().music.play("boss", SONG_BOSS);
 
     // Stars + horizon, constrained to arena (12..76)
     const g = this.add.graphics();
@@ -118,6 +119,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private move(d: number) {
     if (this.busy) return;
     this.cursor = (this.cursor + d + 4) % 4;
+    getAudio().sfx("cursor");
     this.refreshCursor();
   }
   private refreshCursor() {
