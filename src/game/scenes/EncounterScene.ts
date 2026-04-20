@@ -94,10 +94,18 @@ export class EncounterScene extends Phaser.Scene {
     const px = GBC_W / 2;
     g.fillStyle(0x1a2238, 0.7); g.fillEllipse(px, 70, 56, 7);
 
+    // Per-kind aura (color hint at the weakness)
+    const auraColor: Record<EnemyKind, number> = { reflection: 0xa8c8e8, echo: 0xc8a8e8, glitter: 0xe8d8a8 };
+    this.enemyAura = this.add.circle(px, 46, 14, auraColor[this.def.kind], 0.22);
+    this.tweens.add({ targets: this.enemyAura, scale: 1.25, alpha: 0.08, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+
+    // Drifting motes
+    spawnMotes(this, { count: 8, color: auraColor[this.def.kind], alpha: 0.45, driftY: -0.008, driftX: 0.003, depth: 30 });
+
     // Enemy sprite
     this.enemy = this.add.sprite(px, 44, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
     this.enemy.play(`enemy_${this.def.kind}`);
-    this.tweens.add({ targets: this.enemy, y: 42, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    this.enemyBob = this.tweens.add({ targets: this.enemy, y: 42, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
     // Enemy name + HP plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 84, 14, 80, 14);
