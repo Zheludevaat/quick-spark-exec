@@ -40,7 +40,11 @@ export class MoonHallScene extends Phaser.Scene {
   private hint!: GBCText;
 
   constructor() { super("MoonHall"); }
-  init(data: { save: SaveSlot }) { this.save = data.save; }
+  init(data: { save: SaveSlot }) {
+    this.save = data.save;
+    this.mirrors = [];
+    this.dialogActive = false;
+  }
 
   create() {
     this.cameras.main.setBackgroundColor("#0a0f20");
