@@ -1,7 +1,9 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
-import type { Stats } from "../types";
+import type { SaveSlot, Stats } from "../types";
 import { getAudio } from "../audio";
+import { loadSave } from "../save";
+import { openLoreLog } from "./lore";
 
 /**
  * Reusable on-screen HUD: stats top bar + virtual D-pad + A/B for touch.
