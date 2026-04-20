@@ -682,6 +682,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
         return;
       }
     }
+    // Soul takes priority over knot when both are in range.
+    const soul = this.nearestSoul();
+    if (soul) {
+      this.dialogActive = true;
+      runSoul(this, this.save, getArc(soul.def.id), () => {
+        this.dialogActive = false;
+        // Soul may have completed — refresh visual state on next frame.
+        if (isSoulDone(this.save, soul.def.id)) soul.container.setAlpha(0.45);
+      });
+      return;
+    }
     const k = this.nearestKnot();
     if (!k || this.dist(k) > 16 * 16) return;
     if (k.cleared) {
