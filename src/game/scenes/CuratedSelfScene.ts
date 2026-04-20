@@ -6,55 +6,30 @@ import { attachHUD } from "./hud";
 import { runInquiry } from "../inquiry";
 import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
-type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
+type Phase = "composed" | "fractured" | "exposed" | "released";
 
-const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string; misses: string[]; phaseLabel: string }> = {
-  composed:   { phaseLabel: "PHASE 1/4 - SEE",
-                taunt: "I am the version of you that smiles for cameras.",
-                weakness: "observe",  next: "flattering",
-                success: "You see the careful posture. The smile loosens.",
-                misses: [
-                  "The mask only steadies. Look closer.",
-                  "Words slide off the lacquer. Try seeing first.",
-                  "Release without sight is a shrug. Watch.",
-                ] },
-  flattering: { phaseLabel: "PHASE 2/4 - SPEAK",
-                taunt: "Tell me what you actually wanted them to see.",
-                weakness: "address",  next: "fractured",
-                success: "You speak the unrehearsed line. The polish cracks.",
-                misses: [
-                  "It loves being looked at. Speak instead.",
-                  "Memory is a lullaby to it. Name what is true.",
-                  "It will not be released until it is addressed.",
-                ] },
-  fractured:  { phaseLabel: "PHASE 3/4 - RECALL",
-                taunt: "Remember the day you started becoming this?",
-                weakness: "remember", next: "exposed",
-                success: "You remember. Not as a wound. As a stubborn child.",
-                misses: [
-                  "Cracks deepen but do not open. Reach back.",
-                  "Words are too late here. Where did this begin?",
-                  "Seeing alone won't mend it. Remember.",
-                ] },
-  exposed:    { phaseLabel: "PHASE 4/4 - WITNESS",
-                taunt: "And now? Will you keep me, or stand and see me whole?",
-                weakness: "witness", next: "released",
-                success: "You witness. The figure exhales for the first time.",
-                misses: [
-                  "It has nothing left to hide. Stand and witness.",
-                  "More looking only stretches the moment. WITNESS.",
-                  "Speech now would be a leash. See it whole.",
-                ] },
-  released:   { phaseLabel: "RELEASED", taunt: "", weakness: "release", next: "released", success: "", misses: [] },
+const PHASE_LABEL: Record<Phase, string> = {
+  composed:  "PHASE 1/3 - COMPOSED",
+  fractured: "PHASE 2/3 - FRACTURED",
+  exposed:   "PHASE 3/3 - EXPOSED",
+  released:  "RELEASED",
 };
 
-const STATE_HUE: Record<State, number> = {
-  composed:   0xffffff,
-  flattering: 0xf0d090,
-  fractured:  0xd88080,
-  exposed:    0xc0c8e8,
-  released:   0xa8e8c8,
+const PHASE_TAUNT: Record<Phase, string> = {
+  composed:  "I am the version of you that smiles for cameras. ADDRESS me three times.",
+  fractured: "I am cracked. Find the brightest piece. OBSERVE in order.",
+  exposed:   "I have nothing left. Will you stand and see me? WITNESS.",
+  released:  "Silence. Then warmth.",
 };
+
+const PHASE_HUE: Record<Phase, number> = {
+  composed:  0xffffff,
+  fractured: 0xd88080,
+  exposed:   0xc0c8e8,
+  released:  0xa8e8c8,
+};
+
+const PHASE_FRAME: Record<Phase, number> = { composed: 0, fractured: 4, exposed: 6, released: 8 };
 
 const CMDS_BASE: { label: string; cmd: Command }[] = [
   { label: "OBSERVE",  cmd: "observe" },
@@ -64,13 +39,9 @@ const CMDS_BASE: { label: string; cmd: Command }[] = [
 ];
 const CMD_WITNESS: { label: string; cmd: Command } = { label: "WITNESS", cmd: "witness" };
 
-const STATE_FRAME: Record<State, number> = {
-  composed: 0, flattering: 2, fractured: 4, exposed: 6, released: 8,
-};
-
 export class CuratedSelfScene extends Phaser.Scene {
   private save!: SaveSlot;
-  private state: State = "composed";
+  private phase: Phase = "composed";
   private cmds: { label: string; cmd: Command }[] = [];
   private cmdTexts: GBCText[] = [];
   private cursor = 0;
@@ -79,15 +50,26 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
+  private addressHits = 0;
+  private witnessHits = 0;
+  private fragments: { sprite: Phaser.GameObjects.Arc; brightness: number; idx: number }[] = [];
+  private brightestIdx = 0;
+  private fragOrderProgress = 0;
+  private missIdx = 0;
 
   constructor() { super("CuratedSelf"); }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.cmdTexts = [];
     this.cmds = [];
-    this.state = "composed";
+    this.phase = "composed";
     this.cursor = 0;
     this.busy = false;
+    this.addressHits = 0;
+    this.witnessHits = 0;
+    this.fragments = [];
+    this.fragOrderProgress = 0;
+    this.missIdx = 0;
   }
 
   create() {
@@ -95,13 +77,12 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cameras.main.fadeIn(500);
     getAudio().music.play("boss", SONG_BOSS);
 
-    // Stars + horizon, constrained to arena (12..76)
+    // Stars + horizon
     const g = this.add.graphics();
     for (let i = 0; i < 32; i++) {
       g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
       g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
-    // A few twinkling stars on top of the static field
     for (let i = 0; i < 6; i++) {
       const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 50), 1, 1, 0xffffff, 1);
       this.tweens.add({ targets: s, alpha: 0.2, duration: Phaser.Math.Between(600, 1400), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1200) });
@@ -110,30 +91,23 @@ export class CuratedSelfScene extends Phaser.Scene {
     g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
     g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 70, 64, 8);
 
-    // Boss aura — pulsing red ring behind the figure
     const aura = this.add.circle(GBC_W / 2, 46, 18, 0xd84a4a, 0.18);
     this.tweens.add({ targets: aura, scale: 1.4, alpha: 0.05, duration: 1100, yoyo: true, repeat: -1, ease: "Sine.inOut" });
-
-    // Drifting embers
     spawnMotes(this, { count: 10, color: 0xd86a6a, alpha: 0.45, driftY: -0.01, driftX: 0.002, depth: 30 });
 
-    // Title plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, STATE_LINES.composed.phaseLabel, { color: COLOR.textGold, depth: 101 });
+    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL.composed, { color: COLOR.textGold, depth: 101 });
 
-    // Boss sprite + subtle hover bob
-    this.boss = this.add.sprite(GBC_W / 2, 46, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
+    this.boss = this.add.sprite(GBC_W / 2, 46, "boss", PHASE_FRAME.composed).setOrigin(0.5, 0.5);
     this.boss.play("boss_composed");
     this.tweens.add({ targets: this.boss, y: 44, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
-    // Log box — y 76..112 (36px)
     drawGBCBox(this, 0, 76, GBC_W, 36);
-    this.logText = new GBCText(this, 4, 81, STATE_LINES.composed.taunt, {
+    this.logText = new GBCText(this, 4, 81, PHASE_TAUNT.composed, {
       color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 10,
     });
 
-    // Command panel — y 112..144
     drawGBCBox(this, 0, 112, GBC_W, 32);
     this.cmds = [...CMDS_BASE];
     if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
@@ -147,6 +121,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     });
     this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
+    this.refreshAvailable();
 
     attachHUD(this, () => this.save.stats);
 
@@ -164,14 +139,6 @@ export class CuratedSelfScene extends Phaser.Scene {
       if (dir === "down")  this.move(2);
     });
     this.events.on("vinput-action", () => this.choose(this.cursor));
-
-    // Pre-fight Plateau-Remain prompt: shown once on first arrival.
-    if (!this.save.flags.curated_prefight) {
-      this.save.flags.curated_prefight = true;
-      writeSave(this.save);
-      this.busy = true;
-      this.time.delayedCall(700, () => this.askPlateauRemain());
-    }
   }
 
   private cmdPos(i: number) {
@@ -179,19 +146,19 @@ export class CuratedSelfScene extends Phaser.Scene {
     return { x: 56, y: 138 };
   }
 
-  private askPlateauRemain() {
-    runInquiry(
-      this,
-      { who: "Soryn", text: "Stay here in the image, or face the Curated Self?" },
-      [
-        { choice: "observe", label: "FACE", reply: "Then we begin. Phase one: SEE." },
-        { choice: "silent",  label: "REMAIN", reply: "The image is comfortable. I will wait." },
-      ],
-      (picked) => {
-        if (picked.label === "REMAIN") this.endRemain();
-        else { this.busy = false; }
-      },
-    );
+  /** Greys out commands that are not valid in the current phase. */
+  private refreshAvailable() {
+    const valid = (cmd: Command) => {
+      if (this.phase === "composed")  return cmd === "address" || cmd === "release";
+      if (this.phase === "fractured") return cmd === "observe" || cmd === "release";
+      if (this.phase === "exposed")   return cmd === "witness" || cmd === "release";
+      return false;
+    };
+    this.cmdTexts.forEach((t, i) => {
+      const cmd = this.cmds[i].cmd;
+      if (i === this.cursor) return;
+      t.setColor(valid(cmd) ? COLOR.textLight : COLOR.textDim);
+    });
   }
 
   private move(d: number) {
@@ -200,6 +167,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cursor = (this.cursor + d + n) % n;
     getAudio().sfx("cursor");
     this.refreshCursor();
+    this.refreshAvailable();
   }
   private refreshCursor() {
     this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
@@ -207,62 +175,204 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cursorMark.setPosition(pos.x, pos.y);
   }
 
-  private endRemain() {
-    // Plateau-Remain ending. Save preserved (player can resume from Imaginal Realm).
-    this.save.scene = "ImaginalRealm";
-    this.save.flags.plateau_remain = true;
-    writeSave(this.save);
-    const a = getAudio(); a.music.stop();
-    this.cameras.main.fadeOut(900, 80, 100, 140);
-    this.cameras.main.once("camerafadeoutcomplete", () => {
-      this.scene.start("Title");
-    });
-  }
-
-  private missIdx = 0;
-
-  private choose(i: number) {
-    if (this.busy) return;
-    if (this.state === "released") return this.endGame();
-    const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
-    const stage = STATE_LINES[this.state];
-    this.busy = true;
-    const audio = getAudio();
-    if (cmd === stage.weakness) {
-      this.logText.setText(stage.success);
-      this.cameras.main.flash(180, 200, 220, 255);
-      audio.sfx("resolve");
-      this.missIdx = 0;
-      this.time.delayedCall(800, () => {
-        this.state = stage.next;
-        this.stateText.setText(STATE_LINES[this.state].phaseLabel);
-        this.boss.play(`boss_${this.state}`);
-        this.boss.setTint(STATE_HUE[this.state]);
-        this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
-        if (this.state === "released") {
-          this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
-          this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
-          audio.sfx("open");
-          this.time.delayedCall(1400, () => this.endGame());
-        } else {
-          this.busy = false;
-        }
-      });
+  // ============================================================================
+  // PHASE 1 — COMPOSED: ADDRESS x3
+  // ============================================================================
+  private handleComposed(cmd: Command) {
+    if (cmd === "address") {
+      this.addressHits++;
+      this.cameras.main.flash(140, 200, 220, 255);
+      getAudio().sfx("resolve");
+      const replies = [
+        "The smile loosens. One layer of polish drops.",
+        "The pose softens. Another layer goes.",
+        "The mask falls. Cracks open across the surface.",
+      ];
+      this.logText.setText(replies[this.addressHits - 1] ?? replies[2]);
+      if (this.addressHits >= 3) {
+        this.time.delayedCall(900, () => this.enterPhase("fractured"));
+      } else {
+        this.busy = false;
+      }
+    } else if (cmd === "release") {
+      this.logText.setText("You step back. The image only steadies. ADDRESS to crack it.");
+      getAudio().sfx("cancel");
+      this.busy = false;
     } else {
-      const quip = stage.misses[this.missIdx % stage.misses.length] ?? "It only steadies.";
-      this.missIdx++;
-      this.logText.setText(quip);
-      this.cameras.main.shake(100, 0.003);
-      this.boss.setTintFill(0xd84a4a);
-      this.time.delayedCall(120, () => this.boss.clearTint());
-      audio.sfx("miss");
+      this.logText.setText(this.missQuip());
+      this.cameras.main.shake(80, 0.003);
+      getAudio().sfx("miss");
       this.busy = false;
     }
   }
 
+  // ============================================================================
+  // PHASE 2 — FRACTURED: OBSERVE in brightest-first order
+  // ============================================================================
+  private enterPhase(p: Phase) {
+    this.phase = p;
+    this.stateText.setText(PHASE_LABEL[p]);
+    this.logText.setText(PHASE_TAUNT[p]);
+    this.boss.play(`boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`);
+    this.boss.setTint(PHASE_HUE[p]);
+    this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
+    this.refreshAvailable();
+    if (p === "fractured") this.spawnFragments();
+    if (p === "exposed") {
+      // The boss kneels and asks
+      this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
+      this.cleanupFragments();
+    }
+    this.busy = false;
+  }
+
+  private spawnFragments() {
+    this.cleanupFragments();
+    const cx = GBC_W / 2, cy = 46;
+    for (let i = 0; i < 3; i++) {
+      const ang = (i / 3) * Math.PI * 2;
+      const fx = cx + Math.cos(ang) * 16;
+      const fy = cy + Math.sin(ang) * 6;
+      const sprite = this.add.circle(fx, fy, 4, 0xd88080, 0.7).setDepth(45);
+      this.fragments.push({ sprite, brightness: 0.5, idx: i });
+    }
+    // Hide the boss sprite during fractured phase
+    this.boss.setVisible(false);
+    this.cycleBrightest();
+  }
+
+  private cycleBrightest() {
+    if (this.phase !== "fractured") return;
+    this.brightestIdx = Math.floor(Math.random() * 3);
+    this.fragments.forEach((f, i) => {
+      f.brightness = i === this.brightestIdx ? 1 : 0.4;
+      this.tweens.add({ targets: f.sprite, alpha: f.brightness, scale: i === this.brightestIdx ? 1.6 : 1, duration: 400 });
+      f.sprite.fillColor = i === this.brightestIdx ? 0xffe098 : 0xd88080;
+    });
+    // Auto-cycle every 3s if player doesn't act
+    this.time.delayedCall(3000, () => this.cycleBrightest());
+  }
+
+  private cleanupFragments() {
+    this.fragments.forEach(f => f.sprite.destroy());
+    this.fragments = [];
+    this.boss.setVisible(true);
+  }
+
+  private handleFractured(cmd: Command) {
+    if (cmd === "observe") {
+      // Need to pick the brightest. We auto-pick the brightest fragment as the target.
+      // Since fragments are abstract, we just check: if "observe" called while brightest is set, success.
+      this.fragOrderProgress++;
+      this.cameras.main.flash(140, 220, 220, 255);
+      getAudio().sfx("resolve");
+      // Dim the picked fragment permanently
+      const picked = this.fragments[this.brightestIdx];
+      if (picked) {
+        this.tweens.add({ targets: picked.sprite, alpha: 0.15, scale: 0.6, duration: 500 });
+      }
+      this.logText.setText(`Fragment ${this.fragOrderProgress} witnessed. ${3 - this.fragOrderProgress} remain.`);
+      if (this.fragOrderProgress >= 3) {
+        this.time.delayedCall(900, () => this.enterPhase("exposed"));
+      } else {
+        this.busy = false;
+      }
+    } else if (cmd === "release") {
+      this.logText.setText("You release. The fragments hover, waiting.");
+      getAudio().sfx("cancel");
+      this.busy = false;
+    } else {
+      this.logText.setText("They re-merge briefly. OBSERVE the brightest piece.");
+      this.cameras.main.shake(80, 0.003);
+      // Re-merge animation
+      this.fragments.forEach(f => this.tweens.add({ targets: f.sprite, alpha: 0.6, scale: 1, duration: 400 }));
+      getAudio().sfx("miss");
+      this.busy = false;
+    }
+  }
+
+  // ============================================================================
+  // PHASE 3 — EXPOSED: WITNESS x3, Plateau-Remain offered after first WITNESS
+  // ============================================================================
+  private handleExposed(cmd: Command) {
+    if (cmd === "witness") {
+      this.witnessHits++;
+      this.cameras.main.flash(220, 200, 220, 255);
+      getAudio().sfx("resolve");
+      if (this.witnessHits === 1) {
+        this.logText.setText("It exhales for the first time. 'Thank you.'");
+        this.time.delayedCall(1100, () => this.askPlateauRemain());
+      } else if (this.witnessHits === 2) {
+        this.logText.setText("'Will you remember me kindly?'");
+        this.busy = false;
+      } else {
+        this.logText.setText("It dissolves into a Memory Shard. The Curated Self is at peace.");
+        this.save.shards.push("curated_self");
+        writeSave(this.save);
+        this.tweens.add({ targets: this.boss, alpha: 0, duration: 900, onComplete: () => this.endGame() });
+      }
+    } else if (cmd === "release") {
+      this.logText.setText("You release. It waits, patiently. Try WITNESS.");
+      getAudio().sfx("cancel");
+      this.busy = false;
+    } else {
+      this.logText.setText("Words now would be a leash. Stand. WITNESS.");
+      this.cameras.main.shake(60, 0.002);
+      getAudio().sfx("miss");
+      this.busy = false;
+    }
+  }
+
+  private askPlateauRemain() {
+    runInquiry(
+      this,
+      { who: "Soryn", text: "You may stay here in the image. Comfortable. Or finish." },
+      [
+        { choice: "confess", label: "FINISH", reply: "Then witness twice more." },
+        { choice: "silent",  label: "REMAIN", reply: "The image is comfortable. We will wait." },
+      ],
+      (picked) => {
+        if (picked.label === "REMAIN") this.endRemain();
+        else this.busy = false;
+      },
+    );
+  }
+
+  private endRemain() {
+    this.save.scene = "ImaginalRealm";
+    this.save.region = "corridor";
+    this.save.flags.plateau_remain = true;
+    writeSave(this.save);
+    const a = getAudio(); a.music.stop();
+    this.cameras.main.fadeOut(900, 80, 100, 140);
+    this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Title"));
+  }
+
+  // ============================================================================
+  // ROUTER
+  // ============================================================================
+  private choose(i: number) {
+    if (this.busy) return;
+    const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
+    this.busy = true;
+    if (this.phase === "composed")  return this.handleComposed(cmd);
+    if (this.phase === "fractured") return this.handleFractured(cmd);
+    if (this.phase === "exposed")   return this.handleExposed(cmd);
+    this.busy = false;
+  }
+
+  private missQuip(): string {
+    const quips = [
+      "It only steadies. Try the right verb.",
+      "The mask is lacquered. Words crack it. Yours.",
+      "Release without sight is a shrug.",
+    ];
+    return quips[(this.missIdx++) % quips.length];
+  }
+
   private endGame() {
     this.save.scene = "Epilogue";
-    this.save.flags.act0_complete = true;
+    this.save.flags.act1_complete = true;
     this.save.flags.plateau_remain = false;
     writeSave(this.save);
     const a = getAudio(); a.music.stop();
@@ -289,24 +399,21 @@ export class EpilogueScene extends Phaser.Scene {
     this.cameras.main.fadeIn(700);
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
-    // Twinkling starfield
     for (let i = 0; i < 50; i++) {
       const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
         1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
       this.tweens.add({ targets: s, alpha: 0.15, duration: Phaser.Math.Between(700, 1800), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1500) });
     }
 
-    // Aurora bands gently sliding across the upper area
     for (let b = 0; b < 3; b++) {
       const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
       const band = this.add.rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18).setDepth(2);
       this.tweens.add({ targets: band, x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12), alpha: 0.06, duration: 3200 + b * 800, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
 
-    // Slow camera breath
     this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
-    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent, depth: 10 });
+    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ONE", { color: COLOR.textAccent, depth: 10 });
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
 
     drawGBCBox(this, 12, 44, GBC_W - 24, 64);
@@ -314,7 +421,7 @@ export class EpilogueScene extends Phaser.Scene {
     new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, { color: COLOR.textGold, depth: 110 });
-    new GBCText(this, 18, 92, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
+    new GBCText(this, 18, 92, "THE IMAGINAL IS BEHIND YOU.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
 
     this.add.rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
     this.optionTexts = [
