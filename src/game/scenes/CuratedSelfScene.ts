@@ -135,9 +135,11 @@ export class CuratedSelfScene extends Phaser.Scene {
     const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     const stage = STATE_LINES[this.state];
     this.busy = true;
+    const audio = getAudio();
     if (cmd === stage.weakness) {
       this.logText.setText(stage.success);
       this.cameras.main.flash(180, 200, 220, 255);
+      audio.sfx("resolve");
       this.time.delayedCall(800, () => {
         this.state = stage.next;
         this.stateText.setText(this.state.toUpperCase());
@@ -145,6 +147,7 @@ export class CuratedSelfScene extends Phaser.Scene {
         if (this.state === "released") {
           this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
           this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
+          audio.sfx("open");
           this.time.delayedCall(1400, () => this.endGame());
         } else {
           this.busy = false;
@@ -153,6 +156,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     } else {
       this.logText.setText("The mask only steadies. Try another verb.");
       this.cameras.main.shake(100, 0.003);
+      audio.sfx("miss");
       this.busy = false;
     }
   }
@@ -161,6 +165,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save.scene = "Epilogue";
     this.save.flags.act0_complete = true;
     writeSave(this.save);
+    const a = getAudio(); a.music.stop();
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Epilogue", { save: this.save }));
   }
