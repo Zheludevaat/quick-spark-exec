@@ -13,6 +13,8 @@ import {
   type KnotResult,
 } from "./imaginal/knots";
 import { onActionDown } from "../controls";
+import { awardShardFragment } from "../shardFeedback";
+import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 type Knot = {
   kind: KnotKind;
