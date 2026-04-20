@@ -109,6 +109,13 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
   private knotTracker!: GBCText;
+  private souls: {
+    def: SoulDef;
+    container: Phaser.GameObjects.Container;
+    halo: Phaser.GameObjects.Arc;
+    nameLabel?: GBCText;
+    hookLabel?: GBCText;
+  }[] = [];
 
   constructor() {
     super("ImaginalRealm");
