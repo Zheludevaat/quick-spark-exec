@@ -104,6 +104,32 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   refresh();
   scene.events.on("stats-changed", refresh);
 
+  // --- "SAVED" indicator (top-right of stats bar) ---
+  const savedText = new GBCText(scene, GBC_W - 28, 2, "", {
+    color: COLOR.textGold,
+    depth: 202,
+    scrollFactor: 0,
+  });
+  let savedTween: Phaser.Tweens.Tween | null = null;
+  let lastSavedAt = 0;
+  const onSaved = () => {
+    const now = Date.now();
+    if (now - lastSavedAt < 800) return; // throttle bursts
+    lastSavedAt = now;
+    savedText.setText("SAVED");
+    savedText.obj.setAlpha(1);
+    savedTween?.stop();
+    savedTween = scene.tweens.add({
+      targets: savedText.obj,
+      alpha: 0,
+      duration: 1400,
+      delay: 600,
+    });
+  };
+  window.addEventListener("hermetic-saved", onSaved);
+  scene.events.once("shutdown", () => window.removeEventListener("hermetic-saved", onSaved));
+  scene.events.once("destroy", () => window.removeEventListener("hermetic-saved", onSaved));
+
   // --- Touch pad (always available; user can hide via settings) ---
   let pad: TouchPadHandle | null = null;
   const rebuildPad = () => {

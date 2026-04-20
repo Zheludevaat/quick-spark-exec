@@ -14,6 +14,13 @@ export function loadSave(): SaveSlot | null {
 export function writeSave(slot: SaveSlot) {
   if (typeof window === "undefined") return;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...slot, updatedAt: Date.now() }));
+  // Notify HUDs / overlays that a save has been written, so they can show
+  // a transient "SAVED" indicator. Throttled in the listener.
+  try {
+    window.dispatchEvent(new CustomEvent("hermetic-saved"));
+  } catch {
+    // ignore (older runtimes)
+  }
 }
 
 export function clearSave() {
