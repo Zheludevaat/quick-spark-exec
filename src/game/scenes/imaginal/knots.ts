@@ -477,8 +477,16 @@ export function runLanternKnot(
 // ============================================================================
 export function runCrownKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: KnotResult) => void) {
   if (!save.verbs.witness) {
-    runDialog(scene, [{ who: "Soryn", text: "You are not yet ready to WITNESS this image." }], () =>
-      onDone({ cleared: false }),
+    runDialog(
+      scene,
+      [
+        { who: "Soryn", text: "The Crown shows a self you wished you were." },
+        {
+          who: "Soryn",
+          text: "To unmake it you must learn WITNESS. Walk the Crossing and refuse what is not yours.",
+        },
+      ],
+      () => onDone({ cleared: false }),
     );
     return;
   }
