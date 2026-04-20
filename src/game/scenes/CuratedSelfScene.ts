@@ -170,6 +170,8 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cursorMark.setPosition(x, y);
   }
 
+  private missIdx = 0;
+
   private choose(i: number) {
     if (this.busy) return;
     if (this.state === "released") return this.endGame();
@@ -181,10 +183,13 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.logText.setText(stage.success);
       this.cameras.main.flash(180, 200, 220, 255);
       audio.sfx("resolve");
+      this.missIdx = 0;
       this.time.delayedCall(800, () => {
         this.state = stage.next;
         this.stateText.setText(this.state.toUpperCase());
         this.boss.play(`boss_${this.state}`);
+        this.boss.setTint(STATE_HUE[this.state]);
+        this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
         if (this.state === "released") {
           this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
           this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
@@ -195,8 +200,12 @@ export class CuratedSelfScene extends Phaser.Scene {
         }
       });
     } else {
-      this.logText.setText("The mask only steadies. Try another verb.");
+      const quip = stage.misses[this.missIdx % stage.misses.length] ?? "It only steadies.";
+      this.missIdx++;
+      this.logText.setText(quip);
       this.cameras.main.shake(100, 0.003);
+      this.boss.setTintFill(0xd84a4a);
+      this.time.delayedCall(120, () => this.boss.clearTint());
       audio.sfx("miss");
       this.busy = false;
     }
