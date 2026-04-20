@@ -62,7 +62,7 @@ export function selectShards(
   const labels: GBCText[] = [];
   inv.forEach((id, i) => {
     const t = new GBCText(scene, x + 6, y + 14 + i * 8, "  " + shardName(id), {
-      color: COLOR.text,
+      color: COLOR.textLight,
       depth: 201,
     });
     labels.push(t);
