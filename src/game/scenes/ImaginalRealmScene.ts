@@ -518,12 +518,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
-    // Soul proximity: pulse halo + show name/hook label.
+    // Soul proximity: pulse halo, show name/hook, accumulate ambient bark timer.
     const nearSoul = this.nearestSoul();
     for (const s of this.souls) {
       const isNear = s === nearSoul;
-      s.halo.fillAlpha = isNear ? (isSoulDone(this.save, s.def.id) ? 0.15 : 0.3) : 0;
+      const done = isSoulDone(this.save, s.def.id);
+      s.halo.fillAlpha = isNear ? (done ? 0.15 : 0.3) : 0;
       if (isNear) {
+        s.setMood(done ? "resolved" : "engaged");
         if (!s.nameLabel) {
           s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
             color: COLOR.textGold,
@@ -536,11 +538,33 @@ export class ImaginalRealmScene extends Phaser.Scene {
             maxWidthPx: GBC_W - 8,
           });
         }
-      } else if (s.nameLabel) {
-        s.nameLabel.destroy();
-        s.nameLabel = undefined;
-        s.hookLabel?.destroy();
-        s.hookLabel = undefined;
+        s.nearTime += dt;
+        // After 2.4s near without interacting, drift a one-shot ambient thought.
+        if (!s.barkShown && !done && s.nearTime > 2400) {
+          s.barkShown = true;
+          s.bark = new GBCText(this, s.def.x - 18, s.def.y - 26, "...", {
+            color: COLOR.textDim,
+            depth: 23,
+          });
+          this.tweens.add({
+            targets: s.bark.obj,
+            alpha: 0,
+            y: s.def.y - 36,
+            duration: 1800,
+            delay: 600,
+            onComplete: () => s.bark?.destroy(),
+          });
+        }
+      } else {
+        s.setMood(done ? "resolved" : "waiting");
+        s.nearTime = 0;
+        s.barkShown = false;
+        if (s.nameLabel) {
+          s.nameLabel.destroy();
+          s.nameLabel = undefined;
+          s.hookLabel?.destroy();
+          s.hookLabel = undefined;
+        }
       }
     }
 
