@@ -648,22 +648,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (r.stats?.compassion) this.save.stats.compassion += r.stats.compassion;
       if (r.stats?.courage) this.save.stats.courage += r.stats.courage;
       if (r.shardFragments) {
-        this.save.shardFragments = (this.save.shardFragments ?? 0) + r.shardFragments;
-        if (this.save.shardFragments >= 4) {
-          this.save.shardFragments -= 4;
-          const id = `imaginal_${this.save.shards.length}`;
-          this.save.shards.push(id);
-          this.cameras.main.flash(160, 255, 224, 152);
-          const t = new GBCText(this, this.rowan.x - 28, this.rowan.y - 18, "MEMORY SHARD +1", {
-            color: COLOR.textGold,
-            depth: 220,
-          });
-          this.tweens.add({
-            targets: t.obj,
-            alpha: 0,
-            y: this.rowan.y - 32,
-            duration: 1600,
-            onComplete: () => t.destroy(),
+        for (let i = 0; i < r.shardFragments; i++) {
+          awardShardFragment(this, this.save, () => `imaginal_${this.save.shards.length}`, {
+            x: this.rowan.x,
+            y: this.rowan.y,
           });
         }
       }
