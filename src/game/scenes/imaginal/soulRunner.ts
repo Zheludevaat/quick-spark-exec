@@ -97,10 +97,28 @@ export function isSoulDone(save: SaveSlot, id: SoulId): boolean {
 export function recordChoice(save: SaveSlot, id: SoulId, tag: string) {
   if (!save.soulChoices[id]) save.soulChoices[id] = [];
   save.soulChoices[id].push(tag);
+  // Also push into the recent-events ring buffer (max 5) so Soryn / other
+  // souls can react to *what just happened* without scanning every soul.
+  if (!save.soulEventLog) save.soulEventLog = [];
+  save.soulEventLog.push(`${id}:${tag}`);
+  if (save.soulEventLog.length > 5) save.soulEventLog.shift();
 }
 
 export function hasChoice(save: SaveSlot, id: SoulId, tag: string): boolean {
   return !!save.soulChoices[id]?.includes(tag);
+}
+
+/** Most recent N entries from the soul event log, newest last. */
+export function recentSoulEvents(save: SaveSlot, n = 3): string[] {
+  return (save.soulEventLog ?? []).slice(-n);
+}
+
+/** True if any soul recorded the given tag. Useful for cross-soul reactivity. */
+export function anySoulHasChoice(save: SaveSlot, tag: string): boolean {
+  for (const id of Object.keys(save.soulChoices)) {
+    if (save.soulChoices[id].includes(tag)) return true;
+  }
+  return false;
 }
 
 /** Resolve a label to an index. "next" = current+1, "end" = sentinel -1. */
