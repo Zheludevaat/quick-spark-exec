@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
@@ -7,20 +7,48 @@ import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
 
-const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string }> = {
+const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string; misses: string[] }> = {
   composed:   { taunt: "I am the version of you that smiles for cameras.",
                 weakness: "observe",  next: "flattering",
-                success: "You see the careful posture. The smile loosens." },
+                success: "You see the careful posture. The smile loosens.",
+                misses: [
+                  "The mask only steadies. Look closer.",
+                  "Words slide off the lacquer. Try seeing first.",
+                  "Release without sight is a shrug. Watch.",
+                ] },
   flattering: { taunt: "Tell me what you actually wanted them to see.",
                 weakness: "address",  next: "fractured",
-                success: "You speak the unrehearsed line. The polish cracks." },
+                success: "You speak the unrehearsed line. The polish cracks.",
+                misses: [
+                  "It loves being looked at. Speak instead.",
+                  "Memory is a lullaby to it. Name what is true.",
+                  "It will not be released until it is addressed.",
+                ] },
   fractured:  { taunt: "Remember the day you started becoming this?",
                 weakness: "remember", next: "exposed",
-                success: "You remember. Not as a wound. As a stubborn child." },
+                success: "You remember. Not as a wound. As a stubborn child.",
+                misses: [
+                  "Cracks deepen but do not open. Reach back.",
+                  "Words are too late here. Where did this begin?",
+                  "Seeing alone won't mend it. Remember.",
+                ] },
   exposed:    { taunt: "And now? Will you keep me, or let me go?",
                 weakness: "release",  next: "released",
-                success: "You release. The figure exhales for the first time." },
-  released:   { taunt: "", weakness: "release", next: "released", success: "" },
+                success: "You release. The figure exhales for the first time.",
+                misses: [
+                  "It has nothing left to hide. Let it go.",
+                  "More looking only stretches the moment. Release.",
+                  "Speech now would be a leash. Open your hand.",
+                ] },
+  released:   { taunt: "", weakness: "release", next: "released", success: "", misses: [] },
+};
+
+const STATE_HUE: Record<State, number> = {
+  composed:   0xffffff,
+  flattering: 0xf0d090,
+  fractured:  0xd88080,
+  exposed:    0xc0c8e8,
+  released:   0xa8e8c8,
 };
 
 const CMDS: { label: string; cmd: Command }[] = [
