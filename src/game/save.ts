@@ -47,6 +47,7 @@ export function newSave(): SaveSlot {
     soulsCompleted: 0,
     witnessUses: 0,
     sideQuests: {},
+    soulEventLog: [],
     updatedAt: Date.now(),
   };
 }
