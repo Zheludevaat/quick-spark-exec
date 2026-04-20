@@ -245,6 +245,9 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   private choose() {
+    const a = getAudio();
+    a.sfx("confirm");
+    a.music.stop();
     if (this.cursor === 0) {
       this.scene.start("Title");
       return;
