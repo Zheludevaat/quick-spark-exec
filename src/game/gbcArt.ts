@@ -1443,6 +1443,55 @@ export function toggleLcd(scene: Phaser.Scene) {
 }
 
 export function isLcdOn() { return lcdEnabled; }
+
+// ============================================================================
+// Ambient particle layer — drifting motes (silver dust, cyan ripples, etc.)
+// ============================================================================
+
+export type MoteOpts = {
+  count?: number;
+  color?: number;
+  alpha?: number;
+  driftX?: number;
+  driftY?: number;
+  bounds?: { x: number; y: number; w: number; h: number };
+  depth?: number;
+};
+
+/** Spawn a slow-drifting mote field. Returns a destroy() fn. */
+export function spawnMotes(scene: Phaser.Scene, opts: MoteOpts = {}) {
+  const count = opts.count ?? 18;
+  const color = opts.color ?? 0xdde6f5;
+  const alpha = opts.alpha ?? 0.7;
+  const driftX = opts.driftX ?? 0.005;
+  const driftY = opts.driftY ?? -0.008;
+  const b = opts.bounds ?? { x: 0, y: 0, w: GBC_W, h: GBC_H };
+  const depth = opts.depth ?? 50;
+  const dots: Phaser.GameObjects.Rectangle[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = scene.add.rectangle(
+      Phaser.Math.Between(b.x, b.x + b.w),
+      Phaser.Math.Between(b.y, b.y + b.h),
+      1, 1, color, alpha,
+    ).setOrigin(0, 0).setScrollFactor(0).setDepth(depth);
+    d.setData("vx", driftX * Phaser.Math.FloatBetween(0.5, 1.5));
+    d.setData("vy", driftY * Phaser.Math.FloatBetween(0.5, 1.5));
+    dots.push(d);
+  }
+  const ev = scene.time.addEvent({
+    delay: 16, loop: true, callback: () => {
+      for (const d of dots) {
+        d.x += d.getData("vx");
+        d.y += d.getData("vy");
+        if (d.x < b.x) d.x = b.x + b.w;
+        if (d.x > b.x + b.w) d.x = b.x;
+        if (d.y < b.y) d.y = b.y + b.h;
+        if (d.y > b.y + b.h) d.y = b.y;
+      }
+    },
+  });
+  return () => { ev.remove(false); dots.forEach(d => d.destroy()); };
+}
 export function reapplyLcd(scene: Phaser.Scene) {
   if (!lcdEnabled) return;
   ensureLcdOverlay(scene);
