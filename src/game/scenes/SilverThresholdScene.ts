@@ -410,6 +410,15 @@ export class SilverThresholdScene extends Phaser.Scene {
     const barBg = this.add.rectangle(20, GBC_H - 14, GBC_W - 40, 4, 0x2a1810, 1).setOrigin(0, 0.5).setDepth(251);
     const bar   = this.add.rectangle(20, GBC_H - 14, 1, 4, 0xf08868, 1).setOrigin(0, 0.5).setDepth(252);
     const flame = this.add.circle(c.x, c.y, 4, 0xf08868, 0.6).setDepth(40);
+  /** FIRE — hold A while a heat bar rises; release at peak (≥40%). */
+  private miniFire(c: { x: number; y: number }, onDone: () => void) {
+    const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
+    const label = new GBCText(this, 8, GBC_H - 28, "HOLD A. RELEASE WHEN BRIGHT.", {
+      color: COLOR.textAccent, depth: 251, maxWidthPx: GBC_W - 16,
+    });
+    const barBg = this.add.rectangle(20, GBC_H - 14, GBC_W - 40, 4, 0x2a1810, 1).setOrigin(0, 0.5).setDepth(251);
+    const bar   = this.add.rectangle(20, GBC_H - 14, 1, 4, 0xf08868, 1).setOrigin(0, 0.5).setDepth(252);
+    const flame = this.add.circle(c.x, c.y, 4, 0xf08868, 0.6).setDepth(40);
     let progress = 0;
     let held = false;
     let done = false;
@@ -422,28 +431,26 @@ export class SilverThresholdScene extends Phaser.Scene {
         if (progress >= 1 && held) finish();
       },
     });
-    const press = () => { held = true; };
-    const release = () => { if (held && progress >= 0.4) finish(); held = false; };
     const finish = () => {
       if (done) return;
       done = true;
       tick.remove(false);
-      this.input.keyboard?.off("keydown-SPACE", press);
-      this.input.keyboard?.off("keyup-SPACE", release);
-      this.input.keyboard?.off("keydown-ENTER", press);
-      this.input.keyboard?.off("keyup-ENTER", release);
-      this.events.off("vinput-action", press);
+      window.removeEventListener("keydown", domDown);
+      window.removeEventListener("keyup", domUp);
+      this.events.off("vinput-action", vDown);
       box.destroy(); label.destroy(); barBg.destroy(); bar.destroy(); flame.destroy();
       getAudio().sfx("resolve");
       onDone();
     };
-    this.input.keyboard?.on("keydown-SPACE", press);
-    this.input.keyboard?.on("keyup-SPACE", release);
-    this.input.keyboard?.on("keydown-ENTER", press);
-    this.input.keyboard?.on("keyup-ENTER", release);
-    // For touch: vinput-action triggers a brief auto-hold
-    this.events.on("vinput-action", () => { held = true; this.time.delayedCall(1800, () => { held = false; if (progress >= 0.4) finish(); }); });
-    // Safety auto-finish after 6s
+    const isAB = (e: KeyboardEvent) => e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter";
+    const domDown = (e: KeyboardEvent) => { if (isAB(e)) { e.preventDefault(); held = true; } };
+    const domUp   = (e: KeyboardEvent) => { if (isAB(e)) { e.preventDefault(); if (held && progress >= 0.4) finish(); held = false; } };
+    window.addEventListener("keydown", domDown);
+    window.addEventListener("keyup", domUp);
+    // Touch: brief auto-hold on tap.
+    const vDown = () => { held = true; this.time.delayedCall(1800, () => { held = false; if (!done && progress >= 0.4) finish(); }); };
+    this.events.on("vinput-action", vDown);
+    // Safety auto-finish after 6s.
     this.time.delayedCall(6000, () => { if (!done) { progress = 1; held = true; finish(); } });
   }
 
