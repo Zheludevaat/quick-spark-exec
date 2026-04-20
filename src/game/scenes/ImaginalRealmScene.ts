@@ -132,13 +132,20 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.events.on("vinput-action", () => this.tryInteract());
     onActionDown(this, "action", () => this.tryInteract());
 
-    // Daimon Mark glyph (top-right of HUD bar)
+    // Daimon Mark glyph (top-right of HUD bar) — uniform 4-letter codes.
     const bondLabel = this.daimonBondLabel();
-    this.daimonMark = new GBCText(this, GBC_W - 28, 2, bondLabel, {
+    this.daimonMark = new GBCText(this, GBC_W - 30, 2, bondLabel, {
       color: COLOR.textAccent,
       depth: 220,
       scrollFactor: 0,
     });
+    // Knot tracker chip (right of stats bar, left of daimon badge)
+    this.knotTracker = new GBCText(this, GBC_W - 60, 2, "", {
+      color: COLOR.textGold,
+      depth: 220,
+      scrollFactor: 0,
+    });
+    this.refreshKnotTracker();
 
     // Spawn the daimon companion (lives across all 3 sub-regions)
     this.companion = new SorynCompanion(this, this.rowan, () => this.companionLines(), [
