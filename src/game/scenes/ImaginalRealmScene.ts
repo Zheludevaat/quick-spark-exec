@@ -167,6 +167,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
 
     attachHUD(this, () => this.save.stats);
+    mountImaginalProgressBadge(this, {
+      fragments: this.save.shardFragments ?? 0,
+      shards: this.save.shards.length,
+    });
     // Quest-log on J (DOM listener — simple, doesn't conflict with rebindable actions)
     const onJ = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "j" && !this.dialogActive && !this.knotActive) {
