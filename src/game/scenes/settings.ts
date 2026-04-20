@@ -78,10 +78,10 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       });
       bodyObjs.push(hint.obj);
     } else if (page === "keys") {
-      title.setText("SETTINGS · KEY BINDINGS");
+      title.setText("SETTINGS · KEYS");
       cursor = Math.max(0, Math.min(cursor, ACTION_ORDER.length - 1));
       ACTION_ORDER.forEach((a, idx) => {
-        const y = 28 + idx * 9;
+        const y = 26 + idx * 8;
         const isCur = idx === cursor;
         const b = c.bindings[a];
         const arrow = new GBCText(scene, 6, y, isCur ? "▶" : " ", {
