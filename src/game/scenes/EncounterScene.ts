@@ -185,7 +185,7 @@ export class EncounterScene extends Phaser.Scene {
       this.cameras.main.shake(120, 0.004);
       // Telegraph the weakness after the first miss
       if (this.misses === 1 && !this.intentText) {
-        this.intentText = new GBCText(this, 4, 22, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
+        this.intentText = new GBCText(this, 4, 14, `FEARS:${this.def.weakness.toUpperCase()}`, {
           color: COLOR.textGold, depth: 110,
         });
         this.tweens.add({ targets: this.intentText.obj, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
