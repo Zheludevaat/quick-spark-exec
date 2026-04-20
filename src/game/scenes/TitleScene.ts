@@ -3,15 +3,12 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt"
 import { loadSave, newSave, clearSave } from "../save";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
-import { ACT_BY_SCENE, ACT_TITLES, SCENE_LABEL } from "../types";
 
 /**
- * Multi-act title screen.
+ * Title screen — intentionally minimal.
  *
- * The game is structured as a series of acts (Prelude, I, II, III, …).
- * The title scene reflects the player's current progress: it shows the
- * act they're currently in, the scene/chapter name, and a tagline. New
- * players see the Prelude framing.
+ * Just the moon, the title, and the menu. No act/chapter spoilers.
+ * The journey reveals itself as the player walks it.
  */
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -84,32 +81,21 @@ export class TitleScene extends Phaser.Scene {
       depth: 30,
     });
 
-    // ---- Title block ----
-    new GBCText(this, GBC_W / 2 - 38, 76, "HERMETIC", {
+    // ---- Title block — centered, just the name. ----
+    const titleY = 92;
+    const t1 = "HERMETIC";
+    const t2 = "COMEDY";
+    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY, t1, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
-    new GBCText(this, GBC_W / 2 - 24, 86, "COMEDY", {
+    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 10, t2, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
 
     const save = loadSave();
     const remaining = save?.flags?.plateau_remain;
-
-    // ---- Act / chapter banner (always shown — frames the journey) ----
-    const act = save ? (ACT_BY_SCENE[save.scene] ?? save.act ?? 0) : 0;
-    const actTitle = ACT_TITLES[act] ?? `ACT ${act}`;
-    const chapter = save ? SCENE_LABEL[save.scene] : "Begin";
-
-    // Subtle banner above the menu, centered.
-    const bannerY = 100;
-    new GBCText(this, GBC_W / 2 - measure(actTitle) / 2, bannerY, actTitle, {
-      color: COLOR.textAccent,
-    });
-    new GBCText(this, GBC_W / 2 - measure(chapter.toUpperCase()) / 2, bannerY + 8, chapter.toUpperCase(), {
-      color: COLOR.textLight,
-    });
 
     // ---- Menu options ----
     const primaryLabel = remaining
@@ -126,7 +112,7 @@ export class TitleScene extends Phaser.Scene {
       : [{ label: primaryLabel, action: "launch" }];
 
     const boxH = save ? 28 : 18;
-    const menuY = 120;
+    const menuY = 124;
     drawGBCBox(this, 18, menuY, GBC_W - 36, boxH);
 
     let cursor = 0;
