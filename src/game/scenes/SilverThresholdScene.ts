@@ -79,6 +79,7 @@ type ElemKind = "air" | "fire" | "water" | "earth";
 export class SilverThresholdScene extends Phaser.Scene {
   private save!: SaveSlot;
   private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
   private input2!: InputState;
   private dialogActive = false;
   private circles: { kind: ElemKind; sprite: Phaser.GameObjects.Sprite; x: number; y: number; visited: boolean }[] = [];
@@ -147,7 +148,8 @@ export class SilverThresholdScene extends Phaser.Scene {
       this.tweens.add({ targets: this.stone, alpha: 0.5, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
 
-    // Player
+    // Player + soft shadow
+    this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
     this.rowan = makeRowan(this, 16, 70);
 
     // HUD + input
@@ -187,6 +189,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 8, GBC_W - 8);
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 50, GBC_H - 14);
     animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
     // Auto-trigger element circles on touch
     for (const c of this.circles) {
@@ -197,6 +200,16 @@ export class SilverThresholdScene extends Phaser.Scene {
         this.save.flags[`elem_${c.kind}`] = true;
         c.sprite.setAlpha(0.35);
         getAudio().sfx("resolve");
+        // Burst ring + sparkle on activation
+        const burstColor = c.kind === "air" ? 0xdde6f5 : c.kind === "fire" ? 0xf08868 : c.kind === "water" ? 0x88c0f0 : 0xa8c890;
+        const ring = this.add.circle(c.x, c.y, 4, burstColor, 0.6).setDepth(40);
+        this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 600, ease: "Sine.out", onComplete: () => ring.destroy() });
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2;
+          const sp = this.add.rectangle(c.x, c.y, 1, 1, burstColor, 1).setDepth(41);
+          this.tweens.add({ targets: sp, x: c.x + Math.cos(ang) * 14, y: c.y + Math.sin(ang) * 14, alpha: 0, duration: 500, onComplete: () => sp.destroy() });
+        }
+        this.cameras.main.flash(120, 240, 240, 255);
         if (c.kind === "air")   this.save.stats.clarity++;
         if (c.kind === "fire")  this.save.stats.courage++;
         if (c.kind === "water") this.save.stats.compassion++;

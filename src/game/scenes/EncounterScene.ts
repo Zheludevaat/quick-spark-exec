@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { Command, SaveSlot, Stats } from "../types";
 import { getAudio, SONG_BATTLE } from "../audio";
@@ -59,6 +59,8 @@ export class EncounterScene extends Phaser.Scene {
   private cursor = 0;
   private busy = false;
   private enemy!: Phaser.GameObjects.Sprite;
+  private enemyBob?: Phaser.Tweens.Tween;
+  private enemyAura!: Phaser.GameObjects.Arc;
   private cursorMark!: GBCText;
   private misses = 0;
   private intentText?: GBCText;
@@ -92,10 +94,18 @@ export class EncounterScene extends Phaser.Scene {
     const px = GBC_W / 2;
     g.fillStyle(0x1a2238, 0.7); g.fillEllipse(px, 70, 56, 7);
 
+    // Per-kind aura (color hint at the weakness)
+    const auraColor: Record<EnemyKind, number> = { reflection: 0xa8c8e8, echo: 0xc8a8e8, glitter: 0xe8d8a8 };
+    this.enemyAura = this.add.circle(px, 46, 14, auraColor[this.def.kind], 0.22);
+    this.tweens.add({ targets: this.enemyAura, scale: 1.25, alpha: 0.08, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+
+    // Drifting motes
+    spawnMotes(this, { count: 8, color: auraColor[this.def.kind], alpha: 0.45, driftY: -0.008, driftX: 0.003, depth: 30 });
+
     // Enemy sprite
     this.enemy = this.add.sprite(px, 44, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
     this.enemy.play(`enemy_${this.def.kind}`);
-    this.tweens.add({ targets: this.enemy, y: 42, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    this.enemyBob = this.tweens.add({ targets: this.enemy, y: 42, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
     // Enemy name + HP plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 84, 14, 80, 14);
@@ -165,6 +175,16 @@ export class EncounterScene extends Phaser.Scene {
       this.cameras.main.flash(180, 220, 230, 255);
       audio.sfx("resolve");
       this.tweens.add({ targets: this.enemy, alpha: 0, duration: 800 });
+      this.tweens.add({ targets: this.enemyAura, scale: 2.4, alpha: 0, duration: 700 });
+      // Sparkle burst
+      for (let k = 0; k < 8; k++) {
+        const ang = (k / 8) * Math.PI * 2;
+        const sp = this.add.rectangle(GBC_W / 2, 46, 1, 1, 0xffffff, 1).setDepth(120);
+        this.tweens.add({
+          targets: sp, x: GBC_W / 2 + Math.cos(ang) * 22, y: 46 + Math.sin(ang) * 22,
+          alpha: 0, duration: 600, ease: "Sine.out",
+        });
+      }
       // Apply base reward
       if (this.def.reward.clarity)    this.save.stats.clarity    += this.def.reward.clarity;
       if (this.def.reward.compassion) this.save.stats.compassion += this.def.reward.compassion;
@@ -193,6 +213,12 @@ export class EncounterScene extends Phaser.Scene {
       this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
       this.cameras.main.shake(120, 0.004);
+      this.enemy.setTintFill(0xd84a4a);
+      this.time.delayedCall(110, () => this.enemy.clearTint());
+      // bob faster as wounded
+      if (this.enemyBob) {
+        this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
+      }
       audio.sfx("miss");
       // Telegraph the weakness after the first miss
       if (this.misses === 1 && !this.intentText) {

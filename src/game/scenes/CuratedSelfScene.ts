@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
@@ -7,20 +7,48 @@ import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
 
-const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string }> = {
+const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string; misses: string[] }> = {
   composed:   { taunt: "I am the version of you that smiles for cameras.",
                 weakness: "observe",  next: "flattering",
-                success: "You see the careful posture. The smile loosens." },
+                success: "You see the careful posture. The smile loosens.",
+                misses: [
+                  "The mask only steadies. Look closer.",
+                  "Words slide off the lacquer. Try seeing first.",
+                  "Release without sight is a shrug. Watch.",
+                ] },
   flattering: { taunt: "Tell me what you actually wanted them to see.",
                 weakness: "address",  next: "fractured",
-                success: "You speak the unrehearsed line. The polish cracks." },
+                success: "You speak the unrehearsed line. The polish cracks.",
+                misses: [
+                  "It loves being looked at. Speak instead.",
+                  "Memory is a lullaby to it. Name what is true.",
+                  "It will not be released until it is addressed.",
+                ] },
   fractured:  { taunt: "Remember the day you started becoming this?",
                 weakness: "remember", next: "exposed",
-                success: "You remember. Not as a wound. As a stubborn child." },
+                success: "You remember. Not as a wound. As a stubborn child.",
+                misses: [
+                  "Cracks deepen but do not open. Reach back.",
+                  "Words are too late here. Where did this begin?",
+                  "Seeing alone won't mend it. Remember.",
+                ] },
   exposed:    { taunt: "And now? Will you keep me, or let me go?",
                 weakness: "release",  next: "released",
-                success: "You release. The figure exhales for the first time." },
-  released:   { taunt: "", weakness: "release", next: "released", success: "" },
+                success: "You release. The figure exhales for the first time.",
+                misses: [
+                  "It has nothing left to hide. Let it go.",
+                  "More looking only stretches the moment. Release.",
+                  "Speech now would be a leash. Open your hand.",
+                ] },
+  released:   { taunt: "", weakness: "release", next: "released", success: "", misses: [] },
+};
+
+const STATE_HUE: Record<State, number> = {
+  composed:   0xffffff,
+  flattering: 0xf0d090,
+  fractured:  0xd88080,
+  exposed:    0xc0c8e8,
+  released:   0xa8e8c8,
 };
 
 const CMDS: { label: string; cmd: Command }[] = [
@@ -65,18 +93,31 @@ export class CuratedSelfScene extends Phaser.Scene {
       g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
       g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
+    // A few twinkling stars on top of the static field
+    for (let i = 0; i < 6; i++) {
+      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 50), 1, 1, 0xffffff, 1);
+      this.tweens.add({ targets: s, alpha: 0.2, duration: Phaser.Math.Between(600, 1400), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1200) });
+    }
     g.fillStyle(0x1a2030, 1); g.fillRect(0, 64, GBC_W, 2);
     g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
     g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 70, 64, 8);
+
+    // Boss aura — pulsing red ring behind the figure
+    const aura = this.add.circle(GBC_W / 2, 46, 18, 0xd84a4a, 0.18);
+    this.tweens.add({ targets: aura, scale: 1.4, alpha: 0.05, duration: 1100, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+
+    // Drifting embers
+    spawnMotes(this, { count: 10, color: 0xd86a6a, alpha: 0.45, driftY: -0.01, driftX: 0.002, depth: 30 });
 
     // Title plate (top-right under HUD)
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
     this.stateText = new GBCText(this, 4, 14, "COMPOSED", { color: COLOR.textAccent, depth: 101 });
 
-    // Boss sprite
+    // Boss sprite + subtle hover bob
     this.boss = this.add.sprite(GBC_W / 2, 46, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
     this.boss.play("boss_composed");
+    this.tweens.add({ targets: this.boss, y: 44, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
     // Log box — y 76..112 (36px)
     drawGBCBox(this, 0, 76, GBC_W, 36);
@@ -129,6 +170,8 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cursorMark.setPosition(x, y);
   }
 
+  private missIdx = 0;
+
   private choose(i: number) {
     if (this.busy) return;
     if (this.state === "released") return this.endGame();
@@ -140,10 +183,13 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.logText.setText(stage.success);
       this.cameras.main.flash(180, 200, 220, 255);
       audio.sfx("resolve");
+      this.missIdx = 0;
       this.time.delayedCall(800, () => {
         this.state = stage.next;
         this.stateText.setText(this.state.toUpperCase());
         this.boss.play(`boss_${this.state}`);
+        this.boss.setTint(STATE_HUE[this.state]);
+        this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
         if (this.state === "released") {
           this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
           this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
@@ -154,8 +200,12 @@ export class CuratedSelfScene extends Phaser.Scene {
         }
       });
     } else {
-      this.logText.setText("The mask only steadies. Try another verb.");
+      const quip = stage.misses[this.missIdx % stage.misses.length] ?? "It only steadies.";
+      this.missIdx++;
+      this.logText.setText(quip);
       this.cameras.main.shake(100, 0.003);
+      this.boss.setTintFill(0xd84a4a);
+      this.time.delayedCall(120, () => this.boss.clearTint());
       audio.sfx("miss");
       this.busy = false;
     }
@@ -189,10 +239,22 @@ export class EpilogueScene extends Phaser.Scene {
     this.cameras.main.fadeIn(700);
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
-    for (let i = 0; i < 40; i++) {
-      this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
+    // Twinkling starfield
+    for (let i = 0; i < 50; i++) {
+      const s = this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
         1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+      this.tweens.add({ targets: s, alpha: 0.15, duration: Phaser.Math.Between(700, 1800), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 1500) });
     }
+
+    // Aurora bands gently sliding across the upper area
+    for (let b = 0; b < 3; b++) {
+      const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+      const band = this.add.rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18).setDepth(2);
+      this.tweens.add({ targets: band, x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12), alpha: 0.06, duration: 3200 + b * 800, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
+
+    // Slow camera breath
+    this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
     new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent, depth: 10 });
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
