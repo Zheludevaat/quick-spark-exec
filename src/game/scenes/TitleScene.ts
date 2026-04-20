@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
+import { getAudio, SONG_TITLE } from "../audio";
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super("Title"); }
@@ -38,12 +39,21 @@ export class TitleScene extends Phaser.Scene {
     // Blink the prompt
     this.tweens.add({ targets: start.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
+    // Boot audio on first user gesture (browsers require it)
+    const audio = getAudio();
+    const startMusic = () => { audio.resume(); audio.music.play("title", SONG_TITLE); };
+    this.input.keyboard?.once("keydown", startMusic);
+    this.input.once("pointerdown", startMusic);
+    this.events.once("vinput-action", startMusic);
+
     const launch = () => {
+      audio.sfx("confirm");
       const slot = save ?? newSave();
       const next = save ? save.scene : "Intro";
+      audio.music.stop();
       this.scene.start(next, { save: slot });
     };
-    const erase = () => { clearSave(); this.scene.restart(); };
+    const erase = () => { audio.sfx("cancel"); clearSave(); this.scene.restart(); };
 
     this.input.keyboard?.on("keydown-ENTER", launch);
     this.input.keyboard?.on("keydown-SPACE", launch);
