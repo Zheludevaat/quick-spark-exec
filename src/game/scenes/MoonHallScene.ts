@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { getAudio, SONG_MOON } from "../audio";
 
 type Mirror = {
   x: number; y: number;
