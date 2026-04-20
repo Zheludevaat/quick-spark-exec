@@ -125,13 +125,57 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.refreshVesselFill();
     this.vesselHud.refresh();
 
-    // First visit only — opening dialog
+    // Echo at top of stair if she's been unlocked.
+    if (this.save.flags.echo_follower_unlocked) {
+      const echo = this.add
+        .circle(GBC_W - 14, GBC_H - 28, 3, 0xa0c8e8, 0.85)
+        .setStrokeStyle(0.5, 0xffffff);
+      this.tweens.add({
+        targets: echo,
+        alpha: 0.4,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+      });
+      new GBCText(this, GBC_W - 24, GBC_H - 22, "ECHO", {
+        color: COLOR.textAccent,
+        depth: 5,
+      });
+    }
+
+    // First visit only — opening dialog (with apology gate variant).
     if (!this.save.flags.athanor_visited) {
       this.save.flags.athanor_visited = true;
       writeSave(this.save);
       this.busy = true;
-      runDialog(this, OPENING_LINES, () => {
-        this.busy = false;
+      const intro = this.openingLines();
+      runDialog(this, intro, () => {
+        if (hasChoice(this.save, "walking_saint", "forced") && !this.save.flags.act2_apology) {
+          this.runApologyGate();
+        } else {
+          this.busy = false;
+        }
+      });
+    }
+
+    // Salvage hint on return: if quest is active and we're back at threshold,
+    // the bath remembers — point them at Albedo.
+    if (
+      this.save.sideQuests["salvage_a_shard"] === "active" &&
+      !this.save.flags.salvage_hinted_athanor
+    ) {
+      this.save.flags.salvage_hinted_athanor = true;
+      writeSave(this.save);
+      this.time.delayedCall(900, () => {
+        if (this.busy) return;
+        this.busy = true;
+        runDialog(
+          this,
+          [
+            { who: "SORYN", text: "The bath kept something. The water always does." },
+          ],
+          () => (this.busy = false),
+        );
       });
     }
 
@@ -148,7 +192,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = true;
         runDialog(
           this,
-          [{ who: "SORYN", text: "All four are done. The vessel waits to be sealed." }],
+          [{ who: this.save.sorynReleased ? "ROWAN" : "SORYN", text: "All four are done. The vessel waits to be sealed." }],
           () => {
             this.busy = false;
             this.gotoSealedVessel();
