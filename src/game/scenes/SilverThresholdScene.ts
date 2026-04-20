@@ -13,10 +13,22 @@ const SORYN_OPENING = [
 ];
 
 const ELEMENT_LINES: Record<string, { who: string; text: string }[]> = {
-  air:   [{ who: "Air",   text: "Clarity is not certainty. It is willingness to see." }],
-  fire:  [{ who: "Fire",  text: "Courage burns the part of you that hides." }],
-  water: [{ who: "Water", text: "Compassion holds what cannot yet be fixed." }],
-  earth: [{ who: "Earth", text: "You are still here. The ground in you remembers." }],
+  air: [
+    { who: "Air",   text: "Clarity is not certainty. It is willingness to see." },
+    { who: "Air",   text: "What you avoid looking at writes the loudest stories." },
+  ],
+  fire: [
+    { who: "Fire",  text: "Courage burns the part of you that hides." },
+    { who: "Fire",  text: "It does not feel brave. That is how you know it works." },
+  ],
+  water: [
+    { who: "Water", text: "Compassion holds what cannot yet be fixed." },
+    { who: "Water", text: "Even your worst hour deserves a witness who stays." },
+  ],
+  earth: [
+    { who: "Earth", text: "You are still here. The ground in you remembers." },
+    { who: "Earth", text: "Slowness is not failure. It is how roots are made." },
+  ],
 };
 
 const SORYN_AFTER = [
@@ -24,6 +36,21 @@ const SORYN_AFTER = [
   { who: "Soryn", text: "There you will learn four small verbs:" },
   { who: "Soryn", text: "Observe. Address. Remember. Release." },
   { who: "Soryn", text: "Press A at the gate when you are ready." },
+];
+
+const SORYN_REPEAT = [
+  { who: "Soryn", text: "The threshold likes wanderers. Take your time." },
+  { who: "Soryn", text: "When you are ready, walk to each circle." },
+];
+
+const SORYN_REPEAT_AFTER = [
+  { who: "Soryn", text: "The gate listens. Step into it when you can." },
+  { who: "Soryn", text: "Whatever you bring, you will not bring alone." },
+];
+
+const STONE_LINES = [
+  { who: "Stone", text: "An old marker. Carved with one word: BEGIN." },
+  { who: "Stone", text: "You feel a small warmth in the chest. +1 COURAGE." },
 ];
 
 // Map dimensions in tiles (160/16 x 144/16 = 10 x 9)
