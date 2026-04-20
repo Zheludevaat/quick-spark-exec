@@ -59,11 +59,21 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "incomplete",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "CARTOGRAPHER", text: "I am mapping a country that does not exist." },
-          { who: "CARTOGRAPHER", text: "It has three rivers. None of them flow." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          // Cross-soul: if you held the Feather, the cartographer notices the
+          // weight in your hands and his country gets a fourth river.
+          if (hasChoice(save, "weighed_heart", "held")) {
+            return [
+              { who: "CARTOGRAPHER", text: "You walk like someone who held a feather." },
+              { who: "CARTOGRAPHER", text: "I'll add a fourth river. It will run through your hands." },
+            ];
+          }
+          return [
+            { who: "CARTOGRAPHER", text: "I am mapping a country that does not exist." },
+            { who: "CARTOGRAPHER", text: "It has three rivers. None of them flow." },
+          ];
+        },
       },
       {
         kind: "inquiry",
@@ -234,11 +244,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "guessed",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
-          { who: "ONE WHO SANG", text: "She trails off. The water finishes it for her, badly." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (hasChoice(save, "mirror_philosopher", "argued")) {
+            return [
+              { who: "ONE WHO SANG", text: "You argued the man at the pool. He'll thank you, eventually." },
+              { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
+            ];
+          }
+          return [
+            { who: "ONE WHO SANG", text: '"Rosemary for remembrance, and pansies for..."' },
+            { who: "ONE WHO SANG", text: "She trails off. The water finishes it for her, badly." },
+          ];
+        },
       },
       {
         kind: "inquiry",
@@ -575,11 +593,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "tried",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE WHO LISTENS", text: "Is there a tune here? I keep almost hearing one." },
-          { who: "ONE WHO LISTENS", text: "Tap it for me. I'll trust your hands." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (anySoulHasChoice(save, "forced")) {
+            return [
+              { who: "ONE WHO LISTENS", text: "I heard a hand close where one was offered. Loud." },
+              { who: "ONE WHO LISTENS", text: "Make a softer sound for me. Just four taps." },
+            ];
+          }
+          return [
+            { who: "ONE WHO LISTENS", text: "Is there a tune here? I keep almost hearing one." },
+            { who: "ONE WHO LISTENS", text: "Tap it for me. I'll trust your hands." },
+          ];
+        },
       },
       {
         kind: "rhythm",
@@ -622,11 +648,19 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "witnessed",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "CROWNED ONE", text: "You're new. You may bow. Briefly." },
-          { who: "CROWNED ONE", text: "The crown is paper. Don't tell anyone." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (anySoulHasChoice(save, "forced")) {
+            return [
+              { who: "CROWNED ONE", text: "You. The forcing one. I've heard." },
+              { who: "CROWNED ONE", text: "Don't bow. The crown is paper and prefers honesty." },
+            ];
+          }
+          return [
+            { who: "CROWNED ONE", text: "You're new. You may bow. Briefly." },
+            { who: "CROWNED ONE", text: "The crown is paper. Don't tell anyone." },
+          ];
+        },
       },
       {
         kind: "witness",
@@ -690,7 +724,9 @@ const ARCS: Record<SoulId, SoulArc> = {
             label: "EL · I · AS",
             reply: "...yes. Yes. That's me. Thank you, walker.",
             tag: "named",
-            branch: { to: "end", ending: "named" },
+            // Only resolves to NAMED if all 3 syllable lanterns have been lit.
+            // Otherwise: a polite half-recognition that defers the arc.
+            branch: { to: "name_check" },
           },
           {
             choice: "confess",
@@ -700,6 +736,22 @@ const ARCS: Record<SoulId, SoulArc> = {
             branch: { to: "end", ending: "waited" },
           },
         ],
+      },
+      {
+        label: "name_check",
+        kind: "gate",
+        check: (s: SaveSlot) => !!s.flags.stonechild_name_known,
+        pass: { to: "end", ending: "named" },
+        fail: { to: "name_unknown" },
+      },
+      {
+        label: "name_unknown",
+        kind: "dialog",
+        lines: [
+          { who: "STONECHILD", text: "...close. The shape is right. But the lanterns are dark." },
+          { who: "STONECHILD", text: "Find them. Stand near each. They will speak." },
+        ],
+        next: { to: "end", ending: "deferred" },
       },
     ],
     endings: {
