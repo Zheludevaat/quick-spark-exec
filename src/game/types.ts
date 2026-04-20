@@ -25,6 +25,12 @@ export type SaveSlot = {
   region: ImaginalRegion | null;
   /** Field seed-echo motes touched. */
   seedEchoes: Record<string, boolean>;
+  /** Unlocked lore entry IDs (see scenes/lore.ts). */
+  lore: string[];
+  /** Per-NPC arc state (0 = not met, 1+ = arc steps). */
+  souls: Record<string, number>;
+  /** Side-quest tracker. */
+  sideQuests: Record<string, "todo" | "active" | "done">;
   updatedAt: number;
 };
 
@@ -57,6 +63,9 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     seeds: r.seeds ?? {},
     region: region as ImaginalRegion | null,
     seedEchoes: (r as any).seedEchoes ?? {},
+    lore: Array.isArray((r as any).lore) ? (r as any).lore : [],
+    souls: (r as any).souls ?? {},
+    sideQuests: (r as any).sideQuests ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
 }

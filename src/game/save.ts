@@ -34,6 +34,9 @@ export function newSave(): SaveSlot {
     seeds: {},
     region: null,
     seedEchoes: {},
+    lore: [],
+    souls: {},
+    sideQuests: {},
     updatedAt: Date.now(),
   };
 }
