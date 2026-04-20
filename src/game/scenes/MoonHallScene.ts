@@ -50,6 +50,7 @@ export class MoonHallScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#0a0f20");
     this.cameras.main.fadeIn(400);
+    getAudio().music.play("moon", SONG_MOON);
 
     // Paint moon hall tilemap
     const map = buildMoonMap();
