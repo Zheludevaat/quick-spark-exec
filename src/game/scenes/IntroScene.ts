@@ -1,44 +1,58 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import type { SaveSlot } from "../types";
 
 const LINES = [
-  "Tuesday. 8:14 AM. Brake lights.",
-  "A truck. A turn never finished.",
-  "Then — silence. Weightless silver.",
-  "You are Rowan. You are dead.",
-  "And the work is only beginning.",
+  "TUESDAY. 8:14 AM.",
+  "BRAKE LIGHTS.",
+  "A TRUCK. A TURN",
+  "NEVER FINISHED.",
+  "THEN... SILENCE.",
+  "WEIGHTLESS SILVER.",
+  "YOU ARE ROWAN.",
+  "YOU ARE DEAD.",
+  "AND THE WORK IS",
+  "ONLY BEGINNING.",
 ];
 
 export class IntroScene extends Phaser.Scene {
   private save!: SaveSlot;
-  constructor() {
-    super("Intro");
-  }
-  init(data: { save: SaveSlot }) {
-    this.save = data.save;
-  }
-  create() {
-    this.cameras.main.setBackgroundColor(0x000000);
-    this.add.image(VIEW_W / 2, VIEW_H / 2, "silver_threshold_effects")
-      .setDisplaySize(VIEW_W, VIEW_H)
-      .setAlpha(0.4);
+  constructor() { super("Intro"); }
+  init(data: { save: SaveSlot }) { this.save = data.save; }
 
-    drawDialogBox(this, 16, 170, VIEW_W - 32, 56);
-    const t = pixelText(this, 28, 184, "", 9);
-    t.setWordWrapWidth(VIEW_W - 56);
+  create() {
+    this.cameras.main.setBackgroundColor("#000000");
+
+    // Drifting silver flecks
+    const g = this.add.graphics();
+    for (let i = 0; i < 30; i++) {
+      const x = Phaser.Math.Between(0, GBC_W);
+      const y = Phaser.Math.Between(0, GBC_H - 50);
+      const dot = this.add.rectangle(x, y, 1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+      this.tweens.add({ targets: dot, y: dot.y + 50, alpha: 0,
+        duration: Phaser.Math.Between(2500, 5000), repeat: -1,
+        delay: Phaser.Math.Between(0, 3000) });
+    }
+    void g;
+
+    drawGBCBox(this, 8, GBC_H - 50, GBC_W - 16, 42);
+    const text = new GBCText(this, 14, GBC_H - 44, "", { color: COLOR.textLight, maxWidthPx: GBC_W - 28 });
+    const hint = new GBCText(this, GBC_W - 22, GBC_H - 14, "▼A", { color: COLOR.textAccent });
+    this.tweens.add({ targets: hint.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+
     let i = 0;
     const advance = () => {
       if (i >= LINES.length) {
-        this.scene.start("SilverThreshold", { save: this.save });
+        this.cameras.main.fadeOut(400, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("SilverThreshold", { save: this.save }));
         return;
       }
-      t.setText(LINES[i++]);
+      // Show two lines at a time for readability
+      const a = LINES[i++] ?? "";
+      const b = LINES[i++] ?? "";
+      text.setText(`${a}\n${b}`.trim());
     };
     advance();
-
-    const hint = pixelText(this, VIEW_W - 60, 212, "▼ tap / ↵", 7, "#8ec8e8");
-    this.tweens.add({ targets: hint, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
     this.input.on("pointerdown", advance);
     this.input.keyboard?.on("keydown-ENTER", advance);

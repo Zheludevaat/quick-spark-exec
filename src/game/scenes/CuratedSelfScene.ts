@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
@@ -7,99 +7,109 @@ import { attachHUD } from "./hud";
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
 
 const STATE_LINES: Record<State, { taunt: string; weakness: Command; next: State; success: string }> = {
-  composed:    { taunt: "I am the version of you that smiles in photographs. Aren't I better?",
-                 weakness: "observe",  next: "flattering",
-                 success: "You see the careful posture. The smile loosens." },
-  flattering:  { taunt: "Tell me what you actually wanted them to see. Tell me the real line.",
-                 weakness: "address",  next: "fractured",
-                 success: "You speak the unrehearsed sentence. The polish cracks." },
-  fractured:   { taunt: "But remember the day you first started this — the one you were trying to be?",
-                 weakness: "remember", next: "exposed",
-                 success: "You remember. Not as a wound. As a small, stubborn child." },
-  exposed:     { taunt: "And now? Will you keep me, or let me go?",
-                 weakness: "release",  next: "released",
-                 success: "You release. The figure exhales for the first time." },
-  released:    { taunt: "", weakness: "release", next: "released", success: "" },
+  composed:   { taunt: "I am the version of you that smiles for cameras.",
+                weakness: "observe",  next: "flattering",
+                success: "You see the careful posture. The smile loosens." },
+  flattering: { taunt: "Tell me what you actually wanted them to see.",
+                weakness: "address",  next: "fractured",
+                success: "You speak the unrehearsed line. The polish cracks." },
+  fractured:  { taunt: "Remember the day you started becoming this?",
+                weakness: "remember", next: "exposed",
+                success: "You remember. Not as a wound. As a stubborn child." },
+  exposed:    { taunt: "And now? Will you keep me, or let me go?",
+                weakness: "release",  next: "released",
+                success: "You release. The figure exhales for the first time." },
+  released:   { taunt: "", weakness: "release", next: "released", success: "" },
+};
+
+const CMDS: { label: string; cmd: Command }[] = [
+  { label: "OBSERVE",  cmd: "observe" },
+  { label: "ADDRESS",  cmd: "address" },
+  { label: "REMEMBER", cmd: "remember" },
+  { label: "RELEASE",  cmd: "release" },
+];
+
+const STATE_FRAME: Record<State, number> = {
+  composed: 0, flattering: 2, fractured: 4, exposed: 6, released: 8,
 };
 
 export class CuratedSelfScene extends Phaser.Scene {
   private save!: SaveSlot;
   private state: State = "composed";
-  private cmdText: Phaser.GameObjects.Text[] = [];
+  private cmdTexts: GBCText[] = [];
   private cursor = 0;
   private busy = false;
-  private bossSprite!: Phaser.GameObjects.Container;
-  private logText!: Phaser.GameObjects.Text;
-  private stateText!: Phaser.GameObjects.Text;
+  private boss!: Phaser.GameObjects.Sprite;
+  private logText!: GBCText;
+  private stateText!: GBCText;
+  private cursorMark!: GBCText;
 
   constructor() { super("CuratedSelf"); }
-  init(data: { save: SaveSlot }) { this.save = data.save; }
+  init(data: { save: SaveSlot }) {
+    this.save = data.save;
+    this.cmdTexts = [];
+    this.state = "composed";
+    this.cursor = 0;
+    this.busy = false;
+  }
 
   create() {
-    this.cameras.main.setBackgroundColor(0x05070d);
+    this.cameras.main.setBackgroundColor("#05070d");
     this.cameras.main.fadeIn(500);
 
-    this.add.image(VIEW_W / 2, VIEW_H / 2, "moon_overlays_sigils")
-      .setDisplaySize(VIEW_W, VIEW_H).setAlpha(0.25);
+    // Stars
+    const g = this.add.graphics();
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, 70), 1, 1);
+    }
+    g.fillStyle(0x1a2030, 1); g.fillRect(0, 70, GBC_W, 4);
+    g.fillStyle(0x243058, 1); g.fillRect(0, 74, GBC_W, 18);
+    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 84, 70, 10);
 
-    pixelText(this, VIEW_W / 2 - 50, 12, "THE CURATED SELF", 9, "#d86a6a");
-    this.stateText = pixelText(this, VIEW_W / 2 - 30, 24, "composed", 8, "#8ec8e8");
+    // Title plate
+    drawGBCBox(this, 4, 14, 100, 12);
+    new GBCText(this, 8, 17, "THE CURATED SELF", { color: COLOR.textWarn });
+    this.stateText = new GBCText(this, 110, 17, "COMPOSED", { color: COLOR.textAccent });
 
-    this.bossSprite = this.add.container(VIEW_W / 2, 80);
-    this.redrawBoss();
+    // Boss sprite
+    this.boss = this.add.sprite(GBC_W / 2, 56, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
+    this.boss.play("boss_composed");
 
-    drawDialogBox(this, 8, 130, VIEW_W - 16, 100);
-    pixelText(this, 18, 138, "Choose a verb.", 8, "#8ec8e8");
-    const cmds: { label: string; cmd: Command }[] = [
-      { label: "▣ OBSERVE",  cmd: "observe" },
-      { label: "▶ ADDRESS",  cmd: "address" },
-      { label: "◈ REMEMBER", cmd: "remember" },
-      { label: "○ RELEASE",  cmd: "release" },
-    ];
-    cmds.forEach((c, i) => {
-      const x = 22 + (i % 2) * 130;
-      const y = 156 + Math.floor(i / 2) * 16;
-      const t = pixelText(this, x, y, c.label, 9).setInteractive({ useHandCursor: true });
-      t.setData("cmd", c.cmd);
-      t.on("pointerdown", () => this.choose(i));
-      this.cmdText.push(t);
+    // Command panel
+    drawGBCBox(this, 0, 92, GBC_W, 52);
+    CMDS.forEach((c, i) => {
+      const x = 16 + (i % 2) * 70;
+      const y = 102 + Math.floor(i / 2) * 16;
+      const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerdown", () => this.choose(i));
+      t.obj.setData("cmd", c.cmd);
+      this.cmdTexts.push(t);
     });
+    this.cursorMark = new GBCText(this, 8, 102, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
 
-    this.logText = pixelText(this, 18, 200, STATE_LINES.composed.taunt, 8, "#c8d4e8")
-      .setWordWrapWidth(VIEW_W - 36);
+    this.logText = new GBCText(this, 4, 132, STATE_LINES.composed.taunt, {
+      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
+    });
 
     attachHUD(this, () => this.save.stats);
 
-    this.input.keyboard?.on("keydown-LEFT",  () => this.move(-1));
-    this.input.keyboard?.on("keydown-RIGHT", () => this.move(1));
-    this.input.keyboard?.on("keydown-UP",    () => this.move(-2));
-    this.input.keyboard?.on("keydown-DOWN",  () => this.move(2));
-    this.input.keyboard?.on("keydown-ENTER", () => this.choose(this.cursor));
-    this.input.keyboard?.on("keydown-SPACE", () => this.choose(this.cursor));
+    const kb = this.input.keyboard!;
+    kb.on("keydown-LEFT",  () => this.move(-1));
+    kb.on("keydown-RIGHT", () => this.move(1));
+    kb.on("keydown-UP",    () => this.move(-2));
+    kb.on("keydown-DOWN",  () => this.move(2));
+    kb.on("keydown-ENTER", () => this.choose(this.cursor));
+    kb.on("keydown-SPACE", () => this.choose(this.cursor));
     this.events.on("vinput-down", (dir: string) => {
-      if (dir === "left") this.move(-1);
+      if (dir === "left")  this.move(-1);
       if (dir === "right") this.move(1);
-      if (dir === "up") this.move(-2);
-      if (dir === "down") this.move(2);
+      if (dir === "up")    this.move(-2);
+      if (dir === "down")  this.move(2);
     });
     this.events.on("vinput-action", () => this.choose(this.cursor));
-  }
-
-  private redrawBoss() {
-    this.bossSprite.removeAll(true);
-    const colors: Record<State, number> = {
-      composed: PAL.pearl, flattering: PAL.moonCyan, fractured: PAL.silverLight,
-      exposed: PAL.warn, released: PAL.moonBlue,
-    };
-    const ring = this.add.circle(0, 0, 38, colors[this.state], 0.18).setStrokeStyle(1, colors[this.state], 0.9);
-    const sprite = this.add.sprite(0, 0, "curated_self", 0).setScale(1);
-    sprite.play(`boss_${this.state}`);
-    this.bossSprite.add([ring, sprite]);
-    this.tweens.add({ targets: ring, scale: 1.25, alpha: 0.4, duration: 1200, yoyo: true, repeat: -1 });
-    if (this.state === "released") {
-      this.tweens.add({ targets: sprite, alpha: 0.5, duration: 800, yoyo: true, repeat: -1 });
-    }
   }
 
   private move(d: number) {
@@ -108,43 +118,45 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.refreshCursor();
   }
   private refreshCursor() {
-    this.cmdText.forEach((t, i) => t.setColor(i === this.cursor ? "#f0e08c" : "#eef3ff"));
+    this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
+    const x = 8 + (this.cursor % 2) * 70;
+    const y = 102 + Math.floor(this.cursor / 2) * 16;
+    this.cursorMark.setPosition(x, y);
   }
 
   private choose(i: number) {
     if (this.busy) return;
     if (this.state === "released") return this.endGame();
-    const cmd = this.cmdText[i].getData("cmd") as Command;
+    const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     const stage = STATE_LINES[this.state];
     this.busy = true;
     if (cmd === stage.weakness) {
       this.logText.setText(stage.success);
       this.cameras.main.flash(180, 200, 220, 255);
-      this.time.delayedCall(900, () => {
+      this.time.delayedCall(800, () => {
         this.state = stage.next;
-        this.stateText.setText(this.state);
-        this.redrawBoss();
+        this.stateText.setText(this.state.toUpperCase());
+        this.boss.play(`boss_${this.state}`);
         if (this.state === "released") {
-          this.logText.setText("Silence. Then warmth. The verb-loop is yours now.");
-          this.time.delayedCall(1200, () => this.endGame());
+          this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
+          this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
+          this.time.delayedCall(1400, () => this.endGame());
         } else {
-          this.logText.setText(STATE_LINES[this.state].taunt);
           this.busy = false;
         }
       });
     } else {
-      this.logText.setText("It tilts its head. Try a different verb.");
-      this.cameras.main.shake(150, 0.003);
+      this.logText.setText("The mask only steadies. Try another verb.");
+      this.cameras.main.shake(100, 0.003);
       this.busy = false;
     }
   }
 
   private endGame() {
-    this.busy = true;
     this.save.scene = "Epilogue";
     this.save.flags.act0_complete = true;
     writeSave(this.save);
-    this.cameras.main.fadeOut(800, 0, 0, 0);
+    this.cameras.main.fadeOut(700, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Epilogue", { save: this.save }));
   }
 }
@@ -153,26 +165,33 @@ export class EpilogueScene extends Phaser.Scene {
   private save!: SaveSlot;
   constructor() { super("Epilogue"); }
   init(data: { save: SaveSlot }) { this.save = data.save; }
+
   create() {
-    this.cameras.main.setBackgroundColor(0x05070d);
-    this.add.image(VIEW_W / 2, VIEW_H / 2, "silver_threshold_effects")
-      .setDisplaySize(VIEW_W, VIEW_H).setAlpha(0.4);
+    this.cameras.main.setBackgroundColor("#0a0e1a");
+    this.cameras.main.fadeIn(700);
 
-    pixelText(this, VIEW_W / 2 - 60, 30, "ACT 0 — COMPLETE", 11, "#8ec8e8");
-    pixelText(this, 20, 60, "You have learned four small verbs:", 9);
-    pixelText(this, 20, 78, "Observe.  Address.  Remember.  Release.", 9, "#f0e08c");
+    // Quiet starfield
+    for (let i = 0; i < 40; i++) {
+      this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
+        1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+    }
 
-    const s = this.save.stats;
-    pixelText(this, 20, 110, `Clarity ${s.clarity}    Compassion ${s.compassion}    Courage ${s.courage}`, 9);
-    pixelText(this, 20, 130, "Six regions remain. The Sun. The Mercury Library.", 8, "#c8d4e8");
-    pixelText(this, 20, 142, "The Venus Garden. Mars. Jupiter. Saturn.", 8, "#c8d4e8");
-    pixelText(this, 20, 162, "Soryn waits at the next threshold.", 8, "#8ec8e8");
+    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent });
+    new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight });
 
-    drawDialogBox(this, 40, 190, VIEW_W - 80, 36);
-    const again = pixelText(this, 60, 200, "✦  WALK AGAIN", 9).setInteractive({ useHandCursor: true });
-    const wipe = pixelText(this, 60, 212, "✕  ERASE & RESTART", 8, "#d86a6a").setInteractive({ useHandCursor: true });
-    again.on("pointerdown", () => this.scene.start("Title"));
-    wipe.on("pointerdown", () => { clearSave(); this.scene.start("Title"); });
+    drawGBCBox(this, 12, 50, GBC_W - 24, 50);
+    new GBCText(this, 18, 56, `CLARITY    ${this.save.stats.clarity}`, { color: COLOR.textLight });
+    new GBCText(this, 18, 66, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight });
+    new GBCText(this, 18, 76, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight });
+    new GBCText(this, 18, 88, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36 });
+
+    new GBCText(this, 8, GBC_H - 22, "A: WALK AGAIN", { color: COLOR.textGold });
+    new GBCText(this, 8, GBC_H - 12, "B: ERASE & RESTART", { color: COLOR.textDim });
+
     this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("Title"));
+    this.input.keyboard?.on("keydown-SPACE", () => this.scene.start("Title"));
+    this.events.on("vinput-action", () => this.scene.start("Title"));
+    this.events.on("vinput-cancel", () => { clearSave(); this.scene.start("Title"); });
+    this.input.keyboard?.on("keydown-BACKSPACE", () => { clearSave(); this.scene.start("Title"); });
   }
 }

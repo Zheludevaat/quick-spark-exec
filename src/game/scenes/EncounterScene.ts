@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { writeSave } from "../save";
 import type { Command, SaveSlot, Stats } from "../types";
 
@@ -17,44 +17,48 @@ type EnemyDef = {
 
 const ENEMIES: Record<EnemyKind, EnemyDef> = {
   reflection: {
-    name: "A Reflection",
-    kind: "reflection",
-    weakness: "observe",
-    hp: 3,
+    name: "REFLECTION", kind: "reflection", weakness: "observe", hp: 3,
     taunt: "It mimes your every move with a smug little smile.",
     resolved: "Seen plainly, the mimicry collapses into a soft hum.",
     reward: { clarity: 1 },
   },
   echo: {
-    name: "An Echo Double",
-    kind: "echo",
-    weakness: "address",
-    hp: 3,
+    name: "ECHO DOUBLE", kind: "echo", weakness: "address", hp: 3,
     taunt: "It repeats a thing you wish you had not said.",
-    resolved: "You name what you meant. The echo finally answers, kindly.",
+    resolved: "You name what you meant. The echo answers, kindly.",
     reward: { compassion: 1 },
   },
   glitter: {
-    name: "Memory Glitter",
-    kind: "glitter",
-    weakness: "remember",
-    hp: 3,
-    taunt: "Bright shards of an unfinished afternoon swirl around you.",
-    resolved: "You remember the whole afternoon, not just its sharpest corner.",
+    name: "MEMORY GLITTER", kind: "glitter", weakness: "remember", hp: 3,
+    taunt: "Bright shards of an unfinished afternoon swirl.",
+    resolved: "You remember the whole afternoon, not just its corners.",
     reward: { courage: 1 },
   },
 };
+
+const ENEMY_FRAME_BASE: Record<EnemyKind, number> = {
+  reflection: 0, echo: 2, glitter: 4,
+};
+
+const CMDS: { label: string; cmd: Command }[] = [
+  { label: "OBSERVE",  cmd: "observe" },
+  { label: "ADDRESS",  cmd: "address" },
+  { label: "REMEMBER", cmd: "remember" },
+  { label: "RELEASE",  cmd: "release" },
+];
 
 export class EncounterScene extends Phaser.Scene {
   private save!: SaveSlot;
   private def!: EnemyDef;
   private hp = 3;
   private onDone!: (won: boolean) => void;
-  private cmdText: Phaser.GameObjects.Text[] = [];
-  private logText!: Phaser.GameObjects.Text;
+  private cmdTexts: GBCText[] = [];
+  private logText!: GBCText;
   private hpBar!: Phaser.GameObjects.Graphics;
   private cursor = 0;
   private busy = false;
+  private enemy!: Phaser.GameObjects.Sprite;
+  private cursorMark!: GBCText;
 
   constructor() { super("Encounter"); }
   init(data: { save: SaveSlot; kind: EnemyKind; onDone: (won: boolean) => void }) {
@@ -62,70 +66,72 @@ export class EncounterScene extends Phaser.Scene {
     this.def = ENEMIES[data.kind];
     this.hp = this.def.hp;
     this.onDone = data.onDone;
+    this.cmdTexts = [];
   }
 
   create() {
-    this.cameras.main.setBackgroundColor(0x06090f);
+    this.cameras.main.setBackgroundColor("#0a0e1a");
 
-    // backdrop
-    this.add.image(VIEW_W / 2, 70, "moon_overlays_sigils").setDisplaySize(VIEW_W, 130).setAlpha(0.35);
+    // Backdrop: striped night with horizon
+    const g = this.add.graphics();
+    g.fillStyle(0x0a0f20, 1); g.fillRect(0, 0, GBC_W, 70);
+    g.fillStyle(0x1a2030, 1); g.fillRect(0, 70, GBC_W, 4);
+    g.fillStyle(0x243058, 1); g.fillRect(0, 74, GBC_W, 16);
+    // dot stars
+    for (let i = 0; i < 30; i++) {
+      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, 60), 1, 1);
+    }
 
-    // enemy "portrait"
-    const ec = this.add.container(VIEW_W / 2, 70);
-    const ring = this.add.circle(0, 0, 30, this.colorFor(), 0.18).setStrokeStyle(1, this.colorFor(), 0.8);
-    const body = this.add.rectangle(0, 6, 18, 22, this.colorFor(), 0.85).setStrokeStyle(1, PAL.silverLight);
-    const head = this.add.rectangle(0, -8, 14, 12, PAL.pearl).setStrokeStyle(1, PAL.silverDark);
-    ec.add([ring, body, head]);
-    this.tweens.add({ targets: ring, scale: 1.2, alpha: 0.35, duration: 1200, yoyo: true, repeat: -1 });
-    this.tweens.add({ targets: ec, y: 66, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    // Enemy platform (Pokemon-style rounded shadow)
+    const px = GBC_W / 2;
+    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(px, 78, 60, 8);
 
-    // name + HP
-    pixelText(this, VIEW_W / 2 - 40, 14, this.def.name, 9, "#eef3ff");
-    this.hpBar = this.add.graphics();
+    // Enemy sprite
+    this.enemy = this.add.sprite(px, 50, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
+    this.enemy.play(`enemy_${this.def.kind}`);
+    this.tweens.add({ targets: this.enemy, y: 48, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+
+    // Name + HP plate
+    drawGBCBox(this, 4, 4, 90, 14);
+    new GBCText(this, 8, 8, this.def.name, { color: COLOR.textLight });
+    this.hpBar = this.add.graphics().setDepth(101);
     this.drawHp();
 
-    // command panel
-    drawDialogBox(this, 8, 130, VIEW_W - 16, 100);
-    pixelText(this, 18, 138, "What do you do?", 8, "#8ec8e8");
-
-    const cmds: { label: string; cmd: Command }[] = [
-      { label: "▣ OBSERVE",  cmd: "observe" },
-      { label: "▶ ADDRESS",  cmd: "address" },
-      { label: "◈ REMEMBER", cmd: "remember" },
-      { label: "○ RELEASE",  cmd: "release" },
-    ];
-    cmds.forEach((c, i) => {
-      const x = 22 + (i % 2) * 130;
-      const y = 156 + Math.floor(i / 2) * 16;
-      const t = pixelText(this, x, y, c.label, 9).setInteractive({ useHandCursor: true });
-      t.setData("cmd", c.cmd);
-      t.on("pointerdown", () => this.choose(i));
-      this.cmdText.push(t);
+    // Command panel (bottom 2x2)
+    drawGBCBox(this, 0, 92, GBC_W, 52);
+    CMDS.forEach((c, i) => {
+      const x = 16 + (i % 2) * 70;
+      const y = 102 + Math.floor(i / 2) * 16;
+      const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
+      t.obj.setInteractive({ useHandCursor: true });
+      t.obj.on("pointerdown", () => this.choose(i));
+      t.obj.setData("cmd", c.cmd);
+      this.cmdTexts.push(t);
     });
+    this.cursorMark = new GBCText(this, 8, 102, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
 
-    this.logText = pixelText(this, 18, 200, this.def.taunt, 8, "#c8d4e8").setWordWrapWidth(VIEW_W - 36);
+    // Log text under commands area? actually the box has limited room; use a one-liner
+    this.logText = new GBCText(this, 4, 132, this.def.taunt, {
+      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
+    });
 
-    // input
-    this.input.keyboard?.on("keydown-LEFT",  () => this.move(-1));
-    this.input.keyboard?.on("keydown-RIGHT", () => this.move(1));
-    this.input.keyboard?.on("keydown-UP",    () => this.move(-2));
-    this.input.keyboard?.on("keydown-DOWN",  () => this.move(2));
-    this.input.keyboard?.on("keydown-ENTER", () => this.choose(this.cursor));
-    this.input.keyboard?.on("keydown-SPACE", () => this.choose(this.cursor));
+    // Input
+    const kb = this.input.keyboard!;
+    kb.on("keydown-LEFT",  () => this.move(-1));
+    kb.on("keydown-RIGHT", () => this.move(1));
+    kb.on("keydown-UP",    () => this.move(-2));
+    kb.on("keydown-DOWN",  () => this.move(2));
+    kb.on("keydown-ENTER", () => this.choose(this.cursor));
+    kb.on("keydown-SPACE", () => this.choose(this.cursor));
     this.events.on("vinput-down", (dir: string) => {
-      if (dir === "left") this.move(-1);
+      if (dir === "left")  this.move(-1);
       if (dir === "right") this.move(1);
-      if (dir === "up") this.move(-2);
-      if (dir === "down") this.move(2);
+      if (dir === "up")    this.move(-2);
+      if (dir === "down")  this.move(2);
     });
     this.events.on("vinput-action", () => this.choose(this.cursor));
-  }
-
-  private colorFor() {
-    return this.def.kind === "reflection" ? PAL.silverLight
-         : this.def.kind === "echo"       ? PAL.moonBlue
-         : PAL.sigil;
   }
 
   private move(d: number) {
@@ -134,50 +140,53 @@ export class EncounterScene extends Phaser.Scene {
     this.refreshCursor();
   }
   private refreshCursor() {
-    this.cmdText.forEach((t, i) => t.setColor(i === this.cursor ? "#f0e08c" : "#eef3ff"));
+    this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
+    const x = 8 + (this.cursor % 2) * 70;
+    const y = 102 + Math.floor(this.cursor / 2) * 16;
+    this.cursorMark.setPosition(x, y);
   }
 
   private choose(i: number) {
     if (this.busy) return;
-    const cmd = this.cmdText[i].getData("cmd") as Command;
+    const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     this.busy = true;
     if (cmd === this.def.weakness) {
       this.hp = 0;
       this.drawHp();
       this.logText.setText(this.def.resolved);
-      // grant rewards
-      if (this.def.reward.clarity) this.save.stats.clarity += this.def.reward.clarity;
+      this.cameras.main.flash(180, 220, 230, 255);
+      this.tweens.add({ targets: this.enemy, alpha: 0, duration: 800 });
+      if (this.def.reward.clarity)    this.save.stats.clarity    += this.def.reward.clarity;
       if (this.def.reward.compassion) this.save.stats.compassion += this.def.reward.compassion;
-      if (this.def.reward.courage) this.save.stats.courage += this.def.reward.courage;
+      if (this.def.reward.courage)    this.save.stats.courage    += this.def.reward.courage;
       writeSave(this.save);
-      this.time.delayedCall(1400, () => {
-        this.onDone(true);
-        this.scene.stop();
-      });
+      this.time.delayedCall(1500, () => { this.onDone(true); this.scene.stop(); });
     } else if (cmd === "release") {
       this.logText.setText("You release without seeing. The shape lingers, gentler.");
-      this.time.delayedCall(1100, () => {
-        this.onDone(false);
-        this.scene.stop();
-      });
+      this.tweens.add({ targets: this.enemy, alpha: 0.3, duration: 700 });
+      this.time.delayedCall(1300, () => { this.onDone(false); this.scene.stop(); });
     } else {
       this.hp = Math.max(0, this.hp - 1);
       this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
+      this.cameras.main.shake(120, 0.004);
       this.busy = false;
       if (this.hp <= 0) {
-        this.logText.setText("It dissolves anyway — you wore it out by trying.");
+        this.logText.setText("It dissolves anyway - you wore it out by trying.");
         this.busy = true;
-        this.time.delayedCall(1200, () => { this.onDone(true); this.scene.stop(); });
+        this.tweens.add({ targets: this.enemy, alpha: 0, duration: 700 });
+        this.time.delayedCall(1300, () => { this.onDone(true); this.scene.stop(); });
       }
     }
   }
 
   private drawHp() {
     this.hpBar.clear();
-    this.hpBar.fillStyle(PAL.silverDark, 1);
-    this.hpBar.fillRect(VIEW_W - 60, 16, 50, 4);
-    this.hpBar.fillStyle(this.colorFor(), 1);
-    this.hpBar.fillRect(VIEW_W - 60, 16, 50 * (this.hp / this.def.hp), 4);
+    // Plate at top: 50px wide bar
+    const x = 60, y = 12, w = 30, h = 3;
+    this.hpBar.fillStyle(0x2a3550, 1); this.hpBar.fillRect(x, y, w, h);
+    const pct = this.hp / this.def.hp;
+    const color = pct > 0.6 ? 0x6ab84a : pct > 0.3 ? 0xe0c060 : 0xd84a4a;
+    this.hpBar.fillStyle(color, 1); this.hpBar.fillRect(x, y, Math.ceil(w * pct), h);
   }
 }

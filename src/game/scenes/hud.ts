@@ -1,65 +1,63 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H } from "../shared";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import type { Stats } from "../types";
 
 /**
  * Reusable on-screen HUD: stats top bar + virtual D-pad + A/B for touch.
- * Emits "vinput" events on the scene's events emitter:
- *   "vinput-down" / "vinput-up" with { dir: "up"|"down"|"left"|"right" }
- *   "vinput-action" / "vinput-cancel"
+ * Emits scene events: "vinput-down" / "vinput-up" with a dir string,
+ * and "vinput-action" / "vinput-cancel".
  */
 export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const cam = scene.cameras.main;
   cam.setRoundPixels(true);
 
-  // Top stats bar
-  const bar = scene.add.graphics().setScrollFactor(0).setDepth(200);
-  bar.fillStyle(PAL.void, 0.85);
-  bar.fillRect(0, 0, VIEW_W, 14);
-  bar.lineStyle(1, PAL.silverDark, 1);
-  bar.strokeRect(0, 0, VIEW_W, 14);
+  // Top stats bar (compact for 160-wide screen)
+  const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
+  scene.add.rectangle(0, 11, GBC_W, 1, 0x7889a8, 1).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
+  void barBg;
 
-  const text = pixelText(scene, 4, 3, "", 8).setDepth(201);
+  const text = new GBCText(scene, 3, 2, "", { color: COLOR.textLight, depth: 201, scrollFactor: 0 });
   const refresh = () => {
     const s = getStats();
-    text.setText(`◯ Clarity ${s.clarity}   ❤ Compassion ${s.compassion}   ✦ Courage ${s.courage}`);
+    text.setText(`CL${s.clarity} CM${s.compassion} CO${s.courage}`);
   };
   refresh();
   scene.events.on("stats-changed", refresh);
 
-  // Touch controls — only show when touch is present
+  // Touch controls
   const isTouch = scene.sys.game.device.input.touch;
   if (isTouch) {
-    const dpadCx = 38;
-    const dpadCy = VIEW_H - 38;
-    const r = 14;
-    const padBg = scene.add.graphics().setScrollFactor(0).setDepth(200);
-    padBg.fillStyle(0x1a2238, 0.7);
-    padBg.fillCircle(dpadCx, dpadCy, r + 10);
-    padBg.fillStyle(PAL.silverDark, 0.9);
+    const dpadCx = 22;
+    const dpadCy = GBC_H - 22;
 
-    const mkBtn = (x: number, y: number, w: number, h: number, dir: string) => {
-      const z = scene.add.zone(x, y, w, h).setScrollFactor(0).setOrigin(0.5).setDepth(201)
-        .setInteractive();
-      const vis = scene.add.rectangle(x, y, w - 2, h - 2, PAL.silverMid, 0.85)
-        .setScrollFactor(0).setDepth(200);
-      z.on("pointerdown", () => { vis.setFillStyle(PAL.moonCyan); scene.events.emit("vinput-down", dir); });
-      z.on("pointerup", () => { vis.setFillStyle(PAL.silverMid); scene.events.emit("vinput-up", dir); });
-      z.on("pointerout", () => { vis.setFillStyle(PAL.silverMid); scene.events.emit("vinput-up", dir); });
+    const mkBtn = (x: number, y: number, w: number, h: number, dir: string, label?: string) => {
+      const z = scene.add.zone(x, y, w, h).setScrollFactor(0).setOrigin(0.5).setDepth(202).setInteractive();
+      const vis = scene.add.rectangle(x, y, w - 1, h - 1, 0x3a4868, 0.85).setScrollFactor(0).setDepth(201);
+      scene.add.rectangle(x, y, w + 1, h + 1, 0xdde6f5, 0.5).setScrollFactor(0).setDepth(200);
+      if (label) new GBCText(scene, x - 2, y - 3, label, { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
+      z.on("pointerdown", () => { vis.setFillStyle(0x7898c0); scene.events.emit("vinput-down", dir); });
+      z.on("pointerup",   () => { vis.setFillStyle(0x3a4868); scene.events.emit("vinput-up",   dir); });
+      z.on("pointerout",  () => { vis.setFillStyle(0x3a4868); scene.events.emit("vinput-up",   dir); });
     };
-    mkBtn(dpadCx, dpadCy - 14, 18, 14, "up");
-    mkBtn(dpadCx, dpadCy + 14, 18, 14, "down");
-    mkBtn(dpadCx - 14, dpadCy, 14, 18, "left");
-    mkBtn(dpadCx + 14, dpadCy, 14, 18, "right");
+    mkBtn(dpadCx,      dpadCy - 11, 11, 9, "up");
+    mkBtn(dpadCx,      dpadCy + 11, 11, 9, "down");
+    mkBtn(dpadCx - 11, dpadCy,      9, 11, "left");
+    mkBtn(dpadCx + 11, dpadCy,      9, 11, "right");
 
-    // A and B
-    const a = scene.add.circle(VIEW_W - 26, VIEW_H - 30, 12, 0xd84a4a).setScrollFactor(0).setDepth(201).setInteractive();
-    pixelText(scene, VIEW_W - 30, VIEW_H - 34, "A", 10).setDepth(202);
-    a.on("pointerdown", () => scene.events.emit("vinput-action"));
+    // A and B (Game Boy color scheme: A red, B yellow-ish)
+    const aZ = scene.add.zone(GBC_W - 18, GBC_H - 22, 18, 18).setScrollFactor(0).setDepth(202).setInteractive();
+    const aVis = scene.add.circle(GBC_W - 18, GBC_H - 22, 8, 0xd84a4a, 1).setScrollFactor(0).setDepth(201);
+    new GBCText(scene, GBC_W - 21, GBC_H - 26, "A", { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
+    aZ.on("pointerdown", () => { aVis.setScale(0.9); scene.events.emit("vinput-action"); });
+    aZ.on("pointerup",   () => aVis.setScale(1));
+    aZ.on("pointerout",  () => aVis.setScale(1));
 
-    const b = scene.add.circle(VIEW_W - 50, VIEW_H - 16, 10, 0x4ab84a).setScrollFactor(0).setDepth(201).setInteractive();
-    pixelText(scene, VIEW_W - 53, VIEW_H - 20, "B", 9).setDepth(202);
-    b.on("pointerdown", () => scene.events.emit("vinput-cancel"));
+    const bZ = scene.add.zone(GBC_W - 36, GBC_H - 14, 14, 14).setScrollFactor(0).setDepth(202).setInteractive();
+    const bVis = scene.add.circle(GBC_W - 36, GBC_H - 14, 6, 0xe0c060, 1).setScrollFactor(0).setDepth(201);
+    new GBCText(scene, GBC_W - 39, GBC_H - 18, "B", { color: COLOR.textLight, depth: 203, scrollFactor: 0 });
+    bZ.on("pointerdown", () => { bVis.setScale(0.9); scene.events.emit("vinput-cancel"); });
+    bZ.on("pointerup",   () => bVis.setScale(1));
+    bZ.on("pointerout",  () => bVis.setScale(1));
   }
 }
 
@@ -74,7 +72,7 @@ export class InputState {
       w: kb.addKey("W"), s: kb.addKey("S"), a: kb.addKey("A"), d: kb.addKey("D"),
     };
     scene.events.on("vinput-down", (dir: string) => { (this as any)[dir] = true; });
-    scene.events.on("vinput-up", (dir: string) => { (this as any)[dir] = false; });
+    scene.events.on("vinput-up",   (dir: string) => { (this as any)[dir] = false; });
   }
   poll() {
     const k = this.keys;
@@ -87,14 +85,12 @@ export class InputState {
   }
 }
 
-/** Build an animated Rowan sprite using the rowan_walk sheet. */
+/** Build an animated Rowan sprite using the rowan walk sheet. */
 export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
   const c = scene.add.container(x, y);
-  const glow = scene.add.circle(0, 2, 11, PAL.moonCyan, 0.18);
-  scene.tweens.add({ targets: glow, alpha: 0.32, scale: 1.15, duration: 1200, yoyo: true, repeat: -1 });
-  const sprite = scene.add.sprite(0, 0, "rowan_walk", 0);
+  const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
   sprite.play("rowan_down_idle");
-  c.add([glow, sprite]);
+  c.add([sprite]);
   c.setSize(16, 24);
   c.setData("sprite", sprite);
   c.setData("dir", "down");
@@ -109,7 +105,7 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
   if (moving) {
     if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
-    else dir = dy > 0 ? "down" : "up";
+    else                              dir = dy > 0 ? "down"  : "up";
     c.setData("dir", dir);
     const key = `rowan_${dir}`;
     if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
@@ -117,4 +113,51 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
     const key = `rowan_${dir}_idle`;
     if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
   }
+}
+
+/**
+ * Render a multi-line dialog with bitmap font. Returns control object.
+ * Lines come in [{who, text}], advance with A/Space/Enter/click.
+ */
+export function runDialog(
+  scene: Phaser.Scene,
+  lines: { who: string; text: string }[],
+  onDone?: () => void,
+) {
+  const boxX = 4, boxY = GBC_H - 50, boxW = GBC_W - 8, boxH = 46;
+  const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
+  const who = new GBCText(scene, boxX + 6, boxY + 4, "", { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
+  const text = new GBCText(scene, boxX + 6, boxY + 14, "", {
+    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 12,
+  });
+  const hint = new GBCText(scene, boxX + boxW - 14, boxY + boxH - 9, "▼", {
+    color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+  });
+  scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
+
+  let i = 0;
+  let active = true;
+  const next = () => {
+    if (!active) return;
+    if (i >= lines.length) {
+      active = false;
+      box.destroy(); who.destroy(); text.destroy(); hint.destroy();
+      scene.input.keyboard?.off("keydown-SPACE", next);
+      scene.input.keyboard?.off("keydown-ENTER", next);
+      scene.events.off("vinput-action", next);
+      scene.input.off("pointerdown", next);
+      onDone?.();
+      return;
+    }
+    who.setText(lines[i].who.toUpperCase());
+    text.setText(lines[i].text.toUpperCase());
+    i++;
+  };
+  next();
+  scene.input.keyboard?.on("keydown-SPACE", next);
+  scene.input.keyboard?.on("keydown-ENTER", next);
+  scene.events.on("vinput-action", next);
+  scene.input.on("pointerdown", next);
+
+  return { dismiss: () => next() };
 }

@@ -1,109 +1,107 @@
 import * as Phaser from "phaser";
-import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
+import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
-import { attachHUD, InputState, makeRowan, animateRowan } from "./hud";
+import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 
-type Dialog = { who: string; text: string };
-
-const SORYN_OPENING: Dialog[] = [
-  { who: "?", text: "Welcome, Rowan. Take a breath you no longer need." },
+const SORYN_OPENING = [
+  { who: "?",     text: "Welcome, Rowan. Take a breath you no longer need." },
   { who: "Soryn", text: "I am Soryn. A friend of the Threshold." },
   { who: "Soryn", text: "Four old voices want to greet you first." },
   { who: "Soryn", text: "Walk to each circle. Stand. Listen." },
 ];
 
-const ELEMENT_LINES: Record<string, Dialog[]> = {
-  air: [
-    { who: "Air", text: "Clarity is not certainty. It is willingness to see." },
-  ],
-  fire: [
-    { who: "Fire", text: "Courage burns the part of you that hides." },
-  ],
-  water: [
-    { who: "Water", text: "Compassion holds what cannot yet be fixed." },
-  ],
-  earth: [
-    { who: "Earth", text: "You are still here. The ground in you remembers." },
-  ],
+const ELEMENT_LINES: Record<string, { who: string; text: string }[]> = {
+  air:   [{ who: "Air",   text: "Clarity is not certainty. It is willingness to see." }],
+  fire:  [{ who: "Fire",  text: "Courage burns the part of you that hides." }],
+  water: [{ who: "Water", text: "Compassion holds what cannot yet be fixed." }],
+  earth: [{ who: "Earth", text: "You are still here. The ground in you remembers." }],
 };
 
-const SORYN_AFTER: Dialog[] = [
-  { who: "Soryn", text: "Good. Beyond the arch is the Moon — your mirrors wait." },
+const SORYN_AFTER = [
+  { who: "Soryn", text: "Beyond the arch is the Moon - your mirrors wait." },
   { who: "Soryn", text: "There you will learn four small verbs:" },
   { who: "Soryn", text: "Observe. Address. Remember. Release." },
   { who: "Soryn", text: "Press A at the gate when you are ready." },
 ];
+
+// Map dimensions in tiles (160/16 x 144/16 = 10 x 9)
+const MAP_W = 10, MAP_H = 9;
+
+// 0=void, 1=floor, 2=path
+function buildMap(): number[][] {
+  const T = TILE_INDEX;
+  const m: number[][] = [];
+  for (let y = 0; y < MAP_H; y++) {
+    const row: number[] = [];
+    for (let x = 0; x < MAP_W; x++) {
+      // void at top edge, void at bottom corners, path band in middle
+      if (y < 2) row.push(T.SILVER_VOID);
+      else if (y === 2) row.push(T.SILVER_EDGE_N);
+      else if (y >= 3 && y <= 6) row.push(y === 4 || y === 5 ? T.SILVER_PATH : T.SILVER_FLOOR);
+      else row.push(T.SILVER_VOID);
+    }
+    m.push(row);
+  }
+  return m;
+}
+
+type ElemKind = "air" | "fire" | "water" | "earth";
 
 export class SilverThresholdScene extends Phaser.Scene {
   private save!: SaveSlot;
   private rowan!: Phaser.GameObjects.Container;
   private input2!: InputState;
   private dialogActive = false;
-  private circles: { kind: string; sprite: Phaser.GameObjects.Container; visited: boolean }[] = [];
+  private circles: { kind: ElemKind; sprite: Phaser.GameObjects.Sprite; x: number; y: number; visited: boolean }[] = [];
   private gate!: Phaser.GameObjects.Container;
+  private soryn!: Phaser.GameObjects.Sprite;
+  private hint!: GBCText;
 
   constructor() { super("SilverThreshold"); }
   init(data: { save: SaveSlot }) { this.save = data.save; }
 
   create() {
-    this.cameras.main.setBackgroundColor(PAL.void);
+    this.cameras.main.setBackgroundColor(COLOR.void);
+    this.cameras.main.fadeIn(400);
 
-    // Painted backdrop (the silver path)
-    this.add.image(VIEW_W / 2, VIEW_H / 2, "silver_threshold_base")
-      .setDisplaySize(VIEW_W + 40, VIEW_H + 40)
-      .setAlpha(0.55);
-    this.add.image(VIEW_W / 2, VIEW_H / 2, "silver_threshold_effects")
-      .setDisplaySize(VIEW_W, VIEW_H)
-      .setAlpha(0.25)
-      .setBlendMode(Phaser.BlendModes.SCREEN);
-
-    // The walking path band
-    const path = this.add.graphics();
-    path.fillStyle(PAL.silverDark, 0.55);
-    path.fillRoundedRect(20, 80, VIEW_W - 40, 80, 10);
-    path.lineStyle(1, PAL.silverLight, 0.6);
-    path.strokeRoundedRect(20, 80, VIEW_W - 40, 80, 10);
-
-    // Reception circles (4 elements) along the band
-    const positions: [string, number, number, number][] = [
-      ["air", 60, 120, PAL.air],
-      ["fire", 120, 120, PAL.fire],
-      ["water", 180, 120, PAL.water],
-      ["earth", 240, 120, PAL.earth],
-    ];
-    positions.forEach(([kind, x, y, color]) => {
-      const c = this.add.container(x, y);
-      const ring = this.add.circle(0, 0, 12, color, 0.25).setStrokeStyle(1, color, 0.9);
-      const inner = this.add.circle(0, 0, 5, color, 0.7);
-      c.add([ring, inner]);
-      this.tweens.add({ targets: ring, scale: 1.25, alpha: 0.45, duration: 1400, yoyo: true, repeat: -1 });
-      this.circles.push({ kind, sprite: c, visited: this.save.flags[`elem_${kind}`] === true });
-      if (this.circles[this.circles.length - 1].visited) {
-        ring.setAlpha(0.1); inner.setAlpha(0.25);
+    // Paint tilemap
+    const map = buildMap();
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        this.add.image(x * TILE, y * TILE, "gbc_tiles", map[y][x]).setOrigin(0, 0);
       }
-    });
+    }
 
-    // Soryn at far right
-    const soryn = this.add.container(285, 120);
-    const sBody = this.add.rectangle(0, 2, 8, 12, 0x2a3550).setStrokeStyle(1, PAL.moonCyan);
-    const sHead = this.add.rectangle(0, -7, 7, 7, PAL.pearl).setStrokeStyle(1, PAL.silverDark);
-    const sHair = this.add.rectangle(0, -10, 7, 2, PAL.moonCyan);
-    const sGlow = this.add.circle(0, 0, 14, PAL.moonCyan, 0.15);
-    this.tweens.add({ targets: sGlow, alpha: 0.3, duration: 900, yoyo: true, repeat: -1 });
-    soryn.add([sGlow, sBody, sHead, sHair]);
-    pixelText(this, 277, 100, "Soryn", 7, "#8ec8e8");
+    // Element circles along the path
+    const placements: { kind: ElemKind; x: number; y: number }[] = [
+      { kind: "air",   x: 28,  y: 76 },
+      { kind: "fire",  x: 60,  y: 76 },
+      { kind: "water", x: 92,  y: 76 },
+      { kind: "earth", x: 124, y: 76 },
+    ];
+    for (const p of placements) {
+      const visited = !!this.save.flags[`elem_${p.kind}`];
+      const s = this.add.sprite(p.x, p.y, "elements", p.kind === "air" ? 0 : p.kind === "fire" ? 2 : p.kind === "water" ? 4 : 6);
+      s.play(`elem_${p.kind}`);
+      if (visited) s.setAlpha(0.35);
+      this.circles.push({ kind: p.kind, sprite: s, x: p.x, y: p.y, visited });
+    }
 
-    // Moon gate (south, becomes active after all 4 circles visited)
-    this.gate = this.add.container(VIEW_W / 2, VIEW_H - 28);
-    const gateImg = this.add.image(0, 0, "moon_gate_threshold").setDisplaySize(60, 60).setAlpha(0.6);
-    const gateLabel = pixelText(this, -22, -32, "MOON GATE", 7, "#6a7a9c");
-    this.gate.add([gateImg, gateLabel]);
-    (this.gate as any).label = gateLabel;
-    (this.gate as any).img = gateImg;
+    // Soryn at far right of path
+    this.soryn = this.add.sprite(146, 70, "soryn", 0);
+    this.soryn.play("soryn_flicker");
+    new GBCText(this, 138, 56, "SORYN", { color: COLOR.textAccent });
+
+    // Gate at south
+    this.gate = this.add.container(GBC_W / 2, GBC_H - 18);
+    const gateImg = this.add.image(0, 0, "gbc_tiles", TILE_INDEX.GATE).setOrigin(0.5);
+    gateImg.setAlpha(this.save.flags.elements_done ? 1 : 0.4);
+    this.gate.add([gateImg]);
+    this.gate.setData("img", gateImg);
 
     // Player
-    this.rowan = makeRowan(this, 30, 120);
+    this.rowan = makeRowan(this, 16, 70);
 
     // HUD + input
     attachHUD(this, () => this.save.stats);
@@ -112,18 +110,24 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
-    // First-time arrival → trigger Soryn opening dialog after a beat
+    this.hint = new GBCText(this, 4, GBC_H - 9, "MOVE: ARROWS  ACT: A", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
+
+    // First-time arrival → trigger Soryn opening dialog
     if (!this.save.flags.intro_done) {
-      this.time.delayedCall(600, () => this.runDialog(SORYN_OPENING, () => {
-        this.save.flags.intro_done = true;
-        writeSave(this.save);
-      }));
+      this.dialogActive = true;
+      this.time.delayedCall(500, () => {
+        runDialog(this, SORYN_OPENING, () => {
+          this.save.flags.intro_done = true;
+          writeSave(this.save);
+          this.dialogActive = false;
+        });
+      });
     }
   }
 
   update(_t: number, dt: number) {
     if (this.dialogActive) return;
-    const speed = 0.06 * dt;
+    const speed = 0.04 * dt;
     const i = this.input2.poll();
     let dx = 0, dy = 0;
     if (i.left)  dx -= speed;
@@ -132,29 +136,30 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (i.down)  dy += speed;
     this.rowan.x += dx;
     this.rowan.y += dy;
-    this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 24, VIEW_W - 24);
-    this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 90, VIEW_H - 20);
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 8, GBC_W - 8);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 50, GBC_H - 14);
     animateRowan(this.rowan, dx, dy);
 
     // Auto-trigger element circles on touch
     for (const c of this.circles) {
       if (c.visited) continue;
-      const dx = this.rowan.x - c.sprite.x;
-      const dy = this.rowan.y - c.sprite.y;
-      if (dx * dx + dy * dy < 14 * 14) {
+      const ddx = this.rowan.x - c.x, ddy = this.rowan.y - c.y;
+      if (ddx * ddx + ddy * ddy < 10 * 10) {
         c.visited = true;
         this.save.flags[`elem_${c.kind}`] = true;
-        // grant a stat
+        c.sprite.setAlpha(0.35);
         if (c.kind === "air")   this.save.stats.clarity++;
         if (c.kind === "fire")  this.save.stats.courage++;
         if (c.kind === "water") this.save.stats.compassion++;
         if (c.kind === "earth") this.save.stats.clarity++;
         this.events.emit("stats-changed");
         writeSave(this.save);
-        // visual fade
-        c.sprite.list.forEach((o: any) => o.setAlpha?.(0.15));
-        this.runDialog(ELEMENT_LINES[c.kind], () => this.checkAllElements());
-        break;
+        this.dialogActive = true;
+        runDialog(this, ELEMENT_LINES[c.kind], () => {
+          this.dialogActive = false;
+          this.checkAllElements();
+        });
+        return;
       }
     }
   }
@@ -164,60 +169,30 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (all && !this.save.flags.elements_done) {
       this.save.flags.elements_done = true;
       writeSave(this.save);
-      // Activate gate
-      (this.gate as any).img.setAlpha(1);
-      (this.gate as any).label.setColor("#eef3ff").setText("MOON GATE  ▼");
-      this.tweens.add({ targets: this.gate, scale: 1.05, duration: 700, yoyo: true, repeat: -1 });
-      this.runDialog(SORYN_AFTER);
+      (this.gate.getData("img") as Phaser.GameObjects.Image).setAlpha(1);
+      this.tweens.add({ targets: this.gate, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
+      this.dialogActive = true;
+      runDialog(this, SORYN_AFTER, () => { this.dialogActive = false; });
     }
   }
 
   private tryInteract() {
     if (this.dialogActive) return;
     // Soryn talk
-    const dx = this.rowan.x - 285, dy = this.rowan.y - 120;
-    if (dx * dx + dy * dy < 18 * 18) {
+    const sdx = this.rowan.x - this.soryn.x, sdy = this.rowan.y - this.soryn.y;
+    if (sdx * sdx + sdy * sdy < 14 * 14) {
+      this.dialogActive = true;
       const lines = this.save.flags.elements_done ? SORYN_AFTER : SORYN_OPENING;
-      this.runDialog(lines);
+      runDialog(this, lines, () => { this.dialogActive = false; });
       return;
     }
     // Gate enter
     const gx = this.rowan.x - this.gate.x, gy = this.rowan.y - this.gate.y;
-    if (gx * gx + gy * gy < 24 * 24 && this.save.flags.elements_done) {
+    if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
       this.save.scene = "MoonHall";
       writeSave(this.save);
-      this.cameras.main.fadeOut(600, 0, 0, 0);
+      this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("MoonHall", { save: this.save }));
     }
-  }
-
-  private runDialog(lines: Dialog[], onDone?: () => void) {
-    this.dialogActive = true;
-    const box = drawDialogBox(this, 12, 168, VIEW_W - 24, 60);
-    const who = pixelText(this, 22, 174, "", 8, "#8ec8e8").setDepth(101);
-    const text = pixelText(this, 22, 188, "", 9).setDepth(101);
-    text.setWordWrapWidth(VIEW_W - 48);
-    const hint = pixelText(this, VIEW_W - 60, 216, "▼ A / ↵", 7, "#8ec8e8").setDepth(101);
-    let i = 0;
-    const next = () => {
-      if (i >= lines.length) {
-        box.destroy(); who.destroy(); text.destroy(); hint.destroy();
-        this.dialogActive = false;
-        this.input.keyboard?.off("keydown-SPACE", next);
-        this.input.keyboard?.off("keydown-ENTER", next);
-        this.events.off("vinput-action", next);
-        this.input.off("pointerdown", next);
-        onDone?.();
-        return;
-      }
-      who.setText(lines[i].who);
-      text.setText(lines[i].text);
-      i++;
-    };
-    next();
-    this.input.keyboard?.on("keydown-SPACE", next);
-    this.input.keyboard?.on("keydown-ENTER", next);
-    this.events.on("vinput-action", next);
-    this.input.on("pointerdown", next);
   }
 }
