@@ -194,7 +194,11 @@ export function runDialog(
   scene.input.keyboard?.on("keydown-SPACE", next);
   scene.input.keyboard?.on("keydown-ENTER", next);
   scene.events.on("vinput-action", next);
-  scene.input.on("pointerdown", next);
+  // Defer pointerdown registration so the click/tap that opened the dialog
+  // does not immediately advance it.
+  scene.time.delayedCall(120, () => {
+    if (active) scene.input.on("pointerdown", next);
+  });
 
   return { dismiss: () => next() };
 }
