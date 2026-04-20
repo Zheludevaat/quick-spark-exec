@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
 import type { SaveSlot } from "../types";
 
