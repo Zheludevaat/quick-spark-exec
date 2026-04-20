@@ -101,6 +101,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     const c = getControls();
     if (page === "main") {
       title.setText("SETTINGS · DISPLAY & TOUCH");
+      const audio = getAudio();
+      const volPct = Math.round(audio.volume * 100);
       const rows: { label: string; value: string }[] = [
         { label: "TOUCH LAYOUT", value: c.touchLayout.toUpperCase() },
         { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
@@ -110,12 +112,14 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
           label: "DIALOG AUTO-ADV",
           value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
         },
+        { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
+        { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
         { label: "REBIND KEYS →", value: "" },
         { label: "RESET DEFAULTS", value: "" },
       ];
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
       rows.forEach((r, idx) => {
-        const y = 30 + idx * 11;
+        const y = 26 + idx * 10;
         const isCur = idx === cursor;
         const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
           color: COLOR.textAccent,
