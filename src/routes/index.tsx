@@ -5,10 +5,10 @@ export const Route = createFileRoute("/")({
   component: GamePage,
   head: () => ({
     meta: [
-      { title: "Hermetic Comedy — Act 0 + I: The Imaginal Realm" },
-      { name: "description", content: "A pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness." },
-      { property: "og:title", content: "Hermetic Comedy — Act 0 & I" },
-      { property: "og:description", content: "A GBC-style RPG: the Last Day, the Silver Threshold, and the Moon's Imaginal Realm." },
+      { title: "Hermetic Comedy — a pixel-art RPG of small verbs" },
+      { name: "description", content: "A multi-act pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness." },
+      { property: "og:title", content: "Hermetic Comedy" },
+      { property: "og:description", content: "A GBC-style RPG across the Last Day, the Silver Threshold, and the Imaginal Realm." },
     ],
   }),
 });
@@ -58,14 +58,7 @@ function GamePage() {
         fontFamily: "monospace",
       }}
     >
-      <header style={{ textAlign: "center", padding: "8px 16px" }}>
-        <h1 style={{ fontSize: 18, letterSpacing: "0.2em", margin: 0, color: "#8ec8e8" }}>
-          HERMETIC COMEDY
-        </h1>
-        <p style={{ fontSize: 11, opacity: 0.7, margin: "4px 0 0", letterSpacing: "0.1em" }}>
-          act 0 · the last day &middot; act i · the imaginal realm
-        </p>
-      </header>
+      {/* The game scene renders its own title + act banner — no external header to avoid duplication. */}
 
       <div
         ref={hostRef}
