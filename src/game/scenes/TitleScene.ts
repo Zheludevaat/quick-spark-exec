@@ -173,9 +173,84 @@ export class TitleScene extends Phaser.Scene {
       this.scene.start(next, { save: slot });
     };
     const erase = () => {
-      audio.sfx("cancel");
-      clearSave();
-      this.scene.restart();
+      // Two-step gate: show a confirmation overlay before wiping the save.
+      audio.sfx("cursor");
+      const dim = this.add
+        .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.82)
+        .setOrigin(0, 0)
+        .setDepth(950)
+        .setInteractive();
+      const box = drawGBCBox(this, 16, 50, GBC_W - 32, 44, 951);
+      const q1 = new GBCText(this, 24, 56, "ERASE THE SAVE?", {
+        color: COLOR.textGold,
+        depth: 952,
+      });
+      const q2 = new GBCText(this, 24, 66, "THIS CANNOT BE UNDONE.", {
+        color: COLOR.textDim,
+        depth: 952,
+      });
+      const yes = new GBCText(this, 24, 80, "▶ YES, ERASE", {
+        color: COLOR.textLight,
+        depth: 952,
+      });
+      const no = new GBCText(this, 92, 80, "  NO", {
+        color: COLOR.textLight,
+        depth: 952,
+      });
+      let pick = 0; // 0 = YES, 1 = NO (default cursor on YES; user must move)
+      const refreshConfirm = () => {
+        yes.setText(pick === 0 ? "▶ YES, ERASE" : "  YES, ERASE");
+        no.setText(pick === 1 ? "▶ NO" : "  NO");
+        yes.setColor(pick === 0 ? COLOR.textGold : COLOR.textLight);
+        no.setColor(pick === 1 ? COLOR.textGold : COLOR.textLight);
+      };
+      refreshConfirm();
+      const cleanupConfirm = () => {
+        unbindAct();
+        unbindCancel();
+        unbindDir();
+        dim.destroy();
+        box.destroy();
+        q1.destroy();
+        q2.destroy();
+        yes.destroy();
+        no.destroy();
+      };
+      const unbindAct = onActionDown(this, "action", () => {
+        if (pick === 0) {
+          audio.sfx("cancel");
+          cleanupConfirm();
+          clearSave();
+          this.scene.restart();
+        } else {
+          audio.sfx("cursor");
+          cleanupConfirm();
+        }
+      });
+      const unbindCancel = onActionDown(this, "cancel", () => {
+        audio.sfx("cursor");
+        cleanupConfirm();
+      });
+      const unbindDir = onDirection(this, (d) => {
+        if (d === "left" || d === "right") {
+          pick = pick === 0 ? 1 : 0;
+          audio.sfx("cursor");
+          refreshConfirm();
+        }
+      });
+      // Pointer support
+      yes.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        pick = 0;
+        refreshConfirm();
+        audio.sfx("cancel");
+        cleanupConfirm();
+        clearSave();
+        this.scene.restart();
+      });
+      no.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        audio.sfx("cursor");
+        cleanupConfirm();
+      });
     };
     const confirm = () => {
       const opt = options[cursor];
