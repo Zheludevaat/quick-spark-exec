@@ -66,3 +66,34 @@ export function markOperationDone(save: SaveSlot, key: string): void {
   save.flags[key] = true;
   writeSave(save);
 }
+
+/**
+ * Award a stone with a named toast at the top-center of the screen.
+ * Use this from operation scenes when narration warrants it
+ * (e.g. "BLACK STONE — sat with the Mother").
+ */
+export function awardNamedStone(
+  scene: Phaser.Scene,
+  save: SaveSlot,
+  color: StoneColor,
+  reason: string,
+  n = 1,
+): void {
+  awardStone(save, color, n);
+  const t = new GBCText(scene, GBC_W / 2 - 48, 32, `+ ${STONE_LABEL[color]} - ${reason}`, {
+    color: COLOR.textGold,
+    depth: 240,
+    scrollFactor: 0,
+    maxWidthPx: GBC_W - 12,
+  });
+  scene.tweens.add({
+    targets: t.obj,
+    y: 22,
+    alpha: 0,
+    duration: 2000,
+    delay: 700,
+    onComplete: () => t.destroy(),
+  });
+  getAudio().sfx("resolve");
+}
+
