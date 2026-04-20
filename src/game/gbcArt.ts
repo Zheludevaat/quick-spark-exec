@@ -1365,6 +1365,7 @@ export class GBCText {
     this.shadow = opts.shadow;
     this.maxWidthPx = opts.maxWidthPx ?? 200;
     this.key = `gbctext_${Math.random().toString(36).slice(2, 9)}`;
+    this._lastText = text;
     const lines = wrapText(text, this.maxWidthPx);
     const w = Math.max(1, ...lines.map(l => measureText(l)));
     const h = Math.max(1, lines.length * (CHAR_H + 2) - 2);
