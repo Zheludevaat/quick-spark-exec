@@ -82,6 +82,23 @@ export function makeTex(scene: Phaser.Scene, key: string, w: number, h: number) 
   return { tex, ctx: tex.getContext() as CanvasRenderingContext2D };
 }
 
+/** Register a grid of numbered frames on a CanvasTexture (left-to-right, top-to-bottom). */
+export function addGridFrames(
+  tex: Phaser.Textures.CanvasTexture,
+  frameW: number,
+  frameH: number,
+  cols: number,
+  rows: number,
+) {
+  let i = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      tex.add(i, 0, c * frameW, r * frameH, frameW, frameH);
+      i++;
+    }
+  }
+}
+
 // ============================================================================
 // TILES (16x16) — bake into a single tileset image
 // ============================================================================
@@ -346,6 +363,7 @@ export function bakeTileset(scene: Phaser.Scene, key = "gbc_tiles") {
   const h = TILE;
   const { ctx, tex } = makeTex(scene, key, w, h);
   TILE_DEFS.forEach((t, i) => paintGrid(ctx, t.rows, PAL[t.pal], i * TILE, 0));
+  addGridFrames(tex, TILE, TILE, TILE_DEFS.length, 1);
   tex.refresh();
   return key;
 }
@@ -705,6 +723,7 @@ export function bakeRowan(scene: Phaser.Scene, key = "rowan") {
       paintGrid(ctx, dir[r][c], PAL.rowan, c * ROWAN_FRAME_W, r * ROWAN_FRAME_H);
     }
   }
+  addGridFrames(tex, ROWAN_FRAME_W, ROWAN_FRAME_H, cols, rows);
   tex.refresh();
   return key;
 }
@@ -773,6 +792,7 @@ export function bakeSoryn(scene: Phaser.Scene, key = "soryn") {
   const h = ROWAN_FRAME_H;
   const { ctx, tex } = makeTex(scene, key, w, h);
   SORYN_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.soryn, i * ROWAN_FRAME_W, 0));
+  addGridFrames(tex, ROWAN_FRAME_W, ROWAN_FRAME_H, SORYN_FRAMES.length, 1);
   tex.refresh();
   return key;
 }
@@ -1004,6 +1024,7 @@ export function bakeEnemies(scene: Phaser.Scene, key = "enemies") {
   REFLECTION_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.reflection, i * ENEMY_W, 0));
   ECHO_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.echo, (2 + i) * ENEMY_W, 0));
   GLITTER_FRAMES.forEach((f, i) => paintGrid(ctx, f, PAL.glitter, (4 + i) * ENEMY_W, 0));
+  addGridFrames(tex, ENEMY_W, ENEMY_H, 6, 1);
   tex.refresh();
   return key;
 }
@@ -1132,6 +1153,7 @@ export function bakeBoss(scene: Phaser.Scene, key = "boss") {
       paintGrid(ctx, f, PAL[st.palKey], (si * 2 + fi) * BOSS_W, 0);
     });
   });
+  addGridFrames(tex, BOSS_W, BOSS_H, 10, 1);
   tex.refresh();
   return key;
 }
@@ -1192,6 +1214,7 @@ export function bakeElements(scene: Phaser.Scene, key = "elements") {
     paintGrid(ctx, ELEM_BASE[0], PAL[p], (ei * 2) * TILE, 0);
     paintGrid(ctx, ELEM_BASE[1], PAL[p], (ei * 2 + 1) * TILE, 0);
   });
+  addGridFrames(tex, TILE, TILE, 8, 1);
   tex.refresh();
   return key;
 }
