@@ -48,6 +48,19 @@ const CMDS: { label: string; cmd: Command }[] = [
   { label: "RELEASE",  cmd: "release" },
 ];
 
+const VERB_HINT: Record<Command, string> = {
+  observe:  "Look at it plainly. No story.",
+  address:  "Speak the unsaid thing.",
+  remember: "Recall the whole afternoon.",
+  release:  "Let it go - you learn less.",
+};
+
+const KIND_GOAL: Record<EnemyKind, string> = {
+  reflection: "A mimic. Try OBSERVE.",
+  echo:       "A regretted word. Try ADDRESS.",
+  glitter:    "A scattered memory. Try REMEMBER.",
+};
+
 export class EncounterScene extends Phaser.Scene {
   private save!: SaveSlot;
   private def!: EnemyDef;
