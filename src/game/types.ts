@@ -10,6 +10,34 @@ export type SceneKey =
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
 
+/** Canonical act number per scene. Extend as new acts ship. */
+export const ACT_BY_SCENE: Record<SceneKey, number> = {
+  LastDay: 0,
+  Crossing: 0,
+  SilverThreshold: 0,
+  ImaginalRealm: 1,
+  CuratedSelf: 1,
+  Epilogue: 1,
+};
+
+/** Roman numeral + chapter title shown on the title screen. */
+export const ACT_TITLES: Record<number, string> = {
+  0: "PRELUDE — THE LAST DAY",
+  1: "I — THE IMAGINAL",
+  2: "II — THE GREAT WORK",
+  3: "III — THE RETURN",
+};
+
+/** Per-scene short label for the Continue row. */
+export const SCENE_LABEL: Record<SceneKey, string> = {
+  LastDay: "The Last Day",
+  Crossing: "The Crossing",
+  SilverThreshold: "Silver Threshold",
+  ImaginalRealm: "Imaginal Realm",
+  CuratedSelf: "Curated Self",
+  Epilogue: "Epilogue",
+};
+
 export type SaveSlot = {
   scene: SceneKey;
   act: number;
