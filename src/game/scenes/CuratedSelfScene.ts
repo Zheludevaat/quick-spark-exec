@@ -57,6 +57,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private brightestIdx = 0;
   private fragOrderProgress = 0;
   private missIdx = 0;
+  private brightestTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super("CuratedSelf");
@@ -65,13 +66,15 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save = data.save;
     this.cmdTexts = [];
     this.cmds = [];
-    this.phase = "composed";
+    // If the player previously chose REMAIN, skip composed/fractured and
+    // resume at exposed so they don't redo phases 1-2.
+    this.phase = this.save.flags.curated_progress_exposed ? "exposed" : "composed";
     this.cursor = 0;
     this.busy = false;
-    this.addressHits = 0;
+    this.addressHits = this.phase === "exposed" ? 3 : 0;
     this.witnessHits = 0;
     this.fragments = [];
-    this.fragOrderProgress = 0;
+    this.fragOrderProgress = this.phase === "exposed" ? 3 : 0;
     this.missIdx = 0;
   }
 
@@ -309,11 +312,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       });
       f.sprite.fillColor = i === this.brightestIdx ? 0xffe098 : 0xd88080;
     });
-    // Auto-cycle every 3s if player doesn't act
-    this.time.delayedCall(3000, () => this.cycleBrightest());
+    // Re-arm — but track the timer so phase change can stop it.
+    this.brightestTimer?.remove(false);
+    this.brightestTimer = this.time.delayedCall(3000, () => this.cycleBrightest());
   }
 
   private cleanupFragments() {
+    this.brightestTimer?.remove(false);
+    this.brightestTimer = null;
     this.fragments.forEach((f) => f.sprite.destroy());
     this.fragments = [];
     this.boss.setVisible(true);
@@ -411,6 +417,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save.scene = "ImaginalRealm";
     this.save.region = "corridor";
     this.save.flags.plateau_remain = true;
+    this.save.flags.curated_progress_exposed = true;
     writeSave(this.save);
     const a = getAudio();
     a.music.stop();
@@ -527,7 +534,7 @@ export class EpilogueScene extends Phaser.Scene {
       color: COLOR.textLight,
       depth: 110,
     });
-    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, {
+    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}`, {
       color: COLOR.textGold,
       depth: 110,
     });
@@ -585,12 +592,26 @@ export class EpilogueScene extends Phaser.Scene {
   private choose() {
     const a = getAudio();
     a.sfx("confirm");
-    a.music.stop();
     if (this.cursor === 0) {
+      a.music.stop();
       this.scene.start("Title");
       return;
     }
-    clearSave();
-    this.scene.start("Title");
+    // 2-step erase confirm via inquiry — single A press should never wipe a save.
+    runInquiry(
+      this,
+      { who: "Soryn", text: "Erase the entire journey? This cannot be undone." },
+      [
+        { choice: "silent", label: "KEEP IT", reply: "We keep it. The shards remain." },
+        { choice: "confess", label: "ERASE", reply: "The slate is bare. Begin again, kindly." },
+      ],
+      (picked) => {
+        if (picked.label === "ERASE") {
+          clearSave();
+          a.music.stop();
+          this.scene.start("Title");
+        }
+      },
+    );
   }
 }

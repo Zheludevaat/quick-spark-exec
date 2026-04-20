@@ -207,22 +207,14 @@ export function onActionDown(
   action: GameAction,
   handler: () => void,
 ): () => void {
-  const kb = scene.input.keyboard;
-  if (!kb)
-    return () => {
-      /* noop */
-    };
   const wrap = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
     const b = state.bindings[action];
     if (name === b.primary || name === b.secondary) handler();
   };
-  // We attach to the underlying DOM listener so rebinds at runtime "just work"
-  // without needing to re-register Phaser keys.
   const domHandler = (e: KeyboardEvent) => wrap(e);
   window.addEventListener("keydown", domHandler);
-  // Also clean up if scene shuts down.
   const cleanup = () => window.removeEventListener("keydown", domHandler);
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
@@ -237,11 +229,6 @@ export function onDirection(
   scene: Phaser.Scene,
   handler: (dir: "up" | "down" | "left" | "right") => void,
 ): () => void {
-  const kb = scene.input.keyboard;
-  if (!kb)
-    return () => {
-      /* noop */
-    };
   const domHandler = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;

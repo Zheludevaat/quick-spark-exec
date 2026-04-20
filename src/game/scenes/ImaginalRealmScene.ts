@@ -98,9 +98,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private focusGlow!: Phaser.GameObjects.Arc;
   private companion?: SorynCompanion;
   private region: ImaginalRegion = "pools";
+  private lastRegion: ImaginalRegion | null = null;
   private regionRoot!: Phaser.GameObjects.Container;
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
+  private knotTracker!: GBCText;
 
   constructor() {
     super("ImaginalRealm");
@@ -130,13 +132,20 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.events.on("vinput-action", () => this.tryInteract());
     onActionDown(this, "action", () => this.tryInteract());
 
-    // Daimon Mark glyph (top-right of HUD bar)
+    // Daimon Mark glyph (top-right of HUD bar) — uniform 4-letter codes.
     const bondLabel = this.daimonBondLabel();
-    this.daimonMark = new GBCText(this, GBC_W - 28, 2, bondLabel, {
+    this.daimonMark = new GBCText(this, GBC_W - 30, 2, bondLabel, {
       color: COLOR.textAccent,
       depth: 220,
       scrollFactor: 0,
     });
+    // Knot tracker chip (right of stats bar, left of daimon badge)
+    this.knotTracker = new GBCText(this, GBC_W - 60, 2, "", {
+      color: COLOR.textGold,
+      depth: 220,
+      scrollFactor: 0,
+    });
+    this.refreshKnotTracker();
 
     // Spawn the daimon companion (lives across all 3 sub-regions)
     this.companion = new SorynCompanion(this, this.rowan, () => this.companionLines(), [
@@ -310,12 +319,20 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Place rowan at the entry side
+    // Place rowan at the entry side. We track which region they came from
+    // so a "go back north" flow lands them at the south edge instead of
+    // teleporting back to the original entry.
+    const from = this.lastRegion;
     if (region === "pools") {
-      this.rowan.setPosition(24, 56);
+      if (from === "field") this.rowan.setPosition(80, GBC_H - 24);
+      else this.rowan.setPosition(24, 56);
+    } else if (region === "field") {
+      if (from === "corridor") this.rowan.setPosition(80, GBC_H - 24);
+      else this.rowan.setPosition(80, 32);
     } else {
       this.rowan.setPosition(80, 32);
-    } // entered from north
+    }
+    this.lastRegion = region;
 
     // Region-specific intros (one-shot)
     const introFlag = `intro_${region}`;
@@ -335,9 +352,17 @@ export class ImaginalRealmScene extends Phaser.Scene {
   }
 
   private spawnSeedEchoes() {
-    const seeds = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"].filter(
-      (s) => this.save.seeds[s] && !this.save.seedEchoes[s],
-    );
+    const all = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
+    let seeds = all.filter((s) => this.save.seeds[s] && !this.save.seedEchoes[s]);
+    // Fallback: if the player set few/no seeds in Act 0, spawn 2 generic echoes
+    // so the field is never empty. They become "an echo" in copy.
+    if (seeds.length < 2) {
+      const generic = ["seed_call", "seed_mirror"].filter((s) => !this.save.seedEchoes[s]);
+      for (const g of generic) {
+        if (seeds.length >= 2) break;
+        if (!seeds.includes(g)) seeds.push(g);
+      }
+    }
     const positions = [
       { x: 60, y: 80 },
       { x: 100, y: 80 },
@@ -462,9 +487,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       // Region status
       if (this.region === "corridor") {
         const cleared = this.totalCleared();
-        if (cleared >= 4 && this.rowan.y > GBC_H - 24)
+        const needed = 3;
+        if (cleared >= needed && this.rowan.y > GBC_H - 24)
           this.hint.setText("A: ENTER THE CURATED SELF");
-        else this.hint.setText(`KNOTS QUIETED ${cleared}/4 NEEDED`);
+        else this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
       } else {
         this.hint.setText(
           this.region === "pools" ? "WALK SOUTH TO THE FIELD" : "WALK SOUTH TO THE CORRIDOR",
@@ -578,21 +604,44 @@ export class ImaginalRealmScene extends Phaser.Scene {
     // Boss door (corridor south edge)
     if (this.region === "corridor" && this.rowan.y > GBC_H - 22) {
       const cleared = this.totalCleared();
-      if (cleared >= 4) {
+      if (cleared >= 3) {
         this.save.scene = "CuratedSelf";
         writeSave(this.save);
         const a = getAudio();
         a.sfx("boss");
         a.music.stop();
-        // Hide companion at threshold
         if (this.companion) this.companion.setVisible(false);
         gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
         return;
       }
     }
     const k = this.nearestKnot();
-    if (!k || this.dist(k) > 16 * 16 || k.cleared) return;
+    if (!k || this.dist(k) > 16 * 16) return;
+    if (k.cleared) {
+      // Re-visit reading: short reflection, no state change.
+      this.dialogActive = true;
+      runDialog(this, [{ who: "Soryn", text: this.knotEcho(k.kind) }], () => {
+        this.dialogActive = false;
+      });
+      return;
+    }
     this.launchKnot(k);
+  }
+
+  /** Short reflective line shown when re-touching an already-quieted knot. */
+  private knotEcho(kind: KnotKind): string {
+    switch (kind) {
+      case "reflection":
+        return "THE MIRROR IS QUIET. NO INSIDE TO READ.";
+      case "echo":
+        return "THE LINE BENEATH HOLDS. YOU HEARD IT.";
+      case "glitter":
+        return "THE AFTERNOON IS WHOLE. EVEN THE DULL PARTS.";
+      case "lantern":
+        return "THE LANTERN STAYS DARK. KINDLY.";
+      case "crown":
+        return "PAPER. STILL PAPER.";
+    }
   }
 
   private launchKnot(k: Knot) {
@@ -638,6 +687,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow.destroy();
         k.glow = undefined;
       }
+      this.refreshKnotTracker();
     });
   }
 
@@ -673,10 +723,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
   }
 
   private daimonBondLabel(): string {
-    if (this.save.flags.daimon_bond_accept) return "✦ACCEPT";
-    if (this.save.flags.daimon_bond_question) return "✦QUEST";
-    if (this.save.flags.daimon_bond_refuse) return "✦REFUSE";
-    if (this.save.flags.daimon_bond_listen) return "✦LISTEN";
+    // Uniform 4-letter codes so the badge never visually clips.
+    if (this.save.flags.daimon_bond_accept) return "✦BIND";
+    if (this.save.flags.daimon_bond_question) return "✦QUES";
+    if (this.save.flags.daimon_bond_refuse) return "✦REFU";
+    if (this.save.flags.daimon_bond_listen) return "✦HEAR";
     return "✦BOND";
+  }
+
+  private refreshKnotTracker() {
+    if (!this.knotTracker) return;
+    this.knotTracker.setText(`KNOTS ${this.totalCleared()}/5`);
   }
 }
