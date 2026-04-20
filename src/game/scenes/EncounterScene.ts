@@ -48,6 +48,19 @@ const CMDS: { label: string; cmd: Command }[] = [
   { label: "RELEASE",  cmd: "release" },
 ];
 
+const VERB_HINT: Record<Command, string> = {
+  observe:  "Look at it plainly. No story.",
+  address:  "Speak the unsaid thing.",
+  remember: "Recall the whole afternoon.",
+  release:  "Let it go - you learn less.",
+};
+
+const KIND_GOAL: Record<EnemyKind, string> = {
+  reflection: "A mimic. Try OBSERVE.",
+  echo:       "A regretted word. Try ADDRESS.",
+  glitter:    "A scattered memory. Try REMEMBER.",
+};
+
 export class EncounterScene extends Phaser.Scene {
   private save!: SaveSlot;
   private def!: EnemyDef;
@@ -64,6 +77,8 @@ export class EncounterScene extends Phaser.Scene {
   private cursorMark!: GBCText;
   private misses = 0;
   private intentText?: GBCText;
+  private verbHintText!: GBCText;
+  private goalText!: GBCText;
 
   constructor() { super("Encounter"); }
   init(data: { save: SaveSlot; kind: EnemyKind; onDone: (won: boolean) => void }) {
@@ -131,6 +146,12 @@ export class EncounterScene extends Phaser.Scene {
       this.cmdTexts.push(t);
     });
     this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
+
+    // Goal banner under HUD: tells the player what this encounter IS
+    this.goalText = new GBCText(this, 4, 14, KIND_GOAL[this.def.kind], { color: COLOR.textAccent, depth: 110, maxWidthPx: GBC_W - 90 });
+    // Verb hint inside log box, lower line: explains the highlighted command
+    this.verbHintText = new GBCText(this, 4, 102, `> ${VERB_HINT.observe}`, { color: COLOR.textDim, depth: 103, maxWidthPx: GBC_W - 8 });
+
     this.refreshCursor();
 
     // Input
@@ -161,6 +182,8 @@ export class EncounterScene extends Phaser.Scene {
     const x = 8 + (this.cursor % 2) * 70;
     const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
+    const cmd = CMDS[this.cursor].cmd;
+    if (this.verbHintText) this.verbHintText.setText(`> ${VERB_HINT[cmd]}`);
   }
 
   private choose(i: number) {
@@ -220,9 +243,10 @@ export class EncounterScene extends Phaser.Scene {
         this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
       }
       audio.sfx("miss");
-      // Telegraph the weakness after the first miss
+      // Telegraph the weakness after the first miss — replaces the goal banner
       if (this.misses === 1 && !this.intentText) {
-        this.intentText = new GBCText(this, 4, 14, `FEARS:${this.def.weakness.toUpperCase()}`, {
+        this.goalText.setText("");
+        this.intentText = new GBCText(this, 4, 14, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
           color: COLOR.textGold, depth: 110,
         });
         this.tweens.add({ targets: this.intentText.obj, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });

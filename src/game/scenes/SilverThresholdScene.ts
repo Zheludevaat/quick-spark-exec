@@ -160,7 +160,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
     this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
-    this.hint = new GBCText(this, 4, GBC_H - 9, "MOVE: ARROWS  ACT: A", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
+    this.hint = new GBCText(this, 4, GBC_H - 9, "TOUCH THE 4 CIRCLES", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
 
     // First-time arrival → trigger Soryn opening dialog
     if (!this.save.flags.intro_done) {
@@ -190,6 +190,16 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 50, GBC_H - 14);
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+
+    // Contextual hint based on proximity & progress
+    const visited = this.circles.filter(c => c.visited).length;
+    const sdx = this.rowan.x - this.soryn.x, sdy = this.rowan.y - this.soryn.y;
+    const gdx = this.rowan.x - this.gate.x, gdy = this.rowan.y - this.gate.y;
+    const stx = this.rowan.x - this.stone.x, sty = this.rowan.y - this.stone.y;
+    if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SORYN");
+    else if (gdx * gdx + gdy * gdy < 16 * 16) this.hint.setText(this.save.flags.elements_done ? "A: ENTER THE GATE" : `GATE SEALED  ${visited}/4 CIRCLES`);
+    else if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) this.hint.setText("A: INSPECT STONE");
+    else this.hint.setText(this.save.flags.elements_done ? "WALK TO THE GATE (SOUTH)" : `TOUCH THE CIRCLES  ${visited}/4`);
 
     // Auto-trigger element circles on touch
     for (const c of this.circles) {
