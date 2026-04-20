@@ -728,6 +728,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.companion.update();
       if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) this.companion.pingMovement();
     }
+    this.updateEchoFollower();
 
     // Seed-echo touch
     for (const m of this.seedEchoes) {
@@ -735,6 +736,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       const sdx = this.rowan.x - m.x,
         sdy = this.rowan.y - m.y;
       if (sdx * sdx + sdy * sdy < 7 * 7) this.touchSeedEcho(m);
+    }
+
+    // Syllable lanterns: passive OBSERVE — light when Rowan stands within 12px.
+    for (const l of this.syllableLanterns) {
+      if (l.lit) continue;
+      const lx = this.rowan.x - l.x;
+      const ly = this.rowan.y - l.y;
+      if (lx * lx + ly * ly < 12 * 12) this.litLantern(l);
     }
 
     // Edge transitions
