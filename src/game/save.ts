@@ -43,6 +43,9 @@ export function newSave(): SaveSlot {
     seedEchoes: {},
     lore: [],
     souls: {},
+    soulChoices: {},
+    soulsCompleted: 0,
+    witnessUses: 0,
     sideQuests: {},
     updatedAt: Date.now(),
   };
