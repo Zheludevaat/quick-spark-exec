@@ -44,33 +44,45 @@ export class TitleScene extends Phaser.Scene {
       });
     }
 
-    // ---- Moon disc + halo ----
-    const cx = GBC_W / 2;
-    const cy = 42;
-    const halo = this.add.circle(cx, cy, 28, 0xa8c8e8, 0.18);
-    this.tweens.add({
-      targets: halo,
-      scale: 1.18,
-      alpha: 0.08,
-      duration: 2200,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.inOut",
+    // ---- Seven Planetary Spheres (Hermetic order, traditional colors) ----
+    // Moon · Mercury · Venus · Sun · Mars · Jupiter · Saturn
+    const spheres: { name: string; core: number; mid: number; halo: number; r: number }[] = [
+      { name: "Moon",    core: 0xdde6f5, mid: 0xa8c8e8, halo: 0x7898c0, r: 5 }, // silver
+      { name: "Mercury", core: 0xf0e0a8, mid: 0xc8a868, halo: 0x886838, r: 4 }, // quicksilver/amber
+      { name: "Venus",   core: 0xf0c8d8, mid: 0xc88898, halo: 0x885868, r: 5 }, // rose-copper
+      { name: "Sun",     core: 0xfff0a8, mid: 0xf0b048, halo: 0xc06820, r: 7 }, // gold (largest)
+      { name: "Mars",    core: 0xf0a888, mid: 0xc85838, halo: 0x782818, r: 5 }, // iron red
+      { name: "Jupiter", core: 0xc8d8f0, mid: 0x6890c8, halo: 0x305078, r: 6 }, // royal blue / tin
+      { name: "Saturn",  core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5 }, // lead
+    ];
+    const sphereCY = 38;
+    const spacing = 22;
+    const totalW = spacing * (spheres.length - 1);
+    const startX = GBC_W / 2 - totalW / 2;
+    spheres.forEach((sp, i) => {
+      const sx = startX + i * spacing;
+      // Soft halo
+      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, 0.28);
+      this.tweens.add({
+        targets: halo,
+        scale: 1.3,
+        alpha: 0.08,
+        duration: 1800 + i * 140,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+      // Sphere body — concentric discs for a pixel-shaded ball
+      g.fillStyle(sp.halo, 1);
+      g.fillCircle(sx, sphereCY, sp.r);
+      g.fillStyle(sp.mid, 1);
+      g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 1));
+      g.fillStyle(sp.core, 1);
+      g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 2));
+      // Specular highlight
+      g.fillStyle(0xffffff, 0.55);
+      g.fillCircle(sx - 1, sphereCY - 1, 1);
     });
-    g.fillStyle(0x243058, 1);
-    g.fillCircle(cx, cy, 24);
-    g.fillStyle(0x3a5078, 1);
-    g.fillCircle(cx, cy, 20);
-    g.fillStyle(0x7898c0, 1);
-    g.fillCircle(cx, cy, 16);
-    g.fillStyle(0xa8c8e8, 1);
-    g.fillCircle(cx, cy, 12);
-    g.fillStyle(0xdde6f5, 0.4);
-    g.fillCircle(cx - 3, cy - 3, 5);
-    g.fillStyle(0x7898c0, 0.6);
-    g.fillCircle(cx + 4, cy + 2, 2);
-    g.fillStyle(0x7898c0, 0.6);
-    g.fillCircle(cx - 5, cy + 5, 1);
 
     spawnMotes(this, {
       count: 18,
