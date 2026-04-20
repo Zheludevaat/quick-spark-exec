@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { writeSave } from "../save";
 import type { Command, SaveSlot, Stats } from "../types";
+import { getAudio, SONG_BATTLE } from "../audio";
 
 type EnemyKind = "reflection" | "echo" | "glitter";
 
