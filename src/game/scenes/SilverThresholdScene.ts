@@ -811,11 +811,7 @@ export class SilverThresholdScene extends Phaser.Scene {
           angle += 0.05;
           this.rowan.x = c.x + Math.cos(angle) * radius;
           this.rowan.y = c.y + Math.sin(angle) * radius;
-          animateRowan(
-            this.rowan,
-            Math.cos(angle + Math.PI / 2),
-            Math.sin(angle + Math.PI / 2),
-          );
+          animateRowan(this.rowan, Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2));
         } else {
           stallMs += 30;
           if (stallMs > 900 && angle > 0.4) {
