@@ -535,6 +535,8 @@ export class CuratedSelfScene extends Phaser.Scene {
       unlockLore(this.save, "on_the_inscription_returns");
       showLoreToast(this, "on_the_inscription_returns");
     }
+    // Clear the mid-fight checkpoint so a future Continue doesn't reload Phase 3.
+    delete this.save.flags.curated_progress_exposed;
     writeSave(this.save);
     this.speak("victory");
     this.tweens.add({
@@ -545,6 +547,11 @@ export class CuratedSelfScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * The plateau "REMAIN" branch is only offered on the long-form (3-witness)
+   * plan — fractured/gentle weddings already represent a kind of yielding,
+   * so we don't ask the player to yield twice.
+   */
   private askPlateauRemain() {
     runInquiry(
       this,
