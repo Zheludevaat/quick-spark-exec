@@ -1,126 +1,117 @@
 
 
-# Act 1 Plateau — Souls, Famous Shades, and Side Quests
+# Act 2 — Sophistication Pass
 
-Populate the Imaginal Realm (pools / field / corridor) with named souls the player can address, witness, or remain with. Each soul is a vignette: a short dialog tree, a mechanical hook, and an optional side quest that expands the lore of the Plateau. Famous historical "shades" appear as cameo souls — fitted to the tone (melancholic-mythic, absurd underneath).
+Bring the Athanor up to the density and reactivity of Acts 0–1: named encounters, branching inquiries, save-driven reactivity, side quests, lore depth, and tactile feedback. No new scenes — the existing six get filled out.
 
-## Design pillars
+---
 
-1. **Every soul is a knot of a refusal or attachment.** Their arc resolves only when the player uses the right verb (OBSERVE / ADDRESS / REMEMBER / RELEASE / WITNESS).
-2. **No combat. Only encounter.** Outcomes change stats, unlock lore, sometimes hand over a memory shard fragment.
-3. **Famous shades are never named outright in dialog** — they're recognized by their hook. The lore log names them on unlock. (Tone preserved; nothing breaks the mythic register.)
-4. **Side quests chain souls across regions.** Finishing one soul's arc activates a quest that points at another.
+## Gap analysis (current state vs. plan-act2.md)
 
-## The cast
+| Area | Current | Target |
+|---|---|---|
+| Nigredo shades | 1 generic shade reused 3× | 3 named shades, each with unique 4-option inquiry |
+| Albedo | Rhythm tap, generic beats | Beats keyed to specific Act 1 souls; Bath-Keeper line; Drowned Bride return tied to `the_unfinished_song` |
+| Citrinitas | 3 books, generic accept/refuse | 3 books with branching monologues; Librarian; Lantern Mathematician return; hidden Hypatia (4th read) |
+| Rubedo | 2 unions, Soryn release option | Soryn actively pushes back per pairing; Thirteenth Soul if 12 souls; gold stone wired |
+| Sealed Vessel | 4 inscription options | Filtered to 3 by `weddingType`; reactive to `sorynReleased` and `stainsCarried` |
+| Side quests | None | 4 Act 2 quests wired (`salvage_a_shard`, `read_the_fourth_book`, `meet_the_thirteenth`, `release_soryn`) |
+| Cross-act reactivity | Shards derive from Act 1; little else | Shades, books, Bride, Mathematician all read `soulChoices` / `soulEventLog` / `convictions` |
+| Soryn voice | Static | Per-scene barks; rebellious in Rubedo; absent if released |
+| HUD | Stones + shards | + Stains pip in Albedo+; + conviction count in Citrinitas+; + "alone" indicator if Soryn released |
+| Lore | ~14 entries | + 6 hidden/conditional entries (fourth book, thirteenth, releasing daimon, the bride sang, the inquisitor, the teacher who was torn) |
+| Threshold | Door gating works | + Soryn refuses descent if Walking Saint forced (apology inquiry); + Echo remains at threshold if follower |
 
-`src/game/scenes/imaginal/souls.ts` already stubs 7 souls. Expand to 12 (4 per region + 1 "wandering echo" that appears in all). Famous shades marked **★**.
+---
 
-### Pools (the still water)
-1. **Cartographer** — maps a country that does not exist. Arc: ADDRESS three times, then WITNESS to finish his last map.
-2. **Weeping Twin** — weeps at her own reflection, then laughs. Arc: OBSERVE → REMEMBER → RELEASE.
-3. **★ The Drowned Poet** *(Ophelia-coded; never named)* — recites a half-line of a song no one finished. Arc: REMEMBER the missing word (mini word-pick from 4 options).
-4. **★ The Mirror Philosopher** *(Narcissus by way of Plotinus)* — insists the pool is the truer world. Arc: ADDRESS to argue, OBSERVE to agree, RELEASE to walk past. Each gives different lore.
-
-### Field (the glitter)
-5. **Collector** — jar of motes, eyes too bright. Arc: give him 3 echoes you've touched (consumes seedEcho count) → he gives you back a memory shard fragment.
-6. **Sleeper** — won't wake. Arc: WITNESS only. Awards +1 compassion, unlocks lore "ON SLEEP."
-7. **★ The Walking Saint** *(Simone Weil-coded)* — refuses every gift. Arc: try to OFFER motes 3 times (each refused with a different aphorism), then WITNESS unlocks her lore.
-8. **★ The Composer** *(Beethoven-coded; deaf to the field's music)* — asks "is there a tune here?" Arc: complete a 4-tap rhythm mini (`rhythmTap`) → he hears it once → +1 clarity.
-
-### Corridor (the lanterns)
-9. **Crowned One** — already composed, faintly smug. (Existing — extend.) Arc: WITNESS unlocks the existing crown knot.
-10. **Stonechild** — forgot his name. Arc: OBSERVE three lanterns nearby, each lights one syllable; ADDRESS him with the assembled name.
-11. **★ The Lantern Mathematician** *(Pascal-coded)* — counting infinities by lamplight. Arc: pick the right answer from "ALL / NONE / BOTH / NEITHER" — only WITNESS reveals the right one is "NEITHER."
-12. **★ The Weighed Heart** *(Egyptian psychostasia, anonymized as "ONE WHO CARRIED A FEATHER")* — asks you to hold a feather while she remembers. Arc: stand still for 8s without moving (existing input idle pattern from `miniEarth`). Awards a full memory shard.
-
-### Wanderer
-13. **Echo** *(already stubbed)* — appears in whichever region the player has visited least. Hook for NG+ continuity.
-
-## Side quests (extend `sideQuests.ts`)
-
-New IDs (added to the `SideQuestId` union and `SIDE_QUEST_TITLES`):
-
-| ID | Trigger | Goal | Reward |
-|---|---|---|---|
-| `chart_the_pools` | Finish Cartographer arc | Visit all 3 pool soul positions | +1 clarity, lore `pools_geometry` |
-| `feed_the_collector` | Talk to Collector | Bring 3 field echoes | 1 shard fragment |
-| `name_the_stonechild` | Meet Stonechild | Find 3 syllable lanterns in corridor | Lore `on_naming`, +1 compassion |
-| `the_unfinished_song` | Meet Drowned Poet | Find missing word (hidden on a pool tile) | Lore `unfinished_song` |
-| `weigh_the_feather` | Meet Weighed Heart | Stand still 8s | Full memory shard + lore `the_scale` |
-| `witness_the_saint` | Refuse Saint 3× | WITNESS her | Lore `refused_gifts`, unlocks Echo as a follower in NG+ |
-
-Quests cross-link: finishing `feed_the_collector` reveals a hint pointing to `the_unfinished_song`, etc. — encoded as a `nextHint` field on each quest definition.
-
-## Lore additions (`lore.ts`)
-
-12 new entries, one per soul, plus 4 "world expansion" entries unlocked by quest chains:
-- `on_the_plateau` — what the Plateau is (unlocked by completing any 2 souls).
-- `on_the_imaginal` — Henry Corbin reference, anonymized.
-- `on_the_shades` — why famous souls appear here ("FAME IS A LANTERN. THE PLATEAU NOTICES LANTERNS.").
-- `on_witnessing` — meta-entry on the verb itself, unlocked once WITNESS is used 5 times in the realm.
-
-## Mechanics layer
-
-A new file `src/game/scenes/imaginal/soulRunner.ts` provides:
-
-```ts
-export type SoulArc = {
-  id: SoulId;
-  steps: SoulStep[];               // ordered; advance writes save.souls[id]
-  onComplete: (scene, save) => void;
-};
-export type SoulStep =
-  | { kind: "dialog"; lines: DialogLine[] }
-  | { kind: "inquiry"; prompt; options: InquiryOption[]; advanceOn: InquiryChoice[] }
-  | { kind: "rhythm"; bpm: number; beats: number }
-  | { kind: "idle"; ms: number }
-  | { kind: "witness" };           // requires save.verbs.witness
-
-export function runSoul(scene, save, arc): Promise<void>;
-```
-
-This keeps each soul's data declarative. `ImaginalRealmScene` registers per-region soul sprites in `loadRegion` (using the existing `SOULS` array, expanded), wires `tryInteract` to call `runSoul` when Rowan is within ~16px of a soul, and respects `dialogActive`.
-
-## Visual / placement
-
-- Each soul renders as a small GBC-art figure (reuse existing palette + `gbcArt` helpers; one 8×12 sprite per archetype, recolored).
-- Hover halo (alpha pulse) when player is within range — same pattern as `seedEchoMote.halo`.
-- Floating name + hook text appears once Rowan is within 24px (matches existing knot focus).
-- Famous shades get a single-frame "tell" (Composer holds a stylized score, Mathematician a lantern, etc.) — built from existing rect/text primitives, no new asset pipeline.
-
-## Files to add / change
+## Files to edit / add
 
 **New**
-- `src/game/scenes/imaginal/soulRunner.ts` — declarative arc runner.
-- `src/game/scenes/imaginal/soulArcs.ts` — the 12 `SoulArc` definitions.
-- `src/game/scenes/imaginal/soulSprites.ts` — small GBC-art renderer per soul archetype.
+- `src/game/athanor/shades.ts` — declarative registry: `{ id, name, opening: DialogLine[], inquiry: { prompt, options[4] }, rightAnswerTag }`. Three shades: `mother_who_did_her_best`, `self_who_said_yes`, `inquisitor`.
+- `src/game/athanor/books.ts` — declarative registry: `{ id, title, monologue: DialogLine[], inquiry, conviction, refuseTag }`. Four books (3 visible + 1 hidden `the_fourth_book`).
+- `src/game/athanor/wedding.ts` — pairing logic: 2 unions, Soryn rebuttal lines per pairing, `holds`/`yields` counter → `weddingType`.
 
-**Edit**
-- `src/game/scenes/imaginal/souls.ts` — expand `SOULS` to 12, extend `SoulId` union.
-- `src/game/sideQuests.ts` — add 6 new quest IDs + titles + `nextHint` field.
-- `src/game/scenes/lore.ts` — add 16 entries (12 souls + 4 world-expansion).
-- `src/game/scenes/ImaginalRealmScene.ts` — `loadRegion` spawns souls; `tryInteract` routes to `runSoul`; quest activation hooks.
-- `src/game/types.ts` — `souls` map already exists; no schema change needed (arc step is just a number).
+**Edited**
+- `src/game/types.ts` — add `convictions` keys union (documentation only); add `stainsCarried` already present; add `act2_apology` flag note.
+- `src/game/athanor/shards.ts` — add `salvage` flow helper.
+- `src/game/scenes/AthanorThresholdScene.ts` — Walking-Saint apology gate; Echo presence at threshold; Soryn-released barks; salvage offer if a shard was wasted.
+- `src/game/scenes/NigredoScene.ts` — replace generic loop with `runShade(shadeId)`; pick which 3 of the 3 (or random subset if more authored later); track `shadesEncountered[id] = "fled"|"sat_with"|"destroyed"`; if a shard was fully wasted, register `salvage_a_shard` quest.
+- `src/game/scenes/AlbedoScene.ts` — beat schedule generated from `soulChoices` (one beat per resolved soul, max 8); Bath-Keeper closing line; Drowned Bride encounter conditional on `the_unfinished_song` quest done; murky-water modifier if no shards dissolved in Nigredo (`shardsConsumed.length === 0`); stains visualized in HUD.
+- `src/game/scenes/CitrinitasScene.ts` — switch to `books.ts` registry; Librarian NPC with "ask twice" trigger for `read_the_fourth_book`; Lantern Mathematician cameo if his Act 1 arc completed; hidden Hypatia if all 3 books accepted; sentence carried into Rubedo via `save.flags.teachers_sentence`.
+- `src/game/scenes/RubedoScene.ts` — use `wedding.ts`; Soryn pushes back per pairing with arc-aware lines; Thirteenth Soul appears if `soulsCompleted >= 12` → `goldStone = true`, registers `meet_the_thirteenth`; Soryn release moved to mid-scene inquiry (registers `release_soryn`).
+- `src/game/scenes/SealedVesselScene.ts` — filter inscription options to the 1 canonical for the wedding type plus 2 reactive variants (e.g., "AND I WALKED ALONE" if `sorynReleased`; "STAINS AND ALL" if `stainsCarried > 0`); show `teachers_sentence` as a top-of-scene whisper if set.
+- `src/game/sideQuests.ts` — add 4 Act 2 IDs + titles + hint chain: `salvage_a_shard → read_the_fourth_book`, `meet_the_thirteenth → release_soryn`.
+- `src/game/scenes/lore.ts` — add 6 entries: `on_the_inquisitor`, `on_the_bride_sang`, `on_the_fourth_book`, `on_the_torn_teacher`, `on_the_thirteenth`, `on_walking_alone`.
+- `src/game/athanor/vessel.ts` — add stains pip + "ALONE" chip when `sorynReleased`.
+- `src/game/companion.ts` — add Athanor barks (per scene + per stone awarded); short-circuit if `sorynReleased`.
 
-## Implementation order (one PR per step is fine)
+---
 
-1. Expand `souls.ts` registry + add `soulSprites.ts` so figures render in each region (no behavior yet — pure visual pass to verify placement).
-2. Build `soulRunner.ts` with the 5 step kinds; wire `tryInteract` proximity check.
-3. Author the 12 arcs in `soulArcs.ts` (data only; reuses existing `runDialog` / `runInquiry` / `rhythmTap`).
-4. Add the 6 side quests + `nextHint` chain in `sideQuests.ts`.
-5. Add 16 lore entries; trigger unlocks at the right arc steps.
-6. Polish: hover halos, "tell" props for famous shades, Echo NG+ follower.
-7. Tone pass on every dialog line — keep the absurd-comic underside (Saint refuses gifts with a different polite excuse each time; Mathematician's "neither" lands as a punchline).
+## Cross-act reactivity matrix
 
-## Tone guardrails
+```text
+Act 1 signal                       → Act 2 reaction
+-----------------------------------------------------
+walking_saint:forced               → Threshold: Soryn apology gate; Inquisitor harsher
+the_unfinished_song done           → Albedo: Bride sings the song back
+mirror_philosopher:argued          → Citrinitas Book of Anger: extra accept line
+weighed_heart (cartographer)       → Citrinitas Book of Ambition: extra option
+stonechild named (lanterns lit)    → Albedo beat keyed to "EL·I·AS"
+soulsCompleted >= 12               → Rubedo: Thirteenth Soul + gold stone
+soulsCompleted >= 8                → Threshold: auto-shard "PLATEAU'S WEIGHT"
+echo_follower_unlocked             → Threshold: Echo waits at top of stairs
+lantern_mathematician done         → Citrinitas: he returns as scribe
+shardsConsumed.length === 0 (Nig)  → Albedo: murky water, +30% beat speed
+shadesEncountered any "destroyed"  → Albedo: registers salvage_a_shard
+weddingType                        → SealedVessel: inscription palette
+sorynReleased                      → SealedVessel + Threshold: solo barks
+```
 
-- Famous shades: **never named.** The lore log names them on unlock — that's the reveal.
-- Every soul has at least one dryly funny line. The Plateau is sad; the souls are not solemn.
-- No soul "fails" the player. Wrong-verb branches give different lore, never a game-over.
+---
+
+## Side-quest wiring
+
+| ID | Trigger location | Completion location | Reward |
+|---|---|---|---|
+| `salvage_a_shard` | NigredoScene when shard destroyed | AlbedoScene side-encounter | restore shard, +1 compassion, lore `on_salvage` |
+| `read_the_fourth_book` | CitrinitasScene Librarian asked 2× | CitrinitasScene hidden stack | lore `on_the_fourth_book`, +1 clarity |
+| `meet_the_thirteenth` | RubedoScene if `soulsCompleted >= 12` | RubedoScene table | `goldStone = true`, lore `on_the_thirteenth` |
+| `release_soryn` | RubedoScene release inquiry | SealedVesselScene completion | lore `on_walking_alone`, alters Act 3 opening |
+
+---
+
+## HUD additions
+
+- `VesselHud.refresh()` extended: stains pip (○/●×stainsCarried, capped at 3), "ALONE" chip when `sorynReleased`, conviction count `CONV n/3`.
+- Toast on every stone awarded, named ("BLACK STONE — sat with the Mother").
+
+---
+
+## Tone & length budget
+
+- Each shade: ≤ 8 lines opening + 4-option inquiry + ≤ 3 lines reply per branch.
+- Each book: ≤ 6 lines monologue + 2-option inquiry.
+- Soryn rebuttal in Rubedo: ≤ 2 lines per pairing.
+- Total new dialog: ~120 lines. Authoring is the bottleneck.
+
+---
+
+## Implementation order
+
+1. `shades.ts` + Nigredo rewrite (template for the others).
+2. `books.ts` + Citrinitas rewrite + Librarian + hidden Hypatia.
+3. `wedding.ts` + Rubedo rewrite + Thirteenth Soul.
+4. Albedo: soul-keyed beats + Bride conditional + murky-water modifier.
+5. Threshold: apology gate + Echo presence + salvage offer.
+6. SealedVessel: reactive inscription palette + teacher's sentence.
+7. Side quests + lore entries + HUD pips + Soryn barks.
+8. Tone pass; verify a save with 0 shards still completes Act 2; verify a 12-soul perfect run earns the gold stone.
+
+---
 
 ## Risks
 
-- Scope: 12 souls × ~6 lines each = ~72 dialog lines + 6 quest chains. Authoring is the bottleneck, not engineering.
-- `ImaginalRealmScene` is already large; the runner + arcs files keep it from growing further.
-- Famous-shade recognizability has to land via hook + lore text alone — no portraits. Acceptable; matches existing aesthetic.
+- **Authoring volume.** ~120 lines of dialog; keep each beat tight.
+- **Conditional Bride / Hypatia / Thirteenth.** Easy to ship and never see them — add a debug-flag bypass during dev.
+- **Soryn release timing.** If released in Rubedo mid-pairing, the second pairing must work solo — wedding.ts must handle a null companion.
 
