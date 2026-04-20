@@ -72,7 +72,7 @@ export type Command = "observe" | "address" | "remember" | "release" | "witness"
 export function migrateSave(raw: unknown): SaveSlot | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<SaveSlot> & { scene?: string; [k: string]: unknown };
-  let scene = (r.scene ?? "SilverThreshold") as string;
+  let scene = (r.scene ?? "LastDay") as string;
   // Legacy scene names → new
   if (scene === "MoonHall" || scene === "MoonGate") scene = "ImaginalRealm";
   const allowed: SceneKey[] = [
@@ -83,7 +83,8 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     "CuratedSelf",
     "Epilogue",
   ];
-  if (!allowed.includes(scene as SceneKey)) scene = "SilverThreshold";
+  // Unknown scene → safest fallback is the start of the journey, not midway.
+  if (!allowed.includes(scene as SceneKey)) scene = "LastDay";
   const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
   const region =
     (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
