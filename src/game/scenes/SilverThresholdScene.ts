@@ -359,48 +359,56 @@ export class SilverThresholdScene extends Phaser.Scene {
     onDone();
   }
 
-  /** AIR — 3 breath pulses; press A on each pulse (visual cue only, no fail). */
+  /** AIR — 3 breaths. Each press of A counts; gentle pulse loops as guidance. */
   private miniAir(c: { x: number; y: number }, onDone: () => void) {
     const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
-    const label = new GBCText(this, 8, GBC_H - 28, "BREATHE WITH ME (A x3)", { color: COLOR.textAccent, depth: 251 });
+    const label = new GBCText(this, 8, GBC_H - 28, "BREATHE WITH ME — PRESS A x3 (0/3)", {
+      color: COLOR.textAccent, depth: 251, maxWidthPx: GBC_W - 16,
+    });
     const pulse = this.add.circle(c.x, c.y, 6, 0xdde6f5, 0.4).setDepth(40);
+    // Continuous looping breath visual — no gating window.
+    const breathTween = this.tweens.add({
+      targets: pulse, scale: 2.5, alpha: 0.1, duration: 1100, ease: "Sine.inOut", yoyo: true, repeat: -1,
+    });
     let count = 0;
-    let pulsing = false;
-    const step = () => {
-      pulsing = true;
-      this.tweens.add({
-        targets: pulse, scale: 2.5, alpha: 0.1, duration: 1100, ease: "Sine.inOut", yoyo: true,
-        onComplete: () => { pulsing = false; },
-      });
-    };
-    step();
+    let done = false;
     const handler = () => {
-      if (!pulsing) return;
+      if (done) return;
       count++;
       getAudio().sfx("confirm");
-      label.setText(`BREATHE WITH ME (${count}/3)`);
+      // Quick burst feedback so the press feels heard.
+      this.tweens.add({ targets: pulse, scale: 3.2, alpha: 0.6, duration: 180, yoyo: true });
+      label.setText(`BREATHE WITH ME — PRESS A x3 (${count}/3)`);
       if (count >= 3) {
-        cleanup();
-        return;
+        done = true;
+        this.time.delayedCall(250, cleanup);
       }
-      this.time.delayedCall(300, step);
     };
     const cleanup = () => {
-      this.input.keyboard?.off("keydown-SPACE", handler);
-      this.input.keyboard?.off("keydown-ENTER", handler);
+      breathTween.stop();
+      window.removeEventListener("keydown", domHandler);
       this.events.off("vinput-action", handler);
       box.destroy(); label.destroy(); pulse.destroy();
       onDone();
     };
-    this.input.keyboard?.on("keydown-SPACE", handler);
-    this.input.keyboard?.on("keydown-ENTER", handler);
+    // Use DOM keydown to honor rebinds and avoid Phaser key conflicts.
+    const domHandler = (e: KeyboardEvent) => {
+      const k = e.code;
+      if (k === "Space" || k === "Enter" || k === "NumpadEnter") {
+        e.preventDefault();
+        handler();
+      }
+    };
+    window.addEventListener("keydown", domHandler);
     this.events.on("vinput-action", handler);
   }
 
-  /** FIRE — hold A while a heat bar rises; release at peak. (Auto-resolve after 2.5s.) */
+  /** FIRE — hold A while a heat bar rises; release at peak (≥40%). */
   private miniFire(c: { x: number; y: number }, onDone: () => void) {
     const box = drawGBCBox(this, 4, GBC_H - 32, GBC_W - 8, 28, 250);
-    const label = new GBCText(this, 8, GBC_H - 28, "HOLD A. RELEASE WHEN BRIGHT.", { color: COLOR.textAccent, depth: 251 });
+    const label = new GBCText(this, 8, GBC_H - 28, "HOLD A. RELEASE WHEN BRIGHT.", {
+      color: COLOR.textAccent, depth: 251, maxWidthPx: GBC_W - 16,
+    });
     const barBg = this.add.rectangle(20, GBC_H - 14, GBC_W - 40, 4, 0x2a1810, 1).setOrigin(0, 0.5).setDepth(251);
     const bar   = this.add.rectangle(20, GBC_H - 14, 1, 4, 0xf08868, 1).setOrigin(0, 0.5).setDepth(252);
     const flame = this.add.circle(c.x, c.y, 4, 0xf08868, 0.6).setDepth(40);
@@ -416,28 +424,26 @@ export class SilverThresholdScene extends Phaser.Scene {
         if (progress >= 1 && held) finish();
       },
     });
-    const press = () => { held = true; };
-    const release = () => { if (held && progress >= 0.4) finish(); held = false; };
     const finish = () => {
       if (done) return;
       done = true;
       tick.remove(false);
-      this.input.keyboard?.off("keydown-SPACE", press);
-      this.input.keyboard?.off("keyup-SPACE", release);
-      this.input.keyboard?.off("keydown-ENTER", press);
-      this.input.keyboard?.off("keyup-ENTER", release);
-      this.events.off("vinput-action", press);
+      window.removeEventListener("keydown", domDown);
+      window.removeEventListener("keyup", domUp);
+      this.events.off("vinput-action", vDown);
       box.destroy(); label.destroy(); barBg.destroy(); bar.destroy(); flame.destroy();
       getAudio().sfx("resolve");
       onDone();
     };
-    this.input.keyboard?.on("keydown-SPACE", press);
-    this.input.keyboard?.on("keyup-SPACE", release);
-    this.input.keyboard?.on("keydown-ENTER", press);
-    this.input.keyboard?.on("keyup-ENTER", release);
-    // For touch: vinput-action triggers a brief auto-hold
-    this.events.on("vinput-action", () => { held = true; this.time.delayedCall(1800, () => { held = false; if (progress >= 0.4) finish(); }); });
-    // Safety auto-finish after 6s
+    const isAB = (e: KeyboardEvent) => e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter";
+    const domDown = (e: KeyboardEvent) => { if (isAB(e)) { e.preventDefault(); held = true; } };
+    const domUp   = (e: KeyboardEvent) => { if (isAB(e)) { e.preventDefault(); if (held && progress >= 0.4) finish(); held = false; } };
+    window.addEventListener("keydown", domDown);
+    window.addEventListener("keyup", domUp);
+    // Touch: brief auto-hold on tap.
+    const vDown = () => { held = true; this.time.delayedCall(1800, () => { held = false; if (!done && progress >= 0.4) finish(); }); };
+    this.events.on("vinput-action", vDown);
+    // Safety auto-finish after 6s.
     this.time.delayedCall(6000, () => { if (!done) { progress = 1; held = true; finish(); } });
   }
 
@@ -468,21 +474,18 @@ export class SilverThresholdScene extends Phaser.Scene {
       onDone();
     };
     const cleanup = () => {
-      this.input.keyboard?.off("keydown-LEFT", left);
-      this.input.keyboard?.off("keydown-RIGHT", right);
-      this.input.keyboard?.off("keydown-SPACE", pick);
-      this.input.keyboard?.off("keydown-ENTER", pick);
+      window.removeEventListener("keydown", domKey);
       this.events.off("vinput-action", pick);
       this.events.off("vinput-down", vmove);
       refTrue.destroy(); refMask.destroy(); labelL.destroy(); labelR.destroy(); box.destroy(); prompt.destroy();
     };
-    const left = () => move(-1);
-    const right = () => move(1);
     const vmove = (dir: string) => { if (dir === "left") move(-1); if (dir === "right") move(1); };
-    this.input.keyboard?.on("keydown-LEFT", left);
-    this.input.keyboard?.on("keydown-RIGHT", right);
-    this.input.keyboard?.on("keydown-SPACE", pick);
-    this.input.keyboard?.on("keydown-ENTER", pick);
+    const domKey = (e: KeyboardEvent) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); move(-1); }
+      else if (e.code === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); move(1); }
+      else if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter") { e.preventDefault(); pick(); }
+    };
+    window.addEventListener("keydown", domKey);
     this.events.on("vinput-action", pick);
     this.events.on("vinput-down", vmove);
   }
