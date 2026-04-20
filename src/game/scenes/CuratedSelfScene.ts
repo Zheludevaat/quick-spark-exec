@@ -187,6 +187,7 @@ export class EpilogueScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#0a0e1a");
     this.cameras.main.fadeIn(700);
+    getAudio().music.play("epilogue", SONG_EPILOGUE);
 
     for (let i = 0; i < 40; i++) {
       this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
@@ -222,6 +223,7 @@ export class EpilogueScene extends Phaser.Scene {
 
     const move = (d: number) => {
       this.cursor = (this.cursor + d + 2) % 2;
+      getAudio().sfx("cursor");
       this.refreshCursor();
     };
     this.input.keyboard?.on("keydown-UP", () => move(-1));
