@@ -588,6 +588,7 @@ export class SilverThresholdScene extends Phaser.Scene {
   }
 
   private daimonChoice() {
+    this.dialogActive = true;
     runInquiry(
       this,
       { who: "Soryn", text: "Will you accept me as your daimon?" },
