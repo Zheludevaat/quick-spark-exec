@@ -95,7 +95,7 @@ export class InputState {
 export function makeRowan(scene: Phaser.Scene, x: number, y: number) {
   const c = scene.add.container(x, y);
   const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
-  sprite.play("rowan_down_idle");
+  if (scene.anims.exists("rowan_down_idle")) sprite.play("rowan_down_idle");
   c.add([sprite]);
   c.setSize(16, 24);
   c.setData("sprite", sprite);
