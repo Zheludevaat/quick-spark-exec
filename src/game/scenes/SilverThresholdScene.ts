@@ -655,12 +655,19 @@ export class SilverThresholdScene extends Phaser.Scene {
         if (progress >= 1 && held) finish();
       },
     });
+    // Listen for the player's bound A key for hold/release.
+    const actionKeys: Phaser.Input.Keyboard.Key[] = [];
+    const kb = this.input.keyboard;
+    if (kb) {
+      const b = (require("../controls") as typeof import("../controls")).getControls().bindings.action;
+      if (b.primary) actionKeys.push(kb.addKey(b.primary, false, false));
+      if (b.secondary) actionKeys.push(kb.addKey(b.secondary, false, false));
+    }
     const finish = () => {
       if (done) return;
       done = true;
       tick.remove(false);
-      window.removeEventListener("keydown", domDown);
-      window.removeEventListener("keyup", domUp);
+      holdPoll.remove(false);
       this.events.off("vinput-action", vDown);
       box.destroy();
       label.destroy();
@@ -670,35 +677,19 @@ export class SilverThresholdScene extends Phaser.Scene {
       getAudio().sfx("resolve");
       onDone();
     };
-    // Read the player's bound A keys so rebinding works.
-    const isAB = (e: KeyboardEvent) => {
-      const name = (() => {
-        if (e.code === "Space") return "SPACE";
-        if (e.code === "Enter" || e.code === "NumpadEnter") return "ENTER";
-        if (e.code.startsWith("Key")) return e.code.slice(3);
-        return e.key?.toUpperCase() ?? "";
-      })();
-      const c = (window as unknown as { __controls?: never }) && undefined; void c;
-      // Fallback to bindings via dynamic import to avoid circular imports.
-      const { getControls } = require("../controls") as typeof import("../controls");
-      const b = getControls().bindings.action;
-      return name === b.primary || name === b.secondary;
-    };
-    const domDown = (e: KeyboardEvent) => {
-      if (isAB(e)) {
-        e.preventDefault();
-        held = true;
-      }
-    };
-    const domUp = (e: KeyboardEvent) => {
-      if (isAB(e)) {
-        e.preventDefault();
-        if (held && progress >= 0.4) finish();
-        held = false;
-      }
-    };
-    window.addEventListener("keydown", domDown);
-    window.addEventListener("keyup", domUp);
+    // Poll the bound key for hold state — works after rebinds.
+    const holdPoll = this.time.addEvent({
+      delay: 30,
+      loop: true,
+      callback: () => {
+        const anyDown = actionKeys.some((k) => k.isDown);
+        if (anyDown && !held) held = true;
+        else if (!anyDown && held) {
+          held = false;
+          if (progress >= 0.4) finish();
+        }
+      },
+    });
     // Touch: brief auto-hold on tap.
     const vDown = () => {
       held = true;
