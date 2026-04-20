@@ -827,3 +827,82 @@ export function runDialog(
 
   return { dismiss: () => next() };
 }
+
+// ============================================================================
+// Imaginal-only progress badge — small upper-right plate with fragment pips
+// (0..3) and current full-shard count. Driven entirely by HUD events.
+// ============================================================================
+export type ImaginalBadgeHandle = { destroy: () => void };
+
+export function mountImaginalProgressBadge(
+  scene: Phaser.Scene,
+  initial: { fragments: number; shards: number },
+): ImaginalBadgeHandle {
+  const W = 42;
+  const H = 11;
+  const X = GBC_W - W - 2;
+  const Y = 15;
+  const plate = drawGBCPlate(scene, X, Y, W, H, 198, "dark");
+  const pips: Phaser.GameObjects.Arc[] = [];
+  for (let i = 0; i < 3; i++) {
+    const dot = scene.add
+      .circle(X + 4 + i * 4, Y + 5, 1.4, 0xe8c860, 0)
+      .setStrokeStyle(0.5, 0xa87830, 1)
+      .setScrollFactor(0)
+      .setDepth(199);
+    pips.push(dot);
+  }
+  const label = new GBCText(scene, X + 18, Y + 2, "", {
+    color: COLOR.textLight,
+    depth: 199,
+    scrollFactor: 0,
+  });
+  const paint = (frag: number, sh: number) => {
+    for (let i = 0; i < 3; i++) pips[i].setFillStyle(0xe8c860, i < frag ? 1 : 0);
+    label.setText(`SHD ${sh}`);
+  };
+  paint(initial.fragments, initial.shards);
+  const onFrag = (p: FragmentChangedPayload) => {
+    paint(p.fragments, p.shards);
+    const idx = Math.max(0, Math.min(2, p.fragments - 1));
+    const dot = pips[idx];
+    if (dot && p.fragments > 0) {
+      dot.setScale(1);
+      scene.tweens.add({
+        targets: dot,
+        scaleX: { from: 2.2, to: 1 },
+        scaleY: { from: 2.2, to: 1 },
+        duration: 320,
+        ease: "Back.out",
+      });
+    }
+  };
+  const onShard = (p: ShardGainedPayload) => {
+    paint(0, p.shards);
+    const chip = new GBCText(scene, X + 6, Y + 1, "+1 SHD", {
+      color: COLOR.textGold,
+      depth: 230,
+      scrollFactor: 0,
+    });
+    scene.tweens.add({
+      targets: chip.obj,
+      y: Y - 8,
+      alpha: { from: 1, to: 0 },
+      duration: 1100,
+      ease: "Sine.out",
+      onComplete: () => chip.destroy(),
+    });
+  };
+  scene.events.on(HUD_EVENTS.fragmentChanged, onFrag);
+  scene.events.on(HUD_EVENTS.shardGained, onShard);
+  const destroy = () => {
+    scene.events.off(HUD_EVENTS.fragmentChanged, onFrag);
+    scene.events.off(HUD_EVENTS.shardGained, onShard);
+    pips.forEach((p) => p.destroy());
+    label.destroy();
+    plate.destroy();
+  };
+  scene.events.once("shutdown", destroy);
+  scene.events.once("destroy", destroy);
+  return { destroy };
+}
