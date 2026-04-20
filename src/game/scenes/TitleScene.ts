@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
+import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 
