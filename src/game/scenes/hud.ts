@@ -1,5 +1,15 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  drawGBCPlate,
+  STAT_ICON_FRAME,
+  toggleLcd,
+  reapplyLcd,
+} from "../gbcArt";
 import type { SaveSlot, Stats } from "../types";
 import { getAudio } from "../audio";
 import { loadSave } from "../save";
@@ -13,6 +23,13 @@ import {
   type GameAction,
   type ButtonSize,
 } from "../controls";
+import {
+  HUD_EVENTS,
+  type StatChangedPayload,
+  type FragmentChangedPayload,
+  type ShardGainedPayload,
+  type StatKey,
+} from "../ui/hudSignals";
 import { openSettings } from "./settings";
 
 /**
