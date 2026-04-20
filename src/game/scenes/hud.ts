@@ -24,6 +24,15 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     const a = getAudio();
     a.setMuted(!a.muted);
   });
+  // Lore log: L key — opens overlay listing unlocked entries.
+  let loreOpen = false;
+  scene.input.keyboard?.on("keydown-L", () => {
+    if (loreOpen) return;
+    const s: SaveSlot | null = loadSave();
+    if (!s) return;
+    loreOpen = true;
+    openLoreLog(scene, s, () => { loreOpen = false; });
+  });
 
   // Top stats bar (compact for 160-wide screen)
   const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
