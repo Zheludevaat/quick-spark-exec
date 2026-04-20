@@ -182,6 +182,8 @@ export class EncounterScene extends Phaser.Scene {
     const x = 8 + (this.cursor % 2) * 70;
     const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
+    const cmd = CMDS[this.cursor].cmd;
+    if (this.verbHintText) this.verbHintText.setText(`> ${VERB_HINT[cmd]}`);
   }
 
   private choose(i: number) {
