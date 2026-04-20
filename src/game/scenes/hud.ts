@@ -109,15 +109,16 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   if (!sprite) return;
   let dir = c.getData("dir") as string;
   const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+  const anims = sprite.scene.anims;
   if (moving) {
     if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
     else                              dir = dy > 0 ? "down"  : "up";
     c.setData("dir", dir);
     const key = `rowan_${dir}`;
-    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
   } else {
     const key = `rowan_${dir}_idle`;
-    if (sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
   }
 }
 
