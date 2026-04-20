@@ -99,44 +99,116 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#05070d");
-    this.cameras.main.fadeIn(500);
+    this.cameras.main.setBackgroundColor("#03040a");
+    this.cameras.main.fadeIn(700);
     getAudio().music.play("boss", SONG_BOSS);
 
-    // Stars + horizon
-    const g = this.add.graphics();
-    for (let i = 0; i < 32; i++) {
-      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
+    // Deep-sky gradient (banded, GBC-honest)
+    const sky = this.add.graphics().setDepth(0);
+    const bands: [number, number][] = [
+      [0x0a0c1a, 6],
+      [0x121634, 8],
+      [0x1c2150, 10],
+      [0x2a2868, 12],
+      [0x3a2a70, 10],
+      [0x4a2868, 8],
+      [0x602848, 6],
+      [0x7a2848, 4],
+    ];
+    let yy = 0;
+    for (const [c, h] of bands) {
+      sky.fillStyle(c, 1);
+      sky.fillRect(0, yy, GBC_W, h);
+      yy += h;
     }
-    for (let i = 0; i < 6; i++) {
-      const s = this.add.rectangle(
-        Phaser.Math.Between(0, GBC_W),
-        Phaser.Math.Between(14, 50),
-        1,
-        1,
-        0xffffff,
-        1,
-      );
+
+    // Distant nebula clouds (drifting, soft)
+    for (let i = 0; i < 4; i++) {
+      const neb = this.add
+        .ellipse(
+          Phaser.Math.Between(0, GBC_W),
+          Phaser.Math.Between(18, 50),
+          Phaser.Math.Between(36, 60),
+          Phaser.Math.Between(8, 14),
+          [0x6a3a8a, 0x8a3a6a, 0x3a4a8a, 0x5a2a6a][i],
+          0.18,
+        )
+        .setDepth(1);
       this.tweens.add({
-        targets: s,
-        alpha: 0.2,
-        duration: Phaser.Math.Between(600, 1400),
+        targets: neb,
+        x: neb.x + Phaser.Math.Between(-20, 20),
+        alpha: 0.08,
+        duration: 4000 + i * 600,
         yoyo: true,
         repeat: -1,
-        delay: Phaser.Math.Between(0, 1200),
+        ease: "Sine.inOut",
       });
     }
-    g.fillStyle(0x1a2030, 1);
-    g.fillRect(0, 64, GBC_W, 2);
-    g.fillStyle(0x243058, 1);
-    g.fillRect(0, 66, GBC_W, 10);
-    g.fillStyle(0x1a2238, 0.7);
-    g.fillEllipse(GBC_W / 2, 70, 64, 8);
 
-    const aura = this.add.circle(GBC_W / 2, 46, 18, 0xd84a4a, 0.18);
+    // Stars (twinkling)
+    const g = this.add.graphics().setDepth(2);
+    for (let i = 0; i < 48; i++) {
+      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.25, 0.9));
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(2, 56), 1, 1);
+    }
+    for (let i = 0; i < 10; i++) {
+      const s = this.add
+        .rectangle(
+          Phaser.Math.Between(0, GBC_W),
+          Phaser.Math.Between(2, 50),
+          1,
+          1,
+          0xffffff,
+          1,
+        )
+        .setDepth(3);
+      this.tweens.add({
+        targets: s,
+        alpha: 0.15,
+        duration: Phaser.Math.Between(500, 1500),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1500),
+      });
+    }
+
+    // Mountain silhouette (parallax-feel, two layers)
+    const mtn = this.add.graphics().setDepth(4);
+    mtn.fillStyle(0x0c1024, 1);
+    const teeth1 = [0, 60, 8, 50, 22, 58, 38, 48, 56, 60, 74, 52, 92, 60, 110, 50, 128, 60, 144, 56, 160, 62];
+    mtn.beginPath();
+    mtn.moveTo(0, 64);
+    for (let i = 0; i < teeth1.length; i += 2) mtn.lineTo(teeth1[i], teeth1[i + 1]);
+    mtn.lineTo(GBC_W, 64);
+    mtn.closePath();
+    mtn.fillPath();
+
+    // Reflective floor (silver-violet)
+    g.fillStyle(0x1a1838, 1);
+    g.fillRect(0, 64, GBC_W, 2);
+    g.fillStyle(0x2a2858, 1);
+    g.fillRect(0, 66, GBC_W, 10);
+    // Highlight ripple
+    g.fillStyle(0x6a6ac8, 0.35);
+    g.fillRect(0, 67, GBC_W, 1);
+    g.fillStyle(0x4a4a98, 0.5);
+    g.fillEllipse(GBC_W / 2, 71, 90, 4);
+
+    // Boss aura — three concentric rings, breathing in counter-phase
+    const auraOuter = this.add.circle(GBC_W / 2, 46, 28, 0xffb060, 0.08).setDepth(20);
+    const auraMid = this.add.circle(GBC_W / 2, 46, 20, 0xd84a4a, 0.18).setDepth(21);
+    const auraCore = this.add.circle(GBC_W / 2, 46, 12, 0xffe0a0, 0.22).setDepth(22);
     this.tweens.add({
-      targets: aura,
+      targets: auraOuter,
+      scale: 1.35,
+      alpha: 0.03,
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    this.tweens.add({
+      targets: auraMid,
       scale: 1.4,
       alpha: 0.05,
       duration: 1100,
@@ -144,14 +216,41 @@ export class CuratedSelfScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.inOut",
     });
+    this.tweens.add({
+      targets: auraCore,
+      scale: 1.25,
+      alpha: 0.08,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
+    // Drifting motes — warm and cool
     spawnMotes(this, {
-      count: 10,
+      count: 8,
       color: 0xd86a6a,
       alpha: 0.45,
-      driftY: -0.01,
+      driftY: -0.012,
       driftX: 0.002,
       depth: 30,
     });
+    spawnMotes(this, {
+      count: 6,
+      color: 0x88c0f0,
+      alpha: 0.35,
+      driftY: -0.008,
+      driftX: -0.003,
+      depth: 31,
+    });
+
+    // Vignette — corners darken, focuses attention
+    const vignette = this.add.graphics().setDepth(180);
+    vignette.fillStyle(0x000000, 0.45);
+    vignette.fillRect(0, 0, GBC_W, 4);
+    vignette.fillRect(0, GBC_H - 4, GBC_W, 4);
+    vignette.fillRect(0, 0, 4, GBC_H);
+    vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
     drawGBCBox(this, GBC_W - 92, 14, 88, 14);
     new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
@@ -324,6 +423,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (cmd === "address") {
       this.addressHits++;
       this.cameras.main.flash(140, 200, 220, 255);
+      this.sparkBurst(GBC_W / 2, 46, 0xffd070, 10);
       getAudio().sfx("resolve");
       this.logText.setText(addressReply(this.save, this.addressHits));
       this.speak("phase1_hit");
@@ -367,16 +467,43 @@ export class CuratedSelfScene extends Phaser.Scene {
     );
     this.boss.setTint(PHASE_HUE[p]);
     this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
+    // Phase-shift shockwave
+    const ring = this.add.circle(GBC_W / 2, 46, 6, PHASE_HUE[p], 0).setDepth(40);
+    ring.setStrokeStyle(1, PHASE_HUE[p], 0.9);
+    this.tweens.add({
+      targets: ring,
+      scale: 8,
+      alpha: 0,
+      duration: 700,
+      ease: "Cubic.out",
+      onComplete: () => ring.destroy(),
+    });
     this.refreshAvailable();
     if (p === "fractured") this.spawnFragments();
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
-      // Persistent plan hint under the boss so the player knows what to do.
       const plan = phase3Plan(this.save);
       this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
     this.busy = false;
+  }
+
+  /** Burst of small sparks at a point — used on successful hits. */
+  private sparkBurst(x: number, y: number, color = 0xffd070, n = 8) {
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      const sp = this.add.rectangle(x, y, 1, 1, color, 1).setDepth(80);
+      this.tweens.add({
+        targets: sp,
+        x: x + Math.cos(ang) * 14,
+        y: y + Math.sin(ang) * 14,
+        alpha: 0,
+        duration: 500,
+        ease: "Cubic.out",
+        onComplete: () => sp.destroy(),
+      });
+    }
   }
 
   private spawnFragments() {
@@ -447,6 +574,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       getAudio().sfx("resolve");
       const picked = this.fragments[this.brightestIdx];
       if (picked) {
+        this.sparkBurst(picked.sprite.x, picked.sprite.y, 0xffe098, 10);
         this.tweens.add({ targets: picked.sprite, alpha: 0.15, scale: 0.6, duration: 500 });
       }
       this.logText.setText(
@@ -489,6 +617,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (cmd === "witness" && plan.needs.witness > 0) {
       this.witnessHits++;
       this.cameras.main.flash(220, 200, 220, 255);
+      this.sparkBurst(GBC_W / 2, 46, 0xc8e0ff, 12);
       getAudio().sfx("resolve");
       this.speak("phase3_hit");
       if (this.witnessHits === 1)
@@ -503,6 +632,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.busy = false;
     } else if (cmd === "address" && plan.needs.address > 0) {
       this.exposedAddressHits++;
+      this.sparkBurst(GBC_W / 2, 46, 0xffd070, 8);
       getAudio().sfx("resolve");
       this.logText.setText("You name what it was. The image relaxes.");
       this.speak("phase3_hit");
@@ -510,6 +640,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       this.busy = false;
     } else if (cmd === "release" && plan.needs.release > 0) {
       this.exposedReleaseHits++;
+      this.sparkBurst(GBC_W / 2, 46, 0xa8e8c8, 8);
       getAudio().sfx("resolve");
       this.logText.setText("You let go. It does not vanish; it simply rests.");
       this.speak("phase3_hit");
@@ -683,48 +814,92 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#0a0e1a");
-    this.cameras.main.fadeIn(700);
+    this.cameras.main.setBackgroundColor("#05060f");
+    this.cameras.main.fadeIn(900);
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
-    for (let i = 0; i < 50; i++) {
-      const s = this.add.rectangle(
-        Phaser.Math.Between(0, GBC_W),
-        Phaser.Math.Between(0, GBC_H),
-        1,
-        1,
-        0xdde6f5,
-        Phaser.Math.FloatBetween(0.3, 1),
-      );
+    const tier = endingTier(this.save);
+    const TIER_TINT: Record<string, [number, number, number]> = {
+      ascent: [0xfff5d0, 0xffe098, 0xc8b070],
+      gold: [0xffe098, 0xd8a060, 0x8a5028],
+      silver: [0xc8d0e8, 0x88a0c8, 0x4a5878],
+      iron: [0xa8b0c0, 0x687088, 0x2a3048],
+      brittle: [0x9088a0, 0x584860, 0x1a1428],
+    };
+    const tint = TIER_TINT[tier];
+
+    // Deep gradient background tinted by tier
+    const bg = this.add.graphics().setDepth(0);
+    const bandsBg: [number, number][] = [
+      [0x05060f, 30],
+      [tint[2], 40],
+      [tint[1], 50],
+      [tint[0], 24],
+    ];
+    let yy = 0;
+    for (const [c, h] of bandsBg) {
+      bg.fillStyle(c, 0.55);
+      bg.fillRect(0, yy, GBC_W, h);
+      yy += h;
+    }
+
+    // Stars (denser, twinkling)
+    for (let i = 0; i < 70; i++) {
+      const s = this.add
+        .rectangle(
+          Phaser.Math.Between(0, GBC_W),
+          Phaser.Math.Between(0, GBC_H),
+          1,
+          1,
+          0xdde6f5,
+          Phaser.Math.FloatBetween(0.3, 1),
+        )
+        .setDepth(1);
       this.tweens.add({
         targets: s,
-        alpha: 0.15,
-        duration: Phaser.Math.Between(700, 1800),
+        alpha: 0.1,
+        duration: Phaser.Math.Between(700, 2200),
         yoyo: true,
         repeat: -1,
-        delay: Phaser.Math.Between(0, 1500),
+        delay: Phaser.Math.Between(0, 2000),
       });
     }
 
-    for (let b = 0; b < 3; b++) {
-      const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+    // Aurora ribbons — slow, sine-driven
+    const ribbons = [tint[0], tint[1], 0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+    for (let b = 0; b < ribbons.length; b++) {
       const band = this.add
-        .rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18)
+        .rectangle(GBC_W / 2, 18 + b * 7, GBC_W * 1.6, 2, ribbons[b], 0.22)
         .setDepth(2);
       this.tweens.add({
         targets: band,
-        x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12),
+        x: GBC_W / 2 + (b % 2 === 0 ? 18 : -18),
         alpha: 0.06,
-        duration: 3200 + b * 800,
+        scaleX: 1.15,
+        duration: 3400 + b * 700,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",
       });
     }
 
+    // Halo behind title
+    const halo = this.add.circle(GBC_W / 2, 22, 24, tint[0], 0.18).setDepth(3);
+    this.tweens.add({
+      targets: halo,
+      scale: 1.3,
+      alpha: 0.05,
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
+    // Drifting motes
+    spawnMotes(this, { count: 12, color: tint[0], alpha: 0.4, driftY: -0.01, depth: 4 });
+
     this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
-    const tier = endingTier(this.save);
     const tierLabel: Record<string, string> = {
       ascent: "ASCENT",
       gold: "GOLD",
@@ -737,6 +912,14 @@ export class EpilogueScene extends Phaser.Scene {
       color: COLOR.textGold,
       depth: 10,
     });
+
+    // Vignette
+    const vignette = this.add.graphics().setDepth(180);
+    vignette.fillStyle(0x000000, 0.5);
+    vignette.fillRect(0, 0, GBC_W, 4);
+    vignette.fillRect(0, GBC_H - 4, GBC_W, 4);
+    vignette.fillRect(0, 0, 4, GBC_H);
+    vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
     drawGBCBox(this, 8, 36, GBC_W - 16, 70);
     const paragraphs = endingParagraphs(this.save);
