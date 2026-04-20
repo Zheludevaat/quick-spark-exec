@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX } from "../gbcArt";
+import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, spawnMotes, gbcWipe } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
@@ -191,8 +191,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
       this.save.scene = "MoonHall";
       writeSave(this.save);
-      this.cameras.main.fadeOut(500, 0, 0, 0);
-      this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("MoonHall", { save: this.save }));
+      gbcWipe(this, () => this.scene.start("MoonHall", { save: this.save }));
     }
   }
 }
