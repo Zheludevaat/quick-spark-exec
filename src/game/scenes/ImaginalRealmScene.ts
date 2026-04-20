@@ -550,65 +550,6 @@ export class ImaginalRealmScene extends Phaser.Scene {
     }
     this.events.emit("stats-changed");
   }
-    m.touched = true;
-    this.save.seedEchoes[m.seedRef] = true;
-    this.save.shardFragments = (this.save.shardFragments ?? 0) + 1;
-    let extraShard = false;
-    if (this.save.shardFragments >= 4) {
-      this.save.shardFragments -= 4;
-      const id = `field_${this.save.shards.length}`;
-      this.save.shards.push(id);
-      extraShard = true;
-    }
-    writeSave(this.save);
-    getAudio().sfx("confirm");
-    const lines: Record<string, string> = {
-      seed_call: "MARA. SHE STILL CALLS.",
-      seed_window: "THE CHILD IS GROWN. STILL WAVING.",
-      seed_kettle: "TWO CUPS. STILL POURED.",
-      seed_coat: "THE COAT. STILL WAITING.",
-      seed_mirror: "YOU. STILL HERE.",
-    };
-    const t = new GBCText(this, m.x - 28, m.y - 12, lines[m.seedRef] ?? "AN ECHO.", {
-      color: COLOR.textGold,
-      depth: 220,
-    });
-    this.tweens.add({
-      targets: t.obj,
-      alpha: 0,
-      y: m.y - 28,
-      duration: 1800,
-      onComplete: () => t.destroy(),
-    });
-    this.tweens.add({
-      targets: m.sprite,
-      scale: 3,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => m.sprite.destroy(),
-    });
-    this.tweens.add({
-      targets: m.halo,
-      scale: 3,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => m.halo.destroy(),
-    });
-    if (extraShard) {
-      this.cameras.main.flash(160, 255, 224, 152);
-      const s = new GBCText(this, m.x - 28, m.y - 22, "MEMORY SHARD +1", {
-        color: COLOR.textGold,
-        depth: 221,
-      });
-      this.tweens.add({
-        targets: s.obj,
-        alpha: 0,
-        y: m.y - 36,
-        duration: 1600,
-        onComplete: () => s.destroy(),
-      });
-    }
-  }
 
   private allowExit(_from: ImaginalRegion): boolean {
     // Always allow region transitions; knots are optional per region.
