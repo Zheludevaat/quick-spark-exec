@@ -423,6 +423,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (cmd === "address") {
       this.addressHits++;
       this.cameras.main.flash(140, 200, 220, 255);
+      this.sparkBurst(GBC_W / 2, 46, 0xffd070, 10);
       getAudio().sfx("resolve");
       this.logText.setText(addressReply(this.save, this.addressHits));
       this.speak("phase1_hit");
