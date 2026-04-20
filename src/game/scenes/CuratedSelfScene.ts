@@ -466,16 +466,43 @@ export class CuratedSelfScene extends Phaser.Scene {
     );
     this.boss.setTint(PHASE_HUE[p]);
     this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
+    // Phase-shift shockwave
+    const ring = this.add.circle(GBC_W / 2, 46, 6, PHASE_HUE[p], 0).setDepth(40);
+    ring.setStrokeStyle(1, PHASE_HUE[p], 0.9);
+    this.tweens.add({
+      targets: ring,
+      scale: 8,
+      alpha: 0,
+      duration: 700,
+      ease: "Cubic.out",
+      onComplete: () => ring.destroy(),
+    });
     this.refreshAvailable();
     if (p === "fractured") this.spawnFragments();
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
-      // Persistent plan hint under the boss so the player knows what to do.
       const plan = phase3Plan(this.save);
       this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
     this.busy = false;
+  }
+
+  /** Burst of small sparks at a point — used on successful hits. */
+  private sparkBurst(x: number, y: number, color = 0xffd070, n = 8) {
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      const sp = this.add.rectangle(x, y, 1, 1, color, 1).setDepth(80);
+      this.tweens.add({
+        targets: sp,
+        x: x + Math.cos(ang) * 14,
+        y: y + Math.sin(ang) * 14,
+        alpha: 0,
+        duration: 500,
+        ease: "Cubic.out",
+        onComplete: () => sp.destroy(),
+      });
+    }
   }
 
   private spawnFragments() {
