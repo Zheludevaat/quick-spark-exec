@@ -24,16 +24,16 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   const baseX = 4;
   const pips: Phaser.GameObjects.Arc[] = [];
   const labels: GBCText[] = [];
-  const shardChip = new GBCText(scene, baseX, baseY - 8, "", { color: COLOR.textDim, depth: 220 });
+  const shardChip = new GBCText(scene, baseX, baseY - 14, "", { color: COLOR.textDim, depth: 220 });
   // Stains pip row — small open circles that fill as stains accumulate.
-  const stainsLabel = new GBCText(scene, baseX + 70, baseY - 8, "", {
+  const stainsLabel = new GBCText(scene, scene.scale.width - 40, baseY - 14, "", {
     color: COLOR.textDim,
     depth: 220,
   });
   const stainDots: Phaser.GameObjects.Arc[] = [];
   for (let i = 0; i < 3; i++) {
     const d = scene.add
-      .circle(baseX + 88 + i * 4, baseY - 6, 1.5, 0xffffff, 0)
+      .circle(scene.scale.width - 18 + i * 4, baseY - 12, 1.5, 0xffffff, 0)
       .setStrokeStyle(0.5, 0x88a0b8)
       .setDepth(220);
     stainDots.push(d);
@@ -63,11 +63,11 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     });
     const total = save.shardInventory.length;
     const conv = Object.values(save.convictions).filter(Boolean).length;
-    let line = `SHARDS ${total}`;
-    if (conv > 0) line += `  CONV ${conv}/3`;
-    if (save.goldStone) line += `  *GOLD*`;
-    if (save.sorynReleased) line += `  ALONE`;
-    shardChip.setText(line);
+    const parts: string[] = [`SHD ${total}`];
+    if (conv > 0) parts.push(`CNV ${conv}/3`);
+    if (save.goldStone) parts.push(`GOLD`);
+    if (save.sorynReleased) parts.push(`ALONE`);
+    shardChip.setText(parts.join(" "));
 
     // Stains: show pip row only if stains have ever been carried.
     if (save.stainsCarried > 0) {
