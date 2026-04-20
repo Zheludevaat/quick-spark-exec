@@ -8,6 +8,8 @@ export type SceneKey =
   | "CuratedSelf"
   | "Epilogue";
 
+export type ImaginalRegion = "pools" | "field" | "corridor";
+
 export type SaveSlot = {
   scene: SceneKey;
   act: 0 | 1;
@@ -19,6 +21,10 @@ export type SaveSlot = {
   /** Memory-shard sub-fragments (4 = 1 shard). */
   shardFragments: number;
   seeds: Record<string, boolean>;
+  /** Current Imaginal sub-region (set when entering / moving between zones). */
+  region: ImaginalRegion | null;
+  /** Field seed-echo motes touched. */
+  seedEchoes: Record<string, boolean>;
   updatedAt: number;
 };
 
@@ -38,6 +44,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
   const allowed: SceneKey[] = ["LastDay", "Crossing", "SilverThreshold", "ImaginalRealm", "CuratedSelf", "Epilogue"];
   if (!allowed.includes(scene as SceneKey)) scene = "SilverThreshold";
   const act: 0 | 1 = scene === "ImaginalRealm" || scene === "CuratedSelf" || scene === "Epilogue" ? 1 : 0;
+  const region = (r as any).region ?? (scene === "ImaginalRealm" ? "pools" : null);
   return {
     scene: scene as SceneKey,
     act: (r.act as 0 | 1) ?? act,
@@ -48,6 +55,8 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     shards: Array.isArray(r.shards) ? r.shards : [],
     shardFragments: typeof (r as any).shardFragments === "number" ? (r as any).shardFragments : 0,
     seeds: r.seeds ?? {},
+    region: region as ImaginalRegion | null,
+    seedEchoes: (r as any).seedEchoes ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
 }
