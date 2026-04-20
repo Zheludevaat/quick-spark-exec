@@ -24,6 +24,7 @@ import {
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
 import { onActionDown, onDirection, getControls } from "../controls";
+import { awardShardFragment } from "../shardFeedback";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
