@@ -32,8 +32,8 @@ export class TitleScene extends Phaser.Scene {
     const save = loadSave();
     drawGBCBox(this, 18, 118, GBC_W - 36, 22);
     const startLabel = save ? "PRESS A: CONTINUE" : "PRESS A: NEW GAME";
-    const start = new GBCText(this, 26, 124, startLabel, { color: COLOR.textLight });
-    new GBCText(this, 26, 132, save ? "B: ERASE SAVE" : "", { color: COLOR.textDim });
+    const start = new GBCText(this, 26, 124, startLabel, { color: COLOR.textLight, depth: 110 });
+    new GBCText(this, 26, 132, save ? "B: ERASE SAVE" : "", { color: COLOR.textDim, depth: 110 });
 
     // Blink the prompt
     this.tweens.add({ targets: start.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
