@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
 import type { Stats } from "../types";
 
 /**
