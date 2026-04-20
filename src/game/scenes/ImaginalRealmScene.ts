@@ -17,7 +17,7 @@ import { awardShardFragment } from "../shardFeedback";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite } from "./imaginal/soulSprites";
-import { runSoul, isSoulDone } from "./imaginal/soulRunner";
+import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
 
@@ -110,6 +110,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private seedEchoes: SeedEchoMote[] = [];
   private daimonMark!: GBCText;
   private knotTracker!: GBCText;
+  private soulTracker!: GBCText;
   private souls: {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
@@ -176,7 +177,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       depth: 220,
       scrollFactor: 0,
     });
+    // Soul-completion chip (left of knot tracker) — per-region count.
+    this.soulTracker = new GBCText(this, GBC_W - 96, 2, "", {
+      color: COLOR.textAccent,
+      depth: 220,
+      scrollFactor: 0,
+    });
     this.refreshKnotTracker();
+    this.refreshSoulTracker();
 
     // Spawn the daimon companion (lives across all 3 sub-regions)
     this.companion = new SorynCompanion(this, this.rowan, () => this.companionLines(), [
@@ -365,6 +373,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
       const done = isSoulDone(this.save, def.id);
       built.setMood(done ? "resolved" : "waiting");
+      // Resolved souls become faint statues — present but visually quieted.
+      if (done) built.container.setAlpha(0.45);
       this.regionRoot.add(built.container);
       this.regionRoot.add(built.halo);
       this.souls.push({
@@ -376,6 +386,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         barkShown: false,
       });
     }
+    this.refreshSoulTracker();
     // so a "go back north" flow lands them at the south edge instead of
     // teleporting back to the original entry.
     const from = this.lastRegion;
@@ -735,7 +746,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
       runSoul(this, this.save, getArc(soul.def.id), () => {
         this.dialogActive = false;
         // Soul may have completed — refresh visual state on next frame.
-        if (isSoulDone(this.save, soul.def.id)) soul.container.setAlpha(0.45);
+        if (isSoulDone(this.save, soul.def.id)) {
+          soul.container.setAlpha(0.45);
+          soul.setMood("resolved");
+        }
+        this.refreshSoulTracker();
       });
       return;
     }
@@ -807,6 +822,13 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // COMPANION CONTEXT
   // ============================================================================
   private companionLines(): { who: string; text: string }[] {
+    // Highest priority: a recent soul event Soryn can react to.
+    const recent = recentSoulEvents(this.save, 1)[0];
+    if (recent) {
+      const reaction = this.daimonReactionFor(recent);
+      if (reaction) return reaction;
+    }
+
     const cleared = this.totalCleared();
     const region = this.region;
     if (region === "pools") {
@@ -834,6 +856,34 @@ export class ImaginalRealmScene extends Phaser.Scene {
     ];
   }
 
+  /** Soryn's one-liner reaction to a recent soul:tag event. Null = no comment. */
+  private daimonReactionFor(event: string): { who: string; text: string }[] | null {
+    const map: Record<string, string> = {
+      "walking_saint:forced": "You forced the saint. That sits oddly with me.",
+      "walking_saint:witnessed": "You stayed without giving. That was the harder thing.",
+      "cartographer:witnessed": "The cartographer's last river. You stood still for it. Good.",
+      "drowned_poet:named_thoughts": "The song is whole. You returned a word to the water.",
+      "drowned_poet:confessed": "You said you didn't know. The water liked that.",
+      "weeping_twin:released": "She laughed. Briefly. That counts as much as anything here.",
+      "weeping_twin:stayed": "Twice-watched. You looked back. She felt it.",
+      "mirror_philosopher:argued": "He revises his theory. Slowly. You unsettled the pool.",
+      "mirror_philosopher:agreed": "You agreed with him. Don't follow him into the water.",
+      "lantern_mathematician:guessed_neither": "Neither. Of course. He can put the lanterns down.",
+      "stonechild:named": "His name is back. He'll wait less now.",
+      "weighed_heart:held": "You held the feather. You were heavier than your hands.",
+      "collector:gave": "Three echoes. He'll keep them safe-ish, as promised.",
+      "collector:refused": "Good. The jar didn't need them.",
+      "composer:heard": "He heard it. Once. That was enough for him.",
+      "crowned_one:witnessed": "You saw the paper. He felt lighter for it.",
+    };
+    const line = map[event];
+    if (!line) return null;
+    return [
+      { who: "Soryn", text: line },
+      { who: "Soryn", text: "I am still here. Walk on when you are ready." },
+    ];
+  }
+
   private daimonBondLabel(): string {
     // Uniform 4-letter codes so the badge never visually clips.
     if (this.save.flags.daimon_bond_accept) return "✦BIND";
@@ -846,5 +896,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private refreshKnotTracker() {
     if (!this.knotTracker) return;
     this.knotTracker.setText(`KNOTS ${this.totalCleared()}/5`);
+  }
+
+  private refreshSoulTracker() {
+    if (!this.soulTracker) return;
+    const inRegion = this.souls;
+    if (inRegion.length === 0) {
+      this.soulTracker.setText("");
+      return;
+    }
+    const done = inRegion.filter((s) => isSoulDone(this.save, s.def.id)).length;
+    this.soulTracker.setText(`SOULS ${done}/${inRegion.length}`);
   }
 }

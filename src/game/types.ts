@@ -65,6 +65,12 @@ export type SaveSlot = {
   witnessUses: number;
   /** Side-quest tracker. */
   sideQuests: Record<string, "todo" | "active" | "done">;
+  /**
+   * Ring buffer of recent soul events (max 5). Each entry: `${soulId}:${tag}`.
+   * Lets Soryn comment on what just happened, and lets later souls react to
+   * earlier ones across regions.
+   */
+  soulEventLog: string[];
   updatedAt: number;
 };
 
@@ -114,6 +120,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     soulsCompleted: typeof r.soulsCompleted === "number" ? r.soulsCompleted : 0,
     witnessUses: typeof r.witnessUses === "number" ? r.witnessUses : 0,
     sideQuests: (r.sideQuests as Record<string, "todo" | "active" | "done"> | undefined) ?? {},
+    soulEventLog: Array.isArray(r.soulEventLog) ? (r.soulEventLog as string[]).slice(-5) : [],
     updatedAt: r.updatedAt ?? Date.now(),
   };
 }

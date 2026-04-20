@@ -1,6 +1,6 @@
 import type { SoulId } from "./souls";
 import type { SoulArc, SoulEnding } from "./soulRunner";
-import { soulsCompleted } from "./soulRunner";
+import { soulsCompleted, hasChoice, anySoulHasChoice } from "./soulRunner";
 import { unlockLore, showLoreToast } from "../lore";
 import { activateQuest, completeQuest, questStatus } from "../../sideQuests";
 import type { SaveSlot } from "../../types";
@@ -722,11 +722,26 @@ const ARCS: Record<SoulId, SoulArc> = {
     defaultEnding: "wrong",
     steps: [
       {
-        kind: "dialog",
-        lines: [
-          { who: "ONE COUNTING", text: "Do all infinities end? Do none? Do both? Do neither?" },
-          { who: "ONE COUNTING", text: "I have lit a lantern for each answer. One is correct." },
-        ],
+        kind: "react",
+        build: (save: SaveSlot) => {
+          // Cross-soul nods: react if you forced the Saint or named the Stonechild.
+          if (hasChoice(save, "walking_saint", "forced")) {
+            return [
+              { who: "ONE COUNTING", text: "I heard about the saint. You forced her hand." },
+              { who: "ONE COUNTING", text: "Don't force this. The lanterns notice force." },
+            ];
+          }
+          if (hasChoice(save, "stonechild", "named")) {
+            return [
+              { who: "ONE COUNTING", text: "You returned the stonechild's name. Word travels." },
+              { who: "ONE COUNTING", text: "Then you might bear a fourth lantern. Listen." },
+            ];
+          }
+          return [
+            { who: "ONE COUNTING", text: "Do all infinities end? Do none? Do both? Do neither?" },
+            { who: "ONE COUNTING", text: "I have lit a lantern for each answer. One is correct." },
+          ];
+        },
       },
       {
         kind: "inquiry",
@@ -876,6 +891,30 @@ const ARCS: Record<SoulId, SoulArc> = {
         kind: "react",
         build: (save: SaveSlot) => {
           const completed = soulsCompleted(save);
+          // Cross-soul memory: name the most recent specific event we noticed.
+          if (hasChoice(save, "walking_saint", "forced")) {
+            return [
+              { who: "ECHO", text: "The saint walked off without thanks. I felt it from here." },
+              { who: "ECHO", text: "I think you took something she wasn't offering." },
+            ];
+          }
+          if (hasChoice(save, "cartographer", "witnessed")) {
+            return [
+              { who: "ECHO", text: "The cartographer's last river runs through me now." },
+              { who: "ECHO", text: "It points back at you. I think the country was always you." },
+            ];
+          }
+          if (hasChoice(save, "lantern_mathematician", "witnessed_neither")) {
+            return [
+              { who: "ECHO", text: "Neither. Of course. He was so relieved." },
+              { who: "ECHO", text: "He puts the lanterns down for whole minutes now." },
+            ];
+          }
+          if (anySoulHasChoice(save, "released") || anySoulHasChoice(save, "stayed")) {
+            return [
+              { who: "ECHO", text: "The twin laughs sometimes. Did you hear it on your way?" },
+            ];
+          }
           if (completed >= 4) {
             return [
               { who: "ECHO", text: "You've been busy. Four souls quieter for you, and counting." },
