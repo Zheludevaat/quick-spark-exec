@@ -5,10 +5,10 @@ export const Route = createFileRoute("/")({
   component: GamePage,
   head: () => ({
     meta: [
-      { title: "Hermetic Comedy — Act 0: The Silver Threshold" },
-      { name: "description", content: "A pixel-art RPG about dying gracefully and learning four small verbs: Observe, Address, Remember, Release." },
-      { property: "og:title", content: "Hermetic Comedy — Act 0" },
-      { property: "og:description", content: "A GBC-style RPG playable slice. The Silver Threshold, the Moon's Hall of Mirrors, and the Curated Self." },
+      { title: "Hermetic Comedy — Act 0 + I: The Imaginal Realm" },
+      { name: "description", content: "A pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness." },
+      { property: "og:title", content: "Hermetic Comedy — Act 0 & I" },
+      { property: "og:description", content: "A GBC-style RPG: the Last Day, the Silver Threshold, and the Moon's Imaginal Realm." },
     ],
   }),
 });
@@ -63,7 +63,7 @@ function GamePage() {
           HERMETIC COMEDY
         </h1>
         <p style={{ fontSize: 11, opacity: 0.7, margin: "4px 0 0", letterSpacing: "0.1em" }}>
-          act 0 · the silver threshold
+          act 0 · the last day &middot; act i · the imaginal realm
         </p>
       </header>
 

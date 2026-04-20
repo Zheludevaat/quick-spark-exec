@@ -43,8 +43,11 @@ export class TitleScene extends Phaser.Scene {
     new GBCText(this, GBC_W / 2 - 44, 108, "ACT ZERO", { color: COLOR.textAccent });
 
     const save = loadSave();
+    const remaining = save?.flags?.plateau_remain;
     drawGBCBox(this, 18, 118, GBC_W - 36, 22);
-    const startLabel = save ? "PRESS A: CONTINUE" : "PRESS A: NEW GAME";
+    const startLabel = remaining ? "PRESS A: LEAVE THE IMAGINAL"
+      : save ? "PRESS A: CONTINUE"
+      : "PRESS A: NEW GAME";
     const start = new GBCText(this, 26, 124, startLabel, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 26, 132, save ? "B: ERASE SAVE" : "", { color: COLOR.textDim, depth: 110 });
 

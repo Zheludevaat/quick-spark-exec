@@ -79,7 +79,6 @@ export class CuratedSelfScene extends Phaser.Scene {
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
-  private preFightDone = false;
 
   constructor() { super("CuratedSelf"); }
   init(data: { save: SaveSlot }) {
@@ -89,7 +88,6 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.state = "composed";
     this.cursor = 0;
     this.busy = false;
-    this.preFightDone = false;
   }
 
   create() {
@@ -265,6 +263,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private endGame() {
     this.save.scene = "Epilogue";
     this.save.flags.act0_complete = true;
+    this.save.flags.plateau_remain = false;
     writeSave(this.save);
     const a = getAudio(); a.music.stop();
     this.cameras.main.fadeOut(700, 0, 0, 0);
@@ -310,11 +309,12 @@ export class EpilogueScene extends Phaser.Scene {
     new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent, depth: 10 });
     new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
 
-    drawGBCBox(this, 12, 44, GBC_W - 24, 58);
+    drawGBCBox(this, 12, 44, GBC_W - 24, 64);
     new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}`, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight, depth: 110 });
     new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight, depth: 110 });
-    new GBCText(this, 18, 84, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
+    new GBCText(this, 18, 80, `SHARDS     ${this.save.shards.length}/21`, { color: COLOR.textGold, depth: 110 });
+    new GBCText(this, 18, 92, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
 
     this.add.rectangle(0, GBC_H - 28, GBC_W, 28, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
     this.optionTexts = [

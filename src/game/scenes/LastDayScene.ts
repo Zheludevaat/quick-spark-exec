@@ -150,6 +150,10 @@ export class LastDayScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
+    // Door is open immediately if 3+ seeds were already set in a prior visit.
+    const usedAtLoad = this.items.filter(t => t.used).length;
+    if (usedAtLoad >= 3) this.exitOpen = true;
+
     if (!this.save.flags.lastday_intro) {
       this.save.flags.lastday_intro = true;
       writeSave(this.save);
