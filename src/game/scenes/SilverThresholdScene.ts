@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, spawnMotes, gbcWipe } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
 
 const SORYN_OPENING = [
@@ -228,12 +229,76 @@ export class SilverThresholdScene extends Phaser.Scene {
         writeSave(this.save);
         this.dialogActive = true;
         runDialog(this, ELEMENT_LINES[c.kind], () => {
-          this.dialogActive = false;
-          this.checkAllElements();
+          this.runElementRite(c.kind);
         });
         return;
       }
     }
+  }
+
+  private runElementRite(kind: ElemKind) {
+    const RITE: Record<ElemKind, { prompt: string; options: InquiryOption[]; bias: keyof SaveSlot["stats"]; seed?: string }> = {
+      air: {
+        prompt: "What did you avoid looking at?",
+        bias: "clarity",
+        seed: "seed_window",
+        options: [
+          { choice: "observe", label: "OBSERVE", reply: "You see it now. The window. The frost. The truck idling." },
+          { choice: "ask",     label: "ASK",     reply: "You ask the air a question with no answer. It is enough." },
+          { choice: "confess", label: "CONFESS", reply: "You confess: you did not want to be seen waving back." },
+          { choice: "silent",  label: "SILENT",  reply: "Silence. The air receives it without judgment." },
+        ],
+      },
+      fire: {
+        prompt: "What did you not call?",
+        bias: "courage",
+        seed: "seed_call",
+        options: [
+          { choice: "observe", label: "OBSERVE", reply: "You see the phone. You see the name. You see the choice." },
+          { choice: "ask",     label: "ASK",     reply: "You ask: would calling have helped? Maybe. Maybe not." },
+          { choice: "confess", label: "CONFESS", reply: "You confess: you let it ring. You wanted to be left alone." },
+          { choice: "silent",  label: "SILENT",  reply: "The fire takes the silence and warms it." },
+        ],
+      },
+      water: {
+        prompt: "What did you make and not share?",
+        bias: "compassion",
+        seed: "seed_kettle",
+        options: [
+          { choice: "observe", label: "OBSERVE", reply: "Tea, poured for no one. Steam, thinning." },
+          { choice: "ask",     label: "ASK",     reply: "You ask the water: who was it for? You knew. You always knew." },
+          { choice: "confess", label: "CONFESS", reply: "You confess: it was for the version of yourself you preferred." },
+          { choice: "silent",  label: "SILENT",  reply: "The water listens. It has held worse, kindly." },
+        ],
+      },
+      earth: {
+        prompt: "What did you carry that you could have set down?",
+        bias: "clarity",
+        seed: "seed_coat",
+        options: [
+          { choice: "observe", label: "OBSERVE", reply: "Your coat. Pockets full of small unfinished things." },
+          { choice: "ask",     label: "ASK",     reply: "You ask the ground: which of these did I actually need?" },
+          { choice: "confess", label: "CONFESS", reply: "You confess: most of it. You carried most of it for nothing." },
+          { choice: "silent",  label: "SILENT",  reply: "The earth accepts the weight without comment." },
+        ],
+      },
+    };
+    const rite = RITE[kind];
+    runInquiry(this, { who: kind.toUpperCase(), text: rite.prompt }, rite.options, (picked) => {
+      // CONFESS doubles the bias; OBSERVE adds clarity; ASK adds compassion; SILENT adds courage.
+      if (picked.choice === "confess") this.save.stats[rite.bias] += 1;
+      else if (picked.choice === "observe") this.save.stats.clarity += 1;
+      else if (picked.choice === "ask")     this.save.stats.compassion += 1;
+      else if (picked.choice === "silent")  this.save.stats.courage += 1;
+      // If a seed exists for this element and the player set it during the Last Day, mark it acknowledged.
+      if (rite.seed && this.save.seeds[rite.seed]) {
+        this.save.flags[`ack_${rite.seed}`] = true;
+      }
+      this.events.emit("stats-changed");
+      writeSave(this.save);
+      this.dialogActive = false;
+      this.checkAllElements();
+    });
   }
 
   private checkAllElements() {
