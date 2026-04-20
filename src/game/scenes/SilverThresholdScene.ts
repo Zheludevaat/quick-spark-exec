@@ -69,6 +69,8 @@ export class SilverThresholdScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(COLOR.void);
     this.cameras.main.fadeIn(400);
+    const audio = getAudio();
+    audio.music.play("silver", SONG_SILVER);
 
     // Paint tilemap
     const map = buildMap();
