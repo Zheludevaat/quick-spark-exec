@@ -527,13 +527,11 @@ export class SilverThresholdScene extends Phaser.Scene {
             c.visited = true;
             this.save.flags[`elem_${kind}`] = true;
             c.sprite.setAlpha(0.35);
-            // Memory shard fragment (4 = 1 shard)
-            this.save.shardFragments = (this.save.shardFragments ?? 0) + 1;
-            if (this.save.shardFragments >= 4) {
-              this.save.shardFragments -= 4;
-              if (!this.save.shards.includes("threshold_1")) this.save.shards.push("threshold_1");
-              this.flashShardCollected();
-            }
+            // Memory shard fragment (4 = 1 shard) — uses shared feedback
+            awardShardFragment(this, this.save, () => "threshold_1", {
+              x: this.rowan.x,
+              y: this.rowan.y,
+            });
             this.events.emit("stats-changed");
             writeSave(this.save);
             this.cameras.main.flash(120, 240, 240, 255);

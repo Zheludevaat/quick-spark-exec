@@ -7,6 +7,7 @@ import { getAudio, SONG_LASTDAY } from "../audio";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "./lore";
 import { onActionDown, onDirection } from "../controls";
+import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
@@ -494,6 +495,14 @@ export class LastDayScene extends Phaser.Scene {
     if (it.seed) this.save.seeds[it.seed] = true;
     writeSave(this.save);
     if (it.marker) it.marker.setVisible(false);
+    // Side quest: find every visible seed in the flat
+    if (questStatus(this.save, "all_seeds_lastday") !== "done") {
+      activateQuest(this, this.save, "all_seeds_lastday");
+      const required = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
+      if (required.every((s) => this.save.seeds[s])) {
+        completeQuest(this, this.save, "all_seeds_lastday");
+      }
+    }
   }
 
   private runItem(it: Interactable) {
