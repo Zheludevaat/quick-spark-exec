@@ -57,42 +57,44 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#05070d");
     this.cameras.main.fadeIn(500);
 
-    // Stars
+    // Stars + horizon, constrained to arena (12..76)
     const g = this.add.graphics();
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 32; i++) {
       g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, 70), 1, 1);
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
-    g.fillStyle(0x1a2030, 1); g.fillRect(0, 70, GBC_W, 4);
-    g.fillStyle(0x243058, 1); g.fillRect(0, 74, GBC_W, 18);
-    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 84, 70, 10);
+    g.fillStyle(0x1a2030, 1); g.fillRect(0, 64, GBC_W, 2);
+    g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
+    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(GBC_W / 2, 70, 64, 8);
 
-    // Title plate
-    drawGBCBox(this, 4, 14, 100, 12);
-    new GBCText(this, 8, 17, "THE CURATED SELF", { color: COLOR.textWarn });
-    this.stateText = new GBCText(this, 110, 17, "COMPOSED", { color: COLOR.textAccent });
+    // Title plate (top-right under HUD)
+    drawGBCBox(this, GBC_W - 92, 14, 88, 14);
+    new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
+    this.stateText = new GBCText(this, 4, 14, "COMPOSED", { color: COLOR.textAccent, depth: 101 });
 
     // Boss sprite
-    this.boss = this.add.sprite(GBC_W / 2, 56, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
+    this.boss = this.add.sprite(GBC_W / 2, 46, "boss", STATE_FRAME.composed).setOrigin(0.5, 0.5);
     this.boss.play("boss_composed");
 
-    // Command panel
-    drawGBCBox(this, 0, 92, GBC_W, 52);
+    // Log box — y 76..112 (36px)
+    drawGBCBox(this, 0, 76, GBC_W, 36);
+    this.logText = new GBCText(this, 4, 81, STATE_LINES.composed.taunt, {
+      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 10,
+    });
+
+    // Command panel — y 112..144
+    drawGBCBox(this, 0, 112, GBC_W, 32);
     CMDS.forEach((c, i) => {
       const x = 16 + (i % 2) * 70;
-      const y = 102 + Math.floor(i / 2) * 16;
+      const y = 118 + Math.floor(i / 2) * 11;
       const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => this.choose(i));
       t.obj.setData("cmd", c.cmd);
       this.cmdTexts.push(t);
     });
-    this.cursorMark = new GBCText(this, 8, 102, "▶", { color: COLOR.textGold, depth: 101 });
+    this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
-
-    this.logText = new GBCText(this, 4, 132, STATE_LINES.composed.taunt, {
-      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
-    });
 
     attachHUD(this, () => this.save.stats);
 
@@ -120,7 +122,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private refreshCursor() {
     this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
     const x = 8 + (this.cursor % 2) * 70;
-    const y = 102 + Math.floor(this.cursor / 2) * 16;
+    const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
   }
 

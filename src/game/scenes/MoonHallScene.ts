@@ -89,8 +89,10 @@ export class MoonHallScene extends Phaser.Scene {
     // Player at top
     this.rowan = makeRowan(this, 24, 32);
 
-    // Title strip (over the wall row)
+    // Title + hint backings so text stays readable over tilemap walls
+    this.add.rectangle(0, 13, GBC_W, 9, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
     new GBCText(this, 4, 14, "HALL OF MIRRORS", { color: COLOR.textAccent, depth: 200 });
+    this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
     this.hint = new GBCText(this, 4, GBC_H - 9, "WALK TO A MIRROR", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
 
     attachHUD(this, () => this.save.stats);
