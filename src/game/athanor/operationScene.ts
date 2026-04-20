@@ -84,6 +84,9 @@ export function selectShards(
   };
   refresh();
 
+  let unbindAct: (() => void) | null = null;
+  let unbindDir: (() => void) | null = null;
+
   const cleanup = () => {
     promptText.destroy();
     labels.forEach((l) => l.destroy());
@@ -92,7 +95,7 @@ export function selectShards(
     unbindDir?.();
   };
 
-  const unbindAct = onActionDown(scene, "action", () => {
+  unbindAct = onActionDown(scene, "action", () => {
     const id = inv[cursor];
     if (picked.has(id)) {
       picked.delete(id);
@@ -102,13 +105,13 @@ export function selectShards(
     refresh();
     if (picked.size === n) {
       const result = Array.from(picked);
-      // Move from inventory → consumed
+      // Move from inventory → consumed (single source of truth).
       for (const sid of result) consumeShard(save, sid);
       cleanup();
       onPicked(result);
     }
   });
-  const unbindDir = onDirection(scene, (dir) => {
+  unbindDir = onDirection(scene, (dir) => {
     if (dir === "up") cursor = (cursor - 1 + inv.length) % inv.length;
     if (dir === "down") cursor = (cursor + 1) % inv.length;
     refresh();
