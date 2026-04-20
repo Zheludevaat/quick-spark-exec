@@ -814,48 +814,92 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#0a0e1a");
-    this.cameras.main.fadeIn(700);
+    this.cameras.main.setBackgroundColor("#05060f");
+    this.cameras.main.fadeIn(900);
     getAudio().music.play("epilogue", SONG_EPILOGUE);
 
-    for (let i = 0; i < 50; i++) {
-      const s = this.add.rectangle(
-        Phaser.Math.Between(0, GBC_W),
-        Phaser.Math.Between(0, GBC_H),
-        1,
-        1,
-        0xdde6f5,
-        Phaser.Math.FloatBetween(0.3, 1),
-      );
+    const tier = endingTier(this.save);
+    const TIER_TINT: Record<string, [number, number, number]> = {
+      ascent: [0xfff5d0, 0xffe098, 0xc8b070],
+      gold: [0xffe098, 0xd8a060, 0x8a5028],
+      silver: [0xc8d0e8, 0x88a0c8, 0x4a5878],
+      iron: [0xa8b0c0, 0x687088, 0x2a3048],
+      brittle: [0x9088a0, 0x584860, 0x1a1428],
+    };
+    const tint = TIER_TINT[tier];
+
+    // Deep gradient background tinted by tier
+    const bg = this.add.graphics().setDepth(0);
+    const bandsBg: [number, number][] = [
+      [0x05060f, 30],
+      [tint[2], 40],
+      [tint[1], 50],
+      [tint[0], 24],
+    ];
+    let yy = 0;
+    for (const [c, h] of bandsBg) {
+      bg.fillStyle(c, 0.55);
+      bg.fillRect(0, yy, GBC_W, h);
+      yy += h;
+    }
+
+    // Stars (denser, twinkling)
+    for (let i = 0; i < 70; i++) {
+      const s = this.add
+        .rectangle(
+          Phaser.Math.Between(0, GBC_W),
+          Phaser.Math.Between(0, GBC_H),
+          1,
+          1,
+          0xdde6f5,
+          Phaser.Math.FloatBetween(0.3, 1),
+        )
+        .setDepth(1);
       this.tweens.add({
         targets: s,
-        alpha: 0.15,
-        duration: Phaser.Math.Between(700, 1800),
+        alpha: 0.1,
+        duration: Phaser.Math.Between(700, 2200),
         yoyo: true,
         repeat: -1,
-        delay: Phaser.Math.Between(0, 1500),
+        delay: Phaser.Math.Between(0, 2000),
       });
     }
 
-    for (let b = 0; b < 3; b++) {
-      const colors = [0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+    // Aurora ribbons — slow, sine-driven
+    const ribbons = [tint[0], tint[1], 0x88c0f0, 0xa8e8c8, 0xc8a8e8];
+    for (let b = 0; b < ribbons.length; b++) {
       const band = this.add
-        .rectangle(GBC_W / 2, 24 + b * 6, GBC_W * 1.5, 3, colors[b], 0.18)
+        .rectangle(GBC_W / 2, 18 + b * 7, GBC_W * 1.6, 2, ribbons[b], 0.22)
         .setDepth(2);
       this.tweens.add({
         targets: band,
-        x: GBC_W / 2 + (b % 2 === 0 ? 12 : -12),
+        x: GBC_W / 2 + (b % 2 === 0 ? 18 : -18),
         alpha: 0.06,
-        duration: 3200 + b * 800,
+        scaleX: 1.15,
+        duration: 3400 + b * 700,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",
       });
     }
 
+    // Halo behind title
+    const halo = this.add.circle(GBC_W / 2, 22, 24, tint[0], 0.18).setDepth(3);
+    this.tweens.add({
+      targets: halo,
+      scale: 1.3,
+      alpha: 0.05,
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
+    // Drifting motes
+    spawnMotes(this, { count: 12, color: tint[0], alpha: 0.4, driftY: -0.01, depth: 4 });
+
     this.cameras.main.zoomTo(1.04, 4000, "Sine.inOut", true);
 
-    const tier = endingTier(this.save);
     const tierLabel: Record<string, string> = {
       ascent: "ASCENT",
       gold: "GOLD",
@@ -868,6 +912,14 @@ export class EpilogueScene extends Phaser.Scene {
       color: COLOR.textGold,
       depth: 10,
     });
+
+    // Vignette
+    const vignette = this.add.graphics().setDepth(180);
+    vignette.fillStyle(0x000000, 0.5);
+    vignette.fillRect(0, 0, GBC_W, 4);
+    vignette.fillRect(0, GBC_H - 4, GBC_W, 4);
+    vignette.fillRect(0, 0, 4, GBC_H);
+    vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
     drawGBCBox(this, 8, 36, GBC_W - 16, 70);
     const paragraphs = endingParagraphs(this.save);
