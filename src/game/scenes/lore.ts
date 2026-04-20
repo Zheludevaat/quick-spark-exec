@@ -378,6 +378,104 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
       "THE HARDEST KINDNESS. ALSO THE LIGHTEST.",
     ],
   },
+
+  // ===== Act 1 — Variant soul endings =====
+  soul_cartographer_incomplete: {
+    id: "soul_cartographer_incomplete",
+    title: "THE UNFINISHED MAP",
+    source: "POOLS — VARIANT",
+    body: ["YOU LEFT BEFORE THE LAST BEND.", "HE KEPT DRAWING. POLITELY.", "THE COUNTRY WAITS."],
+  },
+  soul_weeping_twin_early: {
+    id: "soul_weeping_twin_early",
+    title: "WALKED PAST",
+    source: "POOLS — VARIANT",
+    body: ["YOU DID NOT STAY.", "SHE LAUGHED ANYWAY. HICCUP-LAUGHED.", "SOMETIMES THAT IS ENOUGH."],
+  },
+  soul_weeping_twin_stayed: {
+    id: "soul_weeping_twin_stayed",
+    title: "TWICE-SEEN",
+    source: "POOLS — VARIANT",
+    body: ["YOU STAYED. THE REFLECTION STAYED.", "TWO WITNESSES TO ONE GRIEF.", "IT BECAME LIGHTER."],
+  },
+  soul_drowned_poet_guessed: {
+    id: "soul_drowned_poet_guessed",
+    title: "THE NEAR WORD",
+    source: "POOLS — VARIANT",
+    body: ["YOU GUESSED. CLOSE. NOT THE WORD.", "THE SONG STILL HALF-SUNG.", "SHE WILL TRY YOU AGAIN."],
+  },
+  soul_drowned_poet_honest: {
+    id: "soul_drowned_poet_honest",
+    title: "EVEN, IN NOT-KNOWING",
+    source: "POOLS — VARIANT",
+    body: ["YOU SAID I DON'T KNOW.", "THE WATER ALSO DID NOT.", "TWO HONEST FORGETTINGS."],
+  },
+  soul_mirror_philosopher_argued: {
+    id: "soul_mirror_philosopher_argued",
+    title: "REVISED",
+    source: "POOLS — VARIANT (ARGUED)",
+    body: ["YOU ARGUED. HE LISTENED.", "HE HAS BEGUN A NEW THEORY.", "FEWER POOLS IN IT."],
+  },
+  soul_mirror_philosopher_agreed: {
+    id: "soul_mirror_philosopher_agreed",
+    title: "POLITELY DECLINED",
+    source: "POOLS — VARIANT (AGREED)",
+    body: ["YOU AGREED. HE INVITED YOU IN.", "YOU DID NOT ENTER. HE NOTICED.", "TRUTH IS FOR THE BRAVE."],
+  },
+  soul_collector_refused: {
+    id: "soul_collector_refused",
+    title: "THE EMPTY JAR",
+    source: "FIELD — VARIANT",
+    body: ["YOU KEPT YOUR ECHOES.", "HE NODDED. THE JAR REMAINED.", "MOTES ARE NOT FOR JARS, REALLY."],
+  },
+  soul_collector_deferred: {
+    id: "soul_collector_deferred",
+    title: "NOT YET",
+    source: "FIELD — VARIANT",
+    body: ["YOU HAD TOO FEW TO GIVE.", "HE SENT YOU TO TOUCH MORE.", "THE FIELD IS PATIENT."],
+  },
+  soul_walking_saint_forced: {
+    id: "soul_walking_saint_forced",
+    title: "THE FORCED GIFT",
+    source: "FIELD — VARIANT (NAMED)",
+    body: ["YOU PRESSED THE MOTE INTO HER HAND.", "SHE TOOK IT. WALKED OFF SHAKING.", "KINDNESS IS NOT A WEAPON."],
+  },
+  soul_walking_saint_left: {
+    id: "soul_walking_saint_left",
+    title: "WALKED ON",
+    source: "FIELD — VARIANT",
+    body: ["YOU DIDN'T OFFER. SHE NODDED.", '"YES. WALK ON. DON\'T STAY FOR ME."', "THE FIELD KEPT ITS SHAPE."],
+  },
+  soul_composer_tried: {
+    id: "soul_composer_tried",
+    title: "ALMOST",
+    source: "FIELD — VARIANT",
+    body: ["CLOSER THAN YESTERDAY.", "HE WILL WAIT FOR QUIETER HANDS.", "THE TUNE IS STILL ALMOST."],
+  },
+  soul_stonechild_waited: {
+    id: "soul_stonechild_waited",
+    title: "WAITING TOGETHER",
+    source: "CORRIDOR — VARIANT",
+    body: ["YOU FORGOT, TOO.", "YOU WAITED TOGETHER. THAT WAS ENOUGH.", "TWO PEOPLE, ONE NAME, NEITHER HAS IT."],
+  },
+  soul_stonechild_deferred: {
+    id: "soul_stonechild_deferred",
+    title: "THE NAME KEEPS",
+    source: "CORRIDOR — VARIANT",
+    body: ["YOU SAID ANOTHER TIME.", "HE SAID OF COURSE.", "A NAME KEEPS. APPARENTLY."],
+  },
+  soul_lantern_mathematician_wrong: {
+    id: "soul_lantern_mathematician_wrong",
+    title: "THE WRONG LANTERN",
+    source: "CORRIDOR — VARIANT (NAMED)",
+    body: ["YOU PICKED ONE. IT DIMMED.", "HE NODDED, WROTE IT DOWN.", "WRONG ANSWERS ARE STILL ANSWERS."],
+  },
+  soul_weighed_heart_tried: {
+    id: "soul_weighed_heart_tried",
+    title: "THE FEATHER, TIPPED",
+    source: "CORRIDOR — VARIANT (NAMED)",
+    body: ["YOU MOVED. THE WEIGHT TIPPED.", "SHE SAID IT WAS ALL RIGHT.", "COME BACK HEAVIER."],
+  },
 };
 
 /** Idempotently unlock a lore entry. Returns true if it was newly unlocked. */
