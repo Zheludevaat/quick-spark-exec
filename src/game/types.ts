@@ -22,10 +22,10 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
 
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
-  0: "PRELUDE — THE LAST DAY",
-  1: "I — THE IMAGINAL",
-  2: "II — THE GREAT WORK",
-  3: "III — THE RETURN",
+  0: "PRELUDE - THE LAST DAY",
+  1: "ACT I - THE IMAGINAL",
+  2: "ACT II - THE GREAT WORK",
+  3: "ACT III - THE RETURN",
 };
 
 /** Per-scene short label for the Continue row. */
