@@ -77,6 +77,8 @@ export class EncounterScene extends Phaser.Scene {
   private cursorMark!: GBCText;
   private misses = 0;
   private intentText?: GBCText;
+  private verbHintText!: GBCText;
+  private goalText!: GBCText;
 
   constructor() { super("Encounter"); }
   init(data: { save: SaveSlot; kind: EnemyKind; onDone: (won: boolean) => void }) {
