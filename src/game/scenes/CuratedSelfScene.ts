@@ -178,22 +178,35 @@ export class EpilogueScene extends Phaser.Scene {
         1, 1, 0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
     }
 
-    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent });
-    new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight });
+    new GBCText(this, GBC_W / 2 - 22, 16, "ACT ZERO", { color: COLOR.textAccent, depth: 10 });
+    new GBCText(this, GBC_W / 2 - 22, 26, "COMPLETE", { color: COLOR.textLight, depth: 10 });
 
-    drawGBCBox(this, 12, 50, GBC_W - 24, 50);
-    new GBCText(this, 18, 56, `CLARITY    ${this.save.stats.clarity}`, { color: COLOR.textLight });
-    new GBCText(this, 18, 66, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight });
-    new GBCText(this, 18, 76, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight });
-    new GBCText(this, 18, 88, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36 });
+    drawGBCBox(this, 12, 44, GBC_W - 24, 58);
+    new GBCText(this, 18, 50, `CLARITY    ${this.save.stats.clarity}`, { color: COLOR.textLight, depth: 110 });
+    new GBCText(this, 18, 60, `COMPASSION ${this.save.stats.compassion}`, { color: COLOR.textLight, depth: 110 });
+    new GBCText(this, 18, 70, `COURAGE    ${this.save.stats.courage}`, { color: COLOR.textLight, depth: 110 });
+    new GBCText(this, 18, 84, "THE VERB-LOOP IS YOURS.", { color: COLOR.textAccent, maxWidthPx: GBC_W - 36, depth: 110 });
 
-    new GBCText(this, 8, GBC_H - 22, "A: WALK AGAIN", { color: COLOR.textGold });
-    new GBCText(this, 8, GBC_H - 12, "B: ERASE & RESTART", { color: COLOR.textDim });
+    // Action prompts with backing strip for legibility
+    this.add.rectangle(0, GBC_H - 26, GBC_W, 26, 0x05070d, 0.92).setOrigin(0, 0).setDepth(199);
+    new GBCText(this, 6, GBC_H - 22, "A: WALK AGAIN",      { color: COLOR.textGold, depth: 200 });
+    new GBCText(this, 6, GBC_H - 12, "B: ERASE  RESTART",  { color: COLOR.textDim,  depth: 200 });
 
-    this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("Title"));
-    this.input.keyboard?.on("keydown-SPACE", () => this.scene.start("Title"));
-    this.events.on("vinput-action", () => this.scene.start("Title"));
-    this.events.on("vinput-cancel", () => { clearSave(); this.scene.start("Title"); });
-    this.input.keyboard?.on("keydown-BACKSPACE", () => { clearSave(); this.scene.start("Title"); });
+    // Attach HUD so touch users get virtual A/B buttons
+    attachHUD(this, () => this.save.stats);
+
+    const walk  = () => this.scene.start("Title");
+    const erase = () => { clearSave(); this.scene.start("Title"); };
+
+    this.input.keyboard?.on("keydown-ENTER",     walk);
+    this.input.keyboard?.on("keydown-SPACE",     walk);
+    this.input.keyboard?.on("keydown-A",         walk);
+    this.input.keyboard?.on("keydown-B",         erase);
+    this.input.keyboard?.on("keydown-BACKSPACE", erase);
+    this.events.on("vinput-action", walk);
+    this.events.on("vinput-cancel", erase);
+    // Tap-to-walk-again as a safety net (deferred so the click that opened
+    // this scene doesn't immediately advance it)
+    this.time.delayedCall(200, () => this.input.on("pointerdown", walk));
   }
 }
