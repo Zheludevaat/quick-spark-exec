@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
 import { writeSave, clearSave } from "../save";
 import type { Command, SaveSlot } from "../types";
 import { attachHUD } from "./hud";
+import { getAudio, SONG_BOSS, SONG_EPILOGUE } from "../audio";
 
 type State = "composed" | "flattering" | "fractured" | "exposed" | "released";
 
@@ -56,6 +57,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#05070d");
     this.cameras.main.fadeIn(500);
+    getAudio().music.play("boss", SONG_BOSS);
 
     // Stars + horizon, constrained to arena (12..76)
     const g = this.add.graphics();
@@ -117,6 +119,7 @@ export class CuratedSelfScene extends Phaser.Scene {
   private move(d: number) {
     if (this.busy) return;
     this.cursor = (this.cursor + d + 4) % 4;
+    getAudio().sfx("cursor");
     this.refreshCursor();
   }
   private refreshCursor() {
@@ -132,9 +135,11 @@ export class CuratedSelfScene extends Phaser.Scene {
     const cmd = this.cmdTexts[i].obj.getData("cmd") as Command;
     const stage = STATE_LINES[this.state];
     this.busy = true;
+    const audio = getAudio();
     if (cmd === stage.weakness) {
       this.logText.setText(stage.success);
       this.cameras.main.flash(180, 200, 220, 255);
+      audio.sfx("resolve");
       this.time.delayedCall(800, () => {
         this.state = stage.next;
         this.stateText.setText(this.state.toUpperCase());
@@ -142,6 +147,7 @@ export class CuratedSelfScene extends Phaser.Scene {
         if (this.state === "released") {
           this.tweens.add({ targets: this.boss, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
           this.logText.setText("Silence. Then warmth. The verb-loop is yours.");
+          audio.sfx("open");
           this.time.delayedCall(1400, () => this.endGame());
         } else {
           this.busy = false;
@@ -150,6 +156,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     } else {
       this.logText.setText("The mask only steadies. Try another verb.");
       this.cameras.main.shake(100, 0.003);
+      audio.sfx("miss");
       this.busy = false;
     }
   }
@@ -158,6 +165,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.save.scene = "Epilogue";
     this.save.flags.act0_complete = true;
     writeSave(this.save);
+    const a = getAudio(); a.music.stop();
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("Epilogue", { save: this.save }));
   }
@@ -179,6 +187,7 @@ export class EpilogueScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#0a0e1a");
     this.cameras.main.fadeIn(700);
+    getAudio().music.play("epilogue", SONG_EPILOGUE);
 
     for (let i = 0; i < 40; i++) {
       this.add.rectangle(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H),
@@ -214,6 +223,7 @@ export class EpilogueScene extends Phaser.Scene {
 
     const move = (d: number) => {
       this.cursor = (this.cursor + d + 2) % 2;
+      getAudio().sfx("cursor");
       this.refreshCursor();
     };
     this.input.keyboard?.on("keydown-UP", () => move(-1));
@@ -235,6 +245,9 @@ export class EpilogueScene extends Phaser.Scene {
   }
 
   private choose() {
+    const a = getAudio();
+    a.sfx("confirm");
+    a.music.stop();
     if (this.cursor === 0) {
       this.scene.start("Title");
       return;

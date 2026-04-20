@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { getAudio, SONG_MOON } from "../audio";
 
 type Mirror = {
   x: number; y: number;
@@ -10,6 +11,32 @@ type Mirror = {
   cleared: boolean;
   sprite: Phaser.GameObjects.Image;
   glow?: Phaser.GameObjects.Arc;
+};
+
+const MIRROR_TAGLINE: Record<Mirror["kind"], string> = {
+  reflection: "A SHAPE THAT MIMICS YOU.",
+  echo:       "A WORD YOU REGRET.",
+  glitter:    "A FRAGMENT OF AN AFTERNOON.",
+  boss:       "THE FACE YOU OFFERED.",
+};
+
+const SORYN_AFTER_CLEAR: Record<Mirror["kind"], { who: string; text: string }[]> = {
+  reflection: [
+    { who: "Soryn", text: "Seeing it plainly is the first kindness." },
+    { who: "Soryn", text: "Most knots are smaller once they are watched." },
+  ],
+  echo: [
+    { who: "Soryn", text: "Naming what you meant is half of mending." },
+    { who: "Soryn", text: "The other half is letting the echo answer back." },
+  ],
+  glitter: [
+    { who: "Soryn", text: "Memory in pieces is still memory." },
+    { who: "Soryn", text: "Hold the whole afternoon. Even the dull parts." },
+  ],
+  boss: [
+    { who: "Soryn", text: "The Curated Self is not your enemy." },
+    { who: "Soryn", text: "It is a story you outgrew. Thank it. Then go." },
+  ],
 };
 
 const MAP_W = 10, MAP_H = 9;
@@ -49,6 +76,7 @@ export class MoonHallScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#0a0f20");
     this.cameras.main.fadeIn(400);
+    getAudio().music.play("moon", SONG_MOON);
 
     // Paint moon hall tilemap
     const map = buildMoonMap();
@@ -138,9 +166,9 @@ export class MoonHallScene extends Phaser.Scene {
       if (near.cleared) this.hint.setText("THIS MIRROR IS QUIET.");
       else if (near.kind === "boss") {
         const ready = this.totalStats() >= 5 && this.mirrors.filter(m => m.kind !== "boss").every(m => m.cleared);
-        this.hint.setText(ready ? "A: FACE CURATED SELF" : "CLEAR SMALL MIRRORS FIRST");
+        this.hint.setText(ready ? "A: FACE CURATED SELF" : MIRROR_TAGLINE.boss);
       } else {
-        this.hint.setText(`A: ENTER ${near.kind.toUpperCase()}`);
+        this.hint.setText(`A: ${MIRROR_TAGLINE[near.kind]}`);
       }
     } else {
       this.hint.setText("WALK TO A MIRROR.");
@@ -171,21 +199,32 @@ export class MoonHallScene extends Phaser.Scene {
       if (!ready) return;
       this.save.scene = "CuratedSelf";
       writeSave(this.save);
+      const a = getAudio(); a.sfx("boss"); a.music.stop();
       gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
       return;
     }
 
+    getAudio().sfx("confirm");
     this.scene.launch("Encounter", {
       save: this.save,
       kind: m.kind,
       onDone: (won: boolean) => {
         this.scene.resume();
+        getAudio().music.play("moon", SONG_MOON);
         if (won) {
           m.cleared = true;
           this.save.flags[`m_${m.kind}`] = true;
           writeSave(this.save);
           m.sprite.setFrame(TILE_INDEX.MIRROR_CLEARED);
           this.events.emit("stats-changed");
+          // Soryn comments after each clear, once
+          const flag = `soryn_after_${m.kind}`;
+          if (!this.save.flags[flag]) {
+            this.save.flags[flag] = true;
+            writeSave(this.save);
+            this.dialogActive = true;
+            this.time.delayedCall(400, () => runDialog(this, SORYN_AFTER_CLEAR[m.kind], () => { this.dialogActive = false; }));
+          }
         }
       },
     });

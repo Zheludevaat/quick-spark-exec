@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
 import type { Stats } from "../types";
+import { getAudio } from "../audio";
 
 /**
  * Reusable on-screen HUD: stats top bar + virtual D-pad + A/B for touch.
@@ -16,6 +17,11 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   // Global LCD toggle: backslash key
   scene.input.keyboard?.on("keydown-BACKSLASH", () => toggleLcd(scene));
+  // Global mute toggle: M key
+  scene.input.keyboard?.on("keydown-M", () => {
+    const a = getAudio();
+    a.setMuted(!a.muted);
+  });
 
   // Top stats bar (compact for 160-wide screen)
   const barBg = scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
@@ -168,6 +174,9 @@ export function runDialog(
       callback: () => {
         n++;
         text.setText(s.slice(0, n));
+        // Tick a soft blip every other glyph (skip spaces) so it doesn't get noisy
+        const ch = s[n - 1];
+        if (n % 2 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; }
       },
     });

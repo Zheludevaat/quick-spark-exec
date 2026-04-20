@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, spawnMotes, gbcWipe } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { getAudio, SONG_SILVER } from "../audio";
 
 const SORYN_OPENING = [
   { who: "?",     text: "Welcome, Rowan. Take a breath you no longer need." },
@@ -12,10 +13,22 @@ const SORYN_OPENING = [
 ];
 
 const ELEMENT_LINES: Record<string, { who: string; text: string }[]> = {
-  air:   [{ who: "Air",   text: "Clarity is not certainty. It is willingness to see." }],
-  fire:  [{ who: "Fire",  text: "Courage burns the part of you that hides." }],
-  water: [{ who: "Water", text: "Compassion holds what cannot yet be fixed." }],
-  earth: [{ who: "Earth", text: "You are still here. The ground in you remembers." }],
+  air: [
+    { who: "Air",   text: "Clarity is not certainty. It is willingness to see." },
+    { who: "Air",   text: "What you avoid looking at writes the loudest stories." },
+  ],
+  fire: [
+    { who: "Fire",  text: "Courage burns the part of you that hides." },
+    { who: "Fire",  text: "It does not feel brave. That is how you know it works." },
+  ],
+  water: [
+    { who: "Water", text: "Compassion holds what cannot yet be fixed." },
+    { who: "Water", text: "Even your worst hour deserves a witness who stays." },
+  ],
+  earth: [
+    { who: "Earth", text: "You are still here. The ground in you remembers." },
+    { who: "Earth", text: "Slowness is not failure. It is how roots are made." },
+  ],
 };
 
 const SORYN_AFTER = [
@@ -23,6 +36,21 @@ const SORYN_AFTER = [
   { who: "Soryn", text: "There you will learn four small verbs:" },
   { who: "Soryn", text: "Observe. Address. Remember. Release." },
   { who: "Soryn", text: "Press A at the gate when you are ready." },
+];
+
+const SORYN_REPEAT = [
+  { who: "Soryn", text: "The threshold likes wanderers. Take your time." },
+  { who: "Soryn", text: "When you are ready, walk to each circle." },
+];
+
+const SORYN_REPEAT_AFTER = [
+  { who: "Soryn", text: "The gate listens. Step into it when you can." },
+  { who: "Soryn", text: "Whatever you bring, you will not bring alone." },
+];
+
+const STONE_LINES = [
+  { who: "Stone", text: "An old marker. Carved with one word: BEGIN." },
+  { who: "Stone", text: "You feel a small warmth in the chest. +1 COURAGE." },
 ];
 
 // Map dimensions in tiles (160/16 x 144/16 = 10 x 9)
@@ -57,6 +85,7 @@ export class SilverThresholdScene extends Phaser.Scene {
   private gate!: Phaser.GameObjects.Container;
   private soryn!: Phaser.GameObjects.Sprite;
   private hint!: GBCText;
+  private stone!: Phaser.GameObjects.Rectangle;
 
   constructor() { super("SilverThreshold"); }
   init(data: { save: SaveSlot }) {
@@ -68,6 +97,8 @@ export class SilverThresholdScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(COLOR.void);
     this.cameras.main.fadeIn(400);
+    const audio = getAudio();
+    audio.music.play("silver", SONG_SILVER);
 
     // Paint tilemap
     const map = buildMap();
@@ -107,6 +138,14 @@ export class SilverThresholdScene extends Phaser.Scene {
     gateImg.setAlpha(this.save.flags.elements_done ? 1 : 0.4);
     this.gate.add([gateImg]);
     this.gate.setData("img", gateImg);
+
+    // Hidden lore stone tucked at the far end of the path — rewards exploration
+    const stoneFound = !!this.save.flags.stone_found;
+    this.stone = this.add.rectangle(14, 58, 6, 4, stoneFound ? 0x3a4868 : 0x7889a8, 1);
+    this.add.rectangle(14, 60, 6, 1, 0x1a2030, 1);
+    if (!stoneFound) {
+      this.tweens.add({ targets: this.stone, alpha: 0.5, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
 
     // Player
     this.rowan = makeRowan(this, 16, 70);
@@ -157,6 +196,7 @@ export class SilverThresholdScene extends Phaser.Scene {
         c.visited = true;
         this.save.flags[`elem_${c.kind}`] = true;
         c.sprite.setAlpha(0.35);
+        getAudio().sfx("resolve");
         if (c.kind === "air")   this.save.stats.clarity++;
         if (c.kind === "fire")  this.save.stats.courage++;
         if (c.kind === "water") this.save.stats.compassion++;
@@ -180,6 +220,7 @@ export class SilverThresholdScene extends Phaser.Scene {
       writeSave(this.save);
       (this.gate.getData("img") as Phaser.GameObjects.Image).setAlpha(1);
       this.tweens.add({ targets: this.gate, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
+      getAudio().sfx("open");
       this.dialogActive = true;
       runDialog(this, SORYN_AFTER, () => { this.dialogActive = false; });
     }
@@ -187,11 +228,30 @@ export class SilverThresholdScene extends Phaser.Scene {
 
   private tryInteract() {
     if (this.dialogActive) return;
+    // Stone inspect (small radius)
+    const stx = this.rowan.x - this.stone.x, sty = this.rowan.y - this.stone.y;
+    if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) {
+      this.dialogActive = true;
+      this.save.flags.stone_found = true;
+      this.save.stats.courage++;
+      this.events.emit("stats-changed");
+      writeSave(this.save);
+      this.stone.setFillStyle(0x3a4868);
+      getAudio().sfx("resolve");
+      runDialog(this, STONE_LINES, () => { this.dialogActive = false; });
+      return;
+    }
     // Soryn talk
     const sdx = this.rowan.x - this.soryn.x, sdy = this.rowan.y - this.soryn.y;
     if (sdx * sdx + sdy * sdy < 14 * 14) {
       this.dialogActive = true;
-      const lines = this.save.flags.elements_done ? SORYN_AFTER : SORYN_OPENING;
+      getAudio().sfx("confirm");
+      const firstTime = !this.save.flags.soryn_talked;
+      this.save.flags.soryn_talked = true;
+      writeSave(this.save);
+      const lines = this.save.flags.elements_done
+        ? (firstTime ? SORYN_AFTER : SORYN_REPEAT_AFTER)
+        : (firstTime ? SORYN_OPENING : SORYN_REPEAT);
       runDialog(this, lines, () => { this.dialogActive = false; });
       return;
     }
@@ -200,6 +260,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.elements_done) {
       this.save.scene = "MoonHall";
       writeSave(this.save);
+      const a = getAudio(); a.sfx("wipe"); a.music.stop();
       gbcWipe(this, () => this.scene.start("MoonHall", { save: this.save }));
     }
   }
