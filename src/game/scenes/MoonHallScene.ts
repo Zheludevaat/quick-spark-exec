@@ -176,14 +176,17 @@ export class MoonHallScene extends Phaser.Scene {
       this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS MIRROR IS QUIET.");
       else if (near.kind === "boss") {
-        const ready = this.totalStats() >= 5 && this.mirrors.filter(m => m.kind !== "boss").every(m => m.cleared);
-        this.hint.setText(ready ? "A: FACE CURATED SELF" : MIRROR_TAGLINE.boss);
+        const cleared = this.mirrors.filter(m => m.kind !== "boss" && m.cleared).length;
+        const ready = this.totalStats() >= 5 && cleared === 3;
+        if (ready) this.hint.setText("A: FACE THE CURATED SELF");
+        else this.hint.setText(`SEALED. CLEAR 3 MIRRORS (${cleared}/3)`);
       } else {
         this.hint.setText(`A: ${MIRROR_TAGLINE[near.kind]}`);
       }
     } else {
       this.focusGlow.fillAlpha = 0;
-      this.hint.setText("WALK TO A MIRROR.");
+      const cleared = this.mirrors.filter(m => m.kind !== "boss" && m.cleared).length;
+      this.hint.setText(`MIRRORS CLEARED ${cleared}/3`);
     }
   }
 
