@@ -23,7 +23,7 @@ import {
 } from "./hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
-import { onActionDown } from "../controls";
+import { onActionDown, onDirection, getControls } from "../controls";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -610,24 +610,17 @@ export class SilverThresholdScene extends Phaser.Scene {
         this.time.delayedCall(250, cleanup);
       }
     };
+    let unbindAct: (() => void) | null = null;
     const cleanup = () => {
       breathTween.stop();
-      window.removeEventListener("keydown", domHandler);
+      unbindAct?.();
       this.events.off("vinput-action", handler);
       box.destroy();
       label.destroy();
       pulse.destroy();
       onDone();
     };
-    // Use DOM keydown to honor rebinds and avoid Phaser key conflicts.
-    const domHandler = (e: KeyboardEvent) => {
-      const k = e.code;
-      if (k === "Space" || k === "Enter" || k === "NumpadEnter") {
-        e.preventDefault();
-        handler();
-      }
-    };
-    window.addEventListener("keydown", domHandler);
+    unbindAct = onActionDown(this, "action", handler);
     this.events.on("vinput-action", handler);
   }
 
@@ -662,12 +655,19 @@ export class SilverThresholdScene extends Phaser.Scene {
         if (progress >= 1 && held) finish();
       },
     });
+    // Listen for the player's bound A key for hold/release.
+    const actionKeys: Phaser.Input.Keyboard.Key[] = [];
+    const kb = this.input.keyboard;
+    if (kb) {
+      const b = getControls().bindings.action;
+      if (b.primary) actionKeys.push(kb.addKey(b.primary, false, false));
+      if (b.secondary) actionKeys.push(kb.addKey(b.secondary, false, false));
+    }
     const finish = () => {
       if (done) return;
       done = true;
       tick.remove(false);
-      window.removeEventListener("keydown", domDown);
-      window.removeEventListener("keyup", domUp);
+      holdPoll.remove(false);
       this.events.off("vinput-action", vDown);
       box.destroy();
       label.destroy();
@@ -677,23 +677,19 @@ export class SilverThresholdScene extends Phaser.Scene {
       getAudio().sfx("resolve");
       onDone();
     };
-    const isAB = (e: KeyboardEvent) =>
-      e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter";
-    const domDown = (e: KeyboardEvent) => {
-      if (isAB(e)) {
-        e.preventDefault();
-        held = true;
-      }
-    };
-    const domUp = (e: KeyboardEvent) => {
-      if (isAB(e)) {
-        e.preventDefault();
-        if (held && progress >= 0.4) finish();
-        held = false;
-      }
-    };
-    window.addEventListener("keydown", domDown);
-    window.addEventListener("keyup", domUp);
+    // Poll the bound key for hold state — works after rebinds.
+    const holdPoll = this.time.addEvent({
+      delay: 30,
+      loop: true,
+      callback: () => {
+        const anyDown = actionKeys.some((k) => k.isDown);
+        if (anyDown && !held) held = true;
+        else if (!anyDown && held) {
+          held = false;
+          if (progress >= 0.4) finish();
+        }
+      },
+    });
     // Touch: brief auto-hold on tap.
     const vDown = () => {
       held = true;
@@ -760,8 +756,11 @@ export class SilverThresholdScene extends Phaser.Scene {
       this.events.emit("stats-changed");
       onDone();
     };
+    let unbindAct: (() => void) | null = null;
+    let unbindDir: (() => void) | null = null;
     const cleanup = () => {
-      window.removeEventListener("keydown", domKey);
+      unbindAct?.();
+      unbindDir?.();
       this.events.off("vinput-action", pick);
       this.events.off("vinput-down", vmove);
       refTrue.destroy();
@@ -775,19 +774,8 @@ export class SilverThresholdScene extends Phaser.Scene {
       if (dir === "left") move(-1);
       if (dir === "right") move(1);
     };
-    const domKey = (e: KeyboardEvent) => {
-      if (e.code === "ArrowLeft" || e.code === "KeyA") {
-        e.preventDefault();
-        move(-1);
-      } else if (e.code === "ArrowRight" || e.code === "KeyD") {
-        e.preventDefault();
-        move(1);
-      } else if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter") {
-        e.preventDefault();
-        pick();
-      }
-    };
-    window.addEventListener("keydown", domKey);
+    unbindAct = onActionDown(this, "action", pick);
+    unbindDir = onDirection(this, vmove);
     this.events.on("vinput-action", pick);
     this.events.on("vinput-down", vmove);
   }

@@ -37,13 +37,27 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const openSettingsGuarded = () => {
     if (settingsOpen) return;
     settingsOpen = true;
+    scene.data.set("__settingsOpen", true);
     openSettings(scene, () => {
       settingsOpen = false;
+      scene.data.set("__settingsOpen", false);
       rebuildPad();
     });
   };
-  // Expose for gear button.
+  const openLoreGuarded = () => {
+    if (loreOpen || settingsOpen) return;
+    const s: SaveSlot | null = loadSave();
+    if (!s) return;
+    loreOpen = true;
+    scene.data.set("__loreOpen", true);
+    openLoreLog(scene, s, () => {
+      loreOpen = false;
+      scene.data.set("__loreOpen", false);
+    });
+  };
+  // Expose for gear / lore touch buttons.
   scene.data.set("__openSettingsGuarded", openSettingsGuarded);
+  scene.data.set("__openLoreGuarded", openLoreGuarded);
 
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {
@@ -58,13 +72,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
       const a = getAudio();
       a.setMuted(!a.muted);
     } else if (matches("lore")) {
-      if (loreOpen || settingsOpen) return;
-      const s: SaveSlot | null = loadSave();
-      if (!s) return;
-      loreOpen = true;
-      openLoreLog(scene, s, () => {
-        loreOpen = false;
-      });
+      openLoreGuarded();
     } else if (matches("settings")) {
       openSettingsGuarded();
     }
@@ -412,10 +420,13 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
       .setDepth(padDepth + 5)
       .setInteractive();
     hit.on("pointerdown", () => {
-      const s = loadSave();
-      if (!s) return;
       buzz(8);
-      openLoreLog(scene, s);
+      const guarded = scene.data.get("__openLoreGuarded") as (() => void) | undefined;
+      if (guarded) guarded();
+      else {
+        const s = loadSave();
+        if (s) openLoreLog(scene, s);
+      }
     });
     created.push(vis, hit);
   }
