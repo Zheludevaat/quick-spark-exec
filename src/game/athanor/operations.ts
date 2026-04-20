@@ -81,6 +81,8 @@ export function awardNamedStone(
   n = 1,
 ): void {
   awardStone(save, color, n);
+  const next = stoneCount(save, color);
+  emitHudStoneFilled(scene, color, next);
   const t = new GBCText(scene, GBC_W / 2 - 48, 32, `+ ${STONE_LABEL[color]} - ${reason}`, {
     color: COLOR.textGold,
     depth: 240,
@@ -96,5 +98,26 @@ export function awardNamedStone(
     onComplete: () => t.destroy(),
   });
   getAudio().sfx("resolve");
+}
+
+/** Award a stone with HUD feedback but no narration toast. */
+export function awardStoneFx(
+  scene: Phaser.Scene,
+  save: SaveSlot,
+  color: StoneColor,
+  n = 1,
+): void {
+  awardStone(save, color, n);
+  emitHudStoneFilled(scene, color, stoneCount(save, color));
+}
+
+function stoneCount(save: SaveSlot, color: StoneColor): number {
+  return color === "black"
+    ? save.blackStones
+    : color === "white"
+      ? save.whiteStones
+      : color === "yellow"
+        ? save.yellowStones
+        : save.redStones;
 }
 
