@@ -58,7 +58,22 @@ function GamePage() {
         fontFamily: "monospace",
       }}
     >
-      {/* The game scene renders its own title + act banner — no external header to avoid duplication. */}
+      {/* Visually-hidden H1 for SEO — the in-game scene shows the visible title. */}
+      <h1
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        Hermetic Comedy — a pixel-art RPG of small verbs
+      </h1>
 
       <div
         ref={hostRef}
