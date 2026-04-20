@@ -39,9 +39,9 @@ export class TitleScene extends Phaser.Scene {
     this.tweens.add({ targets: start.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
     const launch = () => {
-      const next = save ? save.scene : "Intro";
       const slot = save ?? newSave();
-      this.scene.start(next === "Title" ? "Intro" : next, { save: slot });
+      const next = save ? save.scene : "Intro";
+      this.scene.start(next, { save: slot });
     };
     const erase = () => { clearSave(); this.scene.restart(); };
 
