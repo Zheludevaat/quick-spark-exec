@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { PAL, pixelText, VIEW_W, VIEW_H, drawDialogBox } from "../shared";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
-import { attachHUD, InputState, makeRowan } from "./hud";
+import { attachHUD, InputState, makeRowan, animateRowan } from "./hud";
 
 type Mirror = {
   x: number; y: number;
@@ -96,12 +96,16 @@ export class MoonHallScene extends Phaser.Scene {
     if (this.scene.isActive("Encounter")) return;
     const speed = 0.06 * dt;
     const i = this.input2.poll();
-    if (i.left)  this.rowan.x -= speed;
-    if (i.right) this.rowan.x += speed;
-    if (i.up)    this.rowan.y -= speed;
-    if (i.down)  this.rowan.y += speed;
+    let dx = 0, dy = 0;
+    if (i.left)  dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up)    dy -= speed;
+    if (i.down)  dy += speed;
+    this.rowan.x += dx;
+    this.rowan.y += dy;
     this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 16, VIEW_W - 16);
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 70, VIEW_H - 18);
+    animateRowan(this.rowan, dx, dy);
 
     // proximity hint
     const near = this.nearestMirror();

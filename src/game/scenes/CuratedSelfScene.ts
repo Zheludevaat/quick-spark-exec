@@ -92,15 +92,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       composed: PAL.pearl, flattering: PAL.moonCyan, fractured: PAL.silverLight,
       exposed: PAL.warn, released: PAL.moonBlue,
     };
-    const ring = this.add.circle(0, 0, 32, colors[this.state], 0.18).setStrokeStyle(1, colors[this.state], 0.9);
-    const body = this.add.rectangle(0, 8, 22, 28, colors[this.state], 0.85).setStrokeStyle(1, PAL.silverDark);
-    const head = this.add.rectangle(0, -10, 16, 14, PAL.pearl).setStrokeStyle(1, PAL.silverDark);
-    this.bossSprite.add([ring, body, head]);
-    if (this.state === "fractured") {
-      const crack = this.add.rectangle(2, 4, 1, 24, PAL.warn);
-      this.bossSprite.add(crack);
+    const ring = this.add.circle(0, 0, 38, colors[this.state], 0.18).setStrokeStyle(1, colors[this.state], 0.9);
+    const sprite = this.add.sprite(0, 0, "curated_self", 0).setScale(1);
+    sprite.play(`boss_${this.state}`);
+    this.bossSprite.add([ring, sprite]);
+    this.tweens.add({ targets: ring, scale: 1.25, alpha: 0.4, duration: 1200, yoyo: true, repeat: -1 });
+    if (this.state === "released") {
+      this.tweens.add({ targets: sprite, alpha: 0.5, duration: 800, yoyo: true, repeat: -1 });
     }
-    this.tweens.add({ targets: ring, scale: 1.2, alpha: 0.4, duration: 1200, yoyo: true, repeat: -1 });
   }
 
   private move(d: number) {
