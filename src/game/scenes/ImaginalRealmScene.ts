@@ -945,13 +945,13 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (this.region === "corridor" && this.rowan.y > GBC_H - 22) {
       const cleared = this.totalCleared();
       if (cleared >= 3) {
-        this.save.scene = "CuratedSelf";
+        this.save.scene = "AthanorThreshold";
         writeSave(this.save);
         const a = getAudio();
         a.sfx("boss");
         a.music.stop();
         if (this.companion) this.companion.setVisible(false);
-        gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
+        gbcWipe(this, () => this.scene.start("AthanorThreshold", { save: this.save }));
         return;
       }
     }
