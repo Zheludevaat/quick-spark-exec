@@ -70,6 +70,9 @@ export class EncounterScene extends Phaser.Scene {
     this.onDone = data.onDone;
     this.cmdTexts = [];
     this.misses = 0;
+    this.cursor = 0;
+    this.busy = false;
+    this.intentText = undefined;
   }
 
   create() {
