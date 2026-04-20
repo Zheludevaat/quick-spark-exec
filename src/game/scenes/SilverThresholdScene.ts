@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, spawnMotes, gbcWipe } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { getAudio, SONG_SILVER } from "../audio";
 
 const SORYN_OPENING = [
   { who: "?",     text: "Welcome, Rowan. Take a breath you no longer need." },
