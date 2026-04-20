@@ -78,6 +78,7 @@ export class EncounterScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#0a0e1a");
+    getAudio().music.play("battle", SONG_BATTLE);
 
     // Backdrop confined to arena (12..76)
     const g = this.add.graphics();
