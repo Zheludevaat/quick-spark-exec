@@ -3,6 +3,7 @@ import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } f
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
 
 type Mirror = {
@@ -70,6 +71,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private shard?: Phaser.GameObjects.Arc;
   private shardX = 144;
   private shardY = 32;
+  private companion?: SorynCompanion;
 
   constructor() { super("ImaginalRealm"); }
   init(data: { save: SaveSlot }) {
@@ -128,9 +130,32 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.tweens.add({ targets: this.shard, y: this.shardY - 2, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
 
-    this.rowan = makeRowan(this, 24, 32);
+    this.rowan = makeRowan(this, 24, 32, "soul");
     this.rowanShadow = this.add.ellipse(24, 38, 10, 3, 0x000000, 0.35).setDepth(2);
     this.focusGlow = this.add.circle(0, 0, 11, 0xffffff, 0).setDepth(15);
+
+    // Spawn the daimon companion (hidden if Curated Self boss is active)
+    this.companion = new SorynCompanion(
+      this,
+      this.rowan,
+      () => {
+        // Contextual lines based on progress
+        const cleared = this.mirrors.filter(m => m.kind !== "boss" && m.cleared).length;
+        if (cleared === 0) return [
+          { who: "Soryn", text: "An image-knot fears one verb. Try OBSERVE on a mimic." },
+          { who: "Soryn", text: "If you guess wrong, the image only ripples. Try again." },
+        ];
+        if (cleared < 3) return [
+          { who: "Soryn", text: `${cleared} cleared. The realm thins where you have witnessed.` },
+          { who: "Soryn", text: "The boss-knot to the south will not open until three are quiet." },
+        ];
+        return [
+          { who: "Soryn", text: "All three are quiet. The Curated Self waits to the south." },
+          { who: "Soryn", text: "I cannot follow you there. WITNESS is yours alone now." },
+        ];
+      },
+      ["BREATHE.", "I AM HERE.", "THE MIRROR LIES KINDLY.", "YOU ARE DOING WELL."],
+    );
 
     this.add.rectangle(0, 13, GBC_W, 9, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
     new GBCText(this, 4, 14, "THE IMAGINAL REALM", { color: COLOR.textAccent, depth: 200 });
@@ -176,6 +201,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.rowan.y = Phaser.Math.Clamp(this.rowan.y, 22, GBC_H - 18);
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+    if (this.companion) {
+      this.companion.update();
+      if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) this.companion.pingMovement();
+    }
 
     // Shard pickup
     if (this.shard) {

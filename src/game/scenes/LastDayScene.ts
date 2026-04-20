@@ -79,6 +79,12 @@ export class LastDayScene extends Phaser.Scene {
     g.fillStyle(0x2a1810, 1); g.fillRect(coatX - 5, coatY + 6, 10, 2);
     g.fillStyle(0x683828, 1); g.fillRect(coatX - 3, coatY, 6, 4);
 
+    // Hidden bathroom mirror — small tile, easy to miss, near the door
+    const mirX = 110, mirY = 64;
+    g.fillStyle(0x1a1818, 1); g.fillRect(mirX - 4, mirY - 5, 9, 10);
+    g.fillStyle(0x88a0c8, 0.7); g.fillRect(mirX - 3, mirY - 4, 7, 8);
+    g.fillStyle(0xc8d8e8, 0.5); g.fillRect(mirX - 3, mirY - 4, 7, 3);
+
     const doorX = 76, doorY = GBC_H - 12;
     const door = this.add.rectangle(doorX + 4, doorY + 4, 12, 16, 0x2a1810, 1).setDepth(2);
     this.add.rectangle(doorX + 4, doorY + 4, 12, 16, 0x584030, 0).setStrokeStyle(1, 0x584030).setDepth(2);
@@ -96,34 +102,48 @@ export class LastDayScene extends Phaser.Scene {
       {
         x: phX + 1, y: phY, w: 14, h: 14, seed: "seed_call", label: "PHONE",
         lines: [
-          { who: "?", text: "The phone glows. A name you have not called in months." },
-          { who: "?", text: "You let it ring out. The room feels heavier." },
+          { who: "?", text: "The phone glows. Caller ID reads MARA." },
+          { who: "?", text: "You let it ring. You'll call back tomorrow." },
+          { who: "?", text: "You always say tomorrow." },
         ],
         used: false, visual: [], marker: mark(phX + 1, phY, 0x88c0f0),
       },
       {
         x: winX + 11, y: winY + 8, w: 24, h: 18, seed: "seed_window", label: "WINDOW",
         lines: [
-          { who: "?", text: "Frost on the glass. A truck idles in the street below." },
-          { who: "?", text: "You watch a stranger fix her scarf. You almost wave." },
+          { who: "?", text: "Across the street a child waves up at the glass." },
+          { who: "?", text: "You almost wave back. You don't." },
+          { who: "?", text: "The glass between you feels suddenly thin." },
         ],
         used: false, visual: steam, marker: mark(winX + 11, winY + 8, 0xc8d8e8),
       },
       {
         x: kettleX + 5, y: kettleY + 5, w: 14, h: 14, seed: "seed_kettle", label: "KETTLE",
         lines: [
-          { who: "?", text: "The kettle has boiled too long. The steam is thin." },
-          { who: "?", text: "You pour anyway. Tea no one will drink." },
+          { who: "?", text: "The kettle has whistled itself thin." },
+          { who: "?", text: "You pour two cups. You always pour two." },
+          { who: "?", text: "You don't remember when that started." },
         ],
         used: false, visual: [], marker: mark(kettleX + 5, kettleY + 5, 0xdde6f5),
       },
       {
         x: coatX, y: coatY + 6, w: 14, h: 18, seed: "seed_coat", label: "COAT",
         lines: [
-          { who: "?", text: "Your coat by the door. Pockets stuffed with small mercies." },
-          { who: "?", text: "A receipt. A ticket stub. A note you never sent." },
+          { who: "?", text: "Your coat by the door. Pockets full of small unfinished things." },
+          { who: "?", text: "Receipts. A folded letter. A key to a door that isn't this one." },
+          { who: "?", text: "You've been meaning to do a lot of things." },
         ],
         used: false, visual: [], marker: mark(coatX, coatY + 6, 0xd89868),
+      },
+      {
+        // Hidden 5th — mirror. Smaller marker, no halo by default.
+        x: mirX, y: mirY, w: 10, h: 10, seed: "seed_mirror", label: "MIRROR",
+        lines: [
+          { who: "?", text: "You look tired." },
+          { who: "?", text: "You look like someone who hasn't been seen in a while." },
+          { who: "?", text: "You hold your own gaze longer than usual. Then you turn away." },
+        ],
+        used: false, visual: [], marker: mark(mirX, mirY, 0xa8c8e8),
       },
     ];
 
@@ -135,7 +155,7 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
-    this.rowan = makeRowan(this, 80, 82);
+    this.rowan = makeRowan(this, 80, 82, "living");
 
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
@@ -150,8 +170,8 @@ export class LastDayScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
-    // Door is open immediately if 3+ seeds were already set in a prior visit.
-    const usedAtLoad = this.items.filter(t => t.used).length;
+    // Door is open immediately if 3+ main seeds were already set in a prior visit.
+    const usedAtLoad = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
     if (usedAtLoad >= 3) this.exitOpen = true;
 
     if (!this.save.flags.lastday_intro) {
@@ -159,8 +179,9 @@ export class LastDayScene extends Phaser.Scene {
       writeSave(this.save);
       this.dialogActive = true;
       this.time.delayedCall(700, () => runDialog(this, [
-        { who: "?", text: "An ordinary morning. The light is doing its small work." },
-        { who: "?", text: "Touch what calls you. There is no rush. There is no later." },
+        { who: "?", text: "Tuesday. The light is doing its small work." },
+        { who: "?", text: "You have things to do today. You always have things to do." },
+        { who: "?", text: "Touch what calls you. There is no rush. There will be no later." },
       ], () => { this.dialogActive = false; }));
     }
   }
@@ -182,7 +203,7 @@ export class LastDayScene extends Phaser.Scene {
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
     const near = this.nearest();
-    const used = this.items.filter(t => t.used).length;
+    const usedMain = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80, dyg = this.rowan.y - (GBC_H - 8);
       if (dxg * dxg + dyg * dyg < 14 * 14) this.hint.setText("A: STEP THROUGH THE DOOR");
@@ -190,13 +211,24 @@ export class LastDayScene extends Phaser.Scene {
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
     } else {
-      this.hint.setText(`TOUCH WHAT CALLS YOU  ${used}/4`);
+      this.hint.setText(`TOUCH WHAT CALLS YOU  ${usedMain}/4`);
     }
 
-    if (!this.exitOpen && used >= 3) {
+    if (!this.exitOpen && usedMain >= 3) {
       this.exitOpen = true;
-      this.tweens.add({ targets: this.cameras.main, duration: 600, alpha: 1 });
+      this.playChestPain();
     }
+  }
+
+  private playChestPain() {
+    // Brief, wordless: a soft red pulse over Rowan, screen vignette, audio thump.
+    const pulse = this.add.circle(this.rowan.x, this.rowan.y - 4, 4, 0xd84a4a, 0.45).setDepth(40);
+    this.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 1200, ease: "Sine.out", onComplete: () => pulse.destroy() });
+    this.cameras.main.shake(180, 0.0035);
+    getAudio().sfx("boss");
+    // Subtle vignette flash via a brief red overlay
+    const vig = this.add.rectangle(0, 0, GBC_W, GBC_H, 0x501818, 0.0).setOrigin(0, 0).setDepth(195);
+    this.tweens.add({ targets: vig, alpha: 0.35, duration: 300, yoyo: true, onComplete: () => vig.destroy() });
   }
 
   private nearest(): Interactable | null {

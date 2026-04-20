@@ -58,7 +58,7 @@ export class CrossingScene extends Phaser.Scene {
     spawnMotes(this, { count: 10, color: 0xdde6f5, alpha: 0.4, driftY: -0.006, driftX: 0.002, depth: 25 });
 
     // Player at top
-    this.rowan = makeRowan(this, GBC_W / 2, 24);
+    this.rowan = makeRowan(this, GBC_W / 2, 24, "living");
 
     // Dimming overlay (gets darker as Rowan walks south)
     this.overlay = this.add.rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0).setOrigin(0, 0).setDepth(190);
