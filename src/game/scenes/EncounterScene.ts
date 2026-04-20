@@ -101,24 +101,25 @@ export class EncounterScene extends Phaser.Scene {
     this.hpBar = this.add.graphics().setDepth(101);
     this.drawHp();
 
+    // Log box (taunt / feedback) — top half of lower panel
+    drawGBCBox(this, 0, 90, GBC_W, 26);
+    this.logText = new GBCText(this, 4, 94, this.def.taunt, {
+      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
+    });
+
     // Command panel (bottom 2x2)
-    drawGBCBox(this, 0, 92, GBC_W, 52);
+    drawGBCBox(this, 0, 116, GBC_W, 28);
     CMDS.forEach((c, i) => {
       const x = 16 + (i % 2) * 70;
-      const y = 102 + Math.floor(i / 2) * 16;
+      const y = 121 + Math.floor(i / 2) * 11;
       const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => this.choose(i));
       t.obj.setData("cmd", c.cmd);
       this.cmdTexts.push(t);
     });
-    this.cursorMark = new GBCText(this, 8, 102, "▶", { color: COLOR.textGold, depth: 101 });
+    this.cursorMark = new GBCText(this, 8, 121, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
-
-    // Log text under commands area? actually the box has limited room; use a one-liner
-    this.logText = new GBCText(this, 4, 132, this.def.taunt, {
-      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
-    });
 
     // Input
     const kb = this.input.keyboard!;
@@ -145,7 +146,7 @@ export class EncounterScene extends Phaser.Scene {
   private refreshCursor() {
     this.cmdTexts.forEach((t, i) => t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textLight));
     const x = 8 + (this.cursor % 2) * 70;
-    const y = 102 + Math.floor(this.cursor / 2) * 16;
+    const y = 121 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
   }
 
@@ -187,7 +188,7 @@ export class EncounterScene extends Phaser.Scene {
       this.cameras.main.shake(120, 0.004);
       // Telegraph the weakness after the first miss
       if (this.misses === 1 && !this.intentText) {
-        this.intentText = new GBCText(this, 4, 84, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
+        this.intentText = new GBCText(this, 4, 22, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
           color: COLOR.textGold, depth: 110,
         });
         this.tweens.add({ targets: this.intentText.obj, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
