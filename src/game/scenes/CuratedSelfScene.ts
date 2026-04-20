@@ -243,21 +243,30 @@ export class CuratedSelfScene extends Phaser.Scene {
     });
   }
 
-  /** Soryn line, or narrator if released — shown briefly above the log box. */
+  /** Soryn line, or narrator if released — shown briefly above the boss area. */
   private speak(event: SorynEvent) {
     const line = sorynBark(this.save, event) ?? narratorLine(event);
     const isNarrator = this.save.sorynReleased;
-    const t = new GBCText(this, 4, 68, line, {
+    // Position above stateText/boss; keep clear of the log box (y=76+).
+    const t = new GBCText(this, 4, 4, line, {
       color: isNarrator ? COLOR.textGold : COLOR.textAccent,
       depth: 160,
-      maxWidthPx: GBC_W - 8,
+      maxWidthPx: GBC_W - 100,
     });
+    // Draw a subtle backdrop so the line is readable over stars.
+    const bg = this.add
+      .rectangle(2, 2, GBC_W - 96, 10, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(159);
     this.tweens.add({
-      targets: t.obj,
+      targets: [t.obj, bg],
       alpha: 0,
       duration: 1400,
       delay: 1800,
-      onComplete: () => t.destroy(),
+      onComplete: () => {
+        t.destroy();
+        bg.destroy();
+      },
     });
   }
 
