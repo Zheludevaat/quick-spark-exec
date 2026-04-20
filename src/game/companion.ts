@@ -25,7 +25,12 @@ export class SorynCompanion {
   private lastMoveAt = 0;
   private getContext: CompanionContextLines;
   private ambientLines: string[];
-  private dialogState: { box: { destroy: () => void }; who: GBCText; text: GBCText; hint: GBCText } | null = null;
+  private dialogState: {
+    box: { destroy: () => void };
+    who: GBCText;
+    text: GBCText;
+    hint: GBCText;
+  } | null = null;
   private unbindCancel: (() => void) | null = null;
   private unbindAdvance: (() => void) | null = null;
 
@@ -42,7 +47,15 @@ export class SorynCompanion {
 
     // Halo behind the daimon — soft pulsing
     this.halo = scene.add.circle(follow.x - 14, follow.y - 4, 7, 0x88c0e8, 0.18).setDepth(3);
-    scene.tweens.add({ targets: this.halo, scale: 1.4, alpha: 0.05, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    scene.tweens.add({
+      targets: this.halo,
+      scale: 1.4,
+      alpha: 0.05,
+      duration: 1400,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
     this.container = scene.add.container(follow.x - 14, follow.y - 4).setDepth(4);
     this.sprite = scene.add.sprite(0, 0, "soryn_v2", 0).setOrigin(0.5, 0.5);
@@ -50,7 +63,14 @@ export class SorynCompanion {
     this.container.add(this.sprite);
 
     // Subtle bobbing
-    scene.tweens.add({ targets: this.container, y: this.container.y - 2, duration: 1600, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    scene.tweens.add({
+      targets: this.container,
+      y: this.container.y - 2,
+      duration: 1600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
     // B / cancel (rebindable) opens daimon speak
     this.unbindCancel = onActionDown(scene, "cancel", this.openSpeak);
@@ -58,7 +78,9 @@ export class SorynCompanion {
 
     // Ambient whisper every ~15s if idle
     this.ambientTimer = scene.time.addEvent({
-      delay: 15000, loop: true, callback: () => this.tryAmbient(),
+      delay: 15000,
+      loop: true,
+      callback: () => this.tryAmbient(),
     });
 
     // Cleanup on shutdown
@@ -73,12 +95,25 @@ export class SorynCompanion {
   /** Smoothly trail the followed Rowan container (~8 px behind). */
   update() {
     const dir = this.follow.getData("dir") as string | undefined;
-    let ox = -14, oy = -4;
+    let ox = -14,
+      oy = -4;
     switch (dir) {
-      case "up":    ox = 0;   oy = 8;  break;
-      case "down":  ox = 0;   oy = -14; break;
-      case "left":  ox = 14;  oy = -4; break;
-      case "right": ox = -14; oy = -4; break;
+      case "up":
+        ox = 0;
+        oy = 8;
+        break;
+      case "down":
+        ox = 0;
+        oy = -14;
+        break;
+      case "left":
+        ox = 14;
+        oy = -4;
+        break;
+      case "right":
+        ox = -14;
+        oy = -4;
+        break;
     }
     const tx = this.follow.x + ox;
     const ty = this.follow.y + oy;
@@ -93,10 +128,15 @@ export class SorynCompanion {
     if (this.scene.time.now - this.lastMoveAt < 4000) return; // only if recently idle
     const line = this.ambientLines[Math.floor(Math.random() * this.ambientLines.length)];
     const t = new GBCText(this.scene, this.follow.x - 24, this.follow.y - 22, line.toUpperCase(), {
-      color: COLOR.textAccent, depth: 220, scrollFactor: 0,
+      color: COLOR.textAccent,
+      depth: 220,
+      scrollFactor: 0,
     });
     this.scene.tweens.add({
-      targets: t.obj, alpha: 0, y: this.follow.y - 38, duration: 2400,
+      targets: t.obj,
+      alpha: 0,
+      y: this.follow.y - 38,
+      duration: 2400,
       onComplete: () => t.destroy(),
     });
     // Pulse the rings briefly
@@ -114,22 +154,43 @@ export class SorynCompanion {
     if (!lines.length) return;
     this.speaking = true;
     getAudio().sfx("confirm");
-    const boxX = 4, boxY = GBC_H - 56, boxW = GBC_W - 8, boxH = 52;
+    const boxX = 4,
+      boxY = GBC_H - 56,
+      boxW = GBC_W - 8,
+      boxH = 52;
     const box = drawGBCBox(this.scene, boxX, boxY, boxW, boxH, 250);
-    const who = new GBCText(this.scene, boxX + 6, boxY + 4, lines[0].who.toUpperCase(), { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
+    const who = new GBCText(this.scene, boxX + 6, boxY + 4, lines[0].who.toUpperCase(), {
+      color: COLOR.textAccent,
+      depth: 251,
+      scrollFactor: 0,
+    });
     const text = new GBCText(this.scene, boxX + 6, boxY + 14, lines[0].text.toUpperCase(), {
-      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 16,
+      color: COLOR.textLight,
+      depth: 251,
+      scrollFactor: 0,
+      maxWidthPx: boxW - 16,
     });
     const hint = new GBCText(this.scene, boxX + boxW - 10, boxY + boxH - 8, "▼", {
-      color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+      color: COLOR.textAccent,
+      depth: 251,
+      scrollFactor: 0,
     });
-    this.scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
+    this.scene.tweens.add({
+      targets: hint.obj,
+      alpha: 0.25,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
     this.dialogState = { box, who, text, hint };
     let i = 0;
 
     const advance = () => {
       i++;
-      if (i >= lines.length) { closeSpeak(); return; }
+      if (i >= lines.length) {
+        closeSpeak();
+        return;
+      }
       who.setText(lines[i].who.toUpperCase());
       text.setText(lines[i].text.toUpperCase());
     };

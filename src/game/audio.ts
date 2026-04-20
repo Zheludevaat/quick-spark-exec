@@ -23,7 +23,12 @@ class ChipChannel {
   osc?: OscillatorNode;
   gain: GainNode;
   pan: StereoPannerNode;
-  constructor(private ctx: AudioContext, private wave: Wave, output: AudioNode, panValue = 0) {
+  constructor(
+    private ctx: AudioContext,
+    private wave: Wave,
+    output: AudioNode,
+    panValue = 0,
+  ) {
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
     this.pan = ctx.createStereoPanner();
@@ -56,7 +61,10 @@ class ChipChannel {
 class NoiseChannel {
   gain: GainNode;
   buffer: AudioBuffer;
-  constructor(private ctx: AudioContext, output: AudioNode) {
+  constructor(
+    private ctx: AudioContext,
+    output: AudioNode,
+  ) {
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
     this.gain.connect(output);
@@ -87,7 +95,7 @@ type SongStep = [string | null, string | null, string | null]; // [pu1, pu2, wav
 
 type Song = {
   bpm: number;
-  steps: SongStep[];        // 16th-note grid
+  steps: SongStep[]; // 16th-note grid
   noise?: (number | null)[]; // optional snare/kick triggers per step
   loop?: boolean;
 };
@@ -120,7 +128,10 @@ class Music {
   stop() {
     this.currentName = "";
     this.song = undefined;
-    if (this.timer) { clearInterval(this.timer); this.timer = undefined; }
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = undefined;
+    }
   }
 
   private tick = () => {
@@ -136,12 +147,15 @@ class Music {
         const step = this.song.steps[this.nextStep % this.song.steps.length];
         const [a, b, c] = step;
         if (a) this.pu1.note(a, when, stepDur * 0.95, 0.13);
-        if (b) this.pu2.note(b, when, stepDur * 0.95, 0.10);
+        if (b) this.pu2.note(b, when, stepDur * 0.95, 0.1);
         if (c) this.wav.note(c, when, stepDur * 1.5, 0.08);
         const drum = this.song.noise?.[this.nextStep % this.song.noise.length];
-        if (drum) this.noise.hit(when, 0.08, 0.10 * drum, 1500);
+        if (drum) this.noise.hit(when, 0.08, 0.1 * drum, 1500);
         this.nextStep++;
-        if (!this.song.loop && this.nextStep >= this.song.steps.length) { this.stop(); return; }
+        if (!this.song.loop && this.nextStep >= this.song.steps.length) {
+          this.stop();
+          return;
+        }
       }
     };
     schedule();
@@ -160,7 +174,9 @@ class AudioEngine {
   muted = false;
 
   constructor() {
-    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.5;
@@ -187,7 +203,19 @@ class AudioEngine {
   }
 
   /** SFX: tiny one-shot sounds. */
-  sfx(kind: "cursor" | "confirm" | "cancel" | "hit" | "miss" | "resolve" | "boss" | "dialog" | "open" | "wipe") {
+  sfx(
+    kind:
+      | "cursor"
+      | "confirm"
+      | "cancel"
+      | "hit"
+      | "miss"
+      | "resolve"
+      | "boss"
+      | "dialog"
+      | "open"
+      | "wipe",
+  ) {
     const t = this.ctx.currentTime + 0.005;
     switch (kind) {
       case "cursor":
@@ -199,20 +227,20 @@ class AudioEngine {
         break;
       case "cancel":
         this.pu2.freq(440, t, 0.08, 0.12);
-        this.pu2.freq(330, t + 0.06, 0.10, 0.10);
+        this.pu2.freq(330, t + 0.06, 0.1, 0.1);
         break;
       case "hit":
-        this.noise.hit(t, 0.12, 0.20, 2200);
+        this.noise.hit(t, 0.12, 0.2, 2200);
         this.pu1.freq(220, t, 0.08, 0.14);
         break;
       case "miss":
-        this.noise.hit(t, 0.10, 0.12, 600);
+        this.noise.hit(t, 0.1, 0.12, 600);
         break;
       case "resolve":
         this.wav.freq(523, t, 0.18, 0.12);
-        this.wav.freq(659, t + 0.10, 0.18, 0.12);
-        this.wav.freq(784, t + 0.20, 0.30, 0.14);
-        this.pu2.freq(1046, t + 0.20, 0.30, 0.10);
+        this.wav.freq(659, t + 0.1, 0.18, 0.12);
+        this.wav.freq(784, t + 0.2, 0.3, 0.14);
+        this.pu2.freq(1046, t + 0.2, 0.3, 0.1);
         break;
       case "boss":
         this.wav.freq(110, t, 0.5, 0.18);
@@ -223,12 +251,12 @@ class AudioEngine {
         this.pu2.freq(1320, t, 0.012, 0.05);
         break;
       case "open":
-        this.pu1.freq(660, t, 0.04, 0.10);
-        this.pu2.freq(990, t + 0.04, 0.06, 0.10);
+        this.pu1.freq(660, t, 0.04, 0.1);
+        this.pu2.freq(990, t + 0.04, 0.06, 0.1);
         break;
       case "wipe":
         for (let i = 0; i < 6; i++) {
-          this.noise.hit(t + i * 0.04, 0.05, 0.10, 1500 + i * 400);
+          this.noise.hit(t + i * 0.04, 0.05, 0.1, 1500 + i * 400);
         }
         break;
     }
@@ -251,14 +279,38 @@ export const SONG_TITLE: Song = {
   bpm: 84,
   loop: true,
   steps: [
-    ["A4", "E4", "A2"], [N, N, N],   ["C5", N, N],   [N, N, N],
-    ["E5", "G4", N],   [N, N, N],   ["A5", N, N],   [N, N, N],
-    ["G5", "E4", "G2"], [N, N, N],   ["E5", N, N],   [N, N, N],
-    ["C5", "A4", N],   [N, N, N],   ["A4", N, N],   [N, N, N],
-    ["F4", "C4", "F2"], [N, N, N],   ["A4", N, N],   [N, N, N],
-    ["C5", "E4", N],   [N, N, N],   ["F5", N, N],   [N, N, N],
-    ["E5", "C4", "E2"], [N, N, N],   ["C5", N, N],   [N, N, N],
-    ["G4", "B3", N],   [N, N, N],   ["E4", N, N],   [N, N, N],
+    ["A4", "E4", "A2"],
+    [N, N, N],
+    ["C5", N, N],
+    [N, N, N],
+    ["E5", "G4", N],
+    [N, N, N],
+    ["A5", N, N],
+    [N, N, N],
+    ["G5", "E4", "G2"],
+    [N, N, N],
+    ["E5", N, N],
+    [N, N, N],
+    ["C5", "A4", N],
+    [N, N, N],
+    ["A4", N, N],
+    [N, N, N],
+    ["F4", "C4", "F2"],
+    [N, N, N],
+    ["A4", N, N],
+    [N, N, N],
+    ["C5", "E4", N],
+    [N, N, N],
+    ["F5", N, N],
+    [N, N, N],
+    ["E5", "C4", "E2"],
+    [N, N, N],
+    ["C5", N, N],
+    [N, N, N],
+    ["G4", "B3", N],
+    [N, N, N],
+    ["E4", N, N],
+    [N, N, N],
   ],
 };
 
@@ -267,14 +319,38 @@ export const SONG_SILVER: Song = {
   bpm: 72,
   loop: true,
   steps: [
-    ["A4", "C4", "A2"], [N, N, N], [N, N, N], [N, N, N],
-    ["B4", "D4", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["C5", "E4", "G2"], [N, N, N], [N, N, N], [N, N, N],
-    ["B4", "D4", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["G4", "B3", "F2"], [N, N, N], [N, N, N], [N, N, N],
-    ["A4", "C4", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["G4", "B3", "E2"], [N, N, N], [N, N, N], [N, N, N],
-    ["F4", "A3", N],   [N, N, N], [N, N, N], [N, N, N],
+    ["A4", "C4", "A2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["B4", "D4", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["C5", "E4", "G2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["B4", "D4", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["G4", "B3", "F2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["A4", "C4", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["G4", "B3", "E2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["F4", "A3", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
   ],
 };
 
@@ -283,16 +359,73 @@ export const SONG_MOON: Song = {
   bpm: 96,
   loop: true,
   steps: [
-    ["A4", "E4", "A2"], [N, N, N], ["C5", N, N], [N, N, N],
-    ["E5", "G4", N],   [N, N, N], ["D5", N, N], [N, N, N],
-    ["B4", "F4", "G2"], [N, N, N], ["D5", N, N], [N, N, N],
-    ["F5", "A4", N],   [N, N, N], ["E5", N, N], [N, N, N],
-    ["C5", "E4", "F2"], [N, N, N], ["G4", N, N], [N, N, N],
-    ["E5", "G4", N],   [N, N, N], ["F5", N, N], [N, N, N],
-    ["D5", "F4", "E2"], [N, N, N], ["B4", N, N], [N, N, N],
-    ["A4", "C4", N],   [N, N, N], ["G4", N, N], [N, N, N],
+    ["A4", "E4", "A2"],
+    [N, N, N],
+    ["C5", N, N],
+    [N, N, N],
+    ["E5", "G4", N],
+    [N, N, N],
+    ["D5", N, N],
+    [N, N, N],
+    ["B4", "F4", "G2"],
+    [N, N, N],
+    ["D5", N, N],
+    [N, N, N],
+    ["F5", "A4", N],
+    [N, N, N],
+    ["E5", N, N],
+    [N, N, N],
+    ["C5", "E4", "F2"],
+    [N, N, N],
+    ["G4", N, N],
+    [N, N, N],
+    ["E5", "G4", N],
+    [N, N, N],
+    ["F5", N, N],
+    [N, N, N],
+    ["D5", "F4", "E2"],
+    [N, N, N],
+    ["B4", N, N],
+    [N, N, N],
+    ["A4", "C4", N],
+    [N, N, N],
+    ["G4", N, N],
+    [N, N, N],
   ],
-  noise: [1,N,N,N, N,N,1,N, 1,N,N,N, N,N,1,N, 1,N,N,N, N,N,1,N, 1,N,N,N, N,N,1,N],
+  noise: [
+    1,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+    1,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+    1,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+    1,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+  ],
 };
 
 /** Battle — driving, tight loop. */
@@ -300,16 +433,73 @@ export const SONG_BATTLE: Song = {
   bpm: 132,
   loop: true,
   steps: [
-    ["A4", "E4", "A2"], ["A4", N, N], [N, N, "A3"], ["E5", N, N],
-    ["C5", "G4", N],   ["C5", N, N], [N, N, "C3"], ["G5", N, N],
-    ["B4", "F4", "G2"], ["B4", N, N], [N, N, "G3"], ["F5", N, N],
-    ["D5", "A4", N],   ["D5", N, N], [N, N, "D3"], ["A5", N, N],
-    ["A4", "E4", "F2"], ["A4", N, N], [N, N, "F3"], ["E5", N, N],
-    ["F5", "C5", N],   ["F5", N, N], [N, N, "C3"], ["A5", N, N],
-    ["E5", "B4", "E2"], ["E5", N, N], [N, N, "E3"], ["G5", N, N],
-    ["A4", "E4", N],   ["A4", N, N], [N, N, "A3"], ["C5", N, N],
+    ["A4", "E4", "A2"],
+    ["A4", N, N],
+    [N, N, "A3"],
+    ["E5", N, N],
+    ["C5", "G4", N],
+    ["C5", N, N],
+    [N, N, "C3"],
+    ["G5", N, N],
+    ["B4", "F4", "G2"],
+    ["B4", N, N],
+    [N, N, "G3"],
+    ["F5", N, N],
+    ["D5", "A4", N],
+    ["D5", N, N],
+    [N, N, "D3"],
+    ["A5", N, N],
+    ["A4", "E4", "F2"],
+    ["A4", N, N],
+    [N, N, "F3"],
+    ["E5", N, N],
+    ["F5", "C5", N],
+    ["F5", N, N],
+    [N, N, "C3"],
+    ["A5", N, N],
+    ["E5", "B4", "E2"],
+    ["E5", N, N],
+    [N, N, "E3"],
+    ["G5", N, N],
+    ["A4", "E4", N],
+    ["A4", N, N],
+    [N, N, "A3"],
+    ["C5", N, N],
   ],
-  noise: [2,N,1,N, 2,N,1,N, 2,N,1,N, 2,N,1,N, 2,N,1,N, 2,N,1,N, 2,N,1,N, 2,N,1,N],
+  noise: [
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+    2,
+    N,
+    1,
+    N,
+  ],
 };
 
 /** Boss — slower, ominous, with a tritone. */
@@ -317,16 +507,73 @@ export const SONG_BOSS: Song = {
   bpm: 100,
   loop: true,
   steps: [
-    ["E4", "B3", "E2"], [N, N, N], ["G4", N, N], [N, N, N],
-    ["A4", "E4", N],   [N, N, N], ["B4", N, "B2"], [N, N, N],
-    ["D5", "A4", "A2"], [N, N, N], ["B4", N, N], [N, N, N],
-    ["A4", "F4", N],   [N, N, N], ["G4", N, "G2"], [N, N, N],
-    ["F4", "C4", "F2"], [N, N, N], ["A4", N, N], [N, N, N],
-    ["G4", "D4", N],   [N, N, N], ["F4", N, "F2"], [N, N, N],
-    ["E4", "B3", "E2"], [N, N, N], ["G4", N, N], [N, N, N],
-    ["A4", "C5", N],   [N, N, N], ["B4", N, "B2"], [N, N, N],
+    ["E4", "B3", "E2"],
+    [N, N, N],
+    ["G4", N, N],
+    [N, N, N],
+    ["A4", "E4", N],
+    [N, N, N],
+    ["B4", N, "B2"],
+    [N, N, N],
+    ["D5", "A4", "A2"],
+    [N, N, N],
+    ["B4", N, N],
+    [N, N, N],
+    ["A4", "F4", N],
+    [N, N, N],
+    ["G4", N, "G2"],
+    [N, N, N],
+    ["F4", "C4", "F2"],
+    [N, N, N],
+    ["A4", N, N],
+    [N, N, N],
+    ["G4", "D4", N],
+    [N, N, N],
+    ["F4", N, "F2"],
+    [N, N, N],
+    ["E4", "B3", "E2"],
+    [N, N, N],
+    ["G4", N, N],
+    [N, N, N],
+    ["A4", "C5", N],
+    [N, N, N],
+    ["B4", N, "B2"],
+    [N, N, N],
   ],
-  noise: [2,N,N,N, N,N,1,N, 2,N,N,N, N,N,1,1, 2,N,N,N, N,N,1,N, 2,N,N,N, 1,N,1,1],
+  noise: [
+    2,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+    2,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    1,
+    2,
+    N,
+    N,
+    N,
+    N,
+    N,
+    1,
+    N,
+    2,
+    N,
+    N,
+    N,
+    1,
+    N,
+    1,
+    1,
+  ],
 };
 
 /** Last Day — muted, piano-like, melancholy minor. */
@@ -334,14 +581,38 @@ export const SONG_LASTDAY: Song = {
   bpm: 60,
   loop: true,
   steps: [
-    ["A4", N, "A2"],   [N, N, N], [N, N, N], [N, N, N],
-    ["C5", N, N],     [N, N, N], [N, N, N], [N, N, N],
-    ["E4", N, "E2"],   [N, N, N], [N, N, N], [N, N, N],
-    ["G4", N, N],     [N, N, N], [N, N, N], [N, N, N],
-    ["F4", N, "F2"],   [N, N, N], [N, N, N], [N, N, N],
-    ["A4", N, N],     [N, N, N], [N, N, N], [N, N, N],
-    ["E4", N, "C2"],   [N, N, N], [N, N, N], [N, N, N],
-    ["D4", N, N],     [N, N, N], [N, N, N], [N, N, N],
+    ["A4", N, "A2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["C5", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E4", N, "E2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["G4", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["F4", N, "F2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["A4", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E4", N, "C2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["D4", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
   ],
 };
 
@@ -350,14 +621,38 @@ export const SONG_CROSSING: Song = {
   bpm: 50,
   loop: true,
   steps: [
-    [N, N, "A2"], [N, N, N], [N, N, N], [N, N, N],
-    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
-    ["A5", N, N], [N, N, N], [N, N, N], [N, N, N],
-    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
-    [N, N, "G2"], [N, N, N], [N, N, N], [N, N, N],
-    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
-    ["E5", N, N], [N, N, N], [N, N, N], [N, N, N],
-    [N, N, N],   [N, N, N], [N, N, N], [N, N, N],
+    [N, N, "A2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["A5", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, "G2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E5", N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
   ],
 };
 
@@ -366,13 +661,37 @@ export const SONG_EPILOGUE: Song = {
   bpm: 72,
   loop: true,
   steps: [
-    ["C5", "E4", "C3"], [N, N, N], [N, N, N], [N, N, N],
-    ["E5", "G4", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["G5", "C5", "G2"], [N, N, N], [N, N, N], [N, N, N],
-    ["E5", "G4", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["F5", "A4", "F2"], [N, N, N], [N, N, N], [N, N, N],
-    ["A5", "C5", N],   [N, N, N], [N, N, N], [N, N, N],
-    ["G5", "B4", "G2"], [N, N, N], [N, N, N], [N, N, N],
-    ["E5", "C5", "C3"], [N, N, N], [N, N, N], [N, N, N],
+    ["C5", "E4", "C3"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E5", "G4", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["G5", "C5", "G2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E5", "G4", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["F5", "A4", "F2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["A5", "C5", N],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["G5", "B4", "G2"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
+    ["E5", "C5", "C3"],
+    [N, N, N],
+    [N, N, N],
+    [N, N, N],
   ],
 };

@@ -12,7 +12,7 @@ export type InquiryOption = {
   reply: string;
 };
 
-const LINE_H = 9;   // px per text line (7 glyph + 2 leading)
+const LINE_H = 9; // px per text line (7 glyph + 2 leading)
 const PAD = 6;
 
 /**
@@ -38,10 +38,15 @@ export function runInquiry(
 
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
   const who = new GBCText(scene, boxX + PAD, boxY + 4, prompt.who.toUpperCase(), {
-    color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+    color: COLOR.textAccent,
+    depth: 251,
+    scrollFactor: 0,
   });
   const text = new GBCText(scene, boxX + PAD, boxY + 4 + LINE_H, promptText, {
-    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW,
+    color: COLOR.textLight,
+    depth: 251,
+    scrollFactor: 0,
+    maxWidthPx: innerW,
   });
 
   // Options: one per line, marker on the left.
@@ -51,14 +56,23 @@ export function runInquiry(
   options.forEach((o, i) => {
     const y = optionsTop + i * LINE_H;
     const t = new GBCText(scene, boxX + PAD + 8, y, o.label.toUpperCase(), {
-      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW - 8,
+      color: COLOR.textLight,
+      depth: 251,
+      scrollFactor: 0,
+      maxWidthPx: innerW - 8,
     });
     t.obj.setInteractive({ useHandCursor: true });
-    t.obj.on("pointerdown", () => { cursor = i; refresh(); pick(); });
+    t.obj.on("pointerdown", () => {
+      cursor = i;
+      refresh();
+      pick();
+    });
     opts.push(t);
   });
   const mark = new GBCText(scene, boxX + PAD, optionsTop, "▶", {
-    color: COLOR.textGold, depth: 251, scrollFactor: 0,
+    color: COLOR.textGold,
+    depth: 251,
+    scrollFactor: 0,
   });
 
   const refresh = () => {
@@ -89,20 +103,31 @@ export function runInquiry(
     const rBoxY = GBC_H - rBoxH - 2;
     const replyBox = drawGBCBox(scene, boxX, rBoxY, boxW, rBoxH, 250);
     const replyWho = new GBCText(scene, boxX + PAD, rBoxY + 4, prompt.who.toUpperCase(), {
-      color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+      color: COLOR.textAccent,
+      depth: 251,
+      scrollFactor: 0,
     });
     const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + LINE_H, replyText, {
-      color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: innerW,
+      color: COLOR.textLight,
+      depth: 251,
+      scrollFactor: 0,
+      maxWidthPx: innerW,
     });
     const hint = new GBCText(scene, boxX + boxW - 10, rBoxY + rBoxH - 8, "▼", {
-      color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+      color: COLOR.textAccent,
+      depth: 251,
+      scrollFactor: 0,
     });
     scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
     let dismissed = false;
     let unbindReplyAct: (() => void) | null = null;
     const dismiss = () => {
-      if (dismissed) return; dismissed = true;
-      replyBox.destroy(); replyWho.destroy(); replyBody.destroy(); hint.destroy();
+      if (dismissed) return;
+      dismissed = true;
+      replyBox.destroy();
+      replyWho.destroy();
+      replyBody.destroy();
+      hint.destroy();
       unbindReplyAct?.();
       scene.events.off("vinput-action", dismiss);
       scene.input.off("pointerdown", dismiss);
@@ -114,8 +139,11 @@ export function runInquiry(
   };
 
   const cleanup = () => {
-    box.destroy(); who.destroy(); text.destroy(); mark.destroy();
-    opts.forEach(t => t.destroy());
+    box.destroy();
+    who.destroy();
+    text.destroy();
+    mark.destroy();
+    opts.forEach((t) => t.destroy());
     unbindAct?.();
     unbindDir?.();
     scene.events.off("vinput-action", pick);

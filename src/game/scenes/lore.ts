@@ -35,9 +35,9 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
     title: "MARGIN NOTE",
     source: "INSIDE A SECOND-HAND BOOK",
     body: [
-      "\"WITHDRAW INTO YOURSELF AND LOOK.\"",
+      '"WITHDRAW INTO YOURSELF AND LOOK."',
       "SOMEONE CIRCLED THIS IN PENCIL AND WROTE:",
-      "\"OK BUT WHEN.\"",
+      '"OK BUT WHEN."',
     ],
   },
   // ===== Act 0 — Crossing =====
@@ -77,7 +77,7 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
     source: "MET IN THE CROSSING",
     body: [
       "A SHAPE WALKING THE OTHER WAY.",
-      "\"YOU'RE THE SECOND ONE TODAY,\" IT SAID.",
+      '"YOU\'RE THE SECOND ONE TODAY," IT SAID.',
       "IT DID NOT CLARIFY THE FIRST.",
     ],
   },
@@ -100,9 +100,18 @@ export function showLoreToast(scene: Phaser.Scene, id: string) {
   const e = LORE_ENTRIES[id];
   if (!e) return;
   const t = new GBCText(scene, GBC_W / 2 - 40, 26, `+ LORE: ${e.title}`, {
-    color: COLOR.textGold, depth: 240, scrollFactor: 0,
+    color: COLOR.textGold,
+    depth: 240,
+    scrollFactor: 0,
   });
-  scene.tweens.add({ targets: t.obj, y: 16, alpha: 0, duration: 1800, delay: 600, onComplete: () => t.destroy() });
+  scene.tweens.add({
+    targets: t.obj,
+    y: 16,
+    alpha: 0,
+    duration: 1800,
+    delay: 600,
+    onComplete: () => t.destroy(),
+  });
   getAudio().sfx("confirm");
 }
 
@@ -114,16 +123,37 @@ export function showLoreToast(scene: Phaser.Scene, id: string) {
  */
 export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () => void) {
   const ids = save.lore.slice();
-  const dim = scene.add.rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.78).setOrigin(0, 0).setScrollFactor(0).setDepth(900);
+  const dim = scene.add
+    .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.78)
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setDepth(900);
   const box = drawGBCBox(scene, 6, 14, GBC_W - 12, GBC_H - 28, 901);
-  const title = new GBCText(scene, 12, 18, "LORE LOG", { color: COLOR.textAccent, depth: 902, scrollFactor: 0 });
-  const counter = new GBCText(scene, GBC_W - 40, 18, "", { color: COLOR.textDim, depth: 902, scrollFactor: 0 });
-  const srcText = new GBCText(scene, 12, 30, "", { color: COLOR.textDim, depth: 902, scrollFactor: 0 });
+  const title = new GBCText(scene, 12, 18, "LORE LOG", {
+    color: COLOR.textAccent,
+    depth: 902,
+    scrollFactor: 0,
+  });
+  const counter = new GBCText(scene, GBC_W - 40, 18, "", {
+    color: COLOR.textDim,
+    depth: 902,
+    scrollFactor: 0,
+  });
+  const srcText = new GBCText(scene, 12, 30, "", {
+    color: COLOR.textDim,
+    depth: 902,
+    scrollFactor: 0,
+  });
   const body = new GBCText(scene, 12, 42, "", {
-    color: COLOR.textLight, depth: 902, scrollFactor: 0, maxWidthPx: GBC_W - 24,
+    color: COLOR.textLight,
+    depth: 902,
+    scrollFactor: 0,
+    maxWidthPx: GBC_W - 24,
   });
   const hint = new GBCText(scene, 12, GBC_H - 20, "↑↓ NEXT  A CLOSE", {
-    color: COLOR.textDim, depth: 902, scrollFactor: 0,
+    color: COLOR.textDim,
+    depth: 902,
+    scrollFactor: 0,
   });
 
   let idx = 0;
@@ -155,18 +185,39 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
     unbindDir?.();
     scene.events.off("vinput-action", close);
     scene.events.off("vinput-cancel", close);
-    dim.destroy(); box.destroy(); title.destroy(); counter.destroy();
-    srcText.destroy(); body.destroy(); hint.destroy();
+    dim.destroy();
+    box.destroy();
+    title.destroy();
+    counter.destroy();
+    srcText.destroy();
+    body.destroy();
+    hint.destroy();
     onClose?.();
   };
-  const up = () => { if (ids.length === 0) return; idx = (idx - 1 + ids.length) % ids.length; render(); getAudio().sfx("cursor"); };
-  const down = () => { if (ids.length === 0) return; idx = (idx + 1) % ids.length; render(); getAudio().sfx("cursor"); };
-  const close = () => { getAudio().sfx("cancel"); cleanup(); };
+  const up = () => {
+    if (ids.length === 0) return;
+    idx = (idx - 1 + ids.length) % ids.length;
+    render();
+    getAudio().sfx("cursor");
+  };
+  const down = () => {
+    if (ids.length === 0) return;
+    idx = (idx + 1) % ids.length;
+    render();
+    getAudio().sfx("cursor");
+  };
+  const close = () => {
+    getAudio().sfx("cancel");
+    cleanup();
+  };
 
   unbindAction = onActionDown(scene, "action", close);
   unbindCancel = onActionDown(scene, "cancel", close);
   unbindSettings = onActionDown(scene, "settings", close);
-  unbindDir = onDirection(scene, (d) => { if (d === "up") up(); else if (d === "down") down(); });
+  unbindDir = onDirection(scene, (d) => {
+    if (d === "up") up();
+    else if (d === "down") down();
+  });
   scene.events.on("vinput-action", close);
   scene.events.on("vinput-cancel", close);
 }

@@ -5,8 +5,13 @@ import { getAudio } from "../audio";
 import { loadSave } from "../save";
 import { openLoreLog } from "./lore";
 import {
-  getControls, subscribeControls, isActionDown, normalizeKeyEvent, buzz,
-  type GameAction, type ButtonSize,
+  getControls,
+  subscribeControls,
+  isActionDown,
+  normalizeKeyEvent,
+  buzz,
+  type GameAction,
+  type ButtonSize,
 } from "../controls";
 import { openSettings } from "./settings";
 
@@ -32,7 +37,10 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const openSettingsGuarded = () => {
     if (settingsOpen) return;
     settingsOpen = true;
-    openSettings(scene, () => { settingsOpen = false; rebuildPad(); });
+    openSettings(scene, () => {
+      settingsOpen = false;
+      rebuildPad();
+    });
   };
   // Expose for gear button.
   scene.data.set("__openSettingsGuarded", openSettingsGuarded);
@@ -54,7 +62,9 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
       const s: SaveSlot | null = loadSave();
       if (!s) return;
       loreOpen = true;
-      openLoreLog(scene, s, () => { loreOpen = false; });
+      openLoreLog(scene, s, () => {
+        loreOpen = false;
+      });
     } else if (matches("settings")) {
       openSettingsGuarded();
     }
@@ -64,9 +74,21 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.events.once("destroy", () => window.removeEventListener("keydown", onDomKey));
 
   // --- Top stats bar ---
-  scene.add.rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
-  scene.add.rectangle(0, 11, GBC_W, 1, 0x7889a8, 1).setOrigin(0, 0).setScrollFactor(0).setDepth(200);
-  const text = new GBCText(scene, 3, 2, "", { color: COLOR.textLight, depth: 201, scrollFactor: 0 });
+  scene.add
+    .rectangle(0, 0, GBC_W, 11, 0x0a0e1a, 0.92)
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setDepth(200);
+  scene.add
+    .rectangle(0, 11, GBC_W, 1, 0x7889a8, 1)
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setDepth(200);
+  const text = new GBCText(scene, 3, 2, "", {
+    color: COLOR.textLight,
+    depth: 201,
+    scrollFactor: 0,
+  });
   const refresh = () => {
     const s = getStats();
     text.setText(`CL${s.clarity} CM${s.compassion} CO${s.courage}`);
@@ -86,8 +108,14 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   // Live-rebuild when settings change.
   const unsub = subscribeControls(rebuildPad);
-  scene.events.once("shutdown", () => { unsub(); pad?.destroy(); });
-  scene.events.once("destroy", () => { unsub(); pad?.destroy(); });
+  scene.events.once("shutdown", () => {
+    unsub();
+    pad?.destroy();
+  });
+  scene.events.once("destroy", () => {
+    unsub();
+    pad?.destroy();
+  });
 }
 
 function shouldForceTouch(scene: Phaser.Scene): boolean {
@@ -111,10 +139,14 @@ function shouldForceTouch(scene: Phaser.Scene): boolean {
  */
 function sizeFor(s: ButtonSize): { d: number; ab: number; menu: number } {
   switch (s) {
-    case "s":  return { d: 8,  ab: 7,  menu: 6 };
-    case "m":  return { d: 10, ab: 8,  menu: 7 };
-    case "l":  return { d: 12, ab: 10, menu: 7 };
-    case "xl": return { d: 14, ab: 12, menu: 8 };
+    case "s":
+      return { d: 8, ab: 7, menu: 6 };
+    case "m":
+      return { d: 10, ab: 8, menu: 7 };
+    case "l":
+      return { d: 12, ab: 10, menu: 7 };
+    case "xl":
+      return { d: 14, ab: 12, menu: 8 };
   }
 }
 
@@ -135,51 +167,87 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
   const abCy = GBC_H - 22;
 
   // Settings gear top-right
-  const gearX = GBC_W - 8, gearY = 6;
+  const gearX = GBC_W - 8,
+    gearY = 6;
 
-  const showDpad = c.touchLayout === "dpad" || c.touchLayout === "hybrid"
-                   || (c.touchLayout === "off" && shouldForceTouch(scene));
-  const useSwipe = c.touchLayout === "swipe" || c.touchLayout === "hybrid"
-                   || (c.touchLayout === "off" && shouldForceTouch(scene));
+  const showDpad =
+    c.touchLayout === "dpad" ||
+    c.touchLayout === "hybrid" ||
+    (c.touchLayout === "off" && shouldForceTouch(scene));
+  const useSwipe =
+    c.touchLayout === "swipe" ||
+    c.touchLayout === "hybrid" ||
+    (c.touchLayout === "off" && shouldForceTouch(scene));
 
   // ----- D-pad visible buttons -----
   if (showDpad) {
     const pressVis = new Map<string, Phaser.GameObjects.Rectangle>();
     const mkBtn = (cx: number, cy: number, w: number, h: number, dir: string, label: string) => {
       // backdrop ring for visibility on dark and light bgs
-      const ring = scene.add.rectangle(cx, cy, w + 2, h + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
-      const vis = scene.add.rectangle(cx, cy, w, h, 0x222a3a, 0.8).setScrollFactor(0).setDepth(padDepth);
+      const ring = scene.add
+        .rectangle(cx, cy, w + 2, h + 2, 0xdde6f5, 0.35)
+        .setScrollFactor(0)
+        .setDepth(padDepthBg);
+      const vis = scene.add
+        .rectangle(cx, cy, w, h, 0x222a3a, 0.8)
+        .setScrollFactor(0)
+        .setDepth(padDepth);
       vis.setStrokeStyle(1, 0x6a7a98, 0.9);
-      const lbl = new GBCText(scene, cx - 2, cy - 3, label, { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
+      const lbl = new GBCText(scene, cx - 2, cy - 3, label, {
+        color: COLOR.textLight,
+        depth: padDepthHi,
+        scrollFactor: 0,
+      });
       // Wider hit zone than visual for fat-finger forgiveness.
-      const hit = scene.add.zone(cx, cy, w + 6, h + 6).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+      const hit = scene.add
+        .zone(cx, cy, w + 6, h + 6)
+        .setScrollFactor(0)
+        .setOrigin(0.5)
+        .setDepth(padDepth + 5)
+        .setInteractive();
       pressVis.set(dir, vis);
-      const down = () => { vis.setFillStyle(0x6a90c8, 0.9); buzz(8); scene.events.emit("vinput-down", dir); };
-      const up   = () => { vis.setFillStyle(0x222a3a, 0.8); scene.events.emit("vinput-up", dir); };
+      const down = () => {
+        vis.setFillStyle(0x6a90c8, 0.9);
+        buzz(8);
+        scene.events.emit("vinput-down", dir);
+      };
+      const up = () => {
+        vis.setFillStyle(0x222a3a, 0.8);
+        scene.events.emit("vinput-up", dir);
+      };
       hit.on("pointerdown", down);
       hit.on("pointerup", up);
       hit.on("pointerout", up);
       hit.on("pointerupoutside", up);
       created.push(ring, vis, lbl.obj, hit);
     };
-    mkBtn(padCx,         padCy - (d + 2), d + 2, d, "up",    "↑");
-    mkBtn(padCx,         padCy + (d + 2), d + 2, d, "down",  "↓");
-    mkBtn(padCx - (d + 2), padCy,         d, d + 2, "left",  "←");
-    mkBtn(padCx + (d + 2), padCy,         d, d + 2, "right", "→");
+    mkBtn(padCx, padCy - (d + 2), d + 2, d, "up", "↑");
+    mkBtn(padCx, padCy + (d + 2), d + 2, d, "down", "↓");
+    mkBtn(padCx - (d + 2), padCy, d, d + 2, "left", "←");
+    mkBtn(padCx + (d + 2), padCy, d, d + 2, "right", "→");
     void pressVis;
   }
 
   // ----- Swipe-anywhere on left half -----
   if (useSwipe) {
     // Defines an invisible zone that interprets drags as 4-directional held input.
-    const swipeZone = scene.add.zone(0, 11, GBC_W / 2 - 4, GBC_H - 22).setOrigin(0, 0).setScrollFactor(0).setDepth(180).setInteractive();
+    const swipeZone = scene.add
+      .zone(0, 11, GBC_W / 2 - 4, GBC_H - 22)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(180)
+      .setInteractive();
     const cur = { up: false, down: false, left: false, right: false };
     const release = () => {
       (["up", "down", "left", "right"] as const).forEach((k) => {
-        if (cur[k]) { cur[k] = false; scene.events.emit("vinput-up", k); }
+        if (cur[k]) {
+          cur[k] = false;
+          scene.events.emit("vinput-up", k);
+        }
       });
     };
-    let originX = 0, originY = 0;
+    let originX = 0,
+      originY = 0;
     let active = false;
     const dead = 4; // game-space pixels
     swipeZone.on("pointerdown", (p: Phaser.Input.Pointer) => {
@@ -195,14 +263,28 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
       const dy = (p.worldY || p.y) - originY;
       const next = { up: dy < -dead, down: dy > dead, left: dx < -dead, right: dx > dead };
       // Disallow opposing simultaneously
-      if (next.up && next.down) { next.up = false; next.down = false; }
-      if (next.left && next.right) { next.left = false; next.right = false; }
+      if (next.up && next.down) {
+        next.up = false;
+        next.down = false;
+      }
+      if (next.left && next.right) {
+        next.left = false;
+        next.right = false;
+      }
       (["up", "down", "left", "right"] as const).forEach((k) => {
-        if (next[k] && !cur[k]) { cur[k] = true; scene.events.emit("vinput-down", k); }
-        else if (!next[k] && cur[k]) { cur[k] = false; scene.events.emit("vinput-up", k); }
+        if (next[k] && !cur[k]) {
+          cur[k] = true;
+          scene.events.emit("vinput-down", k);
+        } else if (!next[k] && cur[k]) {
+          cur[k] = false;
+          scene.events.emit("vinput-up", k);
+        }
       });
     });
-    const stop = () => { active = false; release(); };
+    const stop = () => {
+      active = false;
+      release();
+    };
     swipeZone.on("pointerup", stop);
     swipeZone.on("pointerupoutside", stop);
     swipeZone.on("pointerout", stop);
@@ -211,14 +293,30 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
 
   // ----- A button -----
   {
-    const ring = scene.add.circle(abCx, abCy, ab + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
+    const ring = scene.add
+      .circle(abCx, abCy, ab + 2, 0xdde6f5, 0.35)
+      .setScrollFactor(0)
+      .setDepth(padDepthBg);
     const vis = scene.add.circle(abCx, abCy, ab, 0xd84a4a, 1).setScrollFactor(0).setDepth(padDepth);
     vis.setStrokeStyle(1, 0xffd8d8, 0.9);
-    const lbl = new GBCText(scene, abCx - 3, abCy - 3, "A", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
-    const hit = scene.add.zone(abCx, abCy, ab * 2 + 8, ab * 2 + 8).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
-    hit.on("pointerdown", () => { vis.setScale(0.85); buzz(10); scene.events.emit("vinput-action"); });
-    hit.on("pointerup",   () => vis.setScale(1));
-    hit.on("pointerout",  () => vis.setScale(1));
+    const lbl = new GBCText(scene, abCx - 3, abCy - 3, "A", {
+      color: COLOR.textLight,
+      depth: padDepthHi,
+      scrollFactor: 0,
+    });
+    const hit = scene.add
+      .zone(abCx, abCy, ab * 2 + 8, ab * 2 + 8)
+      .setScrollFactor(0)
+      .setOrigin(0.5)
+      .setDepth(padDepth + 5)
+      .setInteractive();
+    hit.on("pointerdown", () => {
+      vis.setScale(0.85);
+      buzz(10);
+      scene.events.emit("vinput-action");
+    });
+    hit.on("pointerup", () => vis.setScale(1));
+    hit.on("pointerout", () => vis.setScale(1));
     hit.on("pointerupoutside", () => vis.setScale(1));
     created.push(ring, vis, lbl.obj, hit);
   }
@@ -227,24 +325,55 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
   {
     const bx = abCx - (ab * 2 + 4) * (c.leftHanded ? -1 : 1);
     const by = abCy + ab + 4;
-    const ring = scene.add.circle(bx, by, ab - 1 + 2, 0xdde6f5, 0.35).setScrollFactor(0).setDepth(padDepthBg);
-    const vis = scene.add.circle(bx, by, ab - 1, 0xe0c060, 1).setScrollFactor(0).setDepth(padDepth);
+    const ring = scene.add
+      .circle(bx, by, ab - 1 + 2, 0xdde6f5, 0.35)
+      .setScrollFactor(0)
+      .setDepth(padDepthBg);
+    const vis = scene.add
+      .circle(bx, by, ab - 1, 0xe0c060, 1)
+      .setScrollFactor(0)
+      .setDepth(padDepth);
     vis.setStrokeStyle(1, 0xfff3c0, 0.9);
-    const lbl = new GBCText(scene, bx - 3, by - 3, "B", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
-    const hit = scene.add.zone(bx, by, (ab - 1) * 2 + 8, (ab - 1) * 2 + 8).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
-    hit.on("pointerdown", () => { vis.setScale(0.85); buzz(10); scene.events.emit("vinput-cancel"); });
-    hit.on("pointerup",   () => vis.setScale(1));
-    hit.on("pointerout",  () => vis.setScale(1));
+    const lbl = new GBCText(scene, bx - 3, by - 3, "B", {
+      color: COLOR.textLight,
+      depth: padDepthHi,
+      scrollFactor: 0,
+    });
+    const hit = scene.add
+      .zone(bx, by, (ab - 1) * 2 + 8, (ab - 1) * 2 + 8)
+      .setScrollFactor(0)
+      .setOrigin(0.5)
+      .setDepth(padDepth + 5)
+      .setInteractive();
+    hit.on("pointerdown", () => {
+      vis.setScale(0.85);
+      buzz(10);
+      scene.events.emit("vinput-cancel");
+    });
+    hit.on("pointerup", () => vis.setScale(1));
+    hit.on("pointerout", () => vis.setScale(1));
     hit.on("pointerupoutside", () => vis.setScale(1));
     created.push(ring, vis, lbl.obj, hit);
   }
 
   // ----- Settings gear (top-right) -----
   {
-    const vis = scene.add.circle(gearX, gearY, menu, 0x2a3550, 0.9).setScrollFactor(0).setDepth(padDepth);
+    const vis = scene.add
+      .circle(gearX, gearY, menu, 0x2a3550, 0.9)
+      .setScrollFactor(0)
+      .setDepth(padDepth);
     vis.setStrokeStyle(1, 0xa8c8e8, 0.9);
-    const lbl = new GBCText(scene, gearX - 2, gearY - 3, "≡", { color: COLOR.textLight, depth: padDepthHi, scrollFactor: 0 });
-    const hit = scene.add.zone(gearX, gearY, menu * 2 + 6, menu * 2 + 6).setScrollFactor(0).setOrigin(0.5).setDepth(padDepth + 5).setInteractive();
+    const lbl = new GBCText(scene, gearX - 2, gearY - 3, "≡", {
+      color: COLOR.textLight,
+      depth: padDepthHi,
+      scrollFactor: 0,
+    });
+    const hit = scene.add
+      .zone(gearX, gearY, menu * 2 + 6, menu * 2 + 6)
+      .setScrollFactor(0)
+      .setOrigin(0.5)
+      .setDepth(padDepth + 5)
+      .setInteractive();
     let opening = false;
     hit.on("pointerdown", () => {
       if (opening) return;
@@ -252,22 +381,39 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
       buzz(15);
       const guarded = scene.data.get("__openSettingsGuarded") as (() => void) | undefined;
       if (guarded) guarded();
-      else openSettings(scene, () => { opening = false; });
+      else
+        openSettings(scene, () => {
+          opening = false;
+        });
       // Reset opening flag shortly so the next tap works after settings closes.
-      scene.time.delayedCall(400, () => { opening = false; });
+      scene.time.delayedCall(400, () => {
+        opening = false;
+      });
     });
     created.push(vis, lbl.obj, hit);
   }
 
   // ----- Lore button (small, top-left of HUD strip) -----
   {
-    const lx = 4, ly = 6;
-    const w = 14, h = 8;
-    const vis = scene.add.rectangle(lx, ly, w, h, 0x2a3550, 0).setOrigin(0, 0.5).setScrollFactor(0).setDepth(padDepth);
+    const lx = 4,
+      ly = 6;
+    const w = 14,
+      h = 8;
+    const vis = scene.add
+      .rectangle(lx, ly, w, h, 0x2a3550, 0)
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(padDepth);
     vis.setStrokeStyle(1, 0xa8c8e8, 0);
-    const hit = scene.add.zone(lx + w / 2, ly, w + 4, h + 4).setOrigin(0.5).setScrollFactor(0).setDepth(padDepth + 5).setInteractive();
+    const hit = scene.add
+      .zone(lx + w / 2, ly, w + 4, h + 4)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(padDepth + 5)
+      .setInteractive();
     hit.on("pointerdown", () => {
-      const s = loadSave(); if (!s) return;
+      const s = loadSave();
+      if (!s) return;
       buzz(8);
       openLoreLog(scene, s);
     });
@@ -276,7 +422,13 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
 
   return {
     destroy() {
-      created.forEach(o => { try { o.destroy(); } catch { /* ignore */ } });
+      created.forEach((o) => {
+        try {
+          o.destroy();
+        } catch {
+          /* ignore */
+        }
+      });
     },
   };
 }
@@ -285,18 +437,25 @@ function buildTouchPad(scene: Phaser.Scene): TouchPadHandle {
 // InputState — merges keyboard (with rebinds) + virtual pad
 // ============================================================================
 export class InputState {
-  up = false; down = false; left = false; right = false;
+  up = false;
+  down = false;
+  left = false;
+  right = false;
   private scene: Phaser.Scene;
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    scene.events.on("vinput-down", (dir: string) => { (this as Record<string, unknown>)[dir] = true; });
-    scene.events.on("vinput-up",   (dir: string) => { (this as Record<string, unknown>)[dir] = false; });
+    scene.events.on("vinput-down", (dir: string) => {
+      (this as Record<string, unknown>)[dir] = true;
+    });
+    scene.events.on("vinput-up", (dir: string) => {
+      (this as Record<string, unknown>)[dir] = false;
+    });
   }
   poll() {
     return {
-      up:    this.up    || isActionDown(this.scene, "up"),
-      down:  this.down  || isActionDown(this.scene, "down"),
-      left:  this.left  || isActionDown(this.scene, "left"),
+      up: this.up || isActionDown(this.scene, "up"),
+      down: this.down || isActionDown(this.scene, "down"),
+      left: this.left || isActionDown(this.scene, "left"),
       right: this.right || isActionDown(this.scene, "right"),
     };
   }
@@ -317,7 +476,12 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   c.setData("dir", "down");
   c.setData("skin", skin);
 
-  const accessoryKeys: ("scarf" | "coat" | "boots" | "satchel")[] = ["scarf", "coat", "boots", "satchel"];
+  const accessoryKeys: ("scarf" | "coat" | "boots" | "satchel")[] = [
+    "scarf",
+    "coat",
+    "boots",
+    "satchel",
+  ];
   const accessories: Record<string, Phaser.GameObjects.Sprite> = {};
   accessoryKeys.forEach((k, i) => {
     const a = scene.add.sprite(0, 0, "rowan_acc", i).setOrigin(0.5, 0.7);
@@ -342,23 +506,52 @@ export function shedAccessory(
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
   if (!accs || !accs[which] || !accs[which].visible) return;
   const a = accs[which];
-  const wx = c.x, wy = c.y;
+  const wx = c.x,
+    wy = c.y;
   c.remove(a);
   a.setPosition(wx, wy);
   scene.add.existing(a);
   a.setDepth(50);
   switch (which) {
     case "scarf":
-      scene.tweens.add({ targets: a, y: wy - 30, alpha: 0, duration: 1400, ease: "Sine.out", onComplete: () => a.destroy() });
+      scene.tweens.add({
+        targets: a,
+        y: wy - 30,
+        alpha: 0,
+        duration: 1400,
+        ease: "Sine.out",
+        onComplete: () => a.destroy(),
+      });
       break;
     case "coat":
-      scene.tweens.add({ targets: a, y: wy + 6, alpha: 0, duration: 900, ease: "Quad.in", onComplete: () => a.destroy() });
+      scene.tweens.add({
+        targets: a,
+        y: wy + 6,
+        alpha: 0,
+        duration: 900,
+        ease: "Quad.in",
+        onComplete: () => a.destroy(),
+      });
       break;
     case "boots":
-      scene.tweens.add({ targets: a, alpha: 0, scaleY: 0.4, duration: 900, ease: "Sine.in", onComplete: () => a.destroy() });
+      scene.tweens.add({
+        targets: a,
+        alpha: 0,
+        scaleY: 0.4,
+        duration: 900,
+        ease: "Sine.in",
+        onComplete: () => a.destroy(),
+      });
       break;
     case "satchel":
-      scene.tweens.add({ targets: a, y: wy + 4, alpha: 0, duration: 900, ease: "Quad.in", onComplete: () => a.destroy() });
+      scene.tweens.add({
+        targets: a,
+        y: wy + 4,
+        alpha: 0,
+        duration: 900,
+        ease: "Quad.in",
+        onComplete: () => a.destroy(),
+      });
       break;
   }
   delete accs[which];
@@ -376,7 +569,7 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
     sprite.clearTint();
   }
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
-  if (accs) Object.values(accs).forEach(a => a.setVisible(skin === "living"));
+  if (accs) Object.values(accs).forEach((a) => a.setVisible(skin === "living"));
 }
 
 export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: number) {
@@ -387,7 +580,7 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   const anims = sprite.scene.anims;
   if (moving) {
     if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
-    else                              dir = dy > 0 ? "down"  : "up";
+    else dir = dy > 0 ? "down" : "up";
     c.setData("dir", dir);
     const key = `rowan_${dir}`;
     if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
@@ -397,7 +590,7 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
   }
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
   if (accs) {
-    Object.values(accs).forEach(a => a.setFrame(a.frame.name));
+    Object.values(accs).forEach((a) => a.setFrame(a.frame.name));
   }
 }
 
@@ -409,14 +602,26 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
-  const boxX = 4, boxY = GBC_H - 56, boxW = GBC_W - 8, boxH = 52;
+  const boxX = 4,
+    boxY = GBC_H - 56,
+    boxW = GBC_W - 8,
+    boxH = 52;
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
-  const who = new GBCText(scene, boxX + 6, boxY + 4, "", { color: COLOR.textAccent, depth: 251, scrollFactor: 0 });
+  const who = new GBCText(scene, boxX + 6, boxY + 4, "", {
+    color: COLOR.textAccent,
+    depth: 251,
+    scrollFactor: 0,
+  });
   const text = new GBCText(scene, boxX + 6, boxY + 14, "", {
-    color: COLOR.textLight, depth: 251, scrollFactor: 0, maxWidthPx: boxW - 16,
+    color: COLOR.textLight,
+    depth: 251,
+    scrollFactor: 0,
+    maxWidthPx: boxW - 16,
   });
   const hint = new GBCText(scene, boxX + boxW - 10, boxY + boxH - 8, "▼", {
-    color: COLOR.textAccent, depth: 251, scrollFactor: 0,
+    color: COLOR.textAccent,
+    depth: 251,
+    scrollFactor: 0,
   });
   scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
 
@@ -428,7 +633,10 @@ export function runDialog(
   let autoTimer: Phaser.Time.TimerEvent | null = null;
 
   const finishTyping = () => {
-    if (typeTimer) { typeTimer.remove(false); typeTimer = null; }
+    if (typeTimer) {
+      typeTimer.remove(false);
+      typeTimer = null;
+    }
     text.setText(fullText);
     typing = false;
     hint.setVisible(true);
@@ -436,7 +644,8 @@ export function runDialog(
   };
 
   const scheduleAuto = () => {
-    autoTimer?.remove(false); autoTimer = null;
+    autoTimer?.remove(false);
+    autoTimer = null;
     const ms = getControls().dialogAutoAdvanceMs;
     if (ms > 0 && !typing && active) {
       autoTimer = scene.time.delayedCall(ms, () => next());
@@ -458,7 +667,12 @@ export function runDialog(
         text.setText(s.slice(0, n));
         const ch = s[n - 1];
         if (n % 2 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
-        if (n >= s.length) { typing = false; hint.setVisible(true); typeTimer = null; scheduleAuto(); }
+        if (n >= s.length) {
+          typing = false;
+          hint.setVisible(true);
+          typeTimer = null;
+          scheduleAuto();
+        }
       },
     });
   };
@@ -469,12 +683,19 @@ export function runDialog(
 
   const next = () => {
     if (!active) return;
-    if (typing) { finishTyping(); return; }
-    autoTimer?.remove(false); autoTimer = null;
+    if (typing) {
+      finishTyping();
+      return;
+    }
+    autoTimer?.remove(false);
+    autoTimer = null;
     if (i >= lines.length) {
       active = false;
       if (typeTimer) typeTimer.remove(false);
-      box.destroy(); who.destroy(); text.destroy(); hint.destroy();
+      box.destroy();
+      who.destroy();
+      text.destroy();
+      hint.destroy();
       cleanupKb();
       scene.events.off("vinput-action", next);
       scene.input.off("pointerdown", next);
@@ -496,7 +717,8 @@ export function runDialog(
   };
 
   const onKey = (e: KeyboardEvent) => {
-    const name = normalizeKeyEvent(e); if (!name) return;
+    const name = normalizeKeyEvent(e);
+    if (!name) return;
     const c = getControls();
     if (name === c.bindings.action.primary || name === c.bindings.action.secondary) next();
     else if (name === c.bindings.skip.primary || name === c.bindings.skip.secondary) skipAll();
