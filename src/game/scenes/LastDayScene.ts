@@ -4,15 +4,19 @@ import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { getAudio, SONG_LASTDAY } from "../audio";
+import { runRhythmTap } from "./minigames/rhythmTap";
+import { unlockLore, showLoreToast } from "./lore";
+
+type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
 type Interactable = {
-  x: number; y: number; w: number; h: number;
-  seed: string;
+  kind: ItemKind;
+  x: number; y: number;
+  seed: string | null; // null = lore-only or non-seed item
   label: string;
-  lines: { who: string; text: string }[];
   used: boolean;
-  visual: Phaser.GameObjects.GameObject[];
   marker?: Phaser.GameObjects.Arc;
+  visual?: Phaser.GameObjects.GameObject[];
 };
 
 export class LastDayScene extends Phaser.Scene {
@@ -23,14 +27,21 @@ export class LastDayScene extends Phaser.Scene {
   private hint!: GBCText;
   private items: Interactable[] = [];
   private dialogActive = false;
+  private miniActive = false;
   private exitOpen = false;
+
+  // Hidden breath seed: track time spent stationary
+  private stillMs = 0;
+  private breathPulse?: Phaser.GameObjects.Arc;
 
   constructor() { super("LastDay"); }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.items = [];
     this.dialogActive = false;
+    this.miniActive = false;
     this.exitOpen = false;
+    this.stillMs = 0;
   }
 
   create() {
@@ -46,6 +57,7 @@ export class LastDayScene extends Phaser.Scene {
     g.fillStyle(0x1a1410, 1); g.fillRect(0, 12, GBC_W, 12);
     g.fillStyle(0x2a2018, 1); g.fillRect(0, 22, GBC_W, 2);
 
+    // Window
     const winX = 22, winY = 14;
     g.fillStyle(0x4a5878, 1); g.fillRect(winX, winY, 22, 16);
     g.fillStyle(0x88a8c8, 1); g.fillRect(winX + 1, winY + 1, 20, 14);
@@ -53,6 +65,7 @@ export class LastDayScene extends Phaser.Scene {
     g.fillStyle(0x1a1410, 1); g.fillRect(winX + 10, winY, 2, 16);
     g.fillStyle(0x1a1410, 1); g.fillRect(winX, winY + 7, 22, 2);
 
+    // Counter + kettle
     g.fillStyle(0x3a3028, 1); g.fillRect(110, 30, 50, 14);
     g.fillStyle(0x4a3a30, 1); g.fillRect(110, 30, 50, 2);
     const kettleX = 134, kettleY = 32;
@@ -66,6 +79,7 @@ export class LastDayScene extends Phaser.Scene {
       steam.push(p);
     }
 
+    // Phone
     const phX = 50, phY = 60;
     g.fillStyle(0x3a3028, 1); g.fillRect(phX - 6, phY, 16, 12);
     g.fillStyle(0x1a1818, 1); g.fillRect(phX - 3, phY - 6, 8, 10);
@@ -73,18 +87,30 @@ export class LastDayScene extends Phaser.Scene {
     const phoneRing = this.add.circle(phX + 1, phY - 1, 4, 0x88c0f0, 0.4).setDepth(10);
     this.tweens.add({ targets: phoneRing, scale: 2, alpha: 0, duration: 1400, yoyo: false, repeat: -1 });
 
+    // Coat
     const coatX = 80, coatY = GBC_H - 36;
     g.fillStyle(0x1a1410, 1); g.fillRect(coatX - 8, coatY - 4, 24, 4);
     g.fillStyle(0x4a2820, 1); g.fillRect(coatX - 4, coatY, 8, 14);
     g.fillStyle(0x2a1810, 1); g.fillRect(coatX - 5, coatY + 6, 10, 2);
     g.fillStyle(0x683828, 1); g.fillRect(coatX - 3, coatY, 6, 4);
 
-    // Hidden bathroom mirror — small tile, easy to miss, near the door
+    // Mirror — small, near door
     const mirX = 110, mirY = 64;
     g.fillStyle(0x1a1818, 1); g.fillRect(mirX - 4, mirY - 5, 9, 10);
     g.fillStyle(0x88a0c8, 0.7); g.fillRect(mirX - 3, mirY - 4, 7, 8);
     g.fillStyle(0xc8d8e8, 0.5); g.fillRect(mirX - 3, mirY - 4, 7, 3);
 
+    // Postcard on the desk (small, easy to miss)
+    const pcX = 122, pcY = 42;
+    g.fillStyle(0xe0d8c0, 1); g.fillRect(pcX - 3, pcY - 2, 7, 4);
+    g.fillStyle(0x88a0c8, 1); g.fillRect(pcX - 2, pcY - 1, 3, 2);
+
+    // Book on the floor by the coat
+    const bkX = 96, bkY = GBC_H - 22;
+    g.fillStyle(0x4a2820, 1); g.fillRect(bkX - 3, bkY - 1, 7, 3);
+    g.fillStyle(0xe0d8c0, 1); g.fillRect(bkX - 3, bkY + 1, 7, 1);
+
+    // Door
     const doorX = 76, doorY = GBC_H - 12;
     const door = this.add.rectangle(doorX + 4, doorY + 4, 12, 16, 0x2a1810, 1).setDepth(2);
     this.add.rectangle(doorX + 4, doorY + 4, 12, 16, 0x584030, 0).setStrokeStyle(1, 0x584030).setDepth(2);
@@ -92,66 +118,27 @@ export class LastDayScene extends Phaser.Scene {
 
     spawnMotes(this, { count: 14, color: 0xdde6f5, alpha: 0.35, driftY: 0.004, driftX: 0.006, depth: 25 });
 
-    const mark = (x: number, y: number, color: number) => {
-      const a = this.add.circle(x, y, 6, color, 0.18).setDepth(9);
-      this.tweens.add({ targets: a, scale: 1.4, alpha: 0.05, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    const mark = (x: number, y: number, color: number, radius = 6, alpha = 0.18) => {
+      const a = this.add.circle(x, y, radius, color, alpha).setDepth(9);
+      this.tweens.add({ targets: a, scale: 1.4, alpha: alpha * 0.3, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
       return a;
     };
 
     this.items = [
-      {
-        x: phX + 1, y: phY, w: 14, h: 14, seed: "seed_call", label: "PHONE",
-        lines: [
-          { who: "?", text: "The phone glows. Caller ID reads MARA." },
-          { who: "?", text: "You let it ring. You'll call back tomorrow." },
-          { who: "?", text: "You always say tomorrow." },
-        ],
-        used: false, visual: [], marker: mark(phX + 1, phY, 0x88c0f0),
-      },
-      {
-        x: winX + 11, y: winY + 8, w: 24, h: 18, seed: "seed_window", label: "WINDOW",
-        lines: [
-          { who: "?", text: "Across the street a child waves up at the glass." },
-          { who: "?", text: "You almost wave back. You don't." },
-          { who: "?", text: "The glass between you feels suddenly thin." },
-        ],
-        used: false, visual: steam, marker: mark(winX + 11, winY + 8, 0xc8d8e8),
-      },
-      {
-        x: kettleX + 5, y: kettleY + 5, w: 14, h: 14, seed: "seed_kettle", label: "KETTLE",
-        lines: [
-          { who: "?", text: "The kettle has whistled itself thin." },
-          { who: "?", text: "You pour two cups. You always pour two." },
-          { who: "?", text: "You don't remember when that started." },
-        ],
-        used: false, visual: [], marker: mark(kettleX + 5, kettleY + 5, 0xdde6f5),
-      },
-      {
-        x: coatX, y: coatY + 6, w: 14, h: 18, seed: "seed_coat", label: "COAT",
-        lines: [
-          { who: "?", text: "Your coat by the door. Pockets full of small unfinished things." },
-          { who: "?", text: "Receipts. A folded letter. A key to a door that isn't this one." },
-          { who: "?", text: "You've been meaning to do a lot of things." },
-        ],
-        used: false, visual: [], marker: mark(coatX, coatY + 6, 0xd89868),
-      },
-      {
-        // Hidden 5th — mirror. Smaller marker, no halo by default.
-        x: mirX, y: mirY, w: 10, h: 10, seed: "seed_mirror", label: "MIRROR",
-        lines: [
-          { who: "?", text: "You look tired." },
-          { who: "?", text: "You look like someone who hasn't been seen in a while." },
-          { who: "?", text: "You hold your own gaze longer than usual. Then you turn away." },
-        ],
-        used: false, visual: [], marker: mark(mirX, mirY, 0xa8c8e8),
-      },
+      { kind: "phone",    x: phX + 1,    y: phY,        seed: "seed_call",   label: "PHONE",    used: false, marker: mark(phX + 1, phY, 0x88c0f0), visual: [phoneRing] },
+      { kind: "window",   x: winX + 11,  y: winY + 8,   seed: "seed_window", label: "WINDOW",   used: false, marker: mark(winX + 11, winY + 8, 0xc8d8e8), visual: steam },
+      { kind: "kettle",   x: kettleX + 5, y: kettleY + 5, seed: "seed_kettle", label: "KETTLE", used: false, marker: mark(kettleX + 5, kettleY + 5, 0xdde6f5) },
+      { kind: "coat",     x: coatX,       y: coatY + 6,  seed: "seed_coat",   label: "COAT",   used: false, marker: mark(coatX, coatY + 6, 0xd89868) },
+      { kind: "mirror",   x: mirX,        y: mirY,       seed: "seed_mirror", label: "MIRROR", used: false, marker: mark(mirX, mirY, 0xa8c8e8, 4, 0.12) },
+      // Lore-only items (no main-seed gate)
+      { kind: "postcard", x: pcX,         y: pcY,        seed: null,          label: "POSTCARD", used: false, marker: mark(pcX, pcY, 0xe0d8c0, 3, 0.10) },
+      { kind: "book",     x: bkX,         y: bkY,        seed: null,          label: "BOOK",     used: false, marker: mark(bkX, bkY, 0xe0d8c0, 3, 0.10) },
     ];
 
     for (const it of this.items) {
-      if (this.save.seeds[it.seed]) {
-        it.used = true;
-        if (it.marker) it.marker.setVisible(false);
-      }
+      if (it.seed && this.save.seeds[it.seed]) { it.used = true; if (it.marker) it.marker.setVisible(false); }
+      if (it.kind === "postcard" && this.save.lore.includes("postcard_seaside")) { it.used = true; if (it.marker) it.marker.setVisible(false); }
+      if (it.kind === "book" && this.save.lore.includes("margin_plotinus")) { it.used = true; if (it.marker) it.marker.setVisible(false); }
     }
 
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
@@ -170,8 +157,7 @@ export class LastDayScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
-    // Door is open immediately if 3+ main seeds were already set in a prior visit.
-    const usedAtLoad = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
+    const usedAtLoad = this.items.filter(t => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (usedAtLoad >= 3) this.exitOpen = true;
 
     if (!this.save.flags.lastday_intro) {
@@ -182,12 +168,13 @@ export class LastDayScene extends Phaser.Scene {
         { who: "?", text: "Tuesday. The light is doing its small work." },
         { who: "?", text: "You have things to do today. You always have things to do." },
         { who: "?", text: "Touch what calls you. There is no rush. There will be no later." },
+        { who: "?", text: "(Press L any time to open your Lore Log.)" },
       ], () => { this.dialogActive = false; }));
     }
   }
 
   update(_t: number, dt: number) {
-    if (this.dialogActive) return;
+    if (this.dialogActive || this.miniActive) return;
     const speed = 0.04 * dt;
     const i = this.input2.poll();
     let dx = 0, dy = 0;
@@ -202,8 +189,34 @@ export class LastDayScene extends Phaser.Scene {
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
+    // Hidden seed_breath: stand still 4s anywhere → faint pulse + auto-grant
+    if (!this.save.seeds.seed_breath) {
+      const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+      if (moving) {
+        this.stillMs = 0;
+        if (this.breathPulse) { this.breathPulse.destroy(); this.breathPulse = undefined; }
+      } else {
+        this.stillMs += dt;
+        if (this.stillMs > 1500 && !this.breathPulse) {
+          this.breathPulse = this.add.circle(this.rowan.x, this.rowan.y - 4, 4, 0xa8c8e8, 0.3).setDepth(40);
+          this.tweens.add({ targets: this.breathPulse, scale: 2.5, alpha: 0.05, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+        }
+        if (this.breathPulse) { this.breathPulse.x = this.rowan.x; this.breathPulse.y = this.rowan.y - 4; }
+        if (this.stillMs > 4000) {
+          this.save.seeds.seed_breath = true;
+          writeSave(this.save);
+          getAudio().sfx("confirm");
+          if (this.breathPulse) {
+            this.tweens.add({ targets: this.breathPulse, scale: 5, alpha: 0, duration: 700, onComplete: () => { this.breathPulse?.destroy(); this.breathPulse = undefined; } });
+          }
+          const t = new GBCText(this, this.rowan.x - 18, this.rowan.y - 18, "+ BREATH", { color: COLOR.textGold, depth: 220 });
+          this.tweens.add({ targets: t.obj, alpha: 0, y: this.rowan.y - 32, duration: 1600, onComplete: () => t.destroy() });
+        }
+      }
+    }
+
     const near = this.nearest();
-    const usedMain = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
+    const usedMain = this.items.filter(t => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80, dyg = this.rowan.y - (GBC_H - 8);
       if (dxg * dxg + dyg * dyg < 14 * 14) this.hint.setText("A: STEP THROUGH THE DOOR");
@@ -221,12 +234,10 @@ export class LastDayScene extends Phaser.Scene {
   }
 
   private playChestPain() {
-    // Brief, wordless: a soft red pulse over Rowan, screen vignette, audio thump.
     const pulse = this.add.circle(this.rowan.x, this.rowan.y - 4, 4, 0xd84a4a, 0.45).setDepth(40);
     this.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 1200, ease: "Sine.out", onComplete: () => pulse.destroy() });
     this.cameras.main.shake(180, 0.0035);
     getAudio().sfx("boss");
-    // Subtle vignette flash via a brief red overlay
     const vig = this.add.rectangle(0, 0, GBC_W, GBC_H, 0x501818, 0.0).setOrigin(0, 0).setDepth(195);
     this.tweens.add({ targets: vig, alpha: 0.35, duration: 300, yoyo: true, onComplete: () => vig.destroy() });
   }
@@ -234,6 +245,7 @@ export class LastDayScene extends Phaser.Scene {
   private nearest(): Interactable | null {
     let best: Interactable | null = null; let bd = Infinity;
     for (const it of this.items) {
+      if (it.used) continue;
       const dx = this.rowan.x - it.x, dy = this.rowan.y - it.y;
       const d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = it; }
@@ -242,7 +254,7 @@ export class LastDayScene extends Phaser.Scene {
   }
 
   private tryInteract() {
-    if (this.dialogActive) return;
+    if (this.dialogActive || this.miniActive) return;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80, dyg = this.rowan.y - (GBC_H - 8);
       if (dxg * dxg + dyg * dyg < 14 * 14) {
@@ -256,12 +268,196 @@ export class LastDayScene extends Phaser.Scene {
     }
     const it = this.nearest();
     if (!it || it.used) return;
+    this.runItem(it);
+  }
+
+  // ============================================================================
+  // Per-item interactions
+  // ============================================================================
+  private commitSeed(it: Interactable) {
     it.used = true;
-    this.save.seeds[it.seed] = true;
+    if (it.seed) this.save.seeds[it.seed] = true;
     writeSave(this.save);
     if (it.marker) it.marker.setVisible(false);
-    this.dialogActive = true;
-    getAudio().sfx("dialog");
-    runDialog(this, it.lines, () => { this.dialogActive = false; });
+  }
+
+  private runItem(it: Interactable) {
+    switch (it.kind) {
+      case "phone":    return this.itemPhone(it);
+      case "window":   return this.itemWindow(it);
+      case "kettle":   return this.itemKettle(it);
+      case "coat":     return this.itemCoat(it);
+      case "mirror":   return this.itemMirror(it);
+      case "postcard": return this.itemPostcard(it);
+      case "book":     return this.itemBook(it);
+      case "breath":   return; // handled passively
+    }
+  }
+
+  private itemPhone(it: Interactable) {
+    this.miniActive = true;
+    runDialog(this, [
+      { who: "?", text: "The phone glows. Caller ID reads MARA." },
+      { who: "?", text: "Tap A on each ring. Or don't." },
+    ], () => {
+      runRhythmTap(this, { title: "PICK UP?", beats: [600, 1300, 2000] }, (r) => {
+        const lines: { who: string; text: string }[] = [];
+        if (r.judgment === "great") {
+          lines.push({ who: "?", text: "You answer on the third ring. Mara sounds relieved." });
+          lines.push({ who: "?", text: "She says she dreamt of you. You almost tell her." });
+          this.save.flags.phone_answered = true;
+        } else if (r.judgment === "ok") {
+          lines.push({ who: "?", text: "You fumble for the receiver. By the time you lift it," });
+          lines.push({ who: "?", text: "the call has gone to silence. You set it down." });
+        } else {
+          lines.push({ who: "?", text: "You let it ring. You'll call back tomorrow." });
+          lines.push({ who: "?", text: "You always say tomorrow." });
+          this.save.flags.phone_ignored = true;
+        }
+        this.commitSeed(it);
+        runDialog(this, lines, () => { this.miniActive = false; });
+      });
+    });
+  }
+
+  private itemWindow(it: Interactable) {
+    this.miniActive = true;
+    // Hold UP to wave. Sample input over ~2s and grade.
+    const prompt = new GBCText(this, GBC_W / 2 - 36, 38, "HOLD UP TO WAVE", { color: COLOR.textAccent, depth: 220, scrollFactor: 0 });
+    const bar = this.add.rectangle(GBC_W / 2 - 24, 50, 48, 3, 0x3a4868, 1).setOrigin(0, 0.5).setDepth(220).setScrollFactor(0);
+    const fill = this.add.rectangle(GBC_W / 2 - 24, 50, 0, 3, 0xc8d8e8, 1).setOrigin(0, 0.5).setDepth(221).setScrollFactor(0);
+    let held = 0;
+    const total = 2000;
+    const timer = this.time.addEvent({
+      delay: 50, repeat: total / 50, callback: () => {
+        const i = this.input2.poll();
+        if (i.up) held += 50;
+        fill.width = (held / total) * 48;
+      },
+    });
+    this.time.delayedCall(total + 100, () => {
+      timer.remove(false);
+      prompt.destroy(); bar.destroy(); fill.destroy();
+      const ratio = held / total;
+      const lines: { who: string; text: string }[] = [];
+      if (ratio > 0.7) {
+        lines.push({ who: "?", text: "You wave back. The child's face splits open with a grin." });
+        lines.push({ who: "?", text: "You feel ridiculous. Then warm. Then ridiculous again." });
+        this.save.flags.window_waved = true;
+      } else if (ratio > 0.2) {
+        lines.push({ who: "?", text: "You half-lift a hand. The child has already turned away." });
+      } else {
+        lines.push({ who: "?", text: "You almost wave back. You don't." });
+        lines.push({ who: "?", text: "The glass between you feels suddenly thin." });
+      }
+      this.commitSeed(it);
+      runDialog(this, lines, () => { this.miniActive = false; });
+    });
+  }
+
+  private itemKettle(it: Interactable) {
+    this.miniActive = true;
+    // Pour rhythm: 3 quick beats to "fill cup one", a beat of pause, 3 beats for cup two.
+    runDialog(this, [
+      { who: "?", text: "The kettle has whistled itself thin." },
+      { who: "?", text: "Pour cleanly. (A on each beat.)" },
+    ], () => {
+      runRhythmTap(this, { title: "POUR", beats: [400, 900, 1400, 2200, 2700, 3200] }, (r) => {
+        const lines: { who: string; text: string }[] = [];
+        if (r.hits === r.total) {
+          lines.push({ who: "?", text: "Two cups. Even pours. You always pour two." });
+          lines.push({ who: "?", text: "You don't remember when that started." });
+        } else if (r.judgment === "ok") {
+          lines.push({ who: "?", text: "One cup overfills. You wipe the counter." });
+          lines.push({ who: "?", text: "Two cups. Always two." });
+        } else {
+          lines.push({ who: "?", text: "You scald your wrist. Curse softly." });
+          lines.push({ who: "?", text: "You pour one cup this time. Just one." });
+          this.save.flags.kettle_one_cup = true;
+        }
+        this.commitSeed(it);
+        runDialog(this, lines, () => { this.miniActive = false; });
+      });
+    });
+  }
+
+  private itemCoat(it: Interactable) {
+    this.miniActive = true;
+    // Fold sequence: 3 directional inputs in order (DOWN, LEFT, DOWN). Mistakes are forgiven.
+    runDialog(this, [
+      { who: "?", text: "Your coat by the door. Pockets full of small unfinished things." },
+      { who: "?", text: "Fold it: ↓ ← ↓" },
+    ], () => {
+      const seq = ["down", "left", "down"];
+      let step = 0;
+      const promptT = new GBCText(this, GBC_W / 2 - 28, 38, `STEP 1: ↓`, { color: COLOR.textAccent, depth: 220, scrollFactor: 0 });
+      const symbol = (s: string) => s === "down" ? "↓" : s === "left" ? "←" : s === "right" ? "→" : "↑";
+      const advance = () => {
+        step++;
+        if (step >= seq.length) {
+          promptT.destroy();
+          this.commitSeed(it);
+          runDialog(this, [
+            { who: "?", text: "Receipts. A folded letter. A key to a door that isn't this one." },
+            { who: "?", text: "You hang it. It looks like it belongs to someone else." },
+          ], () => { this.miniActive = false; });
+          return;
+        }
+        promptT.setText(`STEP ${step + 1}: ${symbol(seq[step])}`);
+        getAudio().sfx("confirm");
+      };
+      const onDir = (d: string) => { if (d === seq[step]) advance(); else getAudio().sfx("miss"); };
+      this.events.on("vinput-down", onDir);
+      const onKey = (k: string) => () => onDir(k);
+      const kbDown = onKey("down"), kbLeft = onKey("left"), kbRight = onKey("right"), kbUp = onKey("up");
+      this.input.keyboard?.on("keydown-DOWN", kbDown);
+      this.input.keyboard?.on("keydown-LEFT", kbLeft);
+      this.input.keyboard?.on("keydown-RIGHT", kbRight);
+      this.input.keyboard?.on("keydown-UP", kbUp);
+      this.input.keyboard?.on("keydown-S", kbDown);
+      this.input.keyboard?.on("keydown-A", kbLeft);
+      this.input.keyboard?.on("keydown-D", kbRight);
+      this.input.keyboard?.on("keydown-W", kbUp);
+      // safety timeout
+      this.time.delayedCall(15000, () => {
+        if (!it.used) {
+          promptT.destroy();
+          this.commitSeed(it);
+          runDialog(this, [{ who: "?", text: "You give up folding. You let it slump." }], () => { this.miniActive = false; });
+        }
+      });
+    });
+  }
+
+  private itemMirror(it: Interactable) {
+    this.miniActive = true;
+    this.commitSeed(it);
+    runDialog(this, [
+      { who: "?", text: "You look tired." },
+      { who: "?", text: "You look like someone who hasn't been seen in a while." },
+      { who: "?", text: "You hold your own gaze longer than usual. Then you turn away." },
+    ], () => { this.miniActive = false; });
+  }
+
+  private itemPostcard(it: Interactable) {
+    this.miniActive = true;
+    it.used = true;
+    if (it.marker) it.marker.setVisible(false);
+    if (unlockLore(this.save, "postcard_seaside")) showLoreToast(this, "postcard_seaside");
+    runDialog(this, [
+      { who: "POSTCARD", text: "WISH YOU WERE HERE." },
+      { who: "POSTCARD", text: "ACTUALLY I DON'T. THE GULLS ARE LOUD AND I'VE STARTED TALKING TO THEM. — D." },
+    ], () => { this.miniActive = false; });
+  }
+
+  private itemBook(it: Interactable) {
+    this.miniActive = true;
+    it.used = true;
+    if (it.marker) it.marker.setVisible(false);
+    if (unlockLore(this.save, "margin_plotinus")) showLoreToast(this, "margin_plotinus");
+    runDialog(this, [
+      { who: "BOOK", text: "\"WITHDRAW INTO YOURSELF AND LOOK.\"" },
+      { who: "MARGIN", text: "Someone has circled it in pencil and written: \"OK BUT WHEN.\"" },
+    ], () => { this.miniActive = false; });
   }
 }

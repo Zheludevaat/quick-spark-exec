@@ -1,7 +1,9 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, toggleLcd, reapplyLcd } from "../gbcArt";
-import type { Stats } from "../types";
+import type { SaveSlot, Stats } from "../types";
 import { getAudio } from "../audio";
+import { loadSave } from "../save";
+import { openLoreLog } from "./lore";
 
 /**
  * Reusable on-screen HUD: stats top bar + virtual D-pad + A/B for touch.
@@ -21,6 +23,15 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.input.keyboard?.on("keydown-M", () => {
     const a = getAudio();
     a.setMuted(!a.muted);
+  });
+  // Lore log: L key — opens overlay listing unlocked entries.
+  let loreOpen = false;
+  scene.input.keyboard?.on("keydown-L", () => {
+    if (loreOpen) return;
+    const s: SaveSlot | null = loadSave();
+    if (!s) return;
+    loreOpen = true;
+    openLoreLog(scene, s, () => { loreOpen = false; });
   });
 
   // Top stats bar (compact for 160-wide screen)
