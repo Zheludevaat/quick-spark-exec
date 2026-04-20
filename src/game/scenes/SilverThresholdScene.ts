@@ -160,7 +160,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
     this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setScrollFactor(0).setDepth(199);
-    this.hint = new GBCText(this, 4, GBC_H - 9, "MOVE: ARROWS  ACT: A", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
+    this.hint = new GBCText(this, 4, GBC_H - 9, "TOUCH THE 4 CIRCLES", { color: COLOR.textDim, depth: 200, scrollFactor: 0 });
 
     // First-time arrival → trigger Soryn opening dialog
     if (!this.save.flags.intro_done) {
