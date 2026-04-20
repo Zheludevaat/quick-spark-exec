@@ -43,6 +43,13 @@ export const PAL = {
   fire:      ["#0a0e1a", "#683828", "#d86848", "#ffc888"] as Palette4,
   water:     ["#0a0e1a", "#1a3868", "#4a90d8", "#a8d8f0"] as Palette4,
   earth:     ["#0a0e1a", "#384828", "#688838", "#b8d088"] as Palette4,
+  // Daimon (mystical glyph-being): deep void, silver-blue ring, pale glow, white core
+  daimon:    ["#0a0e1a", "#3a5878", "#88c0e8", "#f0fcff"] as Palette4,
+  // Living-world Rowan accessories
+  scarf:     ["#0a0e1a", "#481818", "#a83838", "#f0a888"] as Palette4, // muted red
+  coat:      ["#0a0e1a", "#2a1810", "#684030", "#a87858"] as Palette4, // brown
+  boots:     ["#0a0e1a", "#1a1410", "#3a2820", "#684838"] as Palette4, // dark leather
+  satchel:   ["#0a0e1a", "#3a2818", "#785838", "#b89868"] as Palette4, // tan
 };
 
 export const COLOR = {
