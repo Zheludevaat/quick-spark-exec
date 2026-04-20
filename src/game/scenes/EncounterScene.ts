@@ -75,50 +75,47 @@ export class EncounterScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#0a0e1a");
 
-    // Backdrop: striped night with horizon
+    // Backdrop confined to arena (12..76)
     const g = this.add.graphics();
-    g.fillStyle(0x0a0f20, 1); g.fillRect(0, 0, GBC_W, 70);
-    g.fillStyle(0x1a2030, 1); g.fillRect(0, 70, GBC_W, 4);
-    g.fillStyle(0x243058, 1); g.fillRect(0, 74, GBC_W, 16);
-    // dot stars
-    for (let i = 0; i < 30; i++) {
+    g.fillStyle(0x0a0f20, 1); g.fillRect(0, 12, GBC_W, 52);
+    g.fillStyle(0x1a2030, 1); g.fillRect(0, 64, GBC_W, 2);
+    g.fillStyle(0x243058, 1); g.fillRect(0, 66, GBC_W, 10);
+    for (let i = 0; i < 22; i++) {
       g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, 60), 1, 1);
+      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
     }
-
-    // Enemy platform (Pokemon-style rounded shadow)
     const px = GBC_W / 2;
-    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(px, 78, 60, 8);
+    g.fillStyle(0x1a2238, 0.7); g.fillEllipse(px, 70, 56, 7);
 
     // Enemy sprite
-    this.enemy = this.add.sprite(px, 50, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
+    this.enemy = this.add.sprite(px, 44, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
     this.enemy.play(`enemy_${this.def.kind}`);
-    this.tweens.add({ targets: this.enemy, y: 48, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    this.tweens.add({ targets: this.enemy, y: 42, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
-    // Name + HP plate
-    drawGBCBox(this, 4, 4, 90, 14);
-    new GBCText(this, 8, 8, this.def.name, { color: COLOR.textLight });
-    this.hpBar = this.add.graphics().setDepth(101);
+    // Enemy name + HP plate (top-right under HUD)
+    drawGBCBox(this, GBC_W - 84, 14, 80, 14);
+    new GBCText(this, GBC_W - 80, 17, this.def.name, { color: COLOR.textLight, depth: 101 });
+    this.hpBar = this.add.graphics().setDepth(102);
     this.drawHp();
 
-    // Log box (taunt / feedback) — top half of lower panel
-    drawGBCBox(this, 0, 90, GBC_W, 26);
-    this.logText = new GBCText(this, 4, 94, this.def.taunt, {
-      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 8,
+    // Log box — y 76..112 (36px, 3 lines comfortable)
+    drawGBCBox(this, 0, 76, GBC_W, 36);
+    this.logText = new GBCText(this, 4, 81, this.def.taunt, {
+      color: COLOR.textAccent, depth: 102, maxWidthPx: GBC_W - 10,
     });
 
-    // Command panel (bottom 2x2)
-    drawGBCBox(this, 0, 116, GBC_W, 28);
+    // Command panel — y 112..144
+    drawGBCBox(this, 0, 112, GBC_W, 32);
     CMDS.forEach((c, i) => {
       const x = 16 + (i % 2) * 70;
-      const y = 121 + Math.floor(i / 2) * 11;
+      const y = 118 + Math.floor(i / 2) * 11;
       const t = new GBCText(this, x, y, c.label, { color: COLOR.textLight, depth: 101 });
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerdown", () => this.choose(i));
       t.obj.setData("cmd", c.cmd);
       this.cmdTexts.push(t);
     });
-    this.cursorMark = new GBCText(this, 8, 121, "▶", { color: COLOR.textGold, depth: 101 });
+    this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
 
     // Input
