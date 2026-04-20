@@ -155,7 +155,7 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
-    this.rowan = makeRowan(this, 80, 82);
+    this.rowan = makeRowan(this, 80, 82, "living");
 
     attachHUD(this, () => this.save.stats);
     this.input2 = new InputState(this);
@@ -170,8 +170,8 @@ export class LastDayScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", () => this.tryInteract());
     this.input.keyboard?.on("keydown-ENTER", () => this.tryInteract());
 
-    // Door is open immediately if 3+ seeds were already set in a prior visit.
-    const usedAtLoad = this.items.filter(t => t.used).length;
+    // Door is open immediately if 3+ main seeds were already set in a prior visit.
+    const usedAtLoad = this.items.filter(t => t.seed !== "seed_mirror" && t.used).length;
     if (usedAtLoad >= 3) this.exitOpen = true;
 
     if (!this.save.flags.lastday_intro) {
@@ -179,8 +179,9 @@ export class LastDayScene extends Phaser.Scene {
       writeSave(this.save);
       this.dialogActive = true;
       this.time.delayedCall(700, () => runDialog(this, [
-        { who: "?", text: "An ordinary morning. The light is doing its small work." },
-        { who: "?", text: "Touch what calls you. There is no rush. There is no later." },
+        { who: "?", text: "Tuesday. The light is doing its small work." },
+        { who: "?", text: "You have things to do today. You always have things to do." },
+        { who: "?", text: "Touch what calls you. There is no rush. There will be no later." },
       ], () => { this.dialogActive = false; }));
     }
   }
