@@ -32,11 +32,18 @@ export class BootScene extends Phaser.Scene {
       });
     });
 
-    // Soryn flicker
+    // Soryn flicker (legacy v1 sprite, kept for fallback)
     this.anims.create({
       key: "soryn_flicker",
       frames: this.anims.generateFrameNumbers("soryn", { start: 0, end: 1 }),
       frameRate: 2, repeat: -1,
+    });
+
+    // Soryn v2 — mystical daimon (4-frame ring rotation)
+    this.anims.create({
+      key: "daimon_idle",
+      frames: this.anims.generateFrameNumbers("soryn_v2", { start: 0, end: 3 }),
+      frameRate: 4, repeat: -1,
     });
 
     // Enemy idle anims
