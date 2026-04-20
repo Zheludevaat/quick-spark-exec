@@ -215,19 +215,7 @@ export function onActionDown(
   };
   const domHandler = (e: KeyboardEvent) => wrap(e);
   window.addEventListener("keydown", domHandler);
-
-  // Forward virtual-pad presses for the canonical action/cancel actions
-  // so scenes don't have to double-bind events.on("vinput-action", ...).
-  let vEvent: string | null = null;
-  if (action === "action") vEvent = "vinput-action";
-  else if (action === "cancel") vEvent = "vinput-cancel";
-  const vHandler = () => handler();
-  if (vEvent) scene.events.on(vEvent, vHandler);
-
-  const cleanup = () => {
-    window.removeEventListener("keydown", domHandler);
-    if (vEvent) scene.events.off(vEvent, vHandler);
-  };
+  const cleanup = () => window.removeEventListener("keydown", domHandler);
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
   return cleanup;
@@ -253,16 +241,7 @@ export function onDirection(
     }
   };
   window.addEventListener("keydown", domHandler);
-  // Also forward virtual-pad direction presses so scenes don't have to
-  // double-bind (vinput-down + onDirection caused double swaps in knot UIs).
-  const vHandler = (dir: string) => {
-    if (dir === "up" || dir === "down" || dir === "left" || dir === "right") handler(dir);
-  };
-  scene.events.on("vinput-down", vHandler);
-  const cleanup = () => {
-    window.removeEventListener("keydown", domHandler);
-    scene.events.off("vinput-down", vHandler);
-  };
+  const cleanup = () => window.removeEventListener("keydown", domHandler);
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
   return cleanup;
