@@ -791,8 +791,3 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 }
-
-/** Cheap proportional-ish measure: 6px per glyph in the GBC bitmap font. */
-function measure(text: string): number {
-  return text.length * 6;
-}
