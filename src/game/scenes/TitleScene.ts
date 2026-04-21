@@ -310,13 +310,30 @@ export class TitleScene extends Phaser.Scene {
       refresh();
     };
 
+    const confirm = () => {
+      if (settingsOpen) return;
+      const opt = options[cursor];
+      if (opt.action === "launch") launch();
+      else if (opt.action === "erase") erase();
+      else if (opt.action === "settings") openTitleSettings();
+    };
+    const move = (d: number) => {
+      if (settingsOpen) return;
+      if (options.length < 2) return;
+      cursor = (cursor + d + options.length) % options.length;
+      audio.sfx("cursor");
+      refresh();
+    };
+
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
+        if (settingsOpen) return;
         cursor = i;
         refresh();
       });
       t.obj.on("pointerdown", () => {
+        if (settingsOpen) return;
         cursor = i;
         refresh();
         confirm();
@@ -324,13 +341,16 @@ export class TitleScene extends Phaser.Scene {
     });
 
     onDirection(this, (d) => {
+      if (settingsOpen) return;
       if (d === "up") move(-1);
       else if (d === "down") move(1);
     });
     onActionDown(this, "action", confirm);
     this.input.keyboard?.on("keydown-BACKSPACE", () => {
+      if (settingsOpen) return;
       if (save) {
-        cursor = 1;
+        cursor = options.findIndex((o) => o.action === "erase");
+        if (cursor < 0) cursor = 0;
         refresh();
         erase();
       }
