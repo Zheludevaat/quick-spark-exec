@@ -50,7 +50,7 @@ type StationKind =
   | "trial_door"
   | "exit_stairs";
 
-type Station = {
+type MStation = {
   kind: StationKind;
   x: number;
   y: number;
