@@ -5,7 +5,16 @@
  * Mercury, Venus, Sun, and Mars are wired. Jupiter and Saturn remain dim.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  gbcWipe,
+  spawnMotes,
+  fitSingleLineText,
+  measureText,
+} from "../gbcArt";
 import type { SaveSlot, SceneKey, SphereKey } from "../types";
 import { ACT_BY_SCENE } from "../types";
 import { writeSave } from "../save";
@@ -143,9 +152,14 @@ export class MetaxyHubScene extends Phaser.Scene {
     const line = this.add.rectangle(PORTAL_X, GBC_H / 2, 1, GBC_H - 30, 0x303048, 0.6);
     line.setOrigin(0.5, 0.5);
 
-    // Title strip
-    new GBCText(this, GBC_W / 2 - 24, 6, "METAXY", { color: COLOR.textGold, depth: 10 });
-    new GBCText(this, GBC_W / 2 - 30, 14, "between worlds", { color: COLOR.textDim, depth: 10 });
+    // Title strip — width-safe centering
+    const titleText = fitSingleLineText("METAXY", GBC_W - 12);
+    const titleX = Math.floor((GBC_W - measureText(titleText)) / 2);
+    new GBCText(this, titleX, 6, titleText, { color: COLOR.textGold, depth: 10 });
+
+    const subText = fitSingleLineText("BETWEEN WORLDS", GBC_W - 12);
+    const subX = Math.floor((GBC_W - measureText(subText)) / 2);
+    new GBCText(this, subX, 14, subText, { color: COLOR.textDim, depth: 10 });
 
     attachHUD(this, () => this.save.stats);
 
@@ -172,8 +186,10 @@ export class MetaxyHubScene extends Phaser.Scene {
 
       const labelColor = lit ? COLOR.textLight : COLOR.textDim;
       const suffix = done ? "  *" : p.scene === null ? "  -" : "";
+      const LABEL_W = GBC_W - (PORTAL_X + 10) - 4;
+      const labelText = fitSingleLineText(p.label + suffix, LABEL_W);
       this.labels.push(
-        new GBCText(this, PORTAL_X + 10, p.y - 3, p.label + suffix, {
+        new GBCText(this, PORTAL_X + 10, p.y - 3, labelText, {
           color: labelColor,
           depth: 12,
         }),
