@@ -32,6 +32,16 @@ import {
 } from "../encounters/EncounterPresentation";
 import { SORYN_THRESHOLD_PROFILE, SORYN_DAIMON_PROFILE } from "../encounters/profiles/soryn";
 import { GUARDIAN_PROFILES } from "../encounters/profiles/guardians";
+import {
+  RECEPTION_OPTIONAL_INTERACTIONS,
+  type ReceptionHostScene,
+} from "./reception/ReceptionExpandedContent";
+import {
+  nearestInteraction,
+  interactionPrompt,
+  interactionEnabled,
+  type ActInteraction,
+} from "../exploration";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -575,6 +585,10 @@ export class SilverThresholdScene extends Phaser.Scene {
       );
 
     // Auto-trigger guardian encounter on touch
+    // Render small markers for any visible expanded interactions in Reception.
+    // (No-op visually here; hint + tryInteract surface them via proximity.)
+
+    // Auto-trigger guardian encounter on touch
     for (const c of this.circles) {
       if (c.visited) continue;
       const ddx = this.rowan.x - c.x,
@@ -585,6 +599,36 @@ export class SilverThresholdScene extends Phaser.Scene {
         return;
       }
     }
+
+    // After main hint logic, surface optional Reception interactions when
+    // nothing more important is in proximity. Always overrides idle hints.
+    const expanded = this.nearestExpandedReception();
+    if (expanded) {
+      this.hint.setText(interactionPrompt(this.save.flags, expanded));
+    }
+  }
+
+  private nearestExpandedReception(): ActInteraction<ReceptionHostScene> | null {
+    return nearestInteraction(
+      this.save.flags,
+      RECEPTION_OPTIONAL_INTERACTIONS,
+      this.rowan.x,
+      this.rowan.y,
+    );
+  }
+
+  private receptionHostShim(): ReceptionHostScene {
+    return {
+      save: this.save,
+      speak: (lines, onDone) => {
+        this.dialogActive = true;
+        runDialog(this, lines, () => {
+          writeSave(this.save);
+          this.dialogActive = false;
+          onDone?.();
+        });
+      },
+    };
   }
 
   private nearSoryn(): boolean {
@@ -1341,6 +1385,12 @@ export class SilverThresholdScene extends Phaser.Scene {
       a.sfx("wipe");
       a.music.stop();
       gbcWipe(this, () => this.scene.start("ImaginalRealm", { save: this.save }));
+      return;
+    }
+    // Optional Reception interactions — last priority.
+    const expanded = this.nearestExpandedReception();
+    if (expanded) {
+      expanded.onInteract({ scene: this.receptionHostShim(), save: this.save });
     }
   }
 }

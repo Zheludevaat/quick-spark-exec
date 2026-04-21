@@ -9,6 +9,16 @@ import { runRhythmTap } from "./minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "./lore";
 import { onActionDown, onDirection } from "../controls";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
+import {
+  LASTDAY_EXPANDED_INTERACTIONS,
+  type LastDayHostScene,
+} from "./lastday/LastDayExpandedContent";
+import {
+  nearestInteraction,
+  interactionPrompt,
+  interactionEnabled,
+  type ActInteraction,
+} from "../exploration";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
@@ -296,6 +306,25 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
+
+    // Render small markers for any visible expanded interactions.
+    for (const it of LASTDAY_EXPANDED_INTERACTIONS) {
+      if (!interactionEnabled(this.save.flags, it)) continue;
+      const dim = it.onceFlag && this.save.flags[it.onceFlag];
+      const m = this.add
+        .circle(it.x, it.y, 2, 0xc8d8e8, dim ? 0.18 : 0.45)
+        .setStrokeStyle(0.5, 0xa8c8e8, dim ? 0.3 : 0.7)
+        .setDepth(8);
+      this.tweens.add({
+        targets: m,
+        alpha: dim ? 0.1 : 0.25,
+        duration: 1500 + Math.floor(Math.random() * 600),
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
     this.rowan = makeRowan(this, 80, 82, "living");
 
     attachHUD(this, () => this.save.stats);
@@ -463,6 +492,7 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     const near = this.nearest();
+    const expandedNear = this.nearestExpanded();
     const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80,
@@ -471,11 +501,15 @@ export class LastDayScene extends Phaser.Scene {
         this.hint.setText(
           this.save.flags.lastday_door_preview_seen ? "A: STEP THROUGH THE DOOR" : "A: OPEN THE DOOR",
         );
+      } else if (expandedNear) {
+        this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
       } else {
         this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
       }
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
+    } else if (expandedNear) {
+      this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
     } else {
       this.hint.setText(
         `TOUCH WHAT CALLS YOU  ${Math.min(usedMain, MAIN_SEEDS_REQUIRED)}/${MAIN_SEEDS_REQUIRED} NEEDED`,
@@ -567,6 +601,29 @@ export class LastDayScene extends Phaser.Scene {
     return bd < 14 * 14 ? best : null;
   }
 
+  private nearestExpanded(): ActInteraction<LastDayHostScene> | null {
+    return nearestInteraction(
+      this.save.flags,
+      LASTDAY_EXPANDED_INTERACTIONS,
+      this.rowan.x,
+      this.rowan.y,
+    );
+  }
+
+  private hostShim(): LastDayHostScene {
+    return {
+      save: this.save,
+      speak: (lines, onDone) => {
+        this.dialogActive = true;
+        runDialog(this, lines, () => {
+          writeSave(this.save);
+          this.dialogActive = false;
+          onDone?.();
+        });
+      },
+    };
+  }
+
   private tryInteract() {
     if (this.dialogActive || this.miniActive) return;
     if (this.exitOpen) {
@@ -595,9 +652,16 @@ export class LastDayScene extends Phaser.Scene {
         return;
       }
     }
+    // Main seed items take priority over expanded inspectables.
     const it = this.nearest();
-    if (!it || it.used) return;
-    this.runItem(it);
+    if (it && !it.used) {
+      this.runItem(it);
+      return;
+    }
+    const expanded = this.nearestExpanded();
+    if (expanded) {
+      expanded.onInteract({ scene: this.hostShim(), save: this.save });
+    }
   }
 
   // ============================================================================
