@@ -21,7 +21,16 @@ export type SoulId =
   | "stonechild"
   | "lantern_mathematician"
   | "weighed_heart"
-  | "lampkeeper_echo";
+  | "lampkeeper_echo"
+  // ===== ACT II EXPANSION SOULS =====
+  /** Pools — a bride who keeps drifting away from her own vow. */
+  | "drifting_bride"
+  /** Pools — veiled mourner who cannot uncover what she lost. */
+  | "veiled_mourner"
+  /** Field — hoards every dawn into jars. */
+  | "hoarder_of_dawns"
+  /** Corridor — a sovereign who rules only paper. */
+  | "paper_sovereign";
 
 /** Visual archetype — which sprite renderer to use. */
 export type SoulArchetype =
@@ -191,6 +200,52 @@ export const SOULS: SoulDef[] = [
     y: 56,
     hook: "A FAINT VERSION OF SOMEONE.",
     loreOnComplete: "soul_echo",
+  },
+
+  // ===== ACT II EXPANSION =====
+  // Pools — drifting bride (mirror archetype, opposite shore from the twin).
+  {
+    id: "drifting_bride",
+    region: "pools",
+    archetype: "mirror",
+    name: "DRIFTING BRIDE",
+    x: 24,
+    y: 96,
+    hook: "SHE STILL DRIFTS TOWARD A VOW SHE CANNOT REACH.",
+    loreOnComplete: "soul_drifting_bride",
+  },
+  // Pools — veiled mourner (weeper archetype, north shore).
+  {
+    id: "veiled_mourner",
+    region: "pools",
+    archetype: "weeper",
+    name: "VEILED MOURNER",
+    x: 96,
+    y: 40,
+    hook: "THE VEIL HIDES NOTHING. SHE WILL NOT LIFT IT.",
+    loreOnComplete: "soul_veiled_mourner",
+  },
+  // Field — hoarder of dawns (collector archetype variant).
+  {
+    id: "hoarder_of_dawns",
+    region: "field",
+    archetype: "collector",
+    name: "HOARDER OF DAWNS",
+    x: 88,
+    y: 44,
+    hook: "EACH JAR HOLDS A MORNING NEVER LIVED.",
+    loreOnComplete: "soul_hoarder_of_dawns",
+  },
+  // Corridor — paper sovereign (crowned archetype variant).
+  {
+    id: "paper_sovereign",
+    region: "corridor",
+    archetype: "crowned",
+    name: "PAPER SOVEREIGN",
+    x: 80,
+    y: 100,
+    hook: "HE RULES A KINGDOM CUT FROM ANNOUNCEMENTS.",
+    loreOnComplete: "soul_paper_sovereign",
   },
 ];
 

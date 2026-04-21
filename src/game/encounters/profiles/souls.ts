@@ -131,4 +131,42 @@ export const SOUL_PROFILES: Record<string, EncounterProfile> = {
     introStyle: "hush",
     sigilStyle: "ring",
   },
+
+  // ===== ACT II EXPANSION =====
+  drifting_bride: {
+    id: "soul_drifting_bride",
+    displayName: "DRIFTING BRIDE",
+    subtitle: "PROMISED, NEVER ARRIVED",
+    category: "soul",
+    palette: { primary: 0xc8a8e8, secondary: 0xdde6f5, glow: 0xa8c8e8 },
+    introStyle: "shimmer",
+    sigilStyle: "mirror",
+  },
+  veiled_mourner: {
+    id: "soul_veiled_mourner",
+    displayName: "VEILED MOURNER",
+    subtitle: "WILL NOT BE UNCOVERED",
+    category: "soul",
+    palette: { primary: 0x586878, secondary: 0xa8c8e8, glow: 0x88a8c8 },
+    introStyle: "hush",
+    sigilStyle: "ring",
+  },
+  hoarder_of_dawns: {
+    id: "soul_hoarder_of_dawns",
+    displayName: "HOARDER OF DAWNS",
+    subtitle: "JARS OF MORNINGS UNUSED",
+    category: "soul",
+    palette: { primary: 0xffe098, secondary: 0xf0d060, glow: 0xc88868 },
+    introStyle: "pulse",
+    sigilStyle: "ember",
+  },
+  paper_sovereign: {
+    id: "soul_paper_sovereign",
+    displayName: "PAPER SOVEREIGN",
+    subtitle: "RULES ONLY ANNOUNCEMENTS",
+    category: "soul",
+    palette: { primary: 0xd8a868, secondary: 0xffe098, glow: 0xd8a868 },
+    introStyle: "seal",
+    sigilStyle: "crown",
+  },
 };
