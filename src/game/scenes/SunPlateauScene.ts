@@ -1,18 +1,24 @@
 /**
  * SunPlateauScene — Act 6 plateau before the Helion trial.
  *
- * Six explorable sub-zones (vestibule, testimony, archive, mirrors, warmth,
- * threshold) wired together by an adjacency graph in SunData. Each zone
- * hosts:
- *   - 0..1 witness arc (with revisit + cross-reference lines)
- *   - 0..1 operation (routed to a real mechanic — see runOperationMechanic)
- *   - 1..2 environmental reads (plaques / banners / pages / keepsakes)
+ * PHASE 1 REBUILD (Mercury parity): the six sub-zones (vestibule, testimony,
+ * archive, mirrors, warmth, threshold) are no longer separate scenes joined
+ * by travel doors. They are ONE continuous Hall the player walks through,
+ * with stations placed at fixed positions across the room.
  *
- * Once a zone's witness/operation is complete, addSunAftermath softens the
- * room. Once every prerequisite is met, a one-time "hall has finished
- * speaking" beat plays at the threshold.
+ * Stations (all live simultaneously):
+ *   - witness arcs (3) — biographer / betrayed / accomplice
+ *   - operations (4)   — light / margin / contradiction / dim
+ *   - environmental reads (~12) — plaques / banners / pages / keepsakes / pillars
+ *   - cracking question, trial gate, settle — at the right-end threshold
  *
- * Trial entry is gated by `sunTrialReady`.
+ * Movement: free 2D walking inside the GBC playfield. Proximity activation
+ * surfaces the nearest station as an "[A] VERB" prompt above Rowan, mirroring
+ * the Mercury walker. The player's current sub-zone is derived from x and
+ * drives the per-zone aftermath repaint + snapshot label.
+ *
+ * Trial entry remains gated by `sunTrialReady`. All save flags, witness
+ * heard / op done bookkeeping, and settle behaviour are preserved.
  */
 
 import * as Phaser from "phaser";
@@ -20,14 +26,18 @@ import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
 import type { SaveSlot } from "../types";
 import { ACT_BY_SCENE } from "../types";
 import { writeSave } from "../save";
-import { attachHUD, makeRowan, animateRowan, runDialog } from "./hud";
-import { onActionDown, onDirection } from "../controls";
+import {
+  attachHUD,
+  makeRowan,
+  animateRowan,
+  runDialog,
+  InputState,
+} from "./hud";
+import { onActionDown } from "../controls";
 import { runInquiry } from "../inquiry";
 import { setSceneSnapshot } from "../gameUiBridge";
-import { getAudio } from "../audio";
 import {
   SUN_ZONE_LABEL,
-  SUN_ZONE_LINKS,
   SUN_MINIMAP_NODES,
   SUN_FLAGS,
   type SunZoneId,
@@ -53,27 +63,72 @@ import { SUN_ENV_READS, sunZoneAftermath } from "../sun/SunPlateauProps";
 
 const HALL_FINISHED_FLAG = "sun_hall_finished_beat";
 
-type Hotspot = {
+/**
+ * Horizontal anchor (in GBC pixels, 0..160) at which each sub-zone is
+ * "centred". The Hall reads left→right as a single procession from the
+ * vestibule to the threshold, matching the canonical minimap order.
+ */
+const ZONE_ANCHOR_X: Record<SunZoneId, number> = {
+  vestibule: 18,
+  testimony: 46,
+  archive: 70,
+  mirrors: 94,
+  warmth: 120,
+  threshold: 146,
+};
+
+const ZONE_ORDER: SunZoneId[] = [
+  "vestibule",
+  "testimony",
+  "archive",
+  "mirrors",
+  "warmth",
+  "threshold",
+];
+
+const WARM = 0xd8b060;
+const COLD = 0xb87838;
+
+type StationKind =
+  | "witness"
+  | "operation"
+  | "env"
+  | "crack"
+  | "trial"
+  | "settle";
+
+type Station = {
   id: string;
+  kind: StationKind;
+  zone: SunZoneId;
   x: number;
   y: number;
-  r: number;
+  /** Used by proximity prompt + idle hint */
   label: string;
+  /** Save flag toggled true once the station has been "completed/seen" */
+  doneFlag?: string;
   onUse: () => void;
 };
 
 export class SunPlateauScene extends Phaser.Scene {
   private save!: SaveSlot;
+  /** Sub-zone derived from Rowan's x position. */
   private zone!: SunZoneId;
   private root!: Phaser.GameObjects.Container;
+  private aftermathLayer?: Phaser.GameObjects.Container;
   private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
+  private inputState!: InputState;
   private zoneLabel!: GBCText;
   private subtitle!: GBCText;
   private hint!: GBCText;
-  private hotspots: Hotspot[] = [];
-  private cursor = 0;
+  private interactPrompt!: GBCText;
+  private stationFocus!: Phaser.GameObjects.Arc;
+  private stations: Station[] = [];
   private busy = false;
-  private playerDir = { x: 0, y: 0 };
+  private lastDx = 0;
+  private lastDy = 0;
+  private hallFinishedShown = false;
 
   constructor() {
     super("SunPlateau");
@@ -81,15 +136,15 @@ export class SunPlateauScene extends Phaser.Scene {
 
   init(data: { save: SaveSlot; zone?: SunZoneId }) {
     this.save = data.save;
+    // `zone` is now a *spawn hint*: where Rowan first appears in the Hall.
     this.zone = data.zone ?? this.save.sunZone ?? "vestibule";
     this.save.scene = "SunPlateau";
     this.save.sunZone = this.zone;
     this.save.act = ACT_BY_SCENE.SunPlateau;
     writeSave(this.save);
-    this.hotspots = [];
-    this.cursor = 0;
+    this.stations = [];
     this.busy = false;
-    this.playerDir = { x: 0, y: 0 };
+    this.hallFinishedShown = !!this.save.flags[HALL_FINISHED_FLAG];
   }
 
   create() {
@@ -97,75 +152,173 @@ export class SunPlateauScene extends Phaser.Scene {
     this.cameras.main.fadeIn(500);
 
     this.root = this.add.container(0, 0);
+    // Phase 1 keeps the per-zone backdrop. Phase 2 will replace this with a
+    // single unified Hall painting; we still need a base wash for now.
     buildSunBackdrop(this, this.root, this.zone);
-    spawnMotes(this, { count: 16, color: 0xd8b060, alpha: 0.25, depth: 8 });
-    this.paintAftermathForZone();
+    spawnMotes(this, { count: 16, color: WARM, alpha: 0.25, depth: 8 });
+    this.aftermathLayer = this.add.container(0, 0);
+    this.root.add(this.aftermathLayer);
+    this.repaintAftermath();
     addSunForeground(this, this.root, this.zone);
 
     this.zoneLabel = makeSunZoneLabel(this, SUN_ZONE_LABEL[this.zone]);
-    this.subtitle = makeSunSubtitle(this, this.zoneSubtitle());
-    this.hint = makeSunHint(this, "A: INTERACT");
+    this.subtitle = makeSunSubtitle(this, this.zoneSubtitle(this.zone));
+    this.hint = makeSunHint(this, "WALK · A INTERACT");
     void this.zoneLabel;
     void this.subtitle;
     attachHUD(this, () => this.save.stats);
 
-    this.rowan = makeRowan(this, 80, 96, "soul");
-    this.rowan.setDepth(40);
+    // Spawn Rowan at the current sub-zone's anchor.
+    const spawnX = ZONE_ANCHOR_X[this.zone];
+    this.rowanShadow = this.add
+      .ellipse(spawnX, GBC_H - 18, 10, 3, 0x000000, 0.4)
+      .setDepth(19);
+    this.rowan = makeRowan(this, spawnX, GBC_H - 22, "soul").setDepth(40);
+    this.inputState = new InputState(this);
 
-    this.buildZoneHotspots();
+    this.interactPrompt = new GBCText(this, 0, 0, "", {
+      color: COLOR.textGold,
+      depth: 60,
+    });
+
+    this.stationFocus = this.add
+      .circle(0, 0, 11, WARM, 0)
+      .setStrokeStyle(1, WARM, 0.85)
+      .setDepth(18)
+      .setVisible(false);
+    this.tweens.add({
+      targets: this.stationFocus,
+      scale: 1.18,
+      alpha: 0.55,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
+    this.buildStations();
     this.publishSnapshot();
 
     if (!this.save.flags[SUN_FLAGS.introSeen]) {
       this.save.flags[SUN_FLAGS.introSeen] = true;
       writeSave(this.save);
+      this.busy = true;
       this.time.delayedCall(300, () => {
-        runDialog(this, [
-          { who: "SOPHENE", text: "Sun. The Hall of Testimony." },
-          { who: "SOPHENE", text: "Everything here is interested in how you appear under light. Try to remain a person anyway." },
-        ]);
+        runDialog(
+          this,
+          [
+            { who: "SOPHENE", text: "Sun. The Hall of Testimony." },
+            {
+              who: "SOPHENE",
+              text: "Walk it. Everything here is interested in how you appear under light. Try to remain a person anyway.",
+            },
+          ],
+          () => {
+            this.busy = false;
+          },
+        );
       });
     }
 
-    onDirection(this, (d) => {
-      if (this.busy) return;
-      if (d === "left") this.playerDir = { x: -1, y: 0 };
-      if (d === "right") this.playerDir = { x: 1, y: 0 };
-      if (d === "up") this.playerDir = { x: 0, y: -1 };
-      if (d === "down") this.playerDir = { x: 0, y: 1 };
-      this.moveCursor(d);
-    });
-
-    onActionDown(this, "action", () => this.useCurrent());
+    onActionDown(this, "action", () => this.tryInteract());
+    this.events.on("vinput-action", () => this.tryInteract());
   }
 
-  update() {
-    animateRowan(this.rowan, this.playerDir.x, this.playerDir.y);
-    this.playerDir.x *= 0.86;
-    this.playerDir.y *= 0.86;
+  // -------------------------------------------------------------- update
+
+  update(_t: number, delta: number) {
+    if (this.busy) {
+      this.interactPrompt.setText("");
+      animateRowan(this.rowan, 0, 0);
+      return;
+    }
+
+    const speed = 0.045 * delta;
+    const i = this.inputState.poll();
+    let dx = 0;
+    let dy = 0;
+    if (i.left) dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up) dy -= speed;
+    if (i.down) dy += speed;
+
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x + dx, 8, GBC_W - 8);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y + dy, 88, GBC_H - 14);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+    animateRowan(this.rowan, dx, dy);
+    this.lastDx = dx;
+    this.lastDy = dy;
+
+    // Cross sub-zone boundary?
+    const nextZone = this.zoneFromX(this.rowan.x);
+    if (nextZone !== this.zone) {
+      this.zone = nextZone;
+      this.save.sunZone = nextZone;
+      writeSave(this.save);
+      this.zoneLabel.setText(SUN_ZONE_LABEL[nextZone]);
+      this.subtitle.setText(this.zoneSubtitle(nextZone));
+      this.repaintAftermath();
+      this.publishSnapshot();
+      this.maybePlayHallFinishedBeat();
+    }
+
+    const near = this.nearestStation();
+    if (near) {
+      const verb = this.verbForStation(near);
+      this.interactPrompt.setText(`[A] ${verb}`);
+      this.interactPrompt.setPosition(this.rowan.x - 12, this.rowan.y - 20);
+      this.hint.setText(this.hintForStation(near));
+      this.hint.setColor(COLOR.textGold);
+      const done = near.doneFlag && this.save.flags[near.doneFlag];
+      this.stationFocus
+        .setVisible(true)
+        .setPosition(near.x, near.y)
+        .setStrokeStyle(1, done ? COLD : WARM, 0.9);
+    } else {
+      this.interactPrompt.setText("");
+      this.hint.setText("WALK · A INTERACT");
+      this.hint.setColor(COLOR.textDim);
+      this.stationFocus.setVisible(false);
+    }
   }
 
-  // -------------------------------------------------------------- aftermath
+  // -------------------------------------------------------------- zones
 
-  private witnessForZone(): SunWitness | undefined {
-    return SUN_WITNESSES.find((w) => w.zone === this.zone);
+  private zoneFromX(x: number): SunZoneId {
+    let best: SunZoneId = "vestibule";
+    let bestD = Infinity;
+    for (const z of ZONE_ORDER) {
+      const d = Math.abs(ZONE_ANCHOR_X[z] - x);
+      if (d < bestD) {
+        bestD = d;
+        best = z;
+      }
+    }
+    return best;
   }
 
-  private opForZone(): SunOperation | undefined {
-    return SUN_OPERATIONS.find((o) => o.zone === this.zone);
+  private witnessForZone(zone: SunZoneId): SunWitness | undefined {
+    return SUN_WITNESSES.find((w) => w.zone === zone);
   }
 
-  private paintAftermathForZone() {
-    const witness = this.witnessForZone();
-    const op = this.opForZone();
-    const witnessDone = witness ? !!this.save.flags[witness.doneFlag] : true;
-    const opDone = op ? !!this.save.flags[op.doneFlag] : true;
+  private opForZone(zone: SunZoneId): SunOperation | undefined {
+    return SUN_OPERATIONS.find((o) => o.zone === zone);
+  }
+
+  private repaintAftermath() {
+    if (!this.aftermathLayer) return;
+    this.aftermathLayer.removeAll(true);
+    const witness = this.witnessForZone(this.zone);
+    const op = this.opForZone(this.zone);
+    const wDone = witness ? !!this.save.flags[witness.doneFlag] : true;
+    const oDone = op ? !!this.save.flags[op.doneFlag] : true;
     const ready = sunTrialReady(this.save);
-    const progress = sunZoneAftermath(this.zone, witnessDone, opDone, ready);
-    addSunAftermath(this, this.root, this.zone, progress);
+    const progress = sunZoneAftermath(this.zone, wDone, oDone, ready);
+    addSunAftermath(this, this.aftermathLayer, this.zone, progress);
   }
 
-  private zoneSubtitle(): string {
-    switch (this.zone) {
+  private zoneSubtitle(zone: SunZoneId): string {
+    switch (zone) {
       case "vestibule":
         return "PRAISE, RECEPTION, ORNAMENT";
       case "testimony":
@@ -181,151 +334,184 @@ export class SunPlateauScene extends Phaser.Scene {
     }
   }
 
-  // -------------------------------------------------------------- hotspots
+  // -------------------------------------------------------------- stations
 
-  private buildZoneHotspots() {
-    this.hotspots = [];
+  /**
+   * Build every station for every zone at fixed positions. The Hall is
+   * single-room, so all stations exist simultaneously; proximity decides
+   * what the player can act on.
+   *
+   * Y-bands keep things readable:
+   *   - witnesses sit mid-room (~y 70)
+   *   - operations sit upper (~y 60)
+   *   - env reads use their authored (x,y) but x is shifted into the zone's
+   *     anchor band to keep them near their parent zone in this single room
+   *   - threshold meta-stations (crack/trial/settle) cluster at the right end
+   */
+  private buildStations() {
+    this.stations = [];
 
-    // Travel doors first, so cursor 0 always navigates somewhere useful.
-    const links = SUN_ZONE_LINKS[this.zone];
-    links.forEach((z, idx) => {
-      this.hotspots.push({
-        id: `door_${z}`,
-        x: 26 + idx * 48,
-        y: 118,
-        r: 10,
-        label: `GO TO ${SUN_ZONE_LABEL[z].toUpperCase()}`,
-        onUse: () => this.goZone(z),
-      });
-    });
-
-    const witness = this.witnessForZone();
-    if (witness) {
-      const done = !!this.save.flags[witness.doneFlag];
-      this.hotspots.push({
-        id: witness.id,
-        x: 80,
+    // Witnesses
+    for (const w of SUN_WITNESSES) {
+      this.stations.push({
+        id: w.id,
+        kind: "witness",
+        zone: w.zone,
+        x: ZONE_ANCHOR_X[w.zone],
         y: 72,
-        r: 12,
-        label: done ? `REVISIT ${witness.name}` : witness.name,
-        onUse: () => this.talkWitness(witness.id),
+        label: this.save.flags[w.doneFlag] ? `REVISIT ${w.name}` : w.name,
+        doneFlag: w.doneFlag,
+        onUse: () => this.talkWitness(w.id),
       });
     }
 
-    const op = this.opForZone();
-    if (op) {
-      const done = !!this.save.flags[op.doneFlag];
-      this.hotspots.push({
+    // Operations
+    for (const op of SUN_OPERATIONS) {
+      this.stations.push({
         id: op.id,
-        x: 122,
-        y: 60,
-        r: 10,
-        label: done ? `(DONE) ${op.title.toUpperCase()}` : op.title.toUpperCase(),
+        kind: "operation",
+        zone: op.zone,
+        x: ZONE_ANCHOR_X[op.zone] + 10,
+        y: 56,
+        label: this.save.flags[op.doneFlag]
+          ? `(DONE) ${op.title.toUpperCase()}`
+          : op.title.toUpperCase(),
+        doneFlag: op.doneFlag,
         onUse: () => this.runOperation(op.id),
       });
     }
 
-    // Environmental reads — one or two per zone.
-    const reads = SUN_ENV_READS[this.zone] ?? [];
-    reads.forEach((read) => {
-      const seen = !!this.save.flags[read.id];
-      this.hotspots.push({
-        id: read.id,
-        x: read.x,
-        y: read.y,
-        r: 8,
-        label: seen ? `RE-READ ${read.label.replace(/^READ |^EXAMINE /, "")}` : read.label,
-        onUse: () => this.readEnv(read.id),
+    // Environmental reads — re-anchor each authored x near its zone's band
+    // so reads cluster around their parent zone in the single Hall room.
+    for (const zone of ZONE_ORDER) {
+      const reads = SUN_ENV_READS[zone] ?? [];
+      const anchor = ZONE_ANCHOR_X[zone];
+      reads.forEach((read, idx) => {
+        // Two reads per zone: place one a hair left of anchor, one right.
+        const ox = idx === 0 ? -8 : 8;
+        const x = Phaser.Math.Clamp(anchor + ox, 8, GBC_W - 8);
+        this.stations.push({
+          id: read.id,
+          kind: "env",
+          zone,
+          x,
+          y: Phaser.Math.Clamp(read.y, 52, 100),
+          label: this.save.flags[read.id]
+            ? `RE-READ ${read.label.replace(/^READ |^EXAMINE /, "")}`
+            : read.label,
+          doneFlag: read.id,
+          onUse: () => this.readEnv(zone, read.id),
+        });
       });
+    }
+
+    // Threshold meta-stations
+    this.stations.push({
+      id: "crack",
+      kind: "crack",
+      zone: "threshold",
+      x: ZONE_ANCHOR_X.threshold - 6,
+      y: 60,
+      label: this.save.flags[SUN_FLAGS.crackingQuestionDone]
+        ? "REVISIT CRACKING QUESTION"
+        : "CRACKING QUESTION",
+      doneFlag: SUN_FLAGS.crackingQuestionDone,
+      onUse: () => this.runCrackingQuestion(),
     });
+    this.stations.push({
+      id: "trial",
+      kind: "trial",
+      zone: "threshold",
+      x: ZONE_ANCHOR_X.threshold + 4,
+      y: 70,
+      label: sunTrialReady(this.save)
+        ? "ENTER TRIAL"
+        : "ENTER TRIAL (LOCKED)",
+      onUse: () => this.enterTrial(),
+    });
+    this.stations.push({
+      id: "settle",
+      kind: "settle",
+      zone: "threshold",
+      x: ZONE_ANCHOR_X.threshold,
+      y: 88,
+      label: "SETTLE HERE",
+      onUse: () => this.settleHere(),
+    });
+  }
 
-    if (this.zone === "threshold") {
-      this.hotspots.push({
-        id: "crack",
-        x: 42,
-        y: 58,
-        r: 10,
-        label: this.save.flags[SUN_FLAGS.crackingQuestionDone]
-          ? "REVISIT CRACKING QUESTION"
-          : "CRACKING QUESTION",
-        onUse: () => this.runCrackingQuestion(),
-      });
-      this.hotspots.push({
-        id: "trial",
-        x: 116,
-        y: 58,
-        r: 12,
-        label: sunTrialReady(this.save) ? "ENTER TRIAL" : "ENTER TRIAL (LOCKED)",
-        onUse: () => this.enterTrial(),
-      });
-      this.hotspots.push({
-        id: "settle",
-        x: 80,
-        y: 90,
-        r: 10,
-        label: "SETTLE HERE",
-        onUse: () => this.settleHere(),
-      });
+  private rebuildStationLabels() {
+    // Cheap re-label after a flag changes; positions don't move.
+    this.stations = [];
+    this.buildStations();
+  }
+
+  private nearestStation(): Station | null {
+    let best: Station | null = null;
+    let bestD = 16;
+    for (const s of this.stations) {
+      const d = Phaser.Math.Distance.Between(
+        this.rowan.x,
+        this.rowan.y,
+        s.x,
+        s.y,
+      );
+      if (d < bestD) {
+        bestD = d;
+        best = s;
+      }
     }
+    return best;
+  }
 
-    this.cursor = 0;
-    this.refreshHint();
-
-    // Threshold ceremony beat: when everything is ready and the player is at
-    // the threshold for the first time after readiness, play a one-time line.
-    if (
-      this.zone === "threshold" &&
-      sunTrialReady(this.save) &&
-      !this.save.flags[HALL_FINISHED_FLAG]
-    ) {
-      this.save.flags[HALL_FINISHED_FLAG] = true;
-      writeSave(this.save);
-      this.time.delayedCall(450, () => {
-        runDialog(this, [
-          { who: "?", text: "The hall has finished speaking. The witnesses are seated. The pages are amended." },
-          { who: "SOPHENE", text: "It is yours to cross now. Helion does not require performance." },
-        ]);
-      });
+  private verbForStation(s: Station): string {
+    if (s.doneFlag && this.save.flags[s.doneFlag]) {
+      switch (s.kind) {
+        case "witness":
+          return "REVISIT";
+        case "operation":
+          return "REFLECT";
+        case "env":
+          return "RE-READ";
+        case "crack":
+          return "REVISIT";
+        default:
+          return "INTERACT";
+      }
+    }
+    switch (s.kind) {
+      case "witness":
+        return "SPEAK";
+      case "operation":
+        return "WORK";
+      case "env":
+        return "READ";
+      case "crack":
+        return "ANSWER";
+      case "trial":
+        return sunTrialReady(this.save) ? "ENTER" : "TRY";
+      case "settle":
+        return "REMAIN";
     }
   }
 
-  private moveCursor(d: string) {
-    if (this.hotspots.length === 0) return;
-    if (d === "left" || d === "up")
-      this.cursor =
-        (this.cursor - 1 + this.hotspots.length) % this.hotspots.length;
-    if (d === "right" || d === "down")
-      this.cursor = (this.cursor + 1) % this.hotspots.length;
-    getAudio().sfx("cursor");
-    this.refreshHint();
+  private hintForStation(s: Station): string {
+    return s.label;
   }
 
-  private refreshHint() {
-    const current = this.hotspots[this.cursor];
-    this.hint.setText(current ? `A: ${current.label}` : "...");
-    this.publishSnapshot();
-  }
-
-  private useCurrent() {
+  private tryInteract() {
     if (this.busy) return;
-    const current = this.hotspots[this.cursor];
-    if (!current) return;
+    const s = this.nearestStation();
+    if (!s) return;
     this.busy = true;
-    current.onUse();
-  }
-
-  private goZone(zone: SunZoneId) {
-    this.save.sunZone = zone;
-    writeSave(this.save);
-    gbcWipe(this, () =>
-      this.scene.start("SunPlateau", { save: this.save, zone }),
-    );
+    this.interactPrompt.setText("");
+    s.onUse();
   }
 
   // ---------------------------------------------------------- env reads
 
-  private readEnv(id: string) {
-    const read = (SUN_ENV_READS[this.zone] ?? []).find((r) => r.id === id);
+  private readEnv(zone: SunZoneId, id: string) {
+    const read = (SUN_ENV_READS[zone] ?? []).find((r) => r.id === id);
     if (!read) {
       this.busy = false;
       return;
@@ -336,9 +522,10 @@ export class SunPlateauScene extends Phaser.Scene {
       if (!seen) {
         this.save.flags[id] = true;
         writeSave(this.save);
+        this.rebuildStationLabels();
       }
       this.busy = false;
-      this.refreshHint();
+      this.publishSnapshot();
     });
   }
 
@@ -354,7 +541,6 @@ export class SunPlateauScene extends Phaser.Scene {
     const done = !!this.save.flags[witness.doneFlag];
 
     if (done) {
-      // Revisit branch: revisit lines, plus optional cross-reference + softening.
       const lines: { who: string; text: string }[] = [...witness.revisit];
       const others = SUN_WITNESSES.filter(
         (w) => w.id !== witness.id && this.save.flags[w.doneFlag],
@@ -366,7 +552,7 @@ export class SunPlateauScene extends Phaser.Scene {
       }
       runDialog(this, lines, () => {
         this.busy = false;
-        this.refreshHint();
+        this.publishSnapshot();
       });
       return;
     }
@@ -386,11 +572,11 @@ export class SunPlateauScene extends Phaser.Scene {
             this.save.flags[witness.doneFlag] = true;
             this.save.sunWitnessHeard[witness.id] = true;
             writeSave(this.save);
-            // Repaint aftermath so the room visibly softens immediately.
-            this.paintAftermathForZone();
+            this.repaintAftermath();
+            this.rebuildStationLabels();
           }
           this.busy = false;
-          this.refreshHint();
+          this.publishSnapshot();
         },
       );
     });
@@ -410,11 +596,14 @@ export class SunPlateauScene extends Phaser.Scene {
         this,
         [
           { who: "?", text: op.aftermath },
-          { who: "?", text: "The work here is done. The room remembers it for you." },
+          {
+            who: "?",
+            text: "The work here is done. The room remembers it for you.",
+          },
         ],
         () => {
           this.busy = false;
-          this.refreshHint();
+          this.publishSnapshot();
         },
       );
       return;
@@ -422,17 +611,6 @@ export class SunPlateauScene extends Phaser.Scene {
     this.runOperationMechanic(op);
   }
 
-  /**
-   * Per-mechanic dispatcher. All mechanics share the same shape:
-   *   1. show the staged steps as a dialog sequence (so the mechanic feels
-   *      like an interaction, not a single menu)
-   *   2. then present the operation's options as the closing decision
-   *   3. on commit, set the doneFlag, run the aftermath line, repaint.
-   *
-   * Each mechanic frames the steps differently so the player feels the
-   * interaction (hold, compare, contradict, dim) even though all roads end
-   * in a closing inquiry.
-   */
   private runOperationMechanic(op: SunOperation) {
     const steps = op.steps ?? [];
     const stepLines: { who: string; text: string }[] = steps.map((text, i) => {
@@ -468,16 +646,16 @@ export class SunPlateauScene extends Phaser.Scene {
             this.save.flags[op.doneFlag] = true;
             this.save.sunOpsDone[op.id] = true;
             writeSave(this.save);
-            this.paintAftermathForZone();
-            // One closing aftermath beat so the room's change is named.
+            this.repaintAftermath();
+            this.rebuildStationLabels();
             runDialog(this, [{ who: "?", text: op.aftermath }], () => {
               this.busy = false;
-              this.refreshHint();
+              this.publishSnapshot();
             });
             return;
           }
           this.busy = false;
-          this.refreshHint();
+          this.publishSnapshot();
         },
       );
     });
@@ -501,9 +679,11 @@ export class SunPlateauScene extends Phaser.Scene {
           this.save.flags[SUN_FLAGS.crackingQuestionDone] = true;
           this.save.sunTrialReady = sunTrialReady(this.save);
           writeSave(this.save);
+          this.rebuildStationLabels();
         }
         this.busy = false;
-        this.refreshHint();
+        this.maybePlayHallFinishedBeat();
+        this.publishSnapshot();
       },
     );
   }
@@ -514,7 +694,10 @@ export class SunPlateauScene extends Phaser.Scene {
       runDialog(
         this,
         [
-          { who: "SOPHENE", text: "Not yet. The hall is still speaking in pieces." },
+          {
+            who: "SOPHENE",
+            text: "Not yet. The hall is still speaking in pieces.",
+          },
           { who: "SOPHENE", text: missing },
         ],
         () => {
@@ -581,23 +764,56 @@ export class SunPlateauScene extends Phaser.Scene {
     );
   }
 
+  /** Threshold ceremony beat: fires once when everything is ready and the
+   * player is standing in the threshold band. */
+  private maybePlayHallFinishedBeat() {
+    if (this.hallFinishedShown) return;
+    if (this.zone !== "threshold") return;
+    if (!sunTrialReady(this.save)) return;
+    this.hallFinishedShown = true;
+    this.save.flags[HALL_FINISHED_FLAG] = true;
+    writeSave(this.save);
+    this.busy = true;
+    this.time.delayedCall(450, () => {
+      runDialog(
+        this,
+        [
+          {
+            who: "?",
+            text: "The hall has finished speaking. The witnesses are seated. The pages are amended.",
+          },
+          {
+            who: "SOPHENE",
+            text: "It is yours to cross now. Helion does not require performance.",
+          },
+        ],
+        () => {
+          this.busy = false;
+        },
+      );
+    });
+  }
+
   // ---------------------------------------------------------- shell pub
 
   private publishSnapshot() {
-    const witnessCount = Object.values(this.save.sunWitnessHeard).filter(Boolean).length;
+    const witnessCount = Object.values(this.save.sunWitnessHeard).filter(
+      Boolean,
+    ).length;
     const opCount = Object.values(this.save.sunOpsDone).filter(Boolean).length;
     const ready = sunTrialReady(this.save);
 
-    // Per-zone state summary line (small text below the main idle body).
-    const witness = this.witnessForZone();
-    const op = this.opForZone();
+    const witness = this.witnessForZone(this.zone);
+    const op = this.opForZone(this.zone);
     const reads = SUN_ENV_READS[this.zone] ?? [];
     const readsSeen = reads.filter((r) => this.save.flags[r.id]).length;
 
     const zoneStatus: string[] = [];
     if (witness) {
       zoneStatus.push(
-        this.save.flags[witness.doneFlag] ? `${witness.name}: HEARD` : `${witness.name}: WAITING`,
+        this.save.flags[witness.doneFlag]
+          ? `${witness.name}: HEARD`
+          : `${witness.name}: WAITING`,
       );
     }
     if (op) {
@@ -626,7 +842,7 @@ export class SunPlateauScene extends Phaser.Scene {
       marker: null,
       idleTitle: SUN_ZONE_LABEL[this.zone].toUpperCase(),
       idleBody: [
-        this.zoneSubtitle(),
+        this.zoneSubtitle(this.zone),
         ...zoneStatus,
         `Witnesses ${witnessCount}/3 · Operations ${opCount}/4`,
         ready ? "Trial threshold open." : "More testimony required.",
@@ -634,9 +850,9 @@ export class SunPlateauScene extends Phaser.Scene {
       footerHint:
         this.zone === "threshold"
           ? ready
-            ? "A INTERACT · THE GATE IS OPEN"
-            : "A INTERACT · COMPLETE WITNESSES / OPERATIONS / QUESTION"
-          : "A INTERACT · USE DOORS TO MOVE BETWEEN CHAMBERS",
+            ? "WALK · A ENTER THE GATE"
+            : "WALK · A INTERACT · COMPLETE TESTIMONY"
+          : "WALK · A INTERACT · WALK RIGHT TOWARD THE THRESHOLD",
       showStatsBar: true,
       showUtilityRail: true,
       showDialogueDock: true,
@@ -647,5 +863,7 @@ export class SunPlateauScene extends Phaser.Scene {
     void COLOR;
     void GBC_H;
     void GBC_W;
+    void this.lastDx;
+    void this.lastDy;
   }
 }
