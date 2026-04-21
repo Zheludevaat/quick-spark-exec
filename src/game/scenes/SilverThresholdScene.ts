@@ -408,6 +408,23 @@ export class SilverThresholdScene extends Phaser.Scene {
       });
     }
 
+    // Reflection Basin — optional discovery, available after the rites.
+    const basinSeen = !!this.save.flags.threshold_basin_seen;
+    this.basin = this.add
+      .circle(GBC_W / 2, 104, 6, 0xc8d8f0, basinSeen ? 0.2 : 0.12)
+      .setDepth(3);
+    this.basin.setStrokeStyle(1, 0xdde6f5, basinSeen ? 0.25 : 0.5);
+    if (!basinSeen) {
+      this.tweens.add({
+        targets: this.basin,
+        alpha: 0.28,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
     // Player + soft shadow. Skin: living unless all elements done already (resume case).
     this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
     const initialSkin = this.save.flags.daimon_bound ? "soul" : "living";
