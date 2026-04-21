@@ -5,6 +5,8 @@ import type { ImaginalRegion, SaveSlot } from "../types";
 import { attachHUD, mountImaginalProgressBadge, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
+import { setSceneSnapshot } from "../gameUiBridge";
+import { ACT_BY_SCENE } from "../types";
 import {
   dispatchKnot,
   KNOT_TAGLINE,
