@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadSave } from "@/game/save";
-import { LORE_ENTRIES, type LoreEntry } from "@/game/scenes/lore";
+import { LORE_ENTRIES, type LoreEntry } from "@/game/scenes/loreData";
 import {
   ShellPanel,
   ShellPanelTitle,
