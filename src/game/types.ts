@@ -11,10 +11,16 @@ export type SceneKey =
   | "Citrinitas"
   | "Rubedo"
   | "SealedVessel"
+  | "MetaxyHub"
   | "CuratedSelf"
   | "Epilogue";
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
+
+/** The seven planetary spheres of the Metaxy ascent. */
+export type SphereKey = "moon" | "mercury" | "venus" | "sun" | "mars" | "jupiter" | "saturn";
+
+export type Calling = "scholar" | "caregiver" | "reformer";
 
 /** Canonical act number per scene. Extend as new acts ship. */
 export const ACT_BY_SCENE: Record<SceneKey, number> = {
