@@ -280,8 +280,14 @@ export class MetaxyHubScene extends Phaser.Scene {
     this.refreshCursor();
   }
 
+  private move(d: number) {
+    this.cursor = (this.cursor + d + this.portals.length) % this.portals.length;
+    getAudio().sfx("cursor");
+    this.refreshCursor();
+  }
+
   private refreshCursor() {
-    const p = PORTALS[this.cursor];
+    const p = this.portals[this.cursor];
     this.mark.setPosition(PORTAL_X - 14, p.y - 3);
     const lit = p.unlocked(this.save) && p.scene !== null;
     if (lit) {
