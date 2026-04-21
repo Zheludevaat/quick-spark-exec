@@ -119,6 +119,8 @@ export type OverlaySnapshot = {
 export type GameUiSnapshot = {
   hud: HudSnapshot;
   dialog: DialogSnapshot;
+  inquiry: InquirySnapshot;
+  modal: ModalSnapshot;
   scene: SceneSnapshot;
   overlay: OverlaySnapshot;
 };
@@ -132,6 +134,20 @@ const initial = (): GameUiSnapshot => ({
     fullText: "",
     typing: false,
     waitingForConfirm: false,
+  },
+  inquiry: {
+    open: false,
+    speaker: "",
+    prompt: "",
+    choices: [],
+    cursor: 0,
+  },
+  modal: {
+    surface: "none",
+    mode: "shell",
+    title: null,
+    subtitle: null,
+    blocking: false,
   },
   scene: {
     key: "",
