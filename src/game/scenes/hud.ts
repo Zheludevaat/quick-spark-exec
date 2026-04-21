@@ -38,6 +38,8 @@ import {
   setOverlaySnapshot,
   setDialogSnapshot,
   clearDialogSnapshot,
+  setModalSnapshot,
+  clearModalSnapshot,
 } from "../gameUiBridge";
 import {
   subscribeVirtualInput,
