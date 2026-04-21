@@ -70,6 +70,7 @@ export function newSave(): SaveSlot {
     gnosticAccepted: false,
     endingChosen: null,
     plateauSettled: {},
+    puzzleState: {},
     updatedAt: Date.now(),
   };
 }

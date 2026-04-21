@@ -171,6 +171,9 @@ export type SaveSlot = {
   /** Per-sphere "settle here" soft-ending ledger. */
   plateauSettled: Partial<Record<SphereKey, boolean>>;
 
+  /** Hermetic puzzle ledger — multi-state node values keyed by `puzzle:{roomId}:{nodeId}`. */
+  puzzleState: Record<string, string | number | boolean>;
+
   updatedAt: number;
 };
 
@@ -265,6 +268,8 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     gnosticAccepted: r.gnosticAccepted === true,
     endingChosen: typeof r.endingChosen === "string" ? r.endingChosen : null,
     plateauSettled: (r.plateauSettled as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
+    puzzleState:
+      (r.puzzleState as Record<string, string | number | boolean> | undefined) ?? {},
 
     updatedAt: r.updatedAt ?? Date.now(),
   };
