@@ -54,38 +54,97 @@ export class NigredoScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
-    // Stone hearth around the furnace
-    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 14, 56, 6, 0x2a1a1a).setStrokeStyle(1, 0x402020).setDepth(0);
-    // Furnace mouth
-    this.add.rectangle(GBC_W / 2, GBC_H / 2, 32, 24, 0x000000).setStrokeStyle(1, 0x803010);
-    // Inner red glow + flickering flame tongues
-    this.add.circle(GBC_W / 2, GBC_H / 2, 6, 0xc04020, 0.7);
-    for (let i = 0; i < 4; i++) {
-      const fx = GBC_W / 2 - 8 + i * 6;
-      const flame = this.add.ellipse(fx, GBC_H / 2 + 4, 4, 7, 0xff8030, 0.85).setDepth(2);
+    // 1. Environment: Weeping Walls & Flooded Floor
+    const waterY = GBC_H - 45;
+
+    const walls = this.add.graphics();
+    for(let i=0; i<15; i++) {
+      walls.fillStyle(0x1a0f14, Phaser.Math.FloatBetween(0.2, 0.5));
+      walls.fillRect(Phaser.Math.Between(0, GBC_W), 0, Phaser.Math.Between(1, 3), Phaser.Math.Between(20, waterY));
+    }
+
+    this.add.rectangle(0, waterY, GBC_W, GBC_H - waterY, 0x0a0608).setOrigin(0, 0).setDepth(1);
+    this.add.rectangle(0, waterY, GBC_W, 1, 0x2a1a20).setOrigin(0, 0).setDepth(1);
+
+    // 2. The Furnace Structure
+    const cx = GBC_W / 2;
+    const cy = GBC_H / 2 - 5;
+
+    this.add.rectangle(cx, cy + 16, 60, 10, 0x1c1014).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
+    this.add.rectangle(cx, cy, 40, 32, 0x11080a).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
+    this.add.rectangle(cx, cy + 4, 24, 20, 0x000000).setDepth(3);
+
+    // 3. Fire & Embers (Particle System)
+    if (!this.textures.exists('pixel')) {
+      const gr = this.make.graphics({x:0, y:0});
+      gr.fillStyle(0xffffff, 1);
+      gr.fillRect(0, 0, 2, 2);
+      gr.generateTexture('pixel', 2, 2);
+      gr.destroy();
+    }
+
+    this.add.particles(cx, cy + 10, 'pixel', {
+      speed: { min: 5, max: 15 },
+      angle: { min: 250, max: 290 },
+      scale: { start: 1.5, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: [ 0xffcc00, 0xff6600, 0xcc0000 ],
+      blendMode: 'ADD',
+      lifespan: { min: 400, max: 800 },
+      frequency: 40,
+      bounds: { x: cx - 10, y: cy - 10, w: 20, h: 20 }
+    }).setDepth(4);
+
+    this.add.particles(cx, cy + 5, 'pixel', {
+      speed: { min: 10, max: 25 },
+      angle: { min: 240, max: 300 },
+      scale: { start: 0.8, end: 0.2 },
+      alpha: { start: 1, end: 0 },
+      tint: 0xff4400,
+      lifespan: { min: 800, max: 1500 },
+      frequency: 150,
+      gravityY: -10
+    }).setDepth(4);
+
+    // 4. Flooded Water Reflection
+    const refY = waterY + 2;
+
+    const mouthReflect = this.add.rectangle(cx, refY + 4, 24, 16, 0x000000, 0.4).setDepth(2);
+
+    const flameReflect = this.add.particles(cx, refY, 'pixel', {
+      speed: { min: 2, max: 8 },
+      angle: { min: 70, max: 110 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 0.35, end: 0 },
+      tint: [ 0xffcc00, 0xff6600 ],
+      blendMode: 'ADD',
+      lifespan: 600,
+      frequency: 60
+    }).setDepth(3);
+
+    this.tweens.add({
+      targets: [mouthReflect, flameReflect],
+      x: cx + 2,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut'
+    });
+
+    for(let i=0; i<3; i++) {
+      const ripple = this.add.rectangle(cx, refY + 8 + (i*6), 16 + (i*4), 1, 0xff6600, 0.15).setDepth(3);
       this.tweens.add({
-        targets: flame,
-        scaleY: { from: 1, to: 1.6 },
-        alpha: { from: 0.85, to: 0.45 },
-        duration: 240 + i * 80,
+        targets: ripple,
+        alpha: 0.05,
+        scaleX: 1.2,
+        duration: 1000 + (i*200),
         yoyo: true,
         repeat: -1,
+        ease: 'Sine.inOut'
       });
     }
-    // Drifting soot embers
-    for (let i = 0; i < 5; i++) {
-      const ember = this.add.circle(GBC_W / 2 - 6 + i * 3, GBC_H / 2 - 2, 1, 0x802010, 0.7).setDepth(3);
-      this.tweens.add({
-        targets: ember,
-        y: GBC_H / 2 - 30,
-        alpha: { from: 0.8, to: 0 },
-        duration: 1600 + i * 200,
-        delay: i * 240,
-        repeat: -1,
-        ease: "Sine.out",
-      });
-    }
-    new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 + 14, "FURNACE", {
+
+    new GBCText(this, cx - 14, cy + 15, "FURNACE", {
       color: COLOR.textWarn,
       depth: 5,
     });
