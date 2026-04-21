@@ -1586,7 +1586,7 @@ export function spawnMotes(scene: Phaser.Scene, opts: MoteOpts = {}) {
     speedX: { min: speedX - 2, max: speedX + 2 },
     speedY: { min: speedY - 2, max: speedY + 2 },
     scale: { start: 0.6, end: 0 },
-    alpha: { start: 0, end: alpha, yoyo: true },
+    alpha: { start: alpha, end: 0 },
     tint: color,
     frequency: Math.max(50, 3000 / count),
     blendMode: "ADD",
