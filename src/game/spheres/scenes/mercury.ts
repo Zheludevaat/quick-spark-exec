@@ -1426,8 +1426,20 @@ export class MercuryTrialScene extends Phaser.Scene {
     onActionDown(this, "action", () => this.tryInteract());
     this.events.on("vinput-action", () => this.tryInteract());
 
+    // Hermaia presence presides over the trial chamber from the top center.
+    this.hermaiaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      22,
+      HERMAIA_PROFILE,
+    );
+
     this.busy = true;
     this.time.delayedCall(500, () => {
+      this.hermaiaPresentation?.introOnce(
+        "encounter_seen_hermaia_trial",
+        this.mSave,
+      );
       runDialog(this, mercuryConfig.trialOpening, () => {
         this.busy = false;
       });
