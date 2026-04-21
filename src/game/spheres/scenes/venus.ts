@@ -17,7 +17,7 @@ import * as Phaser from "phaser";
 import type { SaveSlot } from "../../types";
 import { ACT_BY_SCENE } from "../../types";
 import { writeSave } from "../../save";
-import { attachHUD, runDialog } from "../../scenes/hud";
+import { attachHUD, runDialog, InputState } from "../../scenes/hud";
 import {
   GBC_W,
   GBC_H,
@@ -28,7 +28,7 @@ import {
   spawnMotes,
 } from "../../gbcArt";
 import { getAudio } from "../../audio";
-import { onActionDown, onDirection } from "../../controls";
+import { onActionDown } from "../../controls";
 import { venusConfig } from "../configs/venus";
 import { askSphere } from "../SpherePlateauScene";
 
