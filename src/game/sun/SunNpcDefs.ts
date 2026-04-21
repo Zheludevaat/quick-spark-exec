@@ -44,6 +44,11 @@ export const SUN_WITNESSES: SunWitness[] = [
     name: "THE BIOGRAPHER",
     zone: "testimony",
     doneFlag: "sun_biographer_done",
+    barks: [
+      "THE PROSE WANTS TO FLATTER YOU.",
+      "I HAVE CUT THIS SENTENCE THREE TIMES.",
+      "YOU WERE NEVER QUITE THIS CONSISTENT.",
+    ],
     intro: [
       { who: "BIOGRAPHER", text: "I wrote the version of you that could survive being admired." },
       { who: "BIOGRAPHER", text: "It was elegant. It was coherent. It also had suspiciously good manners." },
