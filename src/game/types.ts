@@ -225,6 +225,23 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     sorynReleased: r.sorynReleased === true,
     stainsCarried: typeof r.stainsCarried === "number" ? r.stainsCarried : 0,
 
+    calling: (r.calling as Calling | null | undefined) ?? null,
+    coherence: typeof r.coherence === "number" ? r.coherence : 100,
+    daimonBond: typeof r.daimonBond === "number" ? r.daimonBond : 0,
+    garmentsReleased:
+      (r.garmentsReleased as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
+    sphereVerbs: {
+      name: (r.sphereVerbs as { name?: boolean } | undefined)?.name ?? false,
+      attune: (r.sphereVerbs as { attune?: boolean } | undefined)?.attune ?? false,
+      stand: (r.sphereVerbs as { stand?: boolean } | undefined)?.stand ?? false,
+      weigh: (r.sphereVerbs as { weigh?: boolean } | undefined)?.weigh ?? false,
+      release: (r.sphereVerbs as { release?: boolean } | undefined)?.release ?? false,
+    },
+    relics: Array.isArray(r.relics) ? (r.relics as string[]) : [],
+    gnosticAccepted: r.gnosticAccepted === true,
+    endingChosen: typeof r.endingChosen === "string" ? r.endingChosen : null,
+    plateauSettled: (r.plateauSettled as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
+
     updatedAt: r.updatedAt ?? Date.now(),
   };
 }
