@@ -133,6 +133,26 @@ export type SaveSlot = {
   sorynReleased: boolean;
   stainsCarried: number;
 
+  // ===== METAXY (Acts 3+) =====
+  /** Player's chosen vocation, set in LastDay. Null until chosen. */
+  calling: Calling | null;
+  /** Soul integrity (0-100). Drains in higher spheres; restored by Stillness. */
+  coherence: number;
+  /** Bond with the daimon Soryn (0-10). Derived from cumulative choices. */
+  daimonBond: number;
+  /** Per-sphere garment release ledger. True after the sphere's trial is passed. */
+  garmentsReleased: Partial<Record<SphereKey, boolean>>;
+  /** Sphere verbs unlocked by completing each sphere trial. */
+  sphereVerbs: { name: boolean; attune: boolean; stand: boolean; weigh: boolean; release: boolean };
+  /** Identity-objects collected per sphere; releasable at the Metaxy altar. */
+  relics: string[];
+  /** Set true only on Saturn if the player accepts the Gnostic offer. */
+  gnosticAccepted: boolean;
+  /** Final ending id once chosen by EndingsRouter. */
+  endingChosen: string | null;
+  /** Per-sphere "settle here" soft-ending ledger. */
+  plateauSettled: Partial<Record<SphereKey, boolean>>;
+
   updatedAt: number;
 };
 
