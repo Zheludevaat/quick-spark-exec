@@ -23,6 +23,12 @@ import { buildSoulSprite, type SoulMood } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../encounters/EncounterPresentation";
+import { KNOT_PROFILES } from "../encounters/profiles/knots";
+import { SOUL_PROFILES } from "../encounters/profiles/souls";
 
 type Knot = {
   kind: KnotKind;
@@ -180,6 +186,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private soulMemoryMarks: Phaser.GameObjects.GameObject[] = [];
   private corridorGateGlow?: Phaser.GameObjects.Arc;
   private corridorSouthSigil?: Phaser.GameObjects.Arc;
+  /** Per-knot encounter presentation. Rebuilt on region change. */
+  private knotPresentations: Partial<Record<KnotKind, EncounterPresentationHandle>> = {};
+  /** Per-soul encounter presentation, keyed by SoulId. Rebuilt on region change. */
+  private soulPresentations: Record<string, EncounterPresentationHandle> = {};
 
   constructor() {
     super("ImaginalRealm");
