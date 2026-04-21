@@ -3,6 +3,13 @@
  *
  * Each scene publishes which shell parts are useful via gameUiBridge.
  * The shell renders only those parts. The Phaser viewport is always shown.
+ *
+ * Modal ownership doctrine (desktop):
+ *   - Phaser owns world-space + diegetic feedback only.
+ *   - The shell's DesktopModalHost owns ALL blocking non-diegetic UI:
+ *       dialog, inquiry, settings, lore, inventory, playerHub.
+ *   - When a modal is blocking, the surrounding shell chrome is dimmed
+ *     so attention belongs to the modal alone.
  */
 import {
   useCallback,
@@ -15,7 +22,7 @@ import { DesktopStatsBar } from "./desktop/DesktopStatsBar";
 import { DesktopUtilityRail } from "./desktop/DesktopUtilityRail";
 import { DesktopMiniMapCard } from "./desktop/DesktopMiniMapCard";
 import { DesktopDialogueDock } from "./desktop/DesktopDialogueDock";
-import { DesktopPlayerHubOverlay } from "./desktop/DesktopPlayerHubOverlay";
+import { DesktopModalHost } from "./desktop/DesktopModalHost";
 import { ShellPanel, ShellPanelMeta } from "./shell/ShellPanel";
 import {
   subscribeGameUi,
@@ -31,17 +38,20 @@ type Props = {
 };
 
 const DEFAULT_FOOTER_HINT =
-  "ARROWS / WASD MOVE · SPACE / ENTER = A · Q = WITNESS · L = LORE · P / ESC = SETTINGS · PLAYER HUB IN LEFT RAIL";
+  "ARROWS / WASD MOVE · SPACE / ENTER = A · Q = WITNESS · L = LORE · I = INVENTORY · P / ESC = SETTINGS · PLAYER HUB IN LEFT RAIL";
 
 export function DesktopGameShell({ children, booted, error }: Props) {
   const [playerHubOpen, setPlayerHubOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [overlay, setOverlay] = useState(() => getGameUiSnapshot().overlay);
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
+  const [modal, setModal] = useState(() => getGameUiSnapshot().modal);
 
   useEffect(() => {
     return subscribeGameUi((s) => {
       setOverlay(s.overlay);
       setScene(s.scene);
+      setModal(s.modal);
     });
   }, []);
 
@@ -50,9 +60,14 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     patchOverlaySnapshot({ playerHubOpen: false });
   }, []);
 
+  const closeInventory = useCallback(() => {
+    setInventoryOpen(false);
+    patchOverlaySnapshot({ inventoryOpen: false });
+  }, []);
+
   useEffect(() => {
-    if (playerHubOpen) clearVirtualInput();
-  }, [playerHubOpen]);
+    if (playerHubOpen || inventoryOpen) clearVirtualInput();
+  }, [playerHubOpen, inventoryOpen]);
 
   useEffect(() => {
     if (!scene.allowPlayerHub && playerHubOpen) {
@@ -67,19 +82,51 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     fn?.();
   }, []);
 
+  const anyShellModalActive =
+    playerHubOpen ||
+    inventoryOpen ||
+    (modal.blocking && modal.surface !== "none");
+
   const openPlayerHub = useCallback(() => {
     if (
       !scene.allowPlayerHub ||
       overlay.settingsOpen ||
       overlay.loreOpen ||
       overlay.inventoryOpen ||
-      overlay.inquiryActive
+      overlay.inquiryActive ||
+      modal.blocking
     ) {
       return;
     }
     setPlayerHubOpen(true);
     patchOverlaySnapshot({ playerHubOpen: true });
-  }, [overlay, scene.allowPlayerHub]);
+  }, [overlay, scene.allowPlayerHub, modal.blocking]);
+
+  const openInventory = useCallback(() => {
+    if (
+      overlay.settingsOpen ||
+      overlay.loreOpen ||
+      overlay.inquiryActive ||
+      modal.blocking
+    ) {
+      return;
+    }
+    setInventoryOpen(true);
+    patchOverlaySnapshot({ inventoryOpen: true });
+  }, [overlay, modal.blocking]);
+
+  // Global I-key opens inventory (when no other modal is active).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (anyShellModalActive) return;
+      if (e.key === "i" || e.key === "I") {
+        e.preventDefault();
+        openInventory();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openInventory, anyShellModalActive]);
 
   const footerHint = scene.footerHint || DEFAULT_FOOTER_HINT;
 
@@ -99,6 +146,13 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       alignItems: "stretch" as const,
     };
   }, [scene.showUtilityRail, scene.showDialogueDock, scene.showMiniMap]);
+
+  // Chrome dimming: when a blocking shell modal is active, fade the
+  // surrounding chrome so the modal owns attention. The Phaser viewport
+  // stays fully visible underneath.
+  const dimmedChromeStyle = anyShellModalActive
+    ? { opacity: 0.45, filter: "saturate(0.7)", transition: "opacity 200ms ease" }
+    : { opacity: 1, transition: "opacity 200ms ease" };
 
   return (
     <div
@@ -131,7 +185,7 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       </h1>
 
       {scene.showStatsBar && (
-        <div style={{ width: "min(96vw, 1100px)" }}>
+        <div style={{ width: "min(96vw, 1100px)", ...dimmedChromeStyle }}>
           <DesktopStatsBar />
         </div>
       )}
@@ -174,11 +228,12 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       </div>
 
       {showDock && (
-        <div style={dockStyle}>
+        <div style={{ ...dockStyle, ...dimmedChromeStyle }}>
           {scene.showUtilityRail && (
             <DesktopUtilityRail
               onOpenHub={openPlayerHub}
               onOpenSettings={openSettings}
+              onOpenInventory={openInventory}
               hubOpen={playerHubOpen}
             />
           )}
@@ -188,16 +243,20 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       )}
 
       {scene.showFooter && (
-        <div style={{ width: "min(96vw, 1100px)" }}>
+        <div style={{ width: "min(96vw, 1100px)", ...dimmedChromeStyle }}>
           <ShellPanel tone="subdued" compact>
             <ShellPanelMeta>{footerHint}</ShellPanelMeta>
           </ShellPanel>
         </div>
       )}
 
-      {scene.allowPlayerHub && (
-        <DesktopPlayerHubOverlay open={playerHubOpen} onClose={closePlayerHub} />
-      )}
+      {/* Single owner of all blocking non-diegetic UI on desktop. */}
+      <DesktopModalHost
+        playerHubOpen={playerHubOpen}
+        onClosePlayerHub={closePlayerHub}
+        inventoryOpen={inventoryOpen}
+        onCloseInventory={closeInventory}
+      />
     </div>
   );
 }
