@@ -182,6 +182,16 @@ export class NigredoScene extends Phaser.Scene {
       depth: 5,
     });
 
+    // Subtle SAT x/3 progress indicator at the top-right.
+    this.progressText = new GBCText(this, GBC_W - 32, 4, "SAT 0/3", {
+      color: COLOR.textDim,
+      depth: 100,
+    });
+
+    // Initial unstable furnace state — fire is hungry until fed.
+    this.applyFurnaceState();
+    this.startAmbientWhispers();
+
     // --- INTERACTIVE UPGRADE: spatial pacing ---
 
     // 1. Spawn Player at the bottom of the room
