@@ -433,15 +433,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: puzzleDone ? "the work, finished by witness" : "ATTUNE: the unfinished work",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "unfinished_work") ? "*" : null),
-      onAct: () => this.tryAttune("unfinished_work", "gallery", 1800, () => {
-        markVenusPuzzleDone(this.save, "unfinished_work");
-        markVenusFlag(this.save, "curatorStarted");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "The drape settles. The painting underneath was never finished." },
-          { who: "?", text: "Witnessed. Not improved." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "unfinished_work",
+          "gallery",
+          1800,
+          () => {
+            markVenusPuzzleDone(this.save, "unfinished_work");
+            markVenusFlag(this.save, "curatorStarted");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "The drape settles. The painting underneath was never finished." },
+            { who: "?", text: "Witnessed. Not improved." },
+          ],
+        ),
     });
 
     this.doors.push({ to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" });
@@ -497,15 +503,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: puzzleDone ? "you let them stay incomplete" : "ATTUNE: the reconstructed beloved",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "reconstruction_chamber") ? "*" : null),
-      onAct: () => this.tryAttune("reconstruction_chamber", "reconstruction", 2200, () => {
-        markVenusPuzzleDone(this.save, "reconstruction_chamber");
-        markVenusFlag(this.save, "reconstructionSeen");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "The notes do not become a person." },
-          { who: "?", text: "The person was never the notes." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "reconstruction_chamber",
+          "reconstruction",
+          2200,
+          () => {
+            markVenusPuzzleDone(this.save, "reconstruction_chamber");
+            markVenusFlag(this.save, "reconstructionSeen");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "The notes do not become a person." },
+            { who: "?", text: "The person was never the notes." },
+          ],
+        ),
     });
 
     this.doors.push({ to: "recognition_hall", x: 0, y: 50, w: 8, h: 30, label: "← RECOGNITION" });
@@ -598,15 +610,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: releaseDone ? "the audience is released" : "ATTUNE: release the audience",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "release_audience") ? "*" : null),
-      onAct: () => this.tryAttune("release_audience", "threshold", 2400, () => {
-        markVenusPuzzleDone(this.save, "release_audience");
-        markVenusFlag(this.save, "audienceReleased");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "You realise no one is watching." },
-          { who: "?", text: "You stay anyway." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "release_audience",
+          "threshold",
+          2400,
+          () => {
+            markVenusPuzzleDone(this.save, "release_audience");
+            markVenusFlag(this.save, "audienceReleased");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "You realise no one is watching." },
+            { who: "?", text: "You stay anyway." },
+          ],
+        ),
     });
 
     // Trial entry hotspot
@@ -911,7 +929,6 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private startLadderRung(idx: number, score: number) {
     if (idx >= 3) {
-      // Resolve
       if (score >= 2) {
         markVenusFlag(this.save, "ladderDone");
         markVenusPuzzleDone(this.save, "ladder_step_3");
@@ -943,13 +960,11 @@ export class VenusPlateauScene extends Phaser.Scene {
       return;
     }
 
-    // Build a small in-place ATTUNE ring for the rung
     const cx = GBC_W / 2;
     const cy = 60 + idx * 14;
     const ring = makeVenusAttuneRing(this, cx, cy, 8);
     let elapsed = 0;
     const requiredMs = 1100;
-    const failWindow = 600; // pressing/moving in this window after start = greedy
     let resolved = false;
     let cleanupAct: (() => void) | null = null;
 
@@ -962,9 +977,9 @@ export class VenusPlateauScene extends Phaser.Scene {
         if (elapsed >= requiredMs && !resolved) {
           resolved = true;
           tick.remove(false);
-          ring.destroy();
           cleanupAct?.();
-          this.startLadderRung(idx + 1, score + 1);
+          ring.complete();
+          this.time.delayedCall(240, () => this.startLadderRung(idx + 1, score + 1));
         }
       },
     });
@@ -973,58 +988,74 @@ export class VenusPlateauScene extends Phaser.Scene {
       if (resolved) return;
       resolved = true;
       tick.remove(false);
-      ring.destroy();
       cleanupAct?.();
-      // Greedy press = counted as 0
+      ring.break();
       this.flashHint("reached. counted as zero.");
-      this.startLadderRung(idx + 1, elapsed < failWindow ? score : score + 1);
+      this.time.delayedCall(240, () => this.startLadderRung(idx + 1, score));
     });
   }
-
-  // -----------------------------------------------------------------
-  // ATTUNE wrapper for in-zone hotspots
-  // -----------------------------------------------------------------
 
   private tryAttune(
     id: string,
     zone: string,
     requiredMs: number,
-    onComplete: () => void,
+    onResolved: () => void,
+    completionLines: { who: string; text: string }[],
   ) {
     if (this.activeAttune) {
       this.cancelActiveAttune(false);
     }
-    const target = createAttuneTarget(id, zone, requiredMs, {
-      onStart: () => {},
-      onBreak: () => {
-        this.flashHint("attune broken. you reached.");
-      },
-      onComplete: () => {
-        getAudio().sfx("resolve");
-        onComplete();
-        this.modal = false;
-        // Refresh zone to update labels/badges
-        this.time.delayedCall(900, () => gbcWipe(this, () => this.loadZone(this.zone, true)));
-      },
-    });
-    startAttune(target);
-    this.activeAttune = target;
-    // Show ring at player position
+
     const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
     this.attuneRing = ring;
-    this.flashHint("attune. do not move.");
+
+    const target = createAttuneTarget(id, zone, requiredMs, {
+      onBreak: () => {
+        this.activeAttune = null;
+        this.attuneRing?.break();
+        this.attuneRing = null;
+        this.flashHint("attune broken. wanting arrived too early.");
+      },
+      onComplete: () => {
+        this.activeAttune = null;
+        getAudio().sfx("resolve");
+        this.attuneRing?.complete();
+        this.attuneRing = null;
+
+        onResolved();
+
+        this.modal = true;
+        this.time.delayedCall(380, () => {
+          runDialog(this, completionLines, () => {
+            this.modal = false;
+            gbcWipe(this, () => this.loadZone(this.zone, true));
+          });
+        });
+      },
+    });
+
+    startAttune(target);
+    this.activeAttune = target;
+    this.flashHint("attune. hold still.");
   }
 
-  private cancelActiveAttune(silent: boolean, keepRing = false) {
-    if (this.activeAttune && this.activeAttune.state === "active" && !silent) {
+  private cancelActiveAttune(silent: boolean) {
+    if (!this.activeAttune) {
+      if (this.attuneRing) {
+        this.attuneRing.destroy();
+        this.attuneRing = null;
+      }
+      return;
+    }
+
+    if (this.activeAttune.state === "active" && !silent) {
       breakAttune(this.activeAttune);
     }
+
     this.activeAttune = null;
-    if (!keepRing && this.attuneRing) {
+
+    if (silent && this.attuneRing) {
       this.attuneRing.destroy();
-      this.attuneRing = null;
-    } else if (keepRing && this.attuneRing) {
-      // Leave the ring, will be cleaned by zone reload
       this.attuneRing = null;
     }
   }
