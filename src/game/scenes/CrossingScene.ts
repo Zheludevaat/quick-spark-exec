@@ -2,7 +2,14 @@ import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot } from "../types";
-import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import {
+  attachHUD,
+  InputState,
+  makeRowan,
+  animateRowan,
+  runDialog,
+  setRowanTransition,
+} from "./hud";
 import { getAudio, SONG_CROSSING } from "../audio";
 import { unlockLore, showLoreToast } from "./lore";
 import { onActionDown } from "../controls";
@@ -64,6 +71,10 @@ export class CrossingScene extends Phaser.Scene {
   private wanderer?: Phaser.GameObjects.Container;
   private wandererSpoken = false;
 
+  // Embodiment FX
+  private rowanAura?: Phaser.GameObjects.Arc;
+  private rowanShadow?: Phaser.GameObjects.Ellipse;
+
   constructor() {
     super("Crossing");
   }
@@ -112,7 +123,22 @@ export class CrossingScene extends Phaser.Scene {
       depth: 25,
     });
 
+    this.rowanShadow = this.add.ellipse(GBC_W / 2, 30, 10, 3, 0x000000, 0.22).setDepth(2);
     this.rowan = makeRowan(this, GBC_W / 2, 24, "living");
+    setRowanTransition(this.rowan, 0);
+
+    this.rowanAura = this.add
+      .circle(this.rowan.x, this.rowan.y - 4, 6, 0xdde6f5, 0.04)
+      .setDepth(48);
+    this.tweens.add({
+      targets: this.rowanAura,
+      scale: 1.8,
+      alpha: 0.01,
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
     this.overlay = this.add
       .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0)
       .setOrigin(0, 0)
@@ -248,6 +274,21 @@ export class CrossingScene extends Phaser.Scene {
     const progress = (this.rowan.y - 24) / (GBC_H - 36);
     this.dim = Phaser.Math.Linear(this.dim, progress * 0.6, 0.05);
     this.overlay.fillAlpha = this.dim;
+
+    // Progressive embodiment shift — Rowan dissolves toward soul-form.
+    const transition = Phaser.Math.Clamp(progress * 0.88, 0, 0.88);
+    setRowanTransition(this.rowan, transition);
+
+    if (this.rowanAura) {
+      this.rowanAura.setPosition(this.rowan.x, this.rowan.y - 4);
+      this.rowanAura.setAlpha(0.02 + progress * 0.12);
+      this.rowanAura.setScale(1 + progress * 0.9);
+    }
+    if (this.rowanShadow) {
+      this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+      this.rowanShadow.setAlpha(0.22 - progress * 0.14);
+      this.rowanShadow.setScale(1 - progress * 0.18, 1 - progress * 0.12);
+    }
 
     // Milestone voices
     if (!this.milestones[0] && progress > 0.25)
