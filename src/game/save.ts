@@ -83,6 +83,19 @@ export function newSave(): SaveSlot {
     sunWitnessHeard: {},
     sunOpsDone: {},
     sunTrialReady: false,
+    clarityPoints: 0,
+    garmentWeights: { moon: 3, mercury: 3, venus: 3, sun: 3, mars: 3, jupiter: 3, saturn: 3 },
+    resonanceProfile: {
+      witnessing: 0,
+      control: 0,
+      possession: 0,
+      performance: 0,
+      struggle: 0,
+      structure: 0,
+      surrender: 0,
+    },
+    memoryLattice: [],
+    sopheneNamed: false,
     updatedAt: Date.now(),
   };
 }
