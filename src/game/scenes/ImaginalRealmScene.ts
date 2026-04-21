@@ -173,6 +173,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     bark?: GBCText;
   }[] = [];
 
+  // Act II memory / aftermath fields
+  private regionToneOverlay?: Phaser.GameObjects.Rectangle;
+  private regionSettledGlow?: Phaser.GameObjects.Arc;
+  private knotMemoryGlyphs: Phaser.GameObjects.GameObject[] = [];
+  private soulMemoryMarks: Phaser.GameObjects.GameObject[] = [];
+  private corridorGateGlow?: Phaser.GameObjects.Arc;
+  private corridorSouthSigil?: Phaser.GameObjects.Arc;
+
   constructor() {
     super("ImaginalRealm");
   }
@@ -184,12 +192,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.syllableLanterns = [];
     this.dialogActive = false;
     this.knotActive = false;
-    this.save.act = 1;
+
+    this.save.scene = "ImaginalRealm";
+    this.save.act = ACT_BY_SCENE.ImaginalRealm;
+
     this.region = (this.save.region as ImaginalRegion) ?? "pools";
     if (!this.save.region) {
       this.save.region = "pools";
-      writeSave(this.save);
     }
+
+    writeSave(this.save);
   }
 
   create() {
