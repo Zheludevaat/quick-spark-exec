@@ -17,7 +17,7 @@ import { awardShardFragment } from "../shardFeedback";
 import { emitHudStatChanged } from "../ui/hudSignals";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
-import { buildSoulSprite } from "./imaginal/soulSprites";
+import { buildSoulSprite, type SoulMood } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
@@ -161,7 +161,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
     halo: Phaser.GameObjects.Arc;
-    setMood: (m: "waiting" | "engaged" | "resolved") => void;
+    setMood: (m: SoulMood) => void;
+    mood: SoulMood;
     nameLabel?: GBCText;
     hookLabel?: GBCText;
     nearTime: number;
@@ -419,40 +420,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Spawn souls for this region with "Alive" Art Direction
+    // Spawn souls — presence styling lives in buildSoulSprite/setMood now.
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
       const done = isSoulDone(this.save, def.id);
-
-      built.setMood(done ? "resolved" : "waiting");
-      if (done) built.container.setAlpha(0.45);
-
-      // Art Upgrade: Dedicated Soft Shadow
-      const shadow = this.add.ellipse(def.x, def.y + 6, 12, 4, 0x000000, 0.4).setDepth(1);
-      this.regionRoot.add(shadow);
-
-      // Art Upgrade: Organic "Breathing" Micro-animation
-      this.tweens.add({
-        targets: built.container,
-        y: built.container.y - (done ? 1 : 2),
-        scaleY: 1.05,
-        scaleX: 0.98,
-        duration: Phaser.Math.Between(1200, 1600),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut'
-      });
-
-      // Art Upgrade: Dynamic, irregular aura pulse
-      this.tweens.add({
-        targets: built.halo,
-        scale: { min: 1.1, max: 1.4 },
-        alpha: { min: 0.1, max: 0.3 },
-        duration: Phaser.Math.Between(2000, 3000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut'
-      });
+      const initialMood: SoulMood = done ? "resolved" : "waiting";
+      built.setMood(initialMood);
 
       this.regionRoot.add(built.halo);
       this.regionRoot.add(built.container);
@@ -462,6 +435,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         container: built.container,
         halo: built.halo,
         setMood: built.setMood,
+        mood: initialMood,
         nearTime: 0,
         barkShown: false,
       });
