@@ -938,7 +938,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     // Build a small in-place ATTUNE ring for the rung
     const cx = GBC_W / 2;
     const cy = 60 + idx * 14;
-    const ring = makeAttuneRing(this, cx, cy, 8, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, cx, cy, 8);
     let elapsed = 0;
     const requiredMs = 1100;
     const failWindow = 600; // pressing/moving in this window after start = greedy
@@ -1002,7 +1002,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     startAttune(target);
     this.activeAttune = target;
     // Show ring at player position
-    const ring = makeAttuneRing(this, this.player.x, this.player.y - 8, 6, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
     this.attuneRing = ring;
     this.flashHint("attune. do not move.");
   }
@@ -1311,7 +1311,7 @@ export class VenusTrialScene extends Phaser.Scene {
       color: COLOR.textAccent,
       depth: 31,
     });
-    const ring = makeAttuneRing(this, cx, cy + 4, 6, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, cx, cy + 4, 6);
 
     let elapsed = 0;
     const requiredMs = 1400;
