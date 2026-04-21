@@ -424,12 +424,20 @@ export class AthanorThresholdScene extends Phaser.Scene {
     if (door) {
       const status = this.doorStatus(door);
       this.hint.setText(`${door.label} - ${status}`);
+      this.doorPresentations[door.key]?.introOnce(
+        `encounter_seen_door_${door.key}`,
+        this.save,
+      );
       return;
     }
     if (this.nearVessel()) {
       const n = this.save.shardInventory.length;
       if (n > 0) this.hint.setText(`A: TRANSMUTE  (${n} SHARDS)`);
       else this.hint.setText("VESSEL");
+      this.vesselPresentation?.introOnce(
+        "encounter_seen_athanor_vessel",
+        this.save,
+      );
       return;
     }
     this.hint.setText("");
