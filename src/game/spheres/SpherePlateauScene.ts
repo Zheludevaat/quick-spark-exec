@@ -167,9 +167,6 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.refreshCursor();
   }
 
-    this.refreshCursor();
-  }
-
   private refreshCursor() {
     const s = this.stations[this.cursor];
     this.mark.setPosition(8, 30 + this.cursor * 8);
