@@ -74,7 +74,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
   private inputState!: InputState;
   private hint!: GBCText;
   private interactPrompt!: GBCText;
-  private stations: Station[] = [];
+  private stations: MStation[] = [];
   private busy = false;
   private statusText!: GBCText;
   private trialGlow!: Phaser.GameObjects.Arc;
@@ -410,8 +410,8 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     }
   }
 
-  private nearestStation(): Station | null {
-    let best: Station | null = null;
+  private nearestStation(): MStation | null {
+    let best: MStation | null = null;
     let bestD = 18;
     for (const st of this.stations) {
       const d = Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, st.x, st.y);
@@ -423,7 +423,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     return best;
   }
 
-  private verbForStation(st: Station): string {
+  private verbForStation(st: MStation): string {
     if (st.kind.startsWith("npc_")) return "SPEAK";
     if (st.kind === "chalkboard") return "READ";
     if (st.kind === "statue") return "INSPECT";
@@ -437,7 +437,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     return "INTERACT";
   }
 
-  private hintForStation(st: Station): string {
+  private hintForStation(st: MStation): string {
     if (st.doneFlag && this.mSave.flags[st.doneFlag]) {
       return `${st.label} (done)`;
     }
@@ -477,7 +477,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     this.handle(st);
   }
 
-  private handle(st: Station) {
+  private handle(st: MStation) {
     switch (st.kind) {
       case "npc_defender":
         return this.runSoul(0, st.doneFlag!);
@@ -530,7 +530,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
 
   // ---- PUZZLE 1: SYLLOGISM (Proof) ----
   // Player picks 3 premises in correct order to build a valid argument.
-  private runSyllogismPuzzle(st: Station) {
+  private runSyllogismPuzzle(st: MStation) {
     if (st.doneFlag && this.mSave.flags[st.doneFlag]) {
       runDialog(this, [{ who: "?", text: "The proof stands. Mercury is satisfied." }], () => {
         this.busy = false;
@@ -547,7 +547,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     );
   }
 
-  private syllogismRound1(st: Station) {
+  private syllogismRound1(st: MStation) {
     runInquiry(
       this,
       { who: "?", text: "PICK THE MAJOR PREMISE" },
@@ -620,7 +620,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
 
   // ---- PUZZLE 2: REFUTATION ----
   // Player must locate the broken joint in a flawed argument.
-  private runRefutationPuzzle(st: Station) {
+  private runRefutationPuzzle(st: MStation) {
     if (st.doneFlag && this.mSave.flags[st.doneFlag]) {
       runDialog(this, [{ who: "?", text: "You have already pulled this argument apart." }], () => {
         this.busy = false;
@@ -675,7 +675,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
 
   // ---- PUZZLE 3: SILENCE ----
   // The player must NOT press anything for ~5 seconds. Movement breaks it.
-  private runSilencePuzzle(st: Station) {
+  private runSilencePuzzle(st: MStation) {
     if (st.doneFlag && this.mSave.flags[st.doneFlag]) {
       runDialog(this, [{ who: "?", text: "You already sat. The Tower remembers." }], () => {
         this.busy = false;
@@ -692,7 +692,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
     );
   }
 
-  private silenceTimer(st: Station) {
+  private silenceTimer(st: MStation) {
     const total = 5000;
     const startX = this.rowan.x;
     const startY = this.rowan.y;
@@ -793,7 +793,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
 
   // ---- 4th OP: CHALKBOARD ARGUMENT ----
   // Doubles as the "argument" op. Reads the crossed-out proofs.
-  private runChalkboard(st: Station) {
+  private runChalkboard(st: MStation) {
     if (st.doneFlag && this.mSave.flags[st.doneFlag]) {
       runDialog(
         this,
