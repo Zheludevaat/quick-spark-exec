@@ -407,4 +407,100 @@ export class NigredoScene extends Phaser.Scene {
       this.beginDissolving();
     }
   }
+
+  /**
+   * Update furnace halo + progress text + a brief outcome flash so each
+   * shade resolution leaves an immediate, visible aftermath.
+   *
+   * Stops ambient whispers permanently once any shade has been faced —
+   * the room hushes when the work begins in earnest.
+   */
+  private applyFurnaceState(lastOutcome?: "sat_with" | "fled" | "destroyed"): void {
+    this.progressText.setText(`SAT ${this.currentSat}/3`);
+
+    // The furnace steadies as the sat count rises.
+    const steadyAlpha = 0.35 + this.currentSat * 0.12;
+    const haloColor =
+      lastOutcome === "destroyed" ? 0xc83030 : this.currentSat >= 1 ? 0xff6620 : 0xff4400;
+    this.furnaceHalo.setFillStyle(haloColor, Math.min(0.85, steadyAlpha));
+
+    if (lastOutcome === "sat_with") {
+      // Brief coherent flare — the fire steadies.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        scaleX: { from: 1, to: 1.25 },
+        scaleY: { from: 1, to: 1.25 },
+        duration: 350,
+        yoyo: true,
+        ease: "Sine.inOut",
+      });
+    } else if (lastOutcome === "destroyed") {
+      // Harsh red flare, then settle uglier.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        scaleX: { from: 1, to: 1.6 },
+        scaleY: { from: 1, to: 1.6 },
+        alpha: { from: 0.85, to: 0.5 },
+        duration: 300,
+        yoyo: true,
+        ease: "Cubic.out",
+      });
+      // Stop whispers; this room has had enough voices.
+      this.ambientWhisperEvent?.remove(false);
+      this.ambientWhisperEvent = undefined;
+    } else if (lastOutcome === "fled") {
+      // Sputter dim.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        alpha: { from: steadyAlpha, to: 0.15 },
+        duration: 500,
+        yoyo: true,
+        ease: "Sine.out",
+      });
+    }
+
+    // Once any shade has been faced, the wall whispers fall silent.
+    if (lastOutcome && this.ambientWhisperEvent) {
+      this.ambientWhisperEvent.remove(false);
+      this.ambientWhisperEvent = undefined;
+    }
+  }
+
+  /**
+   * Low-cost ambient wall-whisper system. Pre-shade and between-shade only —
+   * one bark on screen at a time, fades upward. Pure atmosphere; no save
+   * effect. Stopped permanently after any shade is faced.
+   */
+  private startAmbientWhispers(): void {
+    this.ambientWhisperEvent?.remove(false);
+    this.ambientWhisperEvent = this.time.addEvent({
+      delay: Phaser.Math.Between(4500, 7500),
+      loop: true,
+      callback: () => {
+        if (this.isBusy || this.isDone || this.activeWhisper) return;
+        const text = Phaser.Utils.Array.GetRandom(WALL_WHISPERS);
+        // Anchor near a wall edge, away from the furnace.
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? Phaser.Math.Between(6, 30) : Phaser.Math.Between(GBC_W - 70, GBC_W - 36);
+        const y = Phaser.Math.Between(40, 80);
+        const w = new GBCText(this, x, y, text, {
+          color: COLOR.textDim,
+          depth: 8,
+          maxWidthPx: 60,
+        });
+        this.activeWhisper = w;
+        this.tweens.add({
+          targets: w.obj,
+          y: y - 10,
+          alpha: { from: 0.7, to: 0 },
+          duration: 2200,
+          ease: "Sine.out",
+          onComplete: () => {
+            w.destroy();
+            this.activeWhisper = undefined;
+          },
+        });
+      },
+    });
+  }
 }
