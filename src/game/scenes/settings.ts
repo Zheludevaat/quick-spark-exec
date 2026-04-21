@@ -220,6 +220,11 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   render();
 
   // ---- Input ----
+  const cycleInterfaceMode = () => {
+    const order: InterfaceMode[] = ["desktop", "touch_landscape"];
+    const i = order.indexOf(getControls().interfaceMode);
+    setInterfaceMode(order[(i + 1) % order.length]);
+  };
   const cycleLayout = (dir: 1 | -1) => {
     const order: TouchLayout[] = ["dpad", "swipe", "hybrid", "off"];
     const i = order.indexOf(getControls().touchLayout);
@@ -237,52 +242,57 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     setDialogAutoAdvance(next);
   };
 
+  /** Dispatch a left/right (dir) on the focused main-page row by label. */
   const adjustMain = (dir: 1 | -1) => {
-    switch (cursor) {
-      case 0:
-        cycleLayout(dir);
+    const label = mainRowLabels[cursor];
+    switch (label) {
+      case "INTERFACE MODE":
+        cycleInterfaceMode();
         break;
-      case 1:
+      case "BUTTON SIZE":
         cycleSize(dir);
         break;
-      case 2:
+      case "LEFT-HANDED":
         setLeftHanded(!getControls().leftHanded);
         break;
-      case 3:
+      case "HAPTICS":
         setHaptics(!getControls().haptics);
         break;
-      case 4:
+      case "DIALOG AUTO-ADV":
         cycleAuto(dir);
         break;
-      case 5: {
+      case "VOLUME": {
         const a = getAudio();
-        // 10% steps; if muted, unmute first.
         if (a.muted) a.setMuted(false);
         a.setVolume(a.volume + dir * 0.1);
         break;
       }
-      case 6: {
+      case "AUDIO": {
         const a = getAudio();
         a.setMuted(!a.muted);
         break;
       }
+      case "TOUCH OVERLAY (LEGACY)":
+        cycleLayout(dir);
+        break;
+      default:
+        break;
     }
     getAudio().sfx("cursor");
     render();
   };
 
+  /** Activate (A) on the focused main-page row by label. */
   const activateMain = () => {
-    switch (cursor) {
-      case 7:
-        page = "keys";
-        cursor = 0;
-        break;
-      case 8:
-        resetControls();
-        break;
-      default:
-        adjustMain(1);
-        return;
+    const label = mainRowLabels[cursor];
+    if (label === "REBIND KEYS →") {
+      page = "keys";
+      cursor = 0;
+    } else if (label === "RESET DEFAULTS") {
+      resetControls();
+    } else {
+      adjustMain(1);
+      return;
     }
     getAudio().sfx("confirm");
     render();
