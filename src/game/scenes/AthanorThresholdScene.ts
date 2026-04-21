@@ -667,6 +667,16 @@ export class AthanorThresholdScene extends Phaser.Scene {
 
     // Reapply door states so SEALED/AVAILABLE/DONE all read at a glance.
     for (const d of this.doors) this.applyDoorState(d);
+
+    // When a stage advances (not on initial entry), pulse the vessel and the
+    // newly-completed door so the room visibly remembers the transmutation.
+    const order: Door["key"][] = ["nigredo", "albedo", "citrinitas", "rubedo"];
+    if (!initial && stage > 0) {
+      const justDoneKey = order[Math.min(stage - 1, order.length - 1)];
+      this.doorPresentations[justDoneKey]?.pulse();
+      this.doorPresentations[justDoneKey]?.soften();
+      this.vesselPresentation?.pulse();
+    }
   }
 
   /**
