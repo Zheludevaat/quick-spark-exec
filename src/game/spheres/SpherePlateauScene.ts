@@ -150,10 +150,24 @@ export class SpherePlateauScene extends Phaser.Scene {
     drawGBCBox(this, boxX, boxY, boxW, boxH, 5);
 
     // Windowed list: stations are menu rows — they MUST stay one line each.
+    // If any final display label trims, reserve a wrapped readout band INSIDE
+    // the box so the selected station's full text is always readable.
     this.listTop = boxY + 4;
-    const usable = boxH - 8;
-    this.visibleRows = Math.max(1, Math.min(this.stations.length, Math.floor(usable / this.rowH)));
     this.labelFitW = boxW - 20;
+    this.readoutW = boxW - 8;
+
+    // Compute display state for every station in its final form (label + suffix).
+    const displayStates = this.stations.map((st) =>
+      fitSingleLineState(this.stationDisplay(st), this.labelFitW),
+    );
+    this.needsReadout = displayStates.some((s) => s.trimmed);
+    const readoutH = this.needsReadout
+      ? Math.max(...displayStates.map((s) => textHeightPx(s.full, this.readoutW)))
+      : 0;
+    const readoutBandH = this.needsReadout ? GBC_LINE_H + readoutH : 0;
+
+    const usable = boxH - 8 - readoutBandH;
+    this.visibleRows = Math.max(1, Math.min(this.stations.length, Math.floor(usable / this.rowH)));
     for (let i = 0; i < this.visibleRows; i++) {
       this.stationTexts.push(
         new GBCText(this, 14, this.listTop + i * this.rowH, "", {
@@ -163,6 +177,15 @@ export class SpherePlateauScene extends Phaser.Scene {
       );
     }
     this.mark = new GBCText(this, 8, this.listTop, ">", { color: COLOR.textGold, depth: 12 });
+
+    if (this.needsReadout) {
+      const readoutY = this.listTop + this.visibleRows * this.rowH + GBC_LINE_H;
+      this.selectedReadout = new GBCText(this, boxX + 4, readoutY, "", {
+        color: COLOR.textAccent,
+        depth: 12,
+        maxWidthPx: this.readoutW,
+      });
+    }
 
     this.hint = new GBCText(this, 6, GBC_H - 14, "A: select   B: hub", {
       color: COLOR.textDim,
