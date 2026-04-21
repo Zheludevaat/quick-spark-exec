@@ -27,6 +27,12 @@ const CANONICAL: Record<WeddingType, string> = {
 
 export class SealedVesselScene extends Phaser.Scene {
   private save!: SaveSlot;
+  // --- RITUAL CODA (Act 3 pass) ---
+  private sealRing!: Phaser.GameObjects.Arc;
+  private sealCore!: Phaser.GameObjects.Rectangle;
+  private inscriptionBand!: Phaser.GameObjects.Arc;
+  private sealGlow!: Phaser.GameObjects.Arc;
+  private teacherWhisper?: GBCText;
 
   constructor() {
     super("SealedVessel");
@@ -43,25 +49,67 @@ export class SealedVesselScene extends Phaser.Scene {
     spawnMotes(this, { count: 12, color: 0xc8a060, alpha: 0.5 });
     attachHUD(this, () => this.save.stats);
 
-    this.add.circle(GBC_W / 2, GBC_H / 2, 18, 0x000000).setStrokeStyle(1, 0xc8a060);
-    this.add.rectangle(GBC_W / 2, GBC_H / 2, 16, 30, 0x4a2010);
-    new GBCText(this, GBC_W / 2 - 26, GBC_H / 2 + 26, "THE SEALED VESSEL", {
+    // --- STRONGER CENTRAL SEAL IMAGE ---
+    const cx = GBC_W / 2;
+    const cy = GBC_H / 2;
+    // Outer atmospheric glow.
+    this.sealGlow = this.add
+      .circle(cx, cy, 38, 0xc8a060, 0.12)
+      .setDepth(2)
+      .setBlendMode("ADD");
+    this.tweens.add({
+      targets: this.sealGlow,
+      alpha: { from: 0.12, to: 0.22 },
+      scale: { from: 1, to: 1.08 },
+      duration: 2400,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    // Inscription band — a wider ring waiting for the chosen sentence.
+    this.inscriptionBand = this.add
+      .circle(cx, cy, 26, 0x000000, 0)
+      .setStrokeStyle(1, 0x886038, 0.7)
+      .setDepth(3);
+    // Main seal ring.
+    this.sealRing = this.add
+      .circle(cx, cy, 20, 0x000000, 0)
+      .setStrokeStyle(1.5, 0xc8a060, 1)
+      .setDepth(4);
+    // Vessel core.
+    this.sealCore = this.add.rectangle(cx, cy, 14, 28, 0x4a2010).setDepth(5);
+    this.sealCore.setStrokeStyle(1, 0x6a3018);
+    // Subtle ember.
+    const ember = this.add
+      .circle(cx, cy + 4, 2, 0xff8040, 0.85)
+      .setDepth(6)
+      .setBlendMode("ADD");
+    this.tweens.add({
+      targets: ember,
+      alpha: { from: 0.85, to: 0.4 },
+      scale: { from: 1, to: 1.4 },
+      duration: 1300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    new GBCText(this, cx - 26, cy + 26, "THE SEALED VESSEL", {
       color: COLOR.textGold,
-      depth: 5,
+      depth: 7,
     });
 
     if (this.save.flags.teachers_sentence) {
-      const t = new GBCText(this, 6, 18, '"WHAT YOU CALL FAILURE IS A METHOD."', {
+      this.teacherWhisper = new GBCText(this, 6, 18, '"WHAT YOU CALL FAILURE IS A METHOD."', {
         color: COLOR.textGold,
         depth: 5,
         scrollFactor: 0,
       });
+      // Don't fully fade away — let it linger faintly through the ceremony.
       this.tweens.add({
-        targets: t.obj,
-        alpha: 0,
+        targets: this.teacherWhisper.obj,
+        alpha: { from: 1, to: 0.35 },
         duration: 4500,
         delay: 1500,
-        onComplete: () => t.destroy(),
       });
     }
 
