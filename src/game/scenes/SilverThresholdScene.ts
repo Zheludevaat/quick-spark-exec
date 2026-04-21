@@ -1385,6 +1385,12 @@ export class SilverThresholdScene extends Phaser.Scene {
       a.sfx("wipe");
       a.music.stop();
       gbcWipe(this, () => this.scene.start("ImaginalRealm", { save: this.save }));
+      return;
+    }
+    // Optional Reception interactions — last priority.
+    const expanded = this.nearestExpandedReception();
+    if (expanded) {
+      expanded.onInteract({ scene: this.receptionHostShim(), save: this.save });
     }
   }
 }
