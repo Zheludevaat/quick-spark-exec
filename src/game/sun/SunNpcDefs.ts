@@ -34,6 +34,8 @@ export type SunWitness = {
   softening: { who: string; text: string };
   crossReference: Record<string, string>;
   doneFlag: string;
+  /** Short ambient lines murmured while the player walks the Hall. */
+  barks: string[];
 };
 
 export const SUN_WITNESSES: SunWitness[] = [
@@ -42,6 +44,11 @@ export const SUN_WITNESSES: SunWitness[] = [
     name: "THE BIOGRAPHER",
     zone: "testimony",
     doneFlag: "sun_biographer_done",
+    barks: [
+      "THE PROSE WANTS TO FLATTER YOU.",
+      "I HAVE CUT THIS SENTENCE THREE TIMES.",
+      "YOU WERE NEVER QUITE THIS CONSISTENT.",
+    ],
     intro: [
       { who: "BIOGRAPHER", text: "I wrote the version of you that could survive being admired." },
       { who: "BIOGRAPHER", text: "It was elegant. It was coherent. It also had suspiciously good manners." },
@@ -86,6 +93,11 @@ export const SUN_WITNESSES: SunWitness[] = [
     name: "THE BETRAYED WITNESS",
     zone: "archive",
     doneFlag: "sun_betrayed_done",
+    barks: [
+      "I AM STILL HERE. THAT IS THE INCONVENIENT PART.",
+      "YOU EDITED ME OUT WITH SUCH CONFIDENCE.",
+      "ASK ANYONE WHO PAID FOR YOUR LEGIBILITY.",
+    ],
     intro: [
       { who: "WITNESS", text: "I was there for the version you revised out." },
       { who: "WITNESS", text: "You did not exactly lie. You edited with such confidence that truth became underdressed." },
@@ -130,6 +142,11 @@ export const SUN_WITNESSES: SunWitness[] = [
     name: "THE DEVOTED ACCOMPLICE",
     zone: "warmth",
     doneFlag: "sun_accomplice_done",
+    barks: [
+      "I HELPED MAINTAIN THE IMAGE.",
+      "LOVE IS INTERESTED IN FORGERY.",
+      "YOU WERE EASIEST TO ADORE WHEN POLISHED.",
+    ],
     intro: [
       { who: "ACCOMPLICE", text: "I loved your image and helped maintain it. This turns out to have been affectionate and disastrous." },
       { who: "ACCOMPLICE", text: "You were easiest to adore once everything difficult had been arranged into style." },
