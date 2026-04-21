@@ -49,25 +49,25 @@ export const VENUS_NPCS = {
 };
 
 export const VENUS_AMBIENT_NPCS = {
-  etiquetteClerk: {
-    id: "etiquette_clerk",
-    name: "CLERK OF LIGHTING ETIQUETTE",
+  lightingWitness: {
+    id: "lighting_witness",
+    name: "ONE WHO STOOD TOO LONG IN GOOD LIGHT",
     zone: "atrium" as VenusZoneId,
     ambient: [
-      "The angle of sincerity must not exceed the angle of admiration.",
-      "Please queue in the correct emotional register.",
-      "We do not rank wounds by brightness before noon.",
+      "Admiration becomes inaccurate very quickly under copper light.",
+      "Sincerity and display are neighbours here. They do not get on.",
+      "The room flatters first and explains later. It is an old vice.",
     ],
   } satisfies VenusAmbientNpc,
 
-  anniversaryKeeper: {
-    id: "anniversary_keeper",
-    name: "THE ANNIVERSARY KEEPER",
+  repeaterOfVows: {
+    id: "repeater_of_vows",
+    name: "THE REPEATER OF VOWS",
     zone: "ladder" as VenusZoneId,
     ambient: [
-      "We preserve the moment by repeating it until it dies.",
-      "Every vow is safer when the beloved can no longer surprise you.",
-      "I file each love by aesthetic school. Yours is unfiled.",
+      "We repeated the promise until it sounded true, and then fatally until it sounded beautiful.",
+      "Some loves survive surprise. Others frame it and call that devotion.",
+      "I used to think permanence was the same thing as fidelity. The room has been laughing quietly for years.",
     ],
   } satisfies VenusAmbientNpc,
 };
