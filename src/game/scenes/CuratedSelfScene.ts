@@ -253,9 +253,15 @@ export class CuratedSelfScene extends Phaser.Scene {
     vignette.fillRect(0, 0, 4, GBC_H);
     vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
-    drawGBCBox(this, GBC_W - 92, 14, 88, 14);
-    new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL[this.phase], {
+    // Right-anchored "CURATED SELF" plate, sits below the global top stat bar (y=0..13)
+    drawGBCBox(this, GBC_W - 76, 15, 72, 12);
+    new GBCText(this, GBC_W - 72, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
+    // Phase label with a tiny dark backing strip for legibility on the gradient.
+    this.add
+      .rectangle(2, 15, 78, 11, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(100);
+    this.stateText = new GBCText(this, 4, 16, PHASE_LABEL[this.phase], {
       color: COLOR.textGold,
       depth: 101,
     });
@@ -279,14 +285,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       depth: 101,
     });
 
-    drawGBCBox(this, 0, 76, GBC_W, 36);
-    this.logText = new GBCText(this, 4, 81, phaseTaunt(this.phase, this.save), {
+    drawGBCBox(this, 0, 72, GBC_W, 34);
+    this.logText = new GBCText(this, 4, 77, phaseTaunt(this.phase, this.save), {
       color: COLOR.textAccent,
       depth: 102,
       maxWidthPx: GBC_W - 10,
     });
 
-    drawGBCBox(this, 0, 112, GBC_W, 32);
+    drawGBCBox(this, 0, 108, GBC_W, 28);
     this.cmds = [...CMDS_BASE];
     if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
     if (this.save.goldStone) this.cmds.push(CMD_ASCEND);
@@ -301,7 +307,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       t.obj.setData("cmd", c.cmd);
       this.cmdTexts.push(t);
     });
-    this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
+    this.cursorMark = new GBCText(this, 8, 112, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
     this.refreshAvailable();
 
@@ -332,7 +338,7 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   /** Floating gold whisper that fades after a few seconds. */
   private showWhisper(text: string) {
-    const w = new GBCText(this, 4, 30, text, {
+    const w = new GBCText(this, 4, 40, text, {
       color: COLOR.textGold,
       depth: 150,
       maxWidthPx: GBC_W - 8,
@@ -350,17 +356,16 @@ export class CuratedSelfScene extends Phaser.Scene {
   private speak(event: SorynEvent) {
     const line = sorynBark(this.save, event) ?? narratorLine(event);
     const isNarrator = this.save.sorynReleased;
-    // Position above stateText/boss; keep clear of the log box (y=76+).
-    const t = new GBCText(this, 4, 4, line, {
-      color: isNarrator ? COLOR.textGold : COLOR.textAccent,
-      depth: 160,
-      maxWidthPx: GBC_W - 100,
-    });
-    // Draw a subtle backdrop so the line is readable over stars.
+    // Sit below the phase label / "CURATED SELF" plate (which end ~y=27).
     const bg = this.add
-      .rectangle(2, 2, GBC_W - 96, 10, 0x000000, 0.55)
+      .rectangle(2, 28, GBC_W - 8, 10, 0x000000, 0.55)
       .setOrigin(0, 0)
       .setDepth(159);
+    const t = new GBCText(this, 4, 28, line, {
+      color: isNarrator ? COLOR.textGold : COLOR.textAccent,
+      depth: 160,
+      maxWidthPx: GBC_W - 8,
+    });
     this.tweens.add({
       targets: [t.obj, bg],
       alpha: 0,
@@ -374,9 +379,9 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   private cmdPos(i: number) {
-    if (i < 4) return { x: 8 + (i % 2) * 70, y: 118 + Math.floor(i / 2) * 11 };
-    if (i === 4) return { x: 56, y: 138 };
-    return { x: 100, y: 138 }; // ASCEND slot
+    if (i < 4) return { x: 8 + (i % 2) * 70, y: 112 + Math.floor(i / 2) * 9 };
+    if (i === 4) return { x: 56, y: 130 };
+    return { x: 100, y: 130 }; // ASCEND slot
   }
 
   /** Greys out commands that are not valid in the current phase. */
@@ -487,6 +492,10 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
+      // Kill the FACE: cycler from phase 2 before writing PLAN: so they don't ghost.
+      this.faceTimer?.remove(false);
+      this.faceTimer = null;
+      this.shadeLabel.setText("");
       const plan = phase3Plan(this.save);
       this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
@@ -887,8 +896,8 @@ export class EpilogueScene extends Phaser.Scene {
       });
     }
 
-    // Halo behind title
-    const halo = this.add.circle(GBC_W / 2, 22, 24, tint[0], 0.18).setDepth(3);
+    // Halo behind title (lowered to clear the global top stat bar)
+    const halo = this.add.circle(GBC_W / 2, 24, 24, tint[0], 0.18).setDepth(3);
     this.tweens.add({
       targets: halo,
       scale: 1.3,
@@ -911,8 +920,8 @@ export class EpilogueScene extends Phaser.Scene {
       iron: "IRON",
       brittle: "BRITTLE",
     };
-    new GBCText(this, GBC_W / 2 - 22, 14, "ACT THREE", { color: COLOR.textAccent, depth: 10 });
-    new GBCText(this, GBC_W / 2 - 26, 24, `ENDING: ${tierLabel[tier]}`, {
+    new GBCText(this, GBC_W / 2 - 22, 16, "ACT THREE", { color: COLOR.textAccent, depth: 10 });
+    new GBCText(this, GBC_W / 2 - 26, 26, `ENDING: ${tierLabel[tier]}`, {
       color: COLOR.textGold,
       depth: 10,
     });
@@ -925,24 +934,26 @@ export class EpilogueScene extends Phaser.Scene {
     vignette.fillRect(0, 0, 4, GBC_H);
     vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
-    drawGBCBox(this, 8, 36, GBC_W - 16, 70);
-    const paragraphs = endingParagraphs(this.save);
-    let y = 40;
-    for (const para of paragraphs.slice(0, 4)) {
+    // Paragraph box: tighter line spacing, max 3 entries, append overflow to last.
+    drawGBCBox(this, 8, 38, GBC_W - 16, 64);
+    const allParas = endingParagraphs(this.save);
+    const paragraphs =
+      allParas.length <= 3 ? allParas : [...allParas.slice(0, 2), `${allParas[2]} ${allParas.slice(3).join(" ")}`];
+    let y = 42;
+    for (const para of paragraphs) {
       new GBCText(this, 12, y, para, {
         color: COLOR.textLight,
         depth: 110,
         maxWidthPx: GBC_W - 24,
       });
-      y += 16;
+      y += 14;
     }
-
-    // Stats strip
+    // Stats line tucked at the bottom of the paragraph box.
     const ng = this.save.flags.ng_plus ? " ★" : "";
     new GBCText(
       this,
-      8,
-      108,
+      12,
+      94,
       `C:${this.save.stats.clarity} K:${this.save.stats.compassion} V:${this.save.stats.courage} ◆${this.save.shards.length}${ng}`,
       { color: COLOR.textDim, depth: 110 },
     );
@@ -961,12 +972,12 @@ export class EpilogueScene extends Phaser.Scene {
       .setDepth(199);
     this.optionTexts = this.options.map(
       (o, i) =>
-        new GBCText(this, 18, GBC_H - 36 + i * 11, o.label, {
+        new GBCText(this, 18, GBC_H - 34 + i * 10, o.label, {
           color: i === 0 ? COLOR.textGold : COLOR.textDim,
           depth: 200,
         }),
     );
-    this.cursorMark = new GBCText(this, 8, GBC_H - 36, "▶", {
+    this.cursorMark = new GBCText(this, 8, GBC_H - 34, "▶", {
       color: COLOR.textGold,
       depth: 200,
     });
@@ -1003,7 +1014,7 @@ export class EpilogueScene extends Phaser.Scene {
     this.optionTexts.forEach((t, i) =>
       t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim),
     );
-    this.cursorMark.setPosition(8, GBC_H - 36 + this.cursor * 11);
+    this.cursorMark.setPosition(8, GBC_H - 34 + this.cursor * 10);
   }
 
   private choose() {
