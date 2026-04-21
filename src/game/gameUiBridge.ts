@@ -135,9 +135,33 @@ export function setSceneSnapshot(patch: Partial<SceneSnapshot>) {
   emit();
 }
 
-export function setOverlaySnapshot(patch: Partial<OverlaySnapshot>) {
-  snap = { ...snap, overlay: { ...snap.overlay, ...patch } };
+export function getOverlaySnapshot(): OverlaySnapshot {
+  return snap.overlay;
+}
+
+/**
+ * Merge `patch` into the current overlay snapshot AND derive `modalLock`
+ * from the composite of blocking overlay booleans. This is the canonical
+ * way to mutate overlay state — callers should never set `modalLock`
+ * directly.
+ */
+export function patchOverlaySnapshot(patch: Partial<OverlaySnapshot>) {
+  const next = { ...snap.overlay, ...patch };
+  next.modalLock =
+    !!next.settingsOpen ||
+    !!next.loreOpen ||
+    !!next.inventoryOpen ||
+    !!next.inquiryActive;
+  snap = { ...snap, overlay: next };
   emit();
+}
+
+/**
+ * Back-compat alias. Routes through `patchOverlaySnapshot` so legacy
+ * callers automatically benefit from derived `modalLock`.
+ */
+export function setOverlaySnapshot(patch: Partial<OverlaySnapshot>) {
+  patchOverlaySnapshot(patch);
 }
 
 export function resetGameUiSnapshot() {

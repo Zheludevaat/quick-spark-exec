@@ -9,7 +9,7 @@
  *
  * Closed by tapping the close button or pressing virtual B.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadSave } from "@/game/save";
 import { subscribeVirtualInput } from "@/game/virtualInput";
 import type { SaveSlot } from "@/game/types";
@@ -45,14 +45,22 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
     setSave(loadSave());
   }, [open]);
 
-  // Close on virtual B (cancel) press.
+  // Idempotent close — protects against double-fire when the shell
+  // intercepts B and the virtual-input subscription also fires.
+  const safeClose = useCallback(() => {
+    if (!open) return;
+    onClose();
+  }, [open, onClose]);
+
+  // Fallback: close on virtual B (cancel). The shell normally
+  // intercepts B before it reaches here, but this stays as a safety net.
   useEffect(() => {
     if (!open) return;
     return subscribeVirtualInput((e) => {
-      if (e.type === "down" && e.action === "cancel") onClose();
-      if (e.type === "pulse" && e.action === "cancel") onClose();
+      if (e.type === "down" && e.action === "cancel") safeClose();
+      if (e.type === "pulse" && e.action === "cancel") safeClose();
     });
-  }, [open, onClose]);
+  }, [open, safeClose]);
 
   const sections = useMemo(() => {
     if (!save) return null;
@@ -109,7 +117,7 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={safeClose}
             className="rounded px-2 py-1 text-xs"
             style={{
               background: "rgba(216,74,74,0.85)",

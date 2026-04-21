@@ -35,7 +35,8 @@ import {
 import {
   subscribeGameUi,
   getGameUiSnapshot,
-  setOverlaySnapshot,
+  getOverlaySnapshot,
+  patchOverlaySnapshot,
   type OverlaySnapshot,
 } from "@/game/gameUiBridge";
 import { getControls, subscribeControls } from "@/game/controls";
@@ -157,18 +158,42 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   }, []);
 
   const openInventory = useCallback(() => {
-    if (settingsOpen || loreOpen) return;
+    const ov = getOverlaySnapshot();
+    if (ov.settingsOpen || ov.loreOpen) return;
     setInventoryOpen(true);
-    setOverlaySnapshot({ inventoryOpen: true });
+    patchOverlaySnapshot({ inventoryOpen: true });
     clearVirtualInput();
-  }, [settingsOpen, loreOpen]);
+  }, []);
 
   // Closing the inventory clears any held actions.
   const closeInventory = useCallback(() => {
     setInventoryOpen(false);
-    setOverlaySnapshot({ inventoryOpen: false });
+    patchOverlaySnapshot({ inventoryOpen: false });
     clearVirtualInput();
   }, []);
+
+  // ---------------------------------------------------------------------
+  // B-button routing.
+  //
+  // Inventory is owned by the shell. If it is open, B closes it and we
+  // SWALLOW the cancel — never letting it reach the Phaser scene
+  // underneath (which would otherwise leak as a Witness/cancel action).
+  //
+  // For settings/lore (Phaser-owned), B passes through to the scene's
+  // own cancel handler. For all other states, B is normal cancel.
+  // ---------------------------------------------------------------------
+  const handleBPress = useCallback(() => {
+    if (inventoryOpen) {
+      closeInventory();
+      return;
+    }
+    emitVirtualDown("cancel");
+  }, [inventoryOpen, closeInventory]);
+
+  const handleBRelease = useCallback(() => {
+    if (inventoryOpen) return;
+    emitVirtualUp("cancel");
+  }, [inventoryOpen]);
 
   const leftRail = (
     <RailControls
@@ -186,8 +211,8 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
       cancelDisabled={cancelDisabled}
       onAPress={() => emitVirtualDown("action")}
       onARelease={() => emitVirtualUp("action")}
-      onBPress={() => emitVirtualDown("cancel")}
-      onBRelease={() => emitVirtualUp("cancel")}
+      onBPress={handleBPress}
+      onBRelease={handleBRelease}
     />
   );
 
