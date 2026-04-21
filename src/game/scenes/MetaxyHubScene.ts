@@ -22,6 +22,7 @@ import { attachHUD } from "./hud";
 import { onActionDown, onDirection } from "../controls";
 import { runDialog } from "./hud";
 import { getAudio } from "../audio";
+import { setSceneSnapshot } from "../gameUiBridge";
 
 function sunPortalUnlocked(s: SaveSlot): boolean {
   return !!s.garmentsReleased.venus || !!s.garmentsReleased.sun || !!s.flags.legacy_sun_bridge;
@@ -162,6 +163,7 @@ export class MetaxyHubScene extends Phaser.Scene {
     new GBCText(this, subX, 14, subText, { color: COLOR.textDim, depth: 10 });
 
     attachHUD(this, () => this.save.stats);
+    this.publishMinimap();
 
     // Build portals
     PORTALS.forEach((p, i) => {
@@ -246,6 +248,40 @@ export class MetaxyHubScene extends Phaser.Scene {
     } else {
       this.hint.setText("Locked. Pass the prior sphere first.");
     }
+    this.publishMinimap();
+  }
+
+  /**
+   * Publish the seven-portal ascent as Tier-2 minimap nodes for the React
+   * shell. The currently-cursored portal is marked active.
+   */
+  private publishMinimap() {
+    const cursorSphere = PORTALS[this.cursor]?.sphere;
+    // Normalized layout: vertical ascent with a slight serpentine wiggle so
+    // the schematic reads as motion, not a column of dots.
+    const layout: { sphere: SphereKey; label: string; x: number; y: number }[] = [
+      { sphere: "moon", label: "Moon", x: 0.5, y: 0.92 },
+      { sphere: "mercury", label: "Mercury", x: 0.4, y: 0.78 },
+      { sphere: "venus", label: "Venus", x: 0.6, y: 0.64 },
+      { sphere: "sun", label: "Sun", x: 0.5, y: 0.5 },
+      { sphere: "mars", label: "Mars", x: 0.38, y: 0.36 },
+      { sphere: "jupiter", label: "Jupiter", x: 0.62, y: 0.22 },
+      { sphere: "saturn", label: "Saturn", x: 0.5, y: 0.08 },
+    ];
+    setSceneSnapshot({
+      key: "MetaxyHub",
+      label: "Metaxy Hub",
+      act: ACT_BY_SCENE.MetaxyHub,
+      zone: "Portal Ascent",
+      nodes: layout.map((n) => ({
+        id: n.sphere,
+        label: n.label,
+        x: n.x,
+        y: n.y,
+        active: n.sphere === cursorSphere,
+      })),
+      marker: null,
+    });
   }
 
   private choose() {

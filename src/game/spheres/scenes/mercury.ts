@@ -28,6 +28,7 @@ import {
 import { ACT_BY_SCENE, type SaveSlot } from "../../types";
 import { writeSave } from "../../save";
 import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "../../scenes/hud";
+import { setSceneSnapshot } from "../../gameUiBridge";
 import { onActionDown } from "../../controls";
 import { getAudio } from "../../audio";
 import { askSphere } from "../SpherePlateauScene";
@@ -102,6 +103,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.buildStations();
 
     attachHUD(this, () => this.mSave.stats);
+    setSceneSnapshot({
+      key: "MercuryPlateau",
+      label: "Mercury — Tower of Reasons",
+      act: ACT_BY_SCENE.MercuryPlateau ?? 4,
+      zone: "Tower of Reasons",
+      nodes: null,
+      marker: null,
+    });
 
     // Title strip — width-safe
     const titleText = fitSingleLineText("TOWER OF REASONS", GBC_W - 12);
@@ -982,6 +991,14 @@ export class MercuryTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: mercuryConfig.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.mSave.stats);
+    setSceneSnapshot({
+      key: "MercuryTrial",
+      label: "Mercury — Hermaia's Trial",
+      act: ACT_BY_SCENE.MercuryTrial ?? 4,
+      zone: "Hermaia's Trial",
+      nodes: null,
+      marker: null,
+    });
 
     // Title
     const rawTitle = "HERMAIA'S TRIAL";

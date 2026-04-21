@@ -24,6 +24,7 @@ import {
 import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
+import { setSceneSnapshot } from "../gameUiBridge";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { onActionDown, onDirection } from "../controls";
 import { getAudio } from "../audio";
@@ -112,6 +113,14 @@ export class SpherePlateauScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: this.cfg.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.save.stats);
+    setSceneSnapshot({
+      key: this.scene.key,
+      label: `${this.cfg.label} Plateau`,
+      act: ACT_BY_SCENE[this.scene.key as keyof typeof ACT_BY_SCENE] ?? 4,
+      zone: `${this.cfg.label} — Plateau`,
+      nodes: null,
+      marker: null,
+    });
 
     this.title = new GBCText(this, GBC_W / 2 - 36, 16, `${this.cfg.label} PLATEAU`, {
       color: COLOR.textGold,

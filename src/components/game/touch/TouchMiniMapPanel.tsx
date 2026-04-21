@@ -36,11 +36,19 @@ export function TouchMiniMapPanel() {
         ACT {scene.act || "—"}
       </div>
       <div
-        className="text-[10px] mb-1.5 leading-tight truncate"
+        className="text-[10px] mb-1 leading-tight truncate"
         style={{ color: "#eef3ff" }}
       >
         {scene.label || "—"}
       </div>
+      {scene.zone && (
+        <div
+          className="text-[9px] uppercase tracking-wider mb-1.5 truncate"
+          style={{ color: "#e8c890", opacity: 0.85 }}
+        >
+          {scene.zone}
+        </div>
+      )}
       <div
         className="relative rounded-sm"
         style={{

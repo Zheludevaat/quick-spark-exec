@@ -5,6 +5,8 @@ import type { ImaginalRegion, SaveSlot } from "../types";
 import { attachHUD, mountImaginalProgressBadge, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
+import { setSceneSnapshot } from "../gameUiBridge";
+import { ACT_BY_SCENE } from "../types";
 import {
   dispatchKnot,
   KNOT_TAGLINE,
@@ -320,6 +322,22 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.titleText.setText(REGION_TITLE[region]);
     this.cameras.main.setBackgroundColor(REGION_BG[region]);
     this.cameras.main.fadeIn(400);
+
+    // Publish region as Tier-2 minimap data: three nodes for the imaginal
+    // arc (pools → field → corridor) with the current region marked active.
+    const regionLayout: { id: ImaginalRegion; label: string; x: number; y: number }[] = [
+      { id: "pools", label: "Pools", x: 0.2, y: 0.5 },
+      { id: "field", label: "Field", x: 0.5, y: 0.5 },
+      { id: "corridor", label: "Corridor", x: 0.8, y: 0.5 },
+    ];
+    setSceneSnapshot({
+      key: "ImaginalRealm",
+      label: "Imaginal Realm",
+      act: ACT_BY_SCENE.ImaginalRealm,
+      zone: REGION_TITLE[region],
+      nodes: regionLayout.map((r) => ({ ...r, active: r.id === region })),
+      marker: null,
+    });
 
     this.regionRoot = this.add.container(0, 0).setDepth(0);
 

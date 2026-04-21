@@ -21,6 +21,7 @@ import {
   getControls,
   subscribeControls,
   isActionDown,
+  isTouchLandscapeMode,
   normalizeKeyEvent,
   buzz,
   type GameAction,
@@ -63,8 +64,8 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   reapplyLcd(scene);
 
-  // Resolve presentation mode for this HUD instance.
-  const isTouchShell = getControls().interfaceMode === "touch_landscape";
+  // Resolve presentation mode for this HUD instance — must match the route shell.
+  const isTouchShell = isTouchLandscapeMode();
 
   // Publish scene metadata to React shell.
   const sceneKey = scene.scene.key;
@@ -79,12 +80,14 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (settingsOpen) return;
     settingsOpen = true;
     scene.data.set("__settingsOpen", true);
-    setOverlaySnapshot({ settingsOpen: true, modalLock: true });
+    // Patch only our own flag — let the shell derive modalLock from
+    // the composite overlay state (settings | lore | inventory).
+    setOverlaySnapshot({ settingsOpen: true });
     clearVirtualInput();
     openSettings(scene, () => {
       settingsOpen = false;
       scene.data.set("__settingsOpen", false);
-      setOverlaySnapshot({ settingsOpen: false, modalLock: loreOpen });
+      setOverlaySnapshot({ settingsOpen: false });
       rebuildPad();
     });
   };
@@ -94,12 +97,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (!s) return;
     loreOpen = true;
     scene.data.set("__loreOpen", true);
-    setOverlaySnapshot({ loreOpen: true, modalLock: true });
+    setOverlaySnapshot({ loreOpen: true });
     clearVirtualInput();
     openLoreLog(scene, s, () => {
       loreOpen = false;
       scene.data.set("__loreOpen", false);
-      setOverlaySnapshot({ loreOpen: false, modalLock: settingsOpen });
+      setOverlaySnapshot({ loreOpen: false });
     });
   };
   // Expose for gear / lore touch buttons.
@@ -110,6 +113,16 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     (window as unknown as Record<string, unknown>).__hermeticOpenSettings = openSettingsGuarded;
     (window as unknown as Record<string, unknown>).__hermeticOpenLore = openLoreGuarded;
   }
+  // Clear our globals on shutdown ONLY if they still point to this scene's
+  // handlers — avoid clobbering a newer scene that has already replaced them.
+  const cleanupShellOpeners = () => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as Record<string, unknown>;
+    if (w.__hermeticOpenSettings === openSettingsGuarded) delete w.__hermeticOpenSettings;
+    if (w.__hermeticOpenLore === openLoreGuarded) delete w.__hermeticOpenLore;
+  };
+  scene.events.once("shutdown", cleanupShellOpeners);
+  scene.events.once("destroy", cleanupShellOpeners);
 
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {
@@ -266,7 +279,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     pad?.destroy();
     pad = null;
     const c = getControls();
-    if (c.interfaceMode === "touch_landscape") return;
+    if (isTouchLandscapeMode()) return;
     if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
     pad = buildTouchPad(scene);
   };
@@ -914,7 +927,7 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
-  const isTouchShell = getControls().interfaceMode === "touch_landscape";
+  const isTouchShell = isTouchLandscapeMode();
   const boxX = 4;
   const boxW = GBC_W - 8;
   const innerW = boxW - 16;
