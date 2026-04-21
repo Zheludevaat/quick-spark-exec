@@ -180,7 +180,10 @@ export class TitleScene extends Phaser.Scene {
     });
     devBtn.obj
       .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.openSkipMenu());
+      .on("pointerdown", () => {
+        if (settingsOpen) return;
+        this.openSkipMenu();
+      });
 
     // ---- Boot audio on first user gesture ----
     const audio = getAudio();
