@@ -1,14 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { DesktopGameShell } from "@/components/game/DesktopGameShell";
+import { TouchLandscapeShell } from "@/components/game/TouchLandscapeShell";
+import {
+  getEffectiveInterfaceMode,
+  subscribeControls,
+  type InterfaceMode,
+} from "@/game/controls";
+import { installVirtualInputGlobals, clearVirtualInput } from "@/game/virtualInput";
+import { resetGameUiSnapshot } from "@/game/gameUiBridge";
 
 export const Route = createFileRoute("/")({
   component: GamePage,
   head: () => ({
     meta: [
       { title: "Hermetic Comedy — a pixel-art RPG of small verbs" },
-      { name: "description", content: "A multi-act pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness." },
+      {
+        name: "description",
+        content:
+          "A multi-act pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness.",
+      },
       { property: "og:title", content: "Hermetic Comedy" },
-      { property: "og:description", content: "A GBC-style RPG across the Last Day, the Silver Threshold, and the Imaginal Realm." },
+      {
+        property: "og:description",
+        content:
+          "A GBC-style RPG across the Last Day, the Silver Threshold, and the Imaginal Realm.",
+      },
     ],
   }),
 });
@@ -17,82 +34,72 @@ function GamePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [booted, setBooted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<InterfaceMode>(() => {
+    if (typeof window === "undefined") return "desktop";
+    return getEffectiveInterfaceMode();
+  });
 
+  // Boot Phaser once and keep the same instance across mode toggles.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hostRef.current) return;
     let game: import("phaser").Game | null = null;
     let cancelled = false;
+
+    installVirtualInputGlobals();
+    resetGameUiSnapshot();
+
     (async () => {
       try {
-        console.log("[game] importing createGame…");
         const mod = await import("@/game/createGame");
-        console.log("[game] import resolved", Object.keys(mod));
         if (cancelled || !hostRef.current) return;
-        console.log("[game] calling createGame()");
         game = mod.createGame(hostRef.current);
-        console.log("[game] createGame returned", game);
         setBooted(true);
       } catch (e) {
         console.error("[game] boot failed", e);
-        setError(e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e));
+        setError(
+          e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e),
+        );
       }
     })();
     return () => {
       cancelled = true;
+      clearVirtualInput();
       game?.destroy(true);
     };
   }, []);
 
-  return (
+  // Live-react to interface mode changes from Settings.
+  useEffect(() => {
+    return subscribeControls(() => {
+      const next = getEffectiveInterfaceMode();
+      setMode((prev) => (prev === next ? prev : next));
+      clearVirtualInput();
+    });
+  }, []);
+
+  // The Phaser host is the single mounted canvas — only one of the two
+  // shells renders it at a time. We keep the *same* DOM node across mode
+  // switches by using a stable ref and a key that flips with the mode,
+  // so that React re-parents instead of unmounting Phaser.
+  const hostNode = (
     <div
-      style={{
-        minHeight: "100vh",
-        background: "#05070d",
-        color: "#eef3ff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        fontFamily: "monospace",
-      }}
-    >
-      {/* Visually-hidden H1 for SEO — the in-game scene shows the visible title. */}
-      <h1
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          padding: 0,
-          margin: -1,
-          overflow: "hidden",
-          clip: "rect(0,0,0,0)",
-          whiteSpace: "nowrap",
-          border: 0,
-        }}
-      >
-        Hermetic Comedy — a pixel-art RPG of small verbs
-      </h1>
+      ref={hostRef}
+      id="phaser-host"
+      style={{ width: "100%", height: "100%" }}
+    />
+  );
 
-      <div
-        ref={hostRef}
-        id="phaser-host"
-        style={{
-          width: "min(96vw, 720px)",
-          aspectRatio: "160 / 144",
-          imageRendering: "pixelated",
-          border: "1px solid #2a3550",
-          background: "#05070d",
-          boxShadow: "0 0 60px rgba(74,120,200,0.15)",
-        }}
-      />
-
-      <footer style={{ fontSize: 10, opacity: 0.6, textAlign: "center", padding: "0 16px", maxWidth: 720 }}>
-        Arrow keys / WASD · Space or Enter = A · B or Q = witness · L = lore · P or Esc = settings · Tap ≡ on touch
-        {!booted && !error && <div style={{ marginTop: 4 }}>Loading the silver…</div>}
-        {error && <div style={{ marginTop: 4, color: "#d86a6a" }}>Failed to load: {error}</div>}
-      </footer>
-    </div>
+  if (mode === "touch_landscape") {
+    return (
+      <TouchLandscapeShell booted={booted} error={error}>
+        {hostNode}
+      </TouchLandscapeShell>
+    );
+  }
+  return (
+    <DesktopGameShell booted={booted} error={error}>
+      {hostNode}
+    </DesktopGameShell>
   );
 }
