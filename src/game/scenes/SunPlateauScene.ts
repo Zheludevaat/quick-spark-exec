@@ -55,9 +55,9 @@ import {
   makeSunZoneLabel,
 } from "../sun/SunUi";
 import {
-  buildSunBackdrop,
-  addSunForeground,
-  addSunAftermath,
+  buildSunHallBackdrop,
+  addSunHallForeground,
+  addSunHallAftermath,
 } from "../sun/SunArt";
 import { SUN_ENV_READS, sunZoneAftermath } from "../sun/SunPlateauProps";
 
