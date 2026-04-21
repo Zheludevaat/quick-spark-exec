@@ -162,6 +162,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     container: Phaser.GameObjects.Container;
     halo: Phaser.GameObjects.Arc;
     setMood: (m: SoulMood) => void;
+    destroy: () => void;
     mood: SoulMood;
     nameLabel?: GBCText;
     hookLabel?: GBCText;
@@ -307,10 +308,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.seedEchoes = [];
     // Tear down any souls from the previous region.
     this.souls.forEach((s) => {
-      s.container.destroy();
-      s.halo.destroy();
+      s.destroy();
       s.nameLabel?.destroy();
       s.hookLabel?.destroy();
+      s.bark?.destroy();
     });
     this.souls = [];
     this.region = region;
@@ -435,6 +436,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         container: built.container,
         halo: built.halo,
         setMood: built.setMood,
+        destroy: built.destroy,
         mood: initialMood,
         nearTime: 0,
         barkShown: false,
