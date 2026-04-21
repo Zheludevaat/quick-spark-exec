@@ -17,7 +17,7 @@ import * as Phaser from "phaser";
 import type { SaveSlot } from "../../types";
 import { ACT_BY_SCENE } from "../../types";
 import { writeSave } from "../../save";
-import { attachHUD, runDialog } from "../../scenes/hud";
+import { attachHUD, runDialog, InputState } from "../../scenes/hud";
 import {
   GBC_W,
   GBC_H,
@@ -28,7 +28,7 @@ import {
   spawnMotes,
 } from "../../gbcArt";
 import { getAudio } from "../../audio";
-import { onActionDown, onDirection } from "../../controls";
+import { onActionDown } from "../../controls";
 import { venusConfig } from "../configs/venus";
 import { askSphere } from "../SpherePlateauScene";
 
@@ -137,6 +137,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private subtitle!: GBCText;
 
   private player!: Phaser.GameObjects.Arc;
+  private moveInput!: InputState;
   private playerVx = 0;
   private playerVy = 0;
 
@@ -146,9 +147,12 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private activeAttune: AttuneTarget | null = null;
   private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
-  private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
-  private prevPlayerPos = { x: 0, y: 0 };
   private kypriaPresentation?: EncounterPresentationHandle;
+
+  private destroyKypriaPresentation() {
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = undefined;
+  }
 
   constructor() {
     super("VenusPlateau");
@@ -181,6 +185,10 @@ export class VenusPlateauScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: venusConfig.accent, alpha: 0.42 });
 
     attachHUD(this, () => this.save.stats);
+    this.moveInput = new InputState(this);
+
+    this.events.once("shutdown", () => this.destroyKypriaPresentation());
+    this.events.once("destroy", () => this.destroyKypriaPresentation());
 
     this.zoneLabel = new GBCText(
       this,
@@ -205,14 +213,6 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.player.setStrokeStyle(1, 0x000000, 0.6);
 
     this.loadZone(this.zone, true);
-
-    onDirection(this, (d) => {
-      if (this.modal || this.busy) return;
-      if (d === "left") this.lastInputDir = { x: -1, y: 0 };
-      else if (d === "right") this.lastInputDir = { x: 1, y: 0 };
-      else if (d === "up") this.lastInputDir = { x: 0, y: -1 };
-      else if (d === "down") this.lastInputDir = { x: 0, y: 1 };
-    });
 
     onActionDown(this, "action", () => {
       if (this.modal || this.busy) return;
@@ -247,6 +247,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     writeSave(this.save);
 
     // Tear down previous zone visuals
+    this.destroyKypriaPresentation();
     this.root.removeAll(true);
     this.hotspots = [];
     this.doors = [];
@@ -261,8 +262,6 @@ export class VenusPlateauScene extends Phaser.Scene {
     // Place player at the zone's entry point
     const entry = this.entryFor(zone);
     this.player.setPosition(entry.x, entry.y);
-    this.prevPlayerPos = { x: entry.x, y: entry.y };
-    this.lastInputDir = { x: 0, y: 0 };
 
     switch (zone) {
       case "atrium":
@@ -354,7 +353,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
     // Etiquette clerk NPC at center-back
     this.placeAmbientNpc(
-      VENUS_AMBIENT_NPCS.etiquetteClerk,
+      VENUS_AMBIENT_NPCS.lightingWitness,
       80,
       55,
       0xa8b8d8,
@@ -434,15 +433,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: puzzleDone ? "the work, finished by witness" : "ATTUNE: the unfinished work",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "unfinished_work") ? "*" : null),
-      onAct: () => this.tryAttune("unfinished_work", "gallery", 1800, () => {
-        markVenusPuzzleDone(this.save, "unfinished_work");
-        markVenusFlag(this.save, "curatorStarted");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "The drape settles. The painting underneath was never finished." },
-          { who: "?", text: "Witnessed. Not improved." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "unfinished_work",
+          "gallery",
+          1800,
+          () => {
+            markVenusPuzzleDone(this.save, "unfinished_work");
+            markVenusFlag(this.save, "curatorStarted");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "The drape settles. The painting underneath was never finished." },
+            { who: "?", text: "Witnessed. Not improved." },
+          ],
+        ),
     });
 
     this.doors.push({ to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" });
@@ -498,15 +503,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: puzzleDone ? "you let them stay incomplete" : "ATTUNE: the reconstructed beloved",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "reconstruction_chamber") ? "*" : null),
-      onAct: () => this.tryAttune("reconstruction_chamber", "reconstruction", 2200, () => {
-        markVenusPuzzleDone(this.save, "reconstruction_chamber");
-        markVenusFlag(this.save, "reconstructionSeen");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "The notes do not become a person." },
-          { who: "?", text: "The person was never the notes." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "reconstruction_chamber",
+          "reconstruction",
+          2200,
+          () => {
+            markVenusPuzzleDone(this.save, "reconstruction_chamber");
+            markVenusFlag(this.save, "reconstructionSeen");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "The notes do not become a person." },
+            { who: "?", text: "The person was never the notes." },
+          ],
+        ),
     });
 
     this.doors.push({ to: "recognition_hall", x: 0, y: 50, w: 8, h: 30, label: "← RECOGNITION" });
@@ -528,7 +539,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
     // Anniversary keeper
     this.placeAmbientNpc(
-      VENUS_AMBIENT_NPCS.anniversaryKeeper,
+      VENUS_AMBIENT_NPCS.repeaterOfVows,
       35,
       70,
       0xa890b8,
@@ -599,15 +610,21 @@ export class VenusPlateauScene extends Phaser.Scene {
       label: releaseDone ? "the audience is released" : "ATTUNE: release the audience",
       enabled: () => true,
       badge: () => (isVenusPuzzleDone(this.save, "release_audience") ? "*" : null),
-      onAct: () => this.tryAttune("release_audience", "threshold", 2400, () => {
-        markVenusPuzzleDone(this.save, "release_audience");
-        markVenusFlag(this.save, "audienceReleased");
-        writeSave(this.save);
-        runDialog(this, [
-          { who: "?", text: "You realise no one is watching." },
-          { who: "?", text: "You stay anyway." },
-        ]);
-      }),
+      onAct: () =>
+        this.tryAttune(
+          "release_audience",
+          "threshold",
+          2400,
+          () => {
+            markVenusPuzzleDone(this.save, "release_audience");
+            markVenusFlag(this.save, "audienceReleased");
+            writeSave(this.save);
+          },
+          [
+            { who: "?", text: "You realise no one is watching." },
+            { who: "?", text: "You stay anyway." },
+          ],
+        ),
     });
 
     // Trial entry hotspot
@@ -748,47 +765,48 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number) {
     if (this.modal || this.busy) {
-      // While modal, dampen velocity so re-entry doesn't slide
       this.playerVx = 0;
       this.playerVy = 0;
       return;
     }
 
     const dt = deltaMs / 1000;
+    const input = this.moveInput.poll();
 
-    // Resolve input
-    const target = this.lastInputDir;
-    // Decay direction so a single dpad tick = one nudge but holding the
-    // controls keyboard helper (which fires on every interval) keeps motion
-    this.playerVx = target.x * PLAYER_SPEED;
-    this.playerVy = target.y * PLAYER_SPEED;
-    this.lastInputDir = { x: 0, y: 0 };
+    const rawX = (input.left ? -1 : 0) + (input.right ? 1 : 0);
+    const rawY = (input.up ? -1 : 0) + (input.down ? 1 : 0);
+    const mag = Math.hypot(rawX, rawY);
 
-    // Move player (clamped)
+    if (mag > 0) {
+      this.playerVx = (rawX / mag) * PLAYER_SPEED;
+      this.playerVy = (rawY / mag) * PLAYER_SPEED;
+    } else {
+      this.playerVx = 0;
+      this.playerVy = 0;
+    }
+
     const oldX = this.player.x;
     const oldY = this.player.y;
     const nx = Phaser.Math.Clamp(this.player.x + this.playerVx * dt, 8, GBC_W - 8);
     const ny = Phaser.Math.Clamp(this.player.y + this.playerVy * dt, 30, GBC_H - 16);
     this.player.setPosition(nx, ny);
+
     const moved = Math.abs(nx - oldX) > 0.1 || Math.abs(ny - oldY) > 0.1;
 
-    // ATTUNE: any movement breaks attune (unless explicitly allowed)
     if (this.activeAttune) {
       if (moved && !this.activeAttune.allowMoveWhileAttuning) {
         this.cancelActiveAttune(false);
       } else {
         const completed = updateAttune(this.activeAttune, deltaMs);
-        if (this.attuneRing) this.attuneRing.update(attuneProgress(this.activeAttune));
-        if (completed) {
-          const onDone = this.activeAttune.onComplete;
-          this.cancelActiveAttune(true, /*keepRing*/ false);
-          // onComplete already fired inside updateAttune via target.onComplete
-          void onDone;
+        if (this.attuneRing) {
+          this.attuneRing.update(attuneProgress(this.activeAttune));
+        }
+        if (completed && this.attuneRing) {
+          this.attuneRing.update(1);
         }
       }
     }
 
-    // Door overlap → transition
     for (const d of this.doors) {
       if (
         nx >= d.x &&
@@ -799,8 +817,6 @@ export class VenusPlateauScene extends Phaser.Scene {
         const link = VENUS_ZONE_LINKS[this.zone];
         if (link.includes(d.to)) {
           if (d.to === "threshold" && !venusCrackingReady(this.save) && this.zone === "atrium") {
-            // Atrium → threshold from south door requires readiness; otherwise
-            // bounce them back with a hint
             this.player.setPosition(oldX, oldY);
             this.flashHint("the threshold is not yet for you.");
             return;
@@ -811,7 +827,6 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
     }
 
-    // Hotspot proximity → update hint
     this.refreshHintForProximity();
   }
 
@@ -914,7 +929,6 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private startLadderRung(idx: number, score: number) {
     if (idx >= 3) {
-      // Resolve
       if (score >= 2) {
         markVenusFlag(this.save, "ladderDone");
         markVenusPuzzleDone(this.save, "ladder_step_3");
@@ -946,13 +960,11 @@ export class VenusPlateauScene extends Phaser.Scene {
       return;
     }
 
-    // Build a small in-place ATTUNE ring for the rung
     const cx = GBC_W / 2;
     const cy = 60 + idx * 14;
     const ring = makeVenusAttuneRing(this, cx, cy, 8);
     let elapsed = 0;
     const requiredMs = 1100;
-    const failWindow = 600; // pressing/moving in this window after start = greedy
     let resolved = false;
     let cleanupAct: (() => void) | null = null;
 
@@ -965,9 +977,9 @@ export class VenusPlateauScene extends Phaser.Scene {
         if (elapsed >= requiredMs && !resolved) {
           resolved = true;
           tick.remove(false);
-          ring.destroy();
           cleanupAct?.();
-          this.startLadderRung(idx + 1, score + 1);
+          ring.complete();
+          this.time.delayedCall(240, () => this.startLadderRung(idx + 1, score + 1));
         }
       },
     });
@@ -976,58 +988,74 @@ export class VenusPlateauScene extends Phaser.Scene {
       if (resolved) return;
       resolved = true;
       tick.remove(false);
-      ring.destroy();
       cleanupAct?.();
-      // Greedy press = counted as 0
+      ring.break();
       this.flashHint("reached. counted as zero.");
-      this.startLadderRung(idx + 1, elapsed < failWindow ? score : score + 1);
+      this.time.delayedCall(240, () => this.startLadderRung(idx + 1, score));
     });
   }
-
-  // -----------------------------------------------------------------
-  // ATTUNE wrapper for in-zone hotspots
-  // -----------------------------------------------------------------
 
   private tryAttune(
     id: string,
     zone: string,
     requiredMs: number,
-    onComplete: () => void,
+    onResolved: () => void,
+    completionLines: { who: string; text: string }[],
   ) {
     if (this.activeAttune) {
       this.cancelActiveAttune(false);
     }
-    const target = createAttuneTarget(id, zone, requiredMs, {
-      onStart: () => {},
-      onBreak: () => {
-        this.flashHint("attune broken. you reached.");
-      },
-      onComplete: () => {
-        getAudio().sfx("resolve");
-        onComplete();
-        this.modal = false;
-        // Refresh zone to update labels/badges
-        this.time.delayedCall(900, () => gbcWipe(this, () => this.loadZone(this.zone, true)));
-      },
-    });
-    startAttune(target);
-    this.activeAttune = target;
-    // Show ring at player position
+
     const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
     this.attuneRing = ring;
-    this.flashHint("attune. do not move.");
+
+    const target = createAttuneTarget(id, zone, requiredMs, {
+      onBreak: () => {
+        this.activeAttune = null;
+        this.attuneRing?.break();
+        this.attuneRing = null;
+        this.flashHint("attune broken. wanting arrived too early.");
+      },
+      onComplete: () => {
+        this.activeAttune = null;
+        getAudio().sfx("resolve");
+        this.attuneRing?.complete();
+        this.attuneRing = null;
+
+        onResolved();
+
+        this.modal = true;
+        this.time.delayedCall(380, () => {
+          runDialog(this, completionLines, () => {
+            this.modal = false;
+            gbcWipe(this, () => this.loadZone(this.zone, true));
+          });
+        });
+      },
+    });
+
+    startAttune(target);
+    this.activeAttune = target;
+    this.flashHint("attune. hold still.");
   }
 
-  private cancelActiveAttune(silent: boolean, keepRing = false) {
-    if (this.activeAttune && this.activeAttune.state === "active" && !silent) {
+  private cancelActiveAttune(silent: boolean) {
+    if (!this.activeAttune) {
+      if (this.attuneRing) {
+        this.attuneRing.destroy();
+        this.attuneRing = null;
+      }
+      return;
+    }
+
+    if (this.activeAttune.state === "active" && !silent) {
       breakAttune(this.activeAttune);
     }
+
     this.activeAttune = null;
-    if (!keepRing && this.attuneRing) {
+
+    if (silent && this.attuneRing) {
       this.attuneRing.destroy();
-      this.attuneRing = null;
-    } else if (keepRing && this.attuneRing) {
-      // Leave the ring, will be cleaned by zone reload
       this.attuneRing = null;
     }
   }
@@ -1044,12 +1072,14 @@ export class VenusPlateauScene extends Phaser.Scene {
     }
     markVenusFlag(this.save, "trialThresholdSeen");
     writeSave(this.save);
+    this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("VenusTrial", { save: this.save }));
   }
 
   private toHub() {
     this.save.scene = "MetaxyHub";
     writeSave(this.save);
+    this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
   }
 
@@ -1138,11 +1168,16 @@ export class VenusPlateauScene extends Phaser.Scene {
           });
           return;
         }
-        this.tryAttune(m.id, m.zone, m.requiredMs, () => {
-          this.save.flags[m.doneFlag] = true;
-          writeSave(this.save);
-          runDialog(this, m.lines);
-        });
+        this.tryAttune(
+          m.id,
+          m.zone,
+          m.requiredMs,
+          () => {
+            this.save.flags[m.doneFlag] = true;
+            writeSave(this.save);
+          },
+          m.lines,
+        );
       },
     });
   }
@@ -1241,6 +1276,11 @@ export class VenusTrialScene extends Phaser.Scene {
   private busy = false;
   private kypriaPresentation?: EncounterPresentationHandle;
 
+  private destroyKypriaPresentation() {
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = undefined;
+  }
+
   constructor() {
     super("VenusTrial");
   }
@@ -1282,6 +1322,9 @@ export class VenusTrialScene extends Phaser.Scene {
       KYPRIA_PROFILE,
     );
 
+    this.events.once("shutdown", () => this.destroyKypriaPresentation());
+    this.events.once("destroy", () => this.destroyKypriaPresentation());
+
     this.time.delayedCall(280, () => {
       this.kypriaPresentation?.introOnce(
         "encounter_seen_kypria_trial",
@@ -1320,8 +1363,6 @@ export class VenusTrialScene extends Phaser.Scene {
   }
 
   private runPhaseAttune(phaseId: string) {
-    // A small ATTUNE prompt before the choice — holding non-action for a
-    // beat earns "attuned" weighting on the response.
     const cx = GBC_W / 2;
     const cy = 70;
     const box = drawGBCBox(this, cx - 60, cy - 14, 120, 28, 30);
@@ -1334,8 +1375,14 @@ export class VenusTrialScene extends Phaser.Scene {
     let elapsed = 0;
     const requiredMs = 1400;
     let resolved = false;
-    let attuned = false;
     let cleanupAct: (() => void) | null = null;
+
+    const finish = (attuned: boolean) => {
+      box.destroy();
+      label.destroy();
+      cleanupAct?.();
+      this.time.delayedCall(220, () => this.runPhaseChoice(phaseId, attuned));
+    };
 
     const tick = this.time.addEvent({
       delay: 30,
@@ -1345,13 +1392,9 @@ export class VenusTrialScene extends Phaser.Scene {
         ring.update(Math.min(1, elapsed / requiredMs));
         if (elapsed >= requiredMs && !resolved) {
           resolved = true;
-          attuned = true;
           tick.remove(false);
-          ring.destroy();
-          box.destroy();
-          label.destroy();
-          cleanupAct?.();
-          this.runPhaseChoice(phaseId, attuned);
+          ring.complete();
+          finish(true);
         }
       },
     });
@@ -1359,13 +1402,9 @@ export class VenusTrialScene extends Phaser.Scene {
     cleanupAct = onActionDown(this, "action", () => {
       if (resolved) return;
       resolved = true;
-      attuned = false;
       tick.remove(false);
-      ring.destroy();
-      box.destroy();
-      label.destroy();
-      cleanupAct?.();
-      this.runPhaseChoice(phaseId, attuned);
+      ring.break();
+      finish(false);
     });
   }
 
@@ -1419,6 +1458,7 @@ export class VenusTrialScene extends Phaser.Scene {
       });
 
       runDialog(this, venusConfig.trialPass, () => {
+        this.destroyKypriaPresentation();
         gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
       });
       return;
@@ -1426,6 +1466,7 @@ export class VenusTrialScene extends Phaser.Scene {
     this.save.coherence = Math.max(0, this.save.coherence - 15);
     writeSave(this.save);
     runDialog(this, venusConfig.trialFail, () => {
+      this.destroyKypriaPresentation();
       gbcWipe(this, () => this.scene.start("VenusPlateau", { save: this.save }));
     });
   }
