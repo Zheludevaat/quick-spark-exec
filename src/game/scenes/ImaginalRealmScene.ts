@@ -1312,6 +1312,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow.destroy();
         k.glow = undefined;
       }
+      this.markKnotCleared(k);
       this.refreshKnotTracker();
     });
   }
@@ -1320,7 +1321,6 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // COMPANION CONTEXT
   // ============================================================================
   private companionLines(): { who: string; text: string }[] {
-    // Highest priority: a recent soul event Soryn can react to.
     const recent = recentSoulEvents(this.save, 1)[0];
     if (recent) {
       const reaction = this.daimonReactionFor(recent);
@@ -1329,28 +1329,44 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
     const cleared = this.totalCleared();
     const region = this.region;
+
     if (region === "pools") {
-      if (cleared === 0)
+      const localKnots = this.clearedKnotsInRegion("pools");
+      const localSouls = this.doneSoulsInRegion("pools");
+      if (localKnots === 0 && localSouls === 0) {
         return [
-          {
-            who: "Soryn",
-            text: "Two knots here. Stand still for the mimic. Speak true to the echo.",
-          },
+          { who: "Soryn", text: "Two knots here. Stand still for the mimic. Speak true to the echo." },
         ];
+      }
       return [
-        { who: "Soryn", text: `${cleared} cleared. The pools settle where you have witnessed.` },
+        { who: "Soryn", text: `${localKnots} knots quieted. ${localSouls} souls settled. The pools remember.` },
       ];
     }
+
     if (region === "field") {
-      const echoes = Object.keys(this.save.seedEchoes).length;
+      const echoes = this.touchedEchoesCount();
+      if (echoes >= 3) {
+        return [
+          { who: "Soryn", text: `${echoes} echoes touched. The field knows you better now.` },
+          { who: "Soryn", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
+        ];
+      }
       return [
-        { who: "Soryn", text: `${echoes} echoes touched. The motes carry your last day.` },
-        { who: "Soryn", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
+        { who: "Soryn", text: `${echoes} echoes touched. The motes still carry your last day.` },
+        { who: "Soryn", text: "Walk through what glitters. Do not keep what only comforts." },
       ];
     }
+
+    if (cleared >= 3) {
+      return [
+        { who: "Soryn", text: "South, then. I stop at the threshold." },
+        { who: "Soryn", text: "Take what the plateau taught. Leave the rest here." },
+      ];
+    }
+
     return [
-      { who: "Soryn", text: "The crown is optional. WITNESS — or do not — and walk south." },
-      { who: "Soryn", text: "I cannot enter the boss room. WITNESS is yours alone now." },
+      { who: "Soryn", text: "The crown is optional. WITNESS, or do not, and walk south." },
+      { who: "Soryn", text: "I cannot enter the next room with you." },
     ];
   }
 
