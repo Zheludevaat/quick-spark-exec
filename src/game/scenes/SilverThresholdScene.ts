@@ -501,8 +501,16 @@ export class SilverThresholdScene extends Phaser.Scene {
           this.save.flags.intro_done = true;
           writeSave(this.save);
           this.dialogActive = false;
+          // First-meet identity card for Soryn — only fires once across saves.
+          this.sorynPresentation?.introOnce("encounter_seen_soryn_threshold", this.save);
+          writeSave(this.save);
         });
       });
+    } else if (!this.save.flags.daimon_bound) {
+      // Returning visitor before binding still gets the threshold-form intro
+      // (idempotent — guarded by the same flag).
+      this.sorynPresentation?.introOnce("encounter_seen_soryn_threshold", this.save);
+      writeSave(this.save);
     }
   }
 
@@ -717,6 +725,8 @@ export class SilverThresholdScene extends Phaser.Scene {
               writeSave(this.save);
               this.cameras.main.flash(120, 240, 240, 255);
               this.dialogActive = false;
+              // Quiet the guardian aura — they have been received.
+              this.guardianPresentations[kind]?.soften();
               this.checkAllElements();
             });
           });
@@ -726,12 +736,25 @@ export class SilverThresholdScene extends Phaser.Scene {
 
     const startCircling = () => this.runGuardianCircling(kind, c, startRecognition);
 
+    // First meeting with this guardian: card → circling → ritual.
+    // Already-seen guardians skip straight to circling.
+    const startWithIntro = () => {
+      const introFlag = `encounter_seen_guardian_${kind}`;
+      const presentation = this.guardianPresentations[kind];
+      if (presentation && !this.save.flags[introFlag]) {
+        presentation.introOnce(introFlag, this.save, startCircling);
+        writeSave(this.save);
+      } else {
+        startCircling();
+      }
+    };
+
     if (!this.save.flags.reception_circles_taught) {
       this.save.flags.reception_circles_taught = true;
       writeSave(this.save);
-      runDialog(this, CIRCLE_TEACH_LINES, startCircling);
+      runDialog(this, CIRCLE_TEACH_LINES, startWithIntro);
     } else {
-      startCircling();
+      startWithIntro();
     }
   }
 
