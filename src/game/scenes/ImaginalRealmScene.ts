@@ -60,22 +60,51 @@ const MAP_W = 10,
 function buildMap(region: ImaginalRegion): number[][] {
   const T = TILE_INDEX;
   const m: number[][] = [];
+
+  // Pass 1: Base Scatter Floor (Organic Noise)
   for (let y = 0; y < MAP_H; y++) {
     const row: number[] = [];
     for (let x = 0; x < MAP_W; x++) {
-      if (y === 0) row.push(T.MOON_WALL);
-      else if (x === 0 || x === MAP_W - 1) row.push(T.MOON_WALL);
-      else if (y === MAP_H - 1 && region === "corridor") row.push(T.MOON_WALL);
-      // Pillars
-      else if (region === "pools" && y === 3 && (x === 2 || x === 7)) row.push(T.MOON_PILLAR);
-      else if (region === "field" && y === 4 && (x === 1 || x === 8)) row.push(T.MOON_PILLAR);
-      else if (region === "corridor" && (x === 2 || x === 7) && (y === 3 || y === 6))
-        row.push(T.MOON_PILLAR);
-      else if ((x + y) % 2 === 0) row.push(T.MOON_FLOOR);
-      else row.push(T.MOON_FLOOR_REFLECT);
+      row.push(Math.random() > 0.65 ? T.MOON_FLOOR_REFLECT : T.MOON_FLOOR);
     }
     m.push(row);
   }
+
+  // Pass 2: Organic Boundaries & Jagged Edges
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const isTopEdge = y === 0;
+      const isSideEdge = x === 0 || x === MAP_W - 1;
+      const isBottomEdge = y === MAP_H - 1 && region === "corridor";
+
+      if (isTopEdge || isSideEdge || isBottomEdge) {
+        m[y][x] = T.MOON_WALL;
+
+        if (Math.random() > 0.8) {
+          if (isTopEdge && y + 1 < MAP_H) m[y + 1][x] = T.MOON_PILLAR;
+          if (x === 0 && x + 1 < MAP_W) m[y][x + 1] = T.MOON_PILLAR;
+          if (x === MAP_W - 1 && x - 1 >= 0) m[y][x - 1] = T.MOON_PILLAR;
+        }
+      }
+    }
+  }
+
+  // Pass 3: Region-Specific Landmarks
+  if (region === "pools") {
+    if (m[2][2] !== T.MOON_WALL) m[2][2] = T.MOON_PILLAR;
+    if (m[4][8] !== T.MOON_WALL) m[4][8] = T.MOON_PILLAR;
+    if (m[6][3] !== T.MOON_WALL) m[6][3] = T.MOON_PILLAR;
+  } else if (region === "field") {
+    [ [2, 8], [3, 2], [6, 7], [7, 2] ].forEach(([py, px]) => {
+      if (m[py][px] !== T.MOON_WALL) m[py][px] = T.MOON_PILLAR;
+    });
+  } else if (region === "corridor") {
+    for (let y = 2; y < MAP_H - 2; y++) {
+      if (Math.random() > 0.4) m[y][2] = T.MOON_PILLAR;
+      if (Math.random() > 0.4) m[y][7] = T.MOON_PILLAR;
+    }
+  }
+
   return m;
 }
 
