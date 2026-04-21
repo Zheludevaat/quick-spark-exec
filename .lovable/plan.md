@@ -1,64 +1,154 @@
 
 
-# Fix Act 2 Visual Errors
+# METAXY Adaptation: Continuous Build, No DLC Gating
 
-The six Act 2 scenes all mount the new global top stat bar (y=0..13) and the centered bottom vessel HUD plate (y=92..114, x=32..128), but their decorative art and labels were positioned for the old HUD-less layout. This pass repositions only the in-scene art/labels — no gameplay logic, no save changes.
+The current 3-act game is the unfinished first third of the intended 9-act arc. We are not shipping spheres as DLC — we are removing the premature ending and continuing the journey forward. Acts 0–4 already exist (in spirit). Acts 5–8 must be built. Acts 1–4 must be relabeled to fit the seven-sphere cosmology.
 
-## Reserved zones (do not place content here)
+## Reordering: what we have → where it fits
 
-- **Top HUD plate**: y=0..13, full width.
-- **Vessel HUD plate**: y=92..114, x=32..128 (only in scenes that mount it).
+| Now | Becomes | Notes |
+|---|---|---|
+| LastDay → Crossing | **Act 0: Earthly Life + Death** | Add Calling chooser in LastDay |
+| SilverThreshold | **Act 1: Reception** (4 Guardians + Daimon binding) | Already structurally correct |
+| ImaginalRealm | **Act 2: The Plateau (Imaginal Field)** | Stays as-is, lateral soul work |
+| Athanor (Threshold + 4 ops + SealedVessel) | **Act 3: Moon Sphere — Mirror's Palace + Selenos Trial** | Re-skin only; mechanics fit perfectly |
+| CuratedSelf | **Act 6: Sun Sphere — Hall of Testimony + Helion Trial** | Already perfect; relabel and move later in arc |
+| Epilogue | **Endings Router** (final scene only after Saturn) | No longer fires after Sun |
 
-## Per-scene fixes
+New acts to build: **Act 4 Mercury, Act 5 Venus, Act 7 Mars, Act 8 Jupiter, Act 9 Saturn, Act 10 Final Endings.**
 
-### AthanorThresholdScene
-- **Doors**: currently rect at y=18 size 22 → spans y=7..29, top edge **inside HUD bar**. Move door y from 18 → 24 (now spans 13..35). Glow circles move from y+14=32 → y+14=38. Inline 4-letter labels follow at y+14=38.
-- **Hint text**: currently y=GBC_H-22 = 122 — sits **just below vessel plate** (114) but still touches the touch-pad band. Keep at 122 but shorten width clamp to GBC_W-8 to avoid overlap with Echo label at x=136.
-- **Echo blob + label**: x=146/136, y=116/122. Moves to y=118/124 to clear vessel plate edge cleanly.
-- **VESSEL center label**: at (66, 66) — clear of plate (plate top is 92). No change.
+That puts the existing CuratedSelf in the **middle**, not the end. The Sun is the heart of the journey, not its terminus. Saturn is the gate to the real ending.
 
-### NigredoScene
-- **Furnace rect**: at center (80, 72) size 32x24 → spans y=60..84. Clear.
-- **FURNACE label**: at (66, 90) — **overlaps vessel HUD plate top edge (y=92)**. Move label up to y=86.
-- **Furnace glow circle**: at (80, 72) — clear.
+## The critical fix: stop ending the game at Sun
 
-### AlbedoScene
-- **BATH OF STARS label**: at (62, 50) — clear.
-- **Bath rect**: at (80, 72) size 60x30 → y=57..87. Clear.
-- No changes needed.
+Today, finishing CuratedSelf fires Epilogue and resets to Title. That is the "mistake along the way." After this pass:
 
-### CitrinitasScene
-- **THE SCRIPTORIUM label**: at (50, 14) — **overlaps top HUD bottom edge**. Move to y=16 (clears HUD by 1px gap; text is 7px tall so spans 16..23, still above mote field).
+- CuratedSelf victory routes to **MetaxyHub** with the Mars portal newly lit, not to Epilogue.
+- Epilogue is renamed **EndingsRouter** and gated behind Saturn completion (or an explicit player "settle here" choice at any plateau).
+- The "WALK AGAIN" / "ASCEND" / "ERASE" menu inside CuratedSelf is replaced with a single "RETURN TO METAXY" exit.
+- All save state continues; no NG+ trigger fires from Sun anymore.
 
-### RubedoScene
-- **THE WEDDING label**: at (52, 14) — same overlap. Move to y=16.
-- **Teacher sentence ribbon**: at (6, 22) — currently fine. After moving title to 16, ribbon stays at 22 (clear).
+## MetaxyHub — the connective spine
 
-### SealedVesselScene
-- **Remove `mountVesselHud` call entirely** — per the existing design intent (ritual-clean vessel scene; the inscription IS the moment). Also removes the SHUTDOWN destroy hook for `vesselHud`. The seal art (circle + glass at center) becomes the only vessel imagery.
-- **THE SEALED VESSEL label**: at (54, 96) — currently overlapped by the very plate we're removing. Keep at y=96 (now clear) OR move to y=98 to give the seal art more breathing room. Pick y=98.
-- **Vessel glass rect**: at (80, 72) size 16x30 → y=57..87. Clear.
-- **Vessel circle**: at (80, 72) radius 18 → y=54..90. Clear.
-- **Teacher sentence ribbon**: at (6, 18) — clear of HUD by 5px. No change.
+One new persistent scene becomes the load-bearing structure of the entire game from Act 3 onward.
 
-## Files touched
+- Seven planetary portals arranged in a vertical ascent: Moon (bottom) → Saturn (top).
+- Each portal lights when its sphere is unlocked, dims when locked, and shows a completion glyph when its trial is passed.
+- Soryn stands at the hub between every act, offering boundary dialog and reflection on what just happened.
+- A Relic Altar where the player can release identity-objects collected per sphere (feeds final endings).
+- Replaces the current direct chain (Athanor → CuratedSelf). Every act now exits to the hub; the hub launches the next.
 
-- `src/game/scenes/AthanorThresholdScene.ts` — door y constant, hint clamp, Echo y nudge.
-- `src/game/scenes/NigredoScene.ts` — FURNACE label y.
-- `src/game/scenes/CitrinitasScene.ts` — title y.
-- `src/game/scenes/RubedoScene.ts` — title y.
-- `src/game/scenes/SealedVesselScene.ts` — drop `mountVesselHud` import + call + shutdown hook; nudge SEALED VESSEL label.
+## Sphere Template — built once, instantiated 7 times
 
-## What I will NOT change
+Every sphere act follows the same template scene pair. Build the template once; each new sphere is a config file plus dialog content, not a new scene tree.
 
-- No gameplay logic, dialog, save fields, audio, or quest/lore behavior.
-- No edits to `vessel.ts`, `hud.ts`, or `gbcArt.ts`.
-- AlbedoScene art is already clear — no edits.
+```text
+PlateauHub (per sphere)
+  ├─ 3 named NPC soul cases (reuses runSoul + soulArcs)
+  ├─ 4 sub-operations themed per sphere (reuses selectShards + awardNamedStone)
+  ├─ 1 "Cracking Question" inquiry that defines the trial verb
+  └─ Exit → Trial OR Settle Here (soft plateau ending)
 
-## Smoke test
+SphereTrial (per sphere)
+  ├─ Governor encounter (Selenos/Hermaia/Kypria/Helion/Areon/Jovian/Kronikos)
+  ├─ Uses the sphere's signature verb (Name/Attune/Stand/Weigh/Release)
+  ├─ Pass: garment released, return to MetaxyHub with next portal lit
+  └─ Fail: Coherence drains, Soryn retrieves player to hub for retry
+```
 
-1. Title → DEV → AthanorThreshold. Confirm: top HUD visible, four doors fully below it (no pixel bleed), vessel plate centered at bottom, hint readable, Echo label not overlapping vessel plate.
-2. Enter each operation in order. Confirm: Nigredo furnace label clears vessel plate; Citrinitas/Rubedo titles clear top HUD; Albedo unchanged.
-3. Complete all four ops → SealedVessel. Confirm: NO vessel HUD plate at bottom; seal art (circle + glass + label) is unobstructed centerpiece; teacher-sentence ribbon (if earned) fades cleanly.
-4. Resize to 475x500. Confirm: Phaser FIT scaling preserves layout; nothing clips.
+The existing Athanor structure IS this template — we extract it into shared modules and feed it config.
+
+## Save schema additions (additive only, no renames)
+
+- `calling: "scholar" | "caregiver" | "reformer" | null`
+- `coherence: number` (0–100, additive HUD arc)
+- `daimonBond: number` (0–10, derived from existing Soryn signals)
+- `garmentsReleased: Record<SphereKey, boolean>` (7 keys)
+- `sphereVerbs: { name, attune, stand, weigh, release: boolean }` (witness already exists)
+- `relics: string[]`
+- `gnosticAccepted: boolean`
+- `endingChosen: string | null`
+- `plateauSettled: Record<SphereKey, boolean>`
+
+All defaulted in `migrateSave`. No localStorage key bump. No rename of Soryn (canon stays; "Sophene" added as in-fiction alias only).
+
+## Production order — long but linear
+
+This is a multi-month build. Phasing keeps the game playable end-to-end at every checkpoint.
+
+**Phase 1 — Unblock the ending (1 session)**
+- Schema additions + `migrateSave` defaults.
+- CuratedSelf victory exits to a placeholder MetaxyHub instead of Epilogue.
+- Title screen DEV jumps updated for new act labels.
+
+**Phase 2 — MetaxyHub scene (1 session)**
+- Seven portals, Soryn dialog, relic altar stub.
+- Initially: Moon and Sun lit (because they exist), other 5 dim with foreshadow lines.
+- Wire AthanorThreshold and CuratedSelf entry/exit through the hub.
+
+**Phase 3 — Sphere Template extraction (2 sessions)**
+- Move Athanor's plateau + trial logic into `src/game/spheres/template/{Plateau,Trial}.ts`.
+- Define `SphereConfig` type (id, governor, op themes, NPC arcs, verb, inscriptions, palette).
+- Refactor Moon (Athanor) to use the template via `moon.config.ts`. Game still plays identically.
+
+**Phase 4 — Reframe existing acts (1 session)**
+- Relabel Athanor → Moon Sphere in all UI strings.
+- Relabel CuratedSelf → Sun Sphere; move it to Act 6 in `ACT_BY_SCENE`.
+- Rebuild `SCENE_LABEL` and DEV menu entries.
+- Add Calling chooser beat to LastDay.
+
+**Phase 5 — Build Mercury Sphere (Act 4) (3–4 sessions)**
+- `mercury.config.ts`: Tower of Reasons, Hermaia Trial, Name verb.
+- 3 NPC arcs (the Defender, the Pedant, the Casuist).
+- 4 plateau operations themed as argument/proof/refutation/silence.
+- Cracking Question, inscription, relic.
+
+**Phase 6 — Build Venus Sphere (Act 5) (3–4 sessions)**
+- `venus.config.ts`: Eternal Biennale, Kypria Trial, Attune verb.
+- 3 NPC arcs (the Curator, the Critic, the Beloved).
+- 4 operations themed as longing/recognition/imitation/release.
+
+**Phase 7 — Build Mars Sphere (Act 7) (3–4 sessions)**
+- `mars.config.ts`: Arena of the Strong, Areon Trial, Stand verb.
+- 3 NPC arcs (the Champion, the Coward, the Refuser).
+- Repurposes EncounterScene as Mars duel skeleton.
+
+**Phase 8 — Build Jupiter Sphere (Act 8) (3–4 sessions)**
+- `jupiter.config.ts`: Grand Tribunal, Jovian Trial, Weigh verb.
+- 3 NPC arcs (the Judge, the Advocate, the Accused).
+
+**Phase 9 — Build Saturn Sphere (Act 9) (4–5 sessions)**
+- `saturn.config.ts`: Avenue of Fate + Gnostic Threshold, Kronikos Trial, Release verb.
+- 3 NPC arcs (the Astrologer, the Determinist, the Gnostic Tempter).
+- Sets `gnosticAccepted` flag if player accepts the Gnostic offer.
+
+**Phase 10 — EndingsRouter + 5 endings (2 sessions)**
+- Replaces single Epilogue.
+- Reads full save state; routes to Ascent / Reincarnation (NG+) / Vow-return / Soft Plateau / Gnostic.
+- NG+ semantics: lore, daimonBond, soulChoices, resonance signals carry over as deja-vu.
+
+**Phase 11 — Coherence + Garment HUD + Resonance Profile menu (2 sessions)**
+- Visible Coherence arc on top HUD.
+- 7-segment Garment ring around player sigil, dims as garments release.
+- Resonance Profile pause-menu tab (passive, accumulates from choices across all acts).
+
+## What this plan does NOT defer
+
+- All five missing spheres are scheduled, not stubbed.
+- Endings expansion is in scope.
+- Sphere Template is built up-front so spheres 2–7 are content work, not engine work.
+
+## What this plan explicitly avoids
+
+- No rename of `Soryn` in code (in-fiction alias only).
+- No rename of the `CuratedSelf` scene file (label change only).
+- No rewrite of existing Athanor mechanics — they become the Moon config.
+- No new dialog framework, no new HUD framework, no new save framework.
+
+## Decisions needed before Phase 1 starts
+
+1. **Ship order for the 5 new spheres:** strict planetary order (Mercury → Venus → Mars → Jupiter → Saturn) or build Saturn first so the real ending exists before the middle spheres?
+2. **Calling system depth:** light flavor (3–5 lines per act) or deep branching (different NPC arcs per calling)?
+3. **Coherence visibility:** show the arc from Act 0, or hide until Mars where it first drains?
+4. **Settle-here soft endings:** offer at every plateau from Moon onward, or only Mars/Jupiter/Saturn?
 
