@@ -96,6 +96,11 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private thresholdStage = 0;
   private vesselPresentation?: EncounterPresentationHandle;
   private doorPresentations: Partial<Record<Door["key"], EncounterPresentationHandle>> = {};
+  // Reflection Chamber side door (lunar puzzle exemplar)
+  private reflectionPortalX = 18;
+  private reflectionPortalY = GBC_H - 30;
+  private reflectionPortal?: Phaser.GameObjects.Rectangle;
+  private reflectionLabel?: GBCText;
 
   constructor() {
     super("AthanorThreshold");
