@@ -911,15 +911,6 @@ export class SilverThresholdScene extends Phaser.Scene {
     };
     const pick = () => {
       cleanup();
-      // TRUE = +clarity (the harder, less flattering reflection).
-      // BRIGHT = +compassion to others, but costs 1 clarity to self.
-      if (cursor === 0) {
-        this.save.stats.clarity += 1;
-      } else {
-        this.save.stats.compassion += 1;
-        this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
-      }
-      this.events.emit("stats-changed");
       onDone();
     };
     let unbindAct: (() => void) | null = null;
@@ -989,11 +980,7 @@ export class SilverThresholdScene extends Phaser.Scene {
           tick.remove(false);
           this.rowan.x = startX;
           this.rowan.y = startY;
-          // Reward scales: 1 lap clean = +1 courage; with restarts = no bonus.
-          if (restarts === 0) {
-            this.save.stats.courage += 1;
-            this.events.emit("stats-changed");
-          }
+          // Lap completed — kept symbolic; stat gift comes from Naming.
           box.destroy();
           prompt.destroy();
           onDone();
@@ -1219,12 +1206,28 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) {
       this.dialogActive = true;
       this.save.flags.stone_found = true;
-      this.save.stats.courage++;
+      this.save.flags.reception_observe_taught = true;
+      this.save.stats.courage += 1;
       this.events.emit("stats-changed");
       writeSave(this.save);
       this.stone.setFillStyle(0x3a4868);
       getAudio().sfx("resolve");
       runDialog(this, STONE_LINES, () => {
+        this.dialogActive = false;
+      });
+      return;
+    }
+    // Reflection Basin — optional discovery after the rites.
+    if (
+      this.nearBasin() &&
+      this.save.flags.elements_done &&
+      !this.save.flags.threshold_basin_seen
+    ) {
+      this.dialogActive = true;
+      this.save.flags.threshold_basin_seen = true;
+      writeSave(this.save);
+      getAudio().sfx("confirm");
+      runDialog(this, BASIN_LINES, () => {
         this.dialogActive = false;
       });
       return;
@@ -1250,11 +1253,22 @@ export class SilverThresholdScene extends Phaser.Scene {
       });
       return;
     }
-    // Gate enter
+    // Gate enter — first touch previews; second touch transitions.
     const gx = this.rowan.x - this.gate.x,
       gy = this.rowan.y - this.gate.y;
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.daimon_bound) {
+      if (!this.save.flags.threshold_gate_preview_seen) {
+        this.dialogActive = true;
+        this.save.flags.threshold_gate_preview_seen = true;
+        writeSave(this.save);
+        getAudio().sfx("confirm");
+        runDialog(this, GATE_PREVIEW_LINES, () => {
+          this.dialogActive = false;
+        });
+        return;
+      }
       this.save.scene = "ImaginalRealm";
+      this.save.act = ACT_BY_SCENE.ImaginalRealm;
       writeSave(this.save);
       const a = getAudio();
       a.sfx("wipe");
