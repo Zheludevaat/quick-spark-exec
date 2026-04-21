@@ -64,6 +64,36 @@ const COLD = 0xa8c8e8;
 const STONE = 0x4a5468;
 const STONE_DARK = 0x2a3040;
 const INK = 0x88a4c8;
+const WARM = 0xe8c890; // ignition / named accent
+
+/**
+ * Ambient bark lines per soul kind. Used by the plateau's bark loop to
+ * make the Tower feel inhabited even when the player is just walking.
+ */
+const MERCURY_BARKS: Record<"npc_defender" | "npc_pedant" | "npc_casuist", string[]> = {
+  npc_defender: [
+    "NO. THE STRUCTURE MATTERS.",
+    "I PAID FOR BEING RIGHT.",
+    "THE COST WAS NOT THE ARGUMENT.",
+  ],
+  npc_pedant: [
+    "DEFINE IT AGAIN.",
+    "A SHAPE IS ALSO A CAGE.",
+    "YOU HIDE INSIDE THE TERM.",
+  ],
+  npc_casuist: [
+    "I CAN DEFEAT EITHER SIDE.",
+    "WITHDRAWAL IS SOMETIMES HONEST.",
+    "BOTH SIDES WANT TO WIN.",
+  ],
+};
+
+/** True names revealed once Mercury is cracked. NAME made local. */
+const MERCURY_TRUE_NAMES: { kind: StationKind; name: string; dy: number }[] = [
+  { kind: "statue", name: "VICTORY WITHOUT RELATION", dy: 14 },
+  { kind: "scrolls", name: "THE UNSAID", dy: 8 },
+  { kind: "chalkboard", name: "ASSUMPTION", dy: 12 },
+];
 
 /** ============================================================
  *  MERCURY PLATEAU — fully authored explorable scene
@@ -79,6 +109,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private statusText!: GBCText;
   private trialGlow!: Phaser.GameObjects.Arc;
   private mSave!: SaveSlot;
+  private chamberAltar?: Phaser.GameObjects.Rectangle;
+  private chamberSigil?: Phaser.GameObjects.GameObject[];
+  private chamberReadyShown = false;
+  private chamberPulseTween?: Phaser.Tweens.Tween;
+  private trialDoorHumTween?: Phaser.Tweens.Tween;
+  private ambientBarkEvent?: Phaser.Time.TimerEvent;
+  private activeBark?: GBCText;
+  private trueNameLabels: GBCText[] = [];
 
   constructor() {
     super("MercuryPlateau");
