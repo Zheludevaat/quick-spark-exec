@@ -225,6 +225,60 @@ export function clearDialogSnapshot() {
   emit();
 }
 
+// ---------------------------------------------------------------------
+// Inquiry
+//
+// runInquiry on the canvas side publishes a snapshot of the prompt + the
+// choice rows + the current cursor. The desktop modal host renders the
+// list inside the dialogue tray styling. Touch shell currently keeps the
+// canvas-side renderer.
+// ---------------------------------------------------------------------
+
+export function setInquirySnapshot(patch: Partial<InquirySnapshot>) {
+  snap = { ...snap, inquiry: { ...snap.inquiry, ...patch } };
+  emit();
+}
+
+export function clearInquirySnapshot() {
+  snap = {
+    ...snap,
+    inquiry: { open: false, speaker: "", prompt: "", choices: [], cursor: 0 },
+  };
+  emit();
+}
+
+// ---------------------------------------------------------------------
+// Modal surface
+//
+// The desktop shell promotes itself to the sole owner of all blocking
+// non-diegetic UI. Phaser code requests a surface by calling
+// `setModalSnapshot({ surface: "settings", ... })` and the shell owns
+// the actual rendering of dialog / inquiry / settings / lore / inventory
+// / player hub.
+//
+// `mode: "canvas"` is reserved for touch fallbacks so a scene can opt
+// out of shell ownership when the touch shell hasn't migrated yet.
+// ---------------------------------------------------------------------
+
+export function setModalSnapshot(patch: Partial<ModalSnapshot>) {
+  snap = { ...snap, modal: { ...snap.modal, ...patch } };
+  emit();
+}
+
+export function clearModalSnapshot() {
+  snap = {
+    ...snap,
+    modal: {
+      surface: "none",
+      mode: "shell",
+      title: null,
+      subtitle: null,
+      blocking: false,
+    },
+  };
+  emit();
+}
+
 export function setSceneSnapshot(patch: Partial<SceneSnapshot>) {
   const prev = snap.scene;
   const keyChanged = patch.key !== undefined && patch.key !== prev.key;
