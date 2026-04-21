@@ -76,7 +76,19 @@ import {
   publishVenusMinimap,
   publishVenusTrialMinimap,
 } from "../venus/VenusMinimap";
-import { makeAttuneRing } from "../venus/VenusUi";
+import { makeVenusAttuneRing } from "../venus/VenusUi";
+import { bakeVenusTiles } from "../venus/VenusTiles";
+import { bakeAllVenusSprites, VENUS_SPRITE } from "../venus/VenusSprites";
+import {
+  buildVenusAtriumArt,
+  buildVenusGalleryArt,
+  buildVenusRecognitionHallArt,
+  buildVenusReconstructionArt,
+  buildVenusLadderArt,
+  buildVenusThresholdArt,
+  buildVenusTrialArt,
+  addVenusForegroundFrame,
+} from "../venus/VenusArt";
 import {
   createEncounterPresentation,
   type EncounterPresentationHandle,
@@ -133,7 +145,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private hotspotMarkers: Phaser.GameObjects.GameObject[] = [];
 
   private activeAttune: AttuneTarget | null = null;
-  private attuneRing: ReturnType<typeof makeAttuneRing> | null = null;
+  private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
   private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
   private prevPlayerPos = { x: 0, y: 0 };
   private kypriaPresentation?: EncounterPresentationHandle;
@@ -161,6 +173,11 @@ export class VenusPlateauScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(380);
+
+    // Bake bespoke Venus art assets once per scene lifetime.
+    bakeVenusTiles(this);
+    bakeAllVenusSprites(this);
+
     spawnMotes(this, { count: 18, color: venusConfig.accent, alpha: 0.42 });
 
     attachHUD(this, () => this.save.stats);
