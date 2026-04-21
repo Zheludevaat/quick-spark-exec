@@ -577,4 +577,131 @@ export class AthanorThresholdScene extends Phaser.Scene {
       },
     );
   }
+
+  /**
+   * Update vessel atmosphere + memory nodes + door states to reflect the
+   * current threshold stage (= number of completed operations, 0..4).
+   *
+   * Called on scene entry and after any door's status changes.
+   * @param initial true on first call from create() — skips re-tweens.
+   */
+  private applyThresholdState(initial = false): void {
+    const stage = (this.thresholdStage = this.opDoneCount());
+    this.workStatus.setText(`WORK ${stage}/4`);
+
+    // Vessel core glow tint + alpha follow the most recent stage's color.
+    const stageColors = [0x6a3010, 0x3a3a48, 0xa0a0b8, 0xe8c860, 0xd03838];
+    const stageAlphas = [0.25, 0.4, 0.55, 0.7, 0.85];
+    this.vesselCoreGlow.setFillStyle(stageColors[stage], stageAlphas[stage]);
+
+    // Vessel ring brightens with stage.
+    const ringStrokeAlpha = 0.55 + stage * 0.1;
+    this.vesselRing.setStrokeStyle(1, 0xc8a060, Math.min(1, ringStrokeAlpha));
+    if (stage >= 4 && !initial) {
+      this.tweens.add({
+        targets: this.vesselRing,
+        scale: { from: 1, to: 1.15 },
+        duration: 700,
+        yoyo: true,
+        ease: "Sine.inOut",
+      });
+    }
+
+    // Light up the first `stage` memory nodes.
+    this.vesselNodes.forEach((node, i) => {
+      if (i < stage) {
+        node.setFillStyle(NODE_COLORS[i], 0.95);
+        node.setStrokeStyle(0.5, 0xffe098, 0.85);
+        // A gentle node pulse when the room first acknowledges its stage.
+        if (!initial && i === stage - 1) {
+          this.tweens.add({
+            targets: node,
+            scale: { from: 1, to: 1.6 },
+            alpha: { from: 1, to: 0.7 },
+            duration: 600,
+            yoyo: true,
+            ease: "Sine.inOut",
+          });
+        }
+      } else {
+        node.setFillStyle(NODE_COLORS[i], 0.15);
+        node.setStrokeStyle(0.5, 0x6a4020, 0.55);
+      }
+    });
+
+    // Reapply door states so SEALED/AVAILABLE/DONE all read at a glance.
+    for (const d of this.doors) this.applyDoorState(d);
+  }
+
+  /**
+   * Visual state of one door based on the same status logic used by
+   * doorStatus(). Sealed = chain bar + dim. Available = warm pulse.
+   * Done = calmer glow + lit seal pip.
+   */
+  private applyDoorState(d: Door): void {
+    const status = this.doorStatus(d);
+    // Reset any prior tweens so we don't stack them across stage changes.
+    if (d.lampPulse) {
+      d.lampPulse.stop();
+      d.lampPulse = undefined;
+    }
+    if (d.glowPulse) {
+      d.glowPulse.stop();
+      d.glowPulse = undefined;
+    }
+
+    if (status === "DONE") {
+      d.rect.setAlpha(0.85);
+      d.glow.setFillStyle(d.tint, 0.5);
+      d.glow.setScale(1);
+      d.lamp.setAlpha(0.6);
+      if (d.bar) d.bar.setVisible(false);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0.95);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0.9);
+      }
+      // Calm steady glow — work remembered, not active.
+      d.glowPulse = this.tweens.add({
+        targets: d.glow,
+        alpha: { from: 0.5, to: 0.25 },
+        duration: 1600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    } else if (status === "SEALED" || status === "NEEDS TRANSMUTE") {
+      d.rect.setAlpha(0.55);
+      d.glow.setFillStyle(0x2a1a10, 0.4);
+      d.lamp.setAlpha(0.35);
+      if (d.bar) d.bar.setVisible(true);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0);
+      }
+    } else {
+      // AVAILABLE — active warm pulse on lamp + glow.
+      d.rect.setAlpha(1);
+      d.glow.setFillStyle(0xc8a060, 0.6);
+      d.lamp.setAlpha(0.9);
+      if (d.bar) d.bar.setVisible(false);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0);
+      }
+      d.lampPulse = this.tweens.add({
+        targets: d.lamp,
+        alpha: { from: 0.9, to: 0.45 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+      });
+      d.glowPulse = this.tweens.add({
+        targets: d.glow,
+        alpha: { from: 0.6, to: 0.2 },
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+  }
 }
