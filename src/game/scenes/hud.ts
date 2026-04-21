@@ -928,6 +928,10 @@ export function runDialog(
   onDone?: () => void,
 ) {
   const isTouchShell = isTouchLandscapeMode();
+  // Shell-owned dialogue tray is now the primary visible surface in
+  // both touch and desktop. Keep the desktop pointer-to-advance
+  // affordance below so canvas clicks still advance dialogue.
+  const useShellDialogSurface = true;
   const boxX = 4;
   const boxW = GBC_W - 8;
   const innerW = boxW - 16;
@@ -955,7 +959,7 @@ export function runDialog(
 
   const buildChromeFor = (whoLine: string, bodyLine: string) => {
     destroyChrome();
-    if (isTouchShell) return; // shell tray owns dialog rendering
+    if (useShellDialogSurface) return; // shell tray owns dialog rendering in both modes
     const bodyH = textHeightPx(bodyLine.toUpperCase(), innerW);
     const boxH = Math.max(MIN_H, Math.min(MAX_H, bodyH + 22));
     const boxY = GBC_H - boxH - 2;

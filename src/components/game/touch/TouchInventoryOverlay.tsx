@@ -1,5 +1,5 @@
 /**
- * Read-only inventory overlay for touch landscape mode.
+ * Read-only inventory overlay for the touch landscape shell.
  *
  * Sections:
  *   1. Relics (save.relics)
@@ -8,11 +8,19 @@
  *   4. Sphere Verbs (sphereVerbs booleans)
  *
  * Closed by tapping the close button or pressing virtual B.
+ *
+ * Both the outer card and the section cards use the shared ShellPanel
+ * primitive so inventory belongs to the same shell-card family as the
+ * dialogue tray and minimap.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadSave } from "@/game/save";
 import { subscribeVirtualInput } from "@/game/virtualInput";
 import type { SaveSlot } from "@/game/types";
+import {
+  ShellPanel,
+  ShellPanelTitle,
+} from "@/components/game/shell/ShellPanel";
 
 type Props = {
   open: boolean;
@@ -91,15 +99,12 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <div
-        className="relative rounded-lg"
+      <ShellPanel
+        tone="accent"
         style={{
           width: "min(94vw, 720px)",
           maxHeight: "92vh",
-          background: "linear-gradient(180deg, #0c1428 0%, #050a18 100%)",
-          border: "1px solid rgba(168,200,232,0.5)",
-          boxShadow: "0 0 30px rgba(74,120,200,0.4)",
-          color: "#eef3ff",
+          padding: 0,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -216,28 +221,19 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
             </>
           )}
         </div>
-      </div>
+      </ShellPanel>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section
-      className="rounded p-2"
-      style={{
-        background: "rgba(20,30,55,0.6)",
-        border: "1px solid rgba(74,120,200,0.3)",
-      }}
-    >
-      <h3
-        className="text-[10px] uppercase tracking-wider mb-1.5"
-        style={{ color: "#a8c8e8" }}
-      >
+    <ShellPanel compact tone="subdued">
+      <ShellPanelTitle style={{ color: "#a8c8e8", marginBottom: 6 }}>
         {title}
-      </h3>
+      </ShellPanelTitle>
       <div style={{ color: "#eef3ff" }}>{children}</div>
-    </section>
+    </ShellPanel>
   );
 }
 
