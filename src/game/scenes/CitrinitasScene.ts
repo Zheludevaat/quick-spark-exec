@@ -53,41 +53,83 @@ export class CitrinitasScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
-    // Reading desk silhouette
-    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 22, 80, 4, 0x4a3010).setDepth(0);
-    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 30, 80, 4, 0x2a1808).setDepth(0);
-    // Lectern with a leaning book
-    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 6, 28, 16, 0x3a2008).setStrokeStyle(1, 0x6a4018).setDepth(1);
-    this.add.rectangle(GBC_W / 2 - 6, GBC_H / 2, 12, 14, 0x8a6028, 0.9).setDepth(2);
-    this.add.rectangle(GBC_W / 2 + 6, GBC_H / 2, 12, 14, 0x6a4018, 0.9).setDepth(2);
-    // Swaying lantern overhead
-    this.add.rectangle(GBC_W / 2 - 28, 4, 1, 12, 0x6a4020, 0.8).setDepth(2);
-    const lantern = this.add.circle(GBC_W / 2 - 28, 18, 4, 0xe8c860, 0.85).setStrokeStyle(0.5, 0xc89020).setDepth(2);
+    // --- ART UPGRADE: Parallax Scriptorium & Golden God-Rays ---
+    const cx = GBC_W / 2;
+    const cy = GBC_H / 2;
+
+    // 1. Deep Background Parallax (Endless blurred shelves)
+    const backShelves = this.add.graphics().setDepth(0);
+    for (let i = 0; i < 5; i++) {
+      const y = 20 + i * 16;
+      backShelves.fillStyle(0x1a1008, 1).fillRect(0, y, GBC_W, 14);
+      backShelves.fillStyle(0x2a1a0c, 1).fillRect(0, y + 14, GBC_W, 2);
+      for (let j = 0; j < 16; j++) {
+        if (Math.random() > 0.3) {
+          const bh = Phaser.Math.Between(6, 12);
+          backShelves
+            .fillStyle(0x201408, 1)
+            .fillRect(j * 10 + Phaser.Math.Between(0, 4), y + 14 - bh, 4, bh);
+        }
+      }
+    }
     this.tweens.add({
-      targets: lantern,
-      x: GBC_W / 2 - 22,
-      duration: 2200,
+      targets: backShelves,
+      y: -8,
+      duration: 8000,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
-    // Floating pollen / dust motes lit by the lantern
-    for (let i = 0; i < 6; i++) {
-      const dust = this.add.circle(40 + i * 12, 30 + (i % 2) * 8, 1, 0xe8c860, 0.7).setDepth(3);
+
+    // 2. Heavy Vignette & Dust Layer
+    const shadowVignette = this.add.graphics().setDepth(1);
+    shadowVignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.9, 0.9, 0, 0);
+    shadowVignette.fillRect(0, 0, GBC_W, 40);
+
+    // 3. Golden God-Rays
+    const ray1 = this.add
+      .polygon(cx - 20, cy, [-20, -80, 20, -80, 60, 60, -20, 60], 0xffe098, 0.1)
+      .setDepth(2)
+      .setBlendMode("ADD");
+    const ray2 = this.add
+      .polygon(cx + 40, cy, [-10, -80, 10, -80, 40, 60, -10, 60], 0xffc060, 0.08)
+      .setDepth(2)
+      .setBlendMode("ADD");
+    this.tweens.add({
+      targets: [ray1, ray2],
+      alpha: 0.03,
+      duration: 3500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
+    // 4. Foreground Architecture (Floor & Lectern)
+    this.add.ellipse(cx, cy + 24, 110, 30, 0x1a1008).setDepth(3);
+    this.add.ellipse(cx, cy + 24, 100, 26, 0x3a1c14).setStrokeStyle(2, 0x582c1c).setDepth(3);
+    this.add.rectangle(cx, cy + 14, 28, 20, 0x2a1a0c).setDepth(4);
+    this.add.rectangle(cx, cy + 4, 32, 8, 0x4a3018).setDepth(5);
+
+    // 5. Floating Magic Books
+    for (let i = 0; i < 3; i++) {
+      const bX = cx + (i === 0 ? -30 : i === 1 ? 30 : 0);
+      const bY = cy - 10 + (i === 2 ? -20 : 0);
+      const book = this.add.rectangle(bX, bY, 12, 16, 0x684828).setDepth(6);
+      this.add.rectangle(bX, bY, 10, 14, 0xffe098).setDepth(6);
       this.tweens.add({
-        targets: dust,
-        y: dust.y - 14,
-        alpha: { from: 0.7, to: 0 },
-        duration: 2600 + i * 240,
-        delay: i * 320,
+        targets: book,
+        y: bY - Phaser.Math.Between(4, 8),
+        angle: Phaser.Math.Between(-10, 10),
+        duration: Phaser.Math.Between(1500, 2500),
+        yoyo: true,
         repeat: -1,
-        ease: "Sine.out",
+        ease: "Sine.inOut",
+        delay: i * 400,
       });
     }
-    new GBCText(this, GBC_W / 2 - 30, 16, "THE SCRIPTORIUM", {
-      color: COLOR.textGold,
-      depth: 5,
-    });
+
+    new GBCText(this, cx - 20, cy + 12, "LECTERN", { color: COLOR.textGold, depth: 7 });
+    // --- END ART UPGRADE ---
 
     runDialog(this, OPENING, () => this.maybeMathematician());
   }
