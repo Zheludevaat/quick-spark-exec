@@ -1117,6 +1117,9 @@ export function runDialog(
       cleanupKb();
       scene.events.off("vinput-action", next);
       clearDialogSnapshot();
+      // Release the modal stack only if it still belongs to dialog —
+      // otherwise an inquiry/settings/lore handoff already replaced it.
+      if (getModalSurface() === "dialog") clearModalSnapshot();
       onDone?.();
       return;
     }
