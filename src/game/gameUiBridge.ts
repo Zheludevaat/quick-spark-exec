@@ -50,6 +50,7 @@ export type OverlaySnapshot = {
   settingsOpen: boolean;
   loreOpen: boolean;
   inventoryOpen: boolean;
+  playerHubOpen: boolean;
   inquiryActive: boolean;
   modalLock: boolean;
 };
@@ -76,6 +77,7 @@ const initial = (): GameUiSnapshot => ({
     settingsOpen: false,
     loreOpen: false,
     inventoryOpen: false,
+    playerHubOpen: false,
     inquiryActive: false,
     modalLock: false,
   },
@@ -151,6 +153,7 @@ export function patchOverlaySnapshot(patch: Partial<OverlaySnapshot>) {
     !!next.settingsOpen ||
     !!next.loreOpen ||
     !!next.inventoryOpen ||
+    !!next.playerHubOpen ||
     !!next.inquiryActive;
   snap = { ...snap, overlay: next };
   emit();
