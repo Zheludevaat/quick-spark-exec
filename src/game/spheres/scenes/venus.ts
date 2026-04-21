@@ -268,6 +268,11 @@ export class VenusPlateauScene extends Phaser.Scene {
         break;
     }
 
+    // Phase 5 expansion: side guests + ATTUNE micros + softening overlay.
+    this.placeSideGuests(zone);
+    this.placeAttuneMicros(zone);
+    this.applySoftening(zone);
+
     this.drawDoors();
     this.drawHotspots();
     this.refreshHint();
