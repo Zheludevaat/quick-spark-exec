@@ -78,9 +78,14 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private vesselHud!: VesselHud;
   private vessel!: Phaser.GameObjects.Arc;
   private vesselFill!: Phaser.GameObjects.Rectangle;
+  private vesselCoreGlow!: Phaser.GameObjects.Arc;
+  private vesselRing!: Phaser.GameObjects.Arc;
+  private vesselNodes: Phaser.GameObjects.Arc[] = [];
+  private workStatus!: GBCText;
   private doors: Door[] = [];
   private busy = false;
   private depositedThisVisit = 0;
+  private thresholdStage = 0;
 
   constructor() {
     super("AthanorThreshold");
@@ -89,8 +94,16 @@ export class AthanorThresholdScene extends Phaser.Scene {
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.save.scene = "AthanorThreshold";
-    this.save.act = 2;
+    // Canonical act mapping — was hard-coded to 2 before.
+    this.save.act = ACT_BY_SCENE.AthanorThreshold;
     writeSave(this.save);
+  }
+
+  /** How many of the four operations have been completed. */
+  private opDoneCount(): number {
+    return (["nigredo", "albedo", "citrinitas", "rubedo"] as const).filter(
+      (k) => !!this.save.flags[`op_${k}_done`],
+    ).length;
   }
 
   create() {
