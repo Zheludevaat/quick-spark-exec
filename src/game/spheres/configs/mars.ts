@@ -169,7 +169,7 @@ export const marsConfig: SphereConfig = {
     {
       prompt: { who: "AREON", text: "A loud crowd cheers a thing you know is wrong. What do you do?" },
       options: [
-        { who: undefined, label: "Say so. Quietly.", reply: "Stood.", weight: 3 },
+        { label: "Say so. Quietly.", reply: "Stood.", weight: 3 },
         { label: "Say nothing. Walk out.", reply: "A small standing. Counted.", weight: 2 },
         { label: "Cheer along to fit in.", reply: "The Arena hears the lie.", weight: 0 },
         { label: "Shout them down.", reply: "Loud. Counted as one.", weight: 1 },

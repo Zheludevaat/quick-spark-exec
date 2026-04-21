@@ -16,6 +16,8 @@ export type SceneKey =
   | "MercuryTrial"
   | "VenusPlateau"
   | "VenusTrial"
+  | "MarsPlateau"
+  | "MarsTrial"
   | "CuratedSelf"
   | "Epilogue";
 
