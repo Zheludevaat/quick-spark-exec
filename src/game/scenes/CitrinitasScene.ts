@@ -52,10 +52,38 @@ export class CitrinitasScene extends Phaser.Scene {
     spawnMotes(this, { count: 14, color: 0xe8c860, alpha: 0.5 });
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
-    new GBCText(this, GBC_W / 2 - 30, 16, "THE SCRIPTORIUM", {
-      color: COLOR.textGold,
-      depth: 5,
+
+    // Reading desk silhouette
+    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 22, 80, 4, 0x4a3010).setDepth(0);
+    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 30, 80, 4, 0x2a1808).setDepth(0);
+    // Lectern with a leaning book
+    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 6, 28, 16, 0x3a2008).setStrokeStyle(1, 0x6a4018).setDepth(1);
+    this.add.rectangle(GBC_W / 2 - 6, GBC_H / 2, 12, 14, 0x8a6028, 0.9).setDepth(2);
+    this.add.rectangle(GBC_W / 2 + 6, GBC_H / 2, 12, 14, 0x6a4018, 0.9).setDepth(2);
+    // Swaying lantern overhead
+    this.add.rectangle(GBC_W / 2 - 28, 4, 1, 12, 0x6a4020, 0.8).setDepth(2);
+    const lantern = this.add.circle(GBC_W / 2 - 28, 18, 4, 0xe8c860, 0.85).setStrokeStyle(0.5, 0xc89020).setDepth(2);
+    this.tweens.add({
+      targets: lantern,
+      x: GBC_W / 2 - 22,
+      duration: 2200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
     });
+    // Floating pollen / dust motes lit by the lantern
+    for (let i = 0; i < 6; i++) {
+      const dust = this.add.circle(40 + i * 12, 30 + (i % 2) * 8, 1, 0xe8c860, 0.7).setDepth(3);
+      this.tweens.add({
+        targets: dust,
+        y: dust.y - 14,
+        alpha: { from: 0.7, to: 0 },
+        duration: 2600 + i * 240,
+        delay: i * 320,
+        repeat: -1,
+        ease: "Sine.out",
+      });
+    }
 
     runDialog(this, OPENING, () => this.maybeMathematician());
   }

@@ -54,8 +54,37 @@ export class NigredoScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
+    // Stone hearth around the furnace
+    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 14, 56, 6, 0x2a1a1a).setStrokeStyle(1, 0x402020).setDepth(0);
+    // Furnace mouth
     this.add.rectangle(GBC_W / 2, GBC_H / 2, 32, 24, 0x000000).setStrokeStyle(1, 0x803010);
+    // Inner red glow + flickering flame tongues
     this.add.circle(GBC_W / 2, GBC_H / 2, 6, 0xc04020, 0.7);
+    for (let i = 0; i < 4; i++) {
+      const fx = GBC_W / 2 - 8 + i * 6;
+      const flame = this.add.ellipse(fx, GBC_H / 2 + 4, 4, 7, 0xff8030, 0.85).setDepth(2);
+      this.tweens.add({
+        targets: flame,
+        scaleY: { from: 1, to: 1.6 },
+        alpha: { from: 0.85, to: 0.45 },
+        duration: 240 + i * 80,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+    // Drifting soot embers
+    for (let i = 0; i < 5; i++) {
+      const ember = this.add.circle(GBC_W / 2 - 6 + i * 3, GBC_H / 2 - 2, 1, 0x802010, 0.7).setDepth(3);
+      this.tweens.add({
+        targets: ember,
+        y: GBC_H / 2 - 30,
+        alpha: { from: 0.8, to: 0 },
+        duration: 1600 + i * 200,
+        delay: i * 240,
+        repeat: -1,
+        ease: "Sine.out",
+      });
+    }
     new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 + 14, "FURNACE", {
       color: COLOR.textWarn,
       depth: 5,

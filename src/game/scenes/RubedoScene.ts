@@ -57,6 +57,37 @@ export class RubedoScene extends Phaser.Scene {
     spawnMotes(this, { count: 16, color: 0xb84040, alpha: 0.6 });
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
+
+    // Long banquet table
+    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 14, 90, 5, 0x6a2818).setStrokeStyle(1, 0x402010).setDepth(1);
+    // Twin thrones flanking the table
+    this.add.rectangle(GBC_W / 2 - 40, GBC_H / 2 + 4, 14, 22, 0x401010).setStrokeStyle(1, 0xc8a040).setDepth(2);
+    this.add.rectangle(GBC_W / 2 + 40, GBC_H / 2 + 4, 14, 22, 0x401010).setStrokeStyle(1, 0xc8a040).setDepth(2);
+    // Throne crests
+    this.add.circle(GBC_W / 2 - 40, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
+    this.add.circle(GBC_W / 2 + 40, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
+    // Two candles burning on the table
+    [-12, 12].forEach((dx, i) => {
+      this.add.rectangle(GBC_W / 2 + dx, GBC_H / 2 + 10, 2, 4, 0xe8d8b0).setDepth(2);
+      const flame = this.add.ellipse(GBC_W / 2 + dx, GBC_H / 2 + 6, 2, 4, 0xffc060, 0.9).setDepth(3);
+      this.tweens.add({
+        targets: flame,
+        scaleY: { from: 1, to: 1.5 },
+        alpha: { from: 0.9, to: 0.55 },
+        duration: 320 + i * 80,
+        yoyo: true,
+        repeat: -1,
+      });
+    });
+    // Slow-pulsing red veil drape behind the table
+    const veil = this.add.rectangle(GBC_W / 2, 28, 120, 6, 0xb84040, 0.45).setDepth(0);
+    this.tweens.add({
+      targets: veil,
+      alpha: { from: 0.45, to: 0.2 },
+      duration: 2400,
+      yoyo: true,
+      repeat: -1,
+    });
     new GBCText(this, GBC_W / 2 - 28, 16, "THE WEDDING", {
       color: COLOR.textWarn,
       depth: 5,

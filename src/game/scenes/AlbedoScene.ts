@@ -62,7 +62,40 @@ export class AlbedoScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
+    // Bath
     this.add.rectangle(GBC_W / 2, GBC_H / 2, 60, 30, 0x506880, 0.6).setStrokeStyle(1, 0xc8d8e8);
+    // Surface ripples — three concentric ellipses pulsing outward
+    for (let i = 0; i < 3; i++) {
+      const ring = this.add
+        .ellipse(GBC_W / 2, GBC_H / 2, 18, 5, 0xc8d8e8, 0)
+        .setStrokeStyle(0.5, 0xc8d8e8, 0.7)
+        .setDepth(4);
+      this.tweens.add({
+        targets: ring,
+        scaleX: { from: 0.5, to: 2.4 },
+        scaleY: { from: 0.5, to: 2.4 },
+        alpha: { from: 0.7, to: 0 },
+        duration: 2400,
+        delay: i * 800,
+        repeat: -1,
+        ease: "Sine.out",
+      });
+    }
+    // Slow-falling star points
+    for (let i = 0; i < 8; i++) {
+      const sx = 20 + Math.floor(Math.random() * 100);
+      const star = this.add
+        .circle(sx, -4 - Math.random() * 30, 1, 0xffffff, 0.9)
+        .setDepth(3);
+      this.tweens.add({
+        targets: star,
+        y: GBC_H / 2 - 18,
+        alpha: { from: 0.9, to: 0 },
+        duration: 3200 + Math.random() * 1800,
+        delay: Math.random() * 2000,
+        repeat: -1,
+      });
+    }
     new GBCText(this, GBC_W / 2 - 18, GBC_H / 2 - 22, "BATH OF STARS", {
       color: COLOR.textAccent,
       depth: 5,
