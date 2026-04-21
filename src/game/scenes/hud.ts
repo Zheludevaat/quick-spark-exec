@@ -914,14 +914,13 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
+  const isTouchShell = getControls().interfaceMode === "touch_landscape";
   const boxX = 4;
   const boxW = GBC_W - 8;
   const innerW = boxW - 16;
   const MIN_H = 44;
   const MAX_H = 64;
 
-  // Box + text are recreated whenever a new line advances so the box can
-  // resize to fit the wrapped body.
   let box: ReturnType<typeof drawGBCBox> | null = null;
   let who: GBCText | null = null;
   let text: GBCText | null = null;
@@ -943,6 +942,7 @@ export function runDialog(
 
   const buildChromeFor = (whoLine: string, bodyLine: string) => {
     destroyChrome();
+    if (isTouchShell) return; // shell tray owns dialog rendering
     const bodyH = textHeightPx(bodyLine.toUpperCase(), innerW);
     const boxH = Math.max(MIN_H, Math.min(MAX_H, bodyH + 22));
     const boxY = GBC_H - boxH - 2;
@@ -976,8 +976,20 @@ export function runDialog(
   let active = true;
   let typing = false;
   let fullText = "";
+  let currentWho = "";
   let typeTimer: Phaser.Time.TimerEvent | null = null;
   let autoTimer: Phaser.Time.TimerEvent | null = null;
+
+  const publishDialog = (visibleText: string) => {
+    setDialogSnapshot({
+      open: true,
+      speaker: currentWho,
+      text: visibleText,
+      fullText,
+      typing,
+      waitingForConfirm: !typing,
+    });
+  };
 
   const finishTyping = () => {
     if (typeTimer) {
@@ -987,6 +999,7 @@ export function runDialog(
     text?.setText(fullText);
     typing = false;
     hint?.setVisible(true);
+    publishDialog(fullText);
     scheduleAuto();
   };
 
@@ -1005,19 +1018,23 @@ export function runDialog(
     hint?.setVisible(false);
     let n = 0;
     text?.setText("");
+    publishDialog("");
     if (typeTimer) typeTimer.remove(false);
     typeTimer = scene.time.addEvent({
       delay: 28,
       repeat: s.length - 1,
       callback: () => {
         n++;
-        text?.setText(s.slice(0, n));
+        const slice = s.slice(0, n);
+        text?.setText(slice);
+        publishDialog(slice);
         const ch = s[n - 1];
         if (n % 4 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) {
           typing = false;
           hint?.setVisible(true);
           typeTimer = null;
+          publishDialog(fullText);
           scheduleAuto();
         }
       },
@@ -1043,16 +1060,17 @@ export function runDialog(
       cleanupKb();
       scene.events.off("vinput-action", next);
       scene.input.off("pointerdown", next);
+      clearDialogSnapshot();
       onDone?.();
       return;
     }
     const line = lines[i];
+    currentWho = line.who;
     buildChromeFor(line.who, line.text);
     startTyping(line.text.toUpperCase());
     i++;
   };
 
-  // Skip = jump straight to end of all lines.
   const skipAll = () => {
     if (!active) return;
     i = lines.length;
@@ -1072,9 +1090,15 @@ export function runDialog(
   next();
   window.addEventListener("keydown", onKey);
   scene.events.on("vinput-action", next);
-  scene.time.delayedCall(120, () => {
-    if (active) scene.input.on("pointerdown", next);
-  });
+  // In touch_landscape mode the canvas has no in-canvas dialog box, so a
+  // tap on the gameplay viewport should NOT advance dialog (only the A
+  // button or the dialogue tray should). In desktop mode we keep the
+  // pointer-to-advance affordance.
+  if (!isTouchShell) {
+    scene.time.delayedCall(120, () => {
+      if (active) scene.input.on("pointerdown", next);
+    });
+  }
 
   return { dismiss: () => next() };
 }
