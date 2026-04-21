@@ -68,7 +68,7 @@ const INK = 0x88a4c8;
 /** ============================================================
  *  MERCURY PLATEAU — fully authored explorable scene
  *  ============================================================ */
-export class MercuryPlateauScene extends SpherePlateauScene {
+export class MercuryPlateauScene extends Phaser.Scene {
   private rowan!: Phaser.GameObjects.Container;
   private rowanShadow!: Phaser.GameObjects.Ellipse;
   private inputState!: InputState;
@@ -951,7 +951,7 @@ export class MercuryPlateauScene extends SpherePlateauScene {
  *  face). The player walks to each in turn. After all three are named,
  *  Hermaia weighs the score.
  */
-export class MercuryTrialScene extends SphereTrialScene {
+export class MercuryTrialScene extends Phaser.Scene {
   private rowan!: Phaser.GameObjects.Container;
   private rowanShadow!: Phaser.GameObjects.Ellipse;
   private inputState!: InputState;
