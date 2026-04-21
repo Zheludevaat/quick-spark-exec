@@ -637,6 +637,8 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mSave.flags[doneFlag] = true;
       writeSave(this.mSave);
+      const st = this.stations.find((s) => s.doneFlag === doneFlag);
+      if (st) this.markStationResolved(st);
       this.busy = false;
     });
   }
@@ -1302,6 +1304,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private busy = false;
   private mScore = 0;
   private mSave!: SaveSlot;
+  private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() {
     super("MercuryTrial");
@@ -1341,23 +1344,42 @@ export class MercuryTrialScene extends Phaser.Scene {
       depth: 50,
     });
 
-    // Three doors arranged across the chamber
+    // Cumulative chamber sigil — gains a segment per door named.
+    this.chamberSigilSegs = [];
+    for (let s = 0; s < 3; s++) {
+      const seg = this.add
+        .rectangle(GBC_W / 2 - 12 + s * 12, 22, 8, 2, COLD, 0.18)
+        .setDepth(8);
+      this.chamberSigilSegs.push(seg);
+    }
+
+    // Three doors — each carries its own visual character.
+    // Doubt: cool, flickering, unstable.
+    // Certainty: rigid, solid, stronger glow.
+    // Silence: dimmer, slower, quieter.
     const ys = 50;
     const xs = [32, 80, 128];
     const labels = ["DOUBT", "CERTAINTY", "SILENCE"];
+    const colors = [0x88a8d8, 0xe8c890, 0x8090b0];
+    const alphas = [0.7, 0.95, 0.55];
+    const pulseDur = [700, 1400, 1900];
+    const easings = ["Sine.inOut", "Quad.inOut", "Sine.inOut"];
     for (let i = 0; i < 3; i++) {
-      const arc = this.add.circle(xs[i], ys, 10, COLD, 0.8).setDepth(10);
-      arc.setStrokeStyle(2, 0xffffff, 0.6);
-      // Door frame
-      this.add.rectangle(xs[i], ys + 14, 18, 4, STONE_DARK).setDepth(9);
-      // Pulse
+      const arc = this.add.circle(xs[i], ys, 10, colors[i], alphas[i]).setDepth(10);
+      arc.setStrokeStyle(i === 1 ? 2 : 1, 0xffffff, i === 1 ? 0.8 : 0.5);
+      // Door frame — Certainty's frame is heavier.
+      this.add
+        .rectangle(xs[i], ys + 14, 18, i === 1 ? 5 : 4, STONE_DARK)
+        .setDepth(9);
+      // Pulse — flicker for Doubt, slow breath for Silence.
       this.tweens.add({
         targets: arc,
-        scale: 1.2,
-        alpha: 0.5,
-        duration: 1100 + i * 200,
+        scale: i === 0 ? 1.35 : i === 1 ? 1.1 : 1.05,
+        alpha: i === 0 ? 0.35 : i === 1 ? 0.7 : 0.35,
+        duration: pulseDur[i],
         yoyo: true,
         repeat: -1,
+        ease: easings[i],
       });
       const lbl = new GBCText(this, xs[i] - 14, ys + 18, labels[i], {
         color: COLOR.textDim,
@@ -1459,15 +1481,57 @@ export class MercuryTrialScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mScore += picked.weight;
       door.done = true;
-      door.visual.setAlpha(0.25);
+
+      // Brief collapse/exhale on the door, then leave a quiet seal ring.
+      this.tweens.add({
+        targets: door.visual,
+        scale: 0.6,
+        alpha: 0.18,
+        duration: 350,
+        ease: "Quad.in",
+      });
+      const seal = this.add
+        .circle(door.visual.x, door.visual.y, 8, COLD, 0)
+        .setStrokeStyle(1, COLOR.textGold === "#e8c890" ? 0xe8c890 : 0xffd070, 0.7)
+        .setDepth(11);
+      this.tweens.add({
+        targets: seal,
+        scale: 1.4,
+        alpha: { from: 0.9, to: 0.4 },
+        duration: 600,
+      });
+
       door.label.setColor(COLOR.textGold);
       door.label.setText("NAMED");
       getAudio().sfx("resolve");
+
+      // Cumulative chamber indicator — light one sigil segment per name.
+      const namedCount = this.doors.filter((d) => d.done).length;
+      const seg = this.chamberSigilSegs[namedCount - 1];
+      if (seg) {
+        seg.setFillStyle(0xe8c890, 0.95);
+        this.tweens.add({
+          targets: seg,
+          scale: { from: 1.5, to: 1 },
+          duration: 500,
+          ease: "Back.out",
+        });
+      }
+
       writeSave(this.mSave);
 
       const remaining = this.doors.filter((d) => !d.done).length;
       if (remaining === 0) {
-        this.time.delayedCall(400, () => this.resolve());
+        // Brief ceremonial weighing beat before pass/fail.
+        this.time.delayedCall(500, () => {
+          runDialog(
+            this,
+            [
+              { who: "HERMAIA", text: "Three names. I weigh them." },
+            ],
+            () => this.resolve(),
+          );
+        });
       } else {
         this.busy = false;
       }
