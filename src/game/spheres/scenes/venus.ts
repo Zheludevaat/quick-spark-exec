@@ -1058,6 +1058,7 @@ export class VenusTrialScene extends Phaser.Scene {
   private save!: SaveSlot;
   private state: VenusTrialState = initialVenusTrialState();
   private busy = false;
+  private kypriaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("VenusTrial");
