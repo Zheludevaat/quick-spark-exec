@@ -96,6 +96,11 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private thresholdStage = 0;
   private vesselPresentation?: EncounterPresentationHandle;
   private doorPresentations: Partial<Record<Door["key"], EncounterPresentationHandle>> = {};
+  // Reflection Chamber side door (lunar puzzle exemplar)
+  private reflectionPortalX = 18;
+  private reflectionPortalY = GBC_H - 30;
+  private reflectionPortal?: Phaser.GameObjects.Rectangle;
+  private reflectionLabel?: GBCText;
 
   constructor() {
     super("AthanorThreshold");
@@ -250,6 +255,27 @@ export class AthanorThresholdScene extends Phaser.Scene {
 
     // Vessel presentation — furnace aura + first-approach intro.
     this.vesselPresentation = createEncounterPresentation(this, vx, vy, VESSEL_PROFILE);
+
+    // Reflection Chamber portal — pale lunar arch tucked at the lower left.
+    // Solved state shows a calmer, lit arch.
+    const rpSolved = !!this.save.flags.puzzle_moon_reflection_01_solved;
+    this.add
+      .rectangle(this.reflectionPortalX, this.reflectionPortalY - 1, 14, 18, 0x1a2030, 1)
+      .setStrokeStyle(1, rpSolved ? 0xc8d8f0 : 0x4a5878, 0.85)
+      .setDepth(3);
+    this.reflectionPortal = this.add
+      .rectangle(this.reflectionPortalX, this.reflectionPortalY, 10, 14, rpSolved ? 0x4a6090 : 0x0a0e1a, rpSolved ? 0.6 : 0.95)
+      .setDepth(4);
+    this.add
+      .circle(this.reflectionPortalX, this.reflectionPortalY - 6, 2, 0xc8d8f0, rpSolved ? 0.7 : 0.35)
+      .setDepth(5);
+    this.reflectionLabel = new GBCText(
+      this,
+      this.reflectionPortalX - 12,
+      this.reflectionPortalY + 10,
+      "REFLECT",
+      { color: COLOR.textDim, depth: 5 },
+    );
 
     // Work-stage status indicator near the top edge.
     this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
@@ -418,6 +444,10 @@ export class AthanorThresholdScene extends Phaser.Scene {
     return Math.hypot(this.rowan.x - GBC_W / 2, this.rowan.y - (GBC_H / 2 + 8)) < 16;
   }
 
+  private nearReflection(): boolean {
+    return Math.hypot(this.rowan.x - this.reflectionPortalX, this.rowan.y - this.reflectionPortalY) < 12;
+  }
+
   private refreshHint() {
     if (this.busy) return;
     const door = this.nearestDoor();
@@ -438,6 +468,11 @@ export class AthanorThresholdScene extends Phaser.Scene {
         "encounter_seen_athanor_vessel",
         this.save,
       );
+      return;
+    }
+    if (this.nearReflection()) {
+      const solved = !!this.save.flags.puzzle_moon_reflection_01_solved;
+      this.hint.setText(solved ? "REFLECTION CHAMBER (SOLVED)  A: ENTER" : "A: REFLECTION CHAMBER");
       return;
     }
     this.hint.setText("");
@@ -464,6 +499,14 @@ export class AthanorThresholdScene extends Phaser.Scene {
     }
     if (this.nearVessel()) {
       this.tryDeposit();
+      return;
+    }
+    if (this.nearReflection()) {
+      this.scene.start("PuzzleChamber", {
+        save: this.save,
+        roomId: "moon_reflection_01",
+        returnTo: "AthanorThreshold",
+      });
       return;
     }
     // Coda: if all four operations done, show seal prompt

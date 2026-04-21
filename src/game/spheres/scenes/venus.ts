@@ -330,6 +330,33 @@ export class VenusPlateauScene extends Phaser.Scene {
       "etiquetteHeard",
     );
 
+    // Concord Bridge — venusian harmony exemplar puzzle, tucked at the
+    // upper-right of the atrium. Solved state shows a calmed pair of motes.
+    const concordSolved = !!this.save.flags.puzzle_venus_attunement_01_solved;
+    const concordA = this.add.circle(120, 38, 2, concordSolved ? 0xf0c8d8 : 0x584858, concordSolved ? 0.7 : 0.45).setDepth(11);
+    const concordB = this.add.circle(140, 38, 2, concordSolved ? 0xf0c8d8 : 0x584858, concordSolved ? 0.7 : 0.45).setDepth(11);
+    this.root.add(concordA);
+    this.root.add(concordB);
+    if (!concordSolved) {
+      this.tweens.add({ targets: [concordA, concordB], alpha: 0.2, duration: 1100, yoyo: true, repeat: -1 });
+    }
+    this.hotspots.push({
+      id: "concord_bridge_portal",
+      x: 130,
+      y: 42,
+      r: 9,
+      label: concordSolved ? "the bridge stands" : "ENTER: concord bridge",
+      enabled: () => true,
+      badge: () => (this.save.flags.puzzle_venus_attunement_01_solved ? "*" : null),
+      onAct: () => {
+        this.scene.start("PuzzleChamber", {
+          save: this.save,
+          roomId: "venus_attunement_01",
+          returnTo: "VenusPlateau",
+        });
+      },
+    });
+
     // Doors
     this.doors.push(
       { to: "gallery", x: 0, y: 50, w: 8, h: 30, label: "← GALLERY" },

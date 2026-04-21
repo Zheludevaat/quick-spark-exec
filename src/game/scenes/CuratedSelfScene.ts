@@ -101,6 +101,22 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   create() {
+    // Sun exemplar puzzle: offer the Truth Circle antechamber exactly once
+    // before the curated self appears. Players who solve it return here.
+    if (
+      !this.save.flags.puzzle_sun_stand_01_solved &&
+      !this.save.flags.sun_truth_circle_offered
+    ) {
+      this.save.flags.sun_truth_circle_offered = true;
+      writeSave(this.save);
+      this.scene.start("PuzzleChamber", {
+        save: this.save,
+        roomId: "sun_stand_01",
+        returnTo: "CuratedSelf",
+      });
+      return;
+    }
+
     this.cameras.main.setBackgroundColor("#03040a");
     this.cameras.main.fadeIn(700);
     getAudio().music.play("boss", SONG_BOSS);

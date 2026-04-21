@@ -53,6 +53,7 @@ type StationKind =
   | "scrolls"
   | "crack_chamber"
   | "trial_door"
+  | "hall_of_glyphs"
   | "exit_stairs";
 
 type MStation = {
@@ -407,6 +408,16 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.placeStation("crack_chamber", GBC_W / 2, 24, "CHAMBER", `sphere_mercury_cracked`);
     this.placeStation("trial_door", GBC_W / 2, 14, "TRIAL");
 
+    // -- Hall of Glyphs (lunar/mercurial naming side-chamber) --
+    this.placeStation(
+      "hall_of_glyphs",
+      14,
+      24,
+      "GLYPHS",
+      "puzzle_mercury_name_01_solved",
+      WARM,
+    );
+
     // -- Exit (bottom) --
     this.placeStation("exit_stairs", GBC_W / 2, GBC_H - 6, "STAIRS");
   }
@@ -491,6 +502,18 @@ export class MercuryPlateauScene extends Phaser.Scene {
       // Persistent pulse is applied by refreshChamberGlow() once ready.
     } else if (kind === "trial_door") {
       // glow handled separately; refresh later
+    } else if (kind === "hall_of_glyphs") {
+      // Small lunar arch with three pip glyphs above it.
+      const arch = this.add.rectangle(x, y, 14, 16, STONE_DARK, 1).setDepth(8);
+      arch.setStrokeStyle(1, done ? COLD : color, 0.85);
+      const inner = this.add.rectangle(x, y + 1, 8, 12, done ? 0x1a2840 : 0x0a0e1a, 1).setDepth(9);
+      const pipL = this.add.circle(x - 4, y - 11, 1, done ? 0x404858 : color, done ? 0.4 : 0.85).setDepth(10);
+      const pipM = this.add.circle(x, y - 12, 1, done ? COLD : color, 0.95).setDepth(10);
+      const pipR = this.add.circle(x + 4, y - 11, 1, done ? 0x404858 : color, done ? 0.4 : 0.85).setDepth(10);
+      visual.push(arch, inner, pipL, pipM, pipR);
+      if (!done) {
+        this.tweens.add({ targets: pipM, alpha: 0.5, duration: 950, yoyo: true, repeat: -1 });
+      }
     } else if (kind === "exit_stairs") {
       // already drawn in buildTower; just register the hotspot
     }
@@ -564,6 +587,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
     if (st.kind === "puzzle_silence") return "SIT";
     if (st.kind === "crack_chamber") return "FACE";
     if (st.kind === "trial_door") return "ENTER";
+    if (st.kind === "hall_of_glyphs") return "NAME";
     if (st.kind === "exit_stairs") return "DESCEND";
     return "INTERACT";
   }
@@ -632,6 +656,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
         return this.runCrack();
       case "trial_door":
         return this.tryEnterTrial();
+      case "hall_of_glyphs":
+        this.busy = false;
+        this.scene.start("PuzzleChamber", {
+          save: this.mSave,
+          roomId: "mercury_name_01",
+          returnTo: "MercuryPlateau",
+        });
+        return;
       case "exit_stairs":
         return this.toHub();
     }
