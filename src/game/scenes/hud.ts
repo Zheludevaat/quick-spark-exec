@@ -644,17 +644,73 @@ export class InputState {
 }
 
 // ============================================================================
-// Rowan helpers (unchanged)
+// Rowan helpers — layered living/soul sprites with per-skin animation sets.
 // ============================================================================
 export type RowanSkin = "living" | "soul";
 
-export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: RowanSkin = "living") {
+function rowanAnimKey(skin: RowanSkin, dir: string, idle = false) {
+  return `rowan_${skin}_${dir}${idle ? "_idle" : ""}`;
+}
+
+function getRowanSprites(c: Phaser.GameObjects.Container) {
+  return {
+    living: c.getData("livingSprite") as Phaser.GameObjects.Sprite | undefined,
+    soul: c.getData("soulSprite") as Phaser.GameObjects.Sprite | undefined,
+  };
+}
+
+function playRowanPose(
+  c: Phaser.GameObjects.Container,
+  dir: string,
+  moving: boolean,
+) {
+  const { living, soul } = getRowanSprites(c);
+  const anims = c.scene.anims;
+  if (living) {
+    const key = rowanAnimKey("living", dir, !moving);
+    if (anims.exists(key) && living.anims.currentAnim?.key !== key) {
+      living.play(key);
+    }
+  }
+  if (soul) {
+    const key = rowanAnimKey("soul", dir, !moving);
+    if (anims.exists(key) && soul.anims.currentAnim?.key !== key) {
+      soul.play(key);
+    }
+  }
+}
+
+export function makeRowan(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  skin: RowanSkin = "living",
+) {
   const c = scene.add.container(x, y);
-  const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
-  if (scene.anims.exists("rowan_down_idle")) sprite.play("rowan_down_idle");
-  c.add([sprite]);
+
+  const livingSprite = scene.add
+    .sprite(0, 0, "rowan_living", 0)
+    .setOrigin(0.5, 0.7);
+  const soulSprite = scene.add
+    .sprite(0, 0, "rowan_soul", 0)
+    .setOrigin(0.5, 0.7);
+
+  if (scene.anims.exists(rowanAnimKey("living", "down", true))) {
+    livingSprite.play(rowanAnimKey("living", "down", true));
+  }
+  if (scene.anims.exists(rowanAnimKey("soul", "down", true))) {
+    soulSprite.play(rowanAnimKey("soul", "down", true));
+  }
+
+  livingSprite.setAlpha(skin === "living" ? 1 : 0);
+  soulSprite.setAlpha(skin === "soul" ? 0.85 : 0);
+  soulSprite.setTint(0xeaf2ff);
+
+  c.add([livingSprite, soulSprite]);
   c.setSize(16, 24);
-  c.setData("sprite", sprite);
+  c.setData("livingSprite", livingSprite);
+  c.setData("soulSprite", soulSprite);
+  c.setData("sprite", skin === "soul" ? soulSprite : livingSprite);
   c.setData("dir", "down");
   c.setData("skin", skin);
 
@@ -673,26 +729,30 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   });
   c.setData("accessories", accessories);
 
-  if (skin === "soul") {
-    sprite.setAlpha(0.85);
-    sprite.setTint(0xeaf2ff);
-  }
-
-  // --- ART UPGRADE: Player "Illusion of Life" (idle breathing) ---
-  const idleBop = scene.tweens.add({
-    targets: sprite,
+  // --- ART UPGRADE: idle breathing for both layers ---
+  const idleBopLiving = scene.tweens.add({
+    targets: livingSprite,
     scaleY: 1.04,
     scaleX: 0.98,
-    y: sprite.y - 0.5,
+    y: livingSprite.y - 0.5,
     duration: 1100,
     yoyo: true,
     repeat: -1,
     ease: "Sine.inOut",
   });
-  c.setData("idleBop", idleBop);
-  // --- END ART UPGRADE ---
+  const idleBopSoul = scene.tweens.add({
+    targets: soulSprite,
+    scaleY: 1.04,
+    scaleX: 0.98,
+    y: soulSprite.y - 0.5,
+    duration: 1100,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.inOut",
+  });
+  c.setData("idleBops", [idleBopLiving, idleBopSoul]);
 
-  // --- ART UPGRADE: Contextual Footsteps ---
+  // --- ART UPGRADE: contextual footsteps ---
   if (!scene.textures.exists("footstep_dust")) {
     const gr = scene.make.graphics({ x: 0, y: 0 }, false);
     gr.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 1);
@@ -715,7 +775,6 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   c.setData("footsteps", footsteps);
   c.setData("lastTrail", 0);
   c.setData("walkTimer", 0);
-  // --- END ART UPGRADE ---
 
   return c;
 }
