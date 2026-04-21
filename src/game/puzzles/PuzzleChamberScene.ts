@@ -409,13 +409,11 @@ export class PuzzleChamberScene extends Phaser.Scene {
 
   private softFail(msg: string) {
     this.busy = true;
-    const old = this.hint.text;
-    this.hint.setText(msg);
-    this.hint.setColor(COLOR.textGold);
+    const old = this.hintText;
+    this.hint.setText(msg, COLOR.textGold);
     this.cameras.main.shake(140, 0.002);
     this.time.delayedCall(900, () => {
-      this.hint.setColor(COLOR.textDim);
-      this.hint.setText(old);
+      this.hint.setText(old, COLOR.textDim);
       this.busy = false;
       this.refreshHint();
     });
