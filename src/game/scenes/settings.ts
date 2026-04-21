@@ -304,7 +304,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         const visIdx = abs - start;
         const y = LIST_TOP + visIdx * ROW_H;
         const isCur = abs === cursor;
-        const lblState = fitSingleLineState(r.label, LEFT_W);
+        const visibleLabel = r.menuLabel ?? r.label;
+        const lblState = fitSingleLineState(visibleLabel, LEFT_W);
         const valState = fitSingleLineState(r.value, RIGHT_W);
         const arrow = new GBCText(scene, 8, y, isCur ? ">" : " ", {
           color: COLOR.textAccent,
@@ -324,9 +325,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       }
 
-      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W));
-      footer1.setText(fitSingleLineText("UP/DN MOVE  A SELECT", FOOTER_W));
-      footer2.setText(fitSingleLineText("LT/RT CHANGE  B OR ESC CLOSE", FOOTER_W));
+      detail.setText(mainDetailText(rows[cursor]));
+      detail.setColor(COLOR.textLight);
+      if ("clearTint" in detail.obj) {
+        (detail.obj as unknown as { clearTint?: () => void }).clearTint?.();
+      }
+      footer1.setText("UP/DN MOVE  A OK");
+      footer2.setText("LT/RT CHANGE  B CLOSE");
     } else {
       // KEYS page
       subtitle.setText("KEY BINDINGS");
@@ -369,19 +374,18 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       const focusAction = ACTION_ORDER[cursor];
       if (rebindAction) {
         const slot = rebindSlot === "primary" ? "PRIMARY" : "SECONDARY";
-        detail.setText(
-          fitSingleLineText(
-            `PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`,
-            DETAIL_W,
-          ),
-        );
-        detail.obj.setTint(0xffffff);
-        footer1.setText(fitSingleLineText("PRESS A KEY", FOOTER_W));
-        footer2.setText(fitSingleLineText("ESC CANCEL", FOOTER_W));
+        detail.setText(`PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`);
+        detail.setColor(COLOR.textAccent);
+        footer1.setText("PRESS KEY");
+        footer2.setText("ESC CANCEL");
       } else {
-        detail.setText(fitSingleLineText(keysDetailText(focusAction), DETAIL_W));
-        footer1.setText(fitSingleLineText("UP/DN MOVE  A REBIND", FOOTER_W));
-        footer2.setText(fitSingleLineText("TAB ALT SLOT  B BACK", FOOTER_W));
+        detail.setText(keysDetailText(focusAction));
+        detail.setColor(COLOR.textLight);
+        if ("clearTint" in detail.obj) {
+          (detail.obj as unknown as { clearTint?: () => void }).clearTint?.();
+        }
+        footer1.setText("UP/DN MOVE  A REBIND");
+        footer2.setText("TAB ALT SLOT  B BACK");
       }
     }
   };
