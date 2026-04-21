@@ -34,7 +34,7 @@ const ZONE_OVERRIDES: Partial<Record<VenusZoneId, Partial<ScenicPalette>>> = {
   gallery: { wall1: "#3a2030", trim1: "#f0c0c8" },
   recognition_hall: { accent0: "#e8a8c0", accent1: "#ffd0e0" },
   reconstruction: { floor1: "#3c2236", accent0: "#d090a0" },
-  lader: { bg1: "#2a1830", trim1: "#e0a8b8" },
+  ladder: { bg1: "#2a1830", trim1: "#e0a8b8" },
   threshold: { accent1: "#ffe8d8", trim1: "#f0c0a8" },
 };
 
