@@ -55,9 +55,9 @@ import {
   makeSunZoneLabel,
 } from "../sun/SunUi";
 import {
-  buildSunBackdrop,
-  addSunForeground,
-  addSunAftermath,
+  buildSunHallBackdrop,
+  addSunHallForeground,
+  addSunHallAftermath,
 } from "../sun/SunArt";
 import { SUN_ENV_READS, sunZoneAftermath } from "../sun/SunPlateauProps";
 
@@ -152,14 +152,13 @@ export class SunPlateauScene extends Phaser.Scene {
     this.cameras.main.fadeIn(500);
 
     this.root = this.add.container(0, 0);
-    // Phase 1 keeps the per-zone backdrop. Phase 2 will replace this with a
-    // single unified Hall painting; we still need a base wash for now.
-    buildSunBackdrop(this, this.root, this.zone);
+    // Phase 2: paint the Hall as a single continuous room.
+    buildSunHallBackdrop(this, this.root);
     spawnMotes(this, { count: 16, color: WARM, alpha: 0.25, depth: 8 });
     this.aftermathLayer = this.add.container(0, 0);
     this.root.add(this.aftermathLayer);
     this.repaintAftermath();
-    addSunForeground(this, this.root, this.zone);
+    addSunHallForeground(this, this.root);
 
     this.zoneLabel = makeSunZoneLabel(this, SUN_ZONE_LABEL[this.zone]);
     this.subtitle = makeSunSubtitle(this, this.zoneSubtitle(this.zone));
@@ -308,13 +307,14 @@ export class SunPlateauScene extends Phaser.Scene {
   private repaintAftermath() {
     if (!this.aftermathLayer) return;
     this.aftermathLayer.removeAll(true);
-    const witness = this.witnessForZone(this.zone);
-    const op = this.opForZone(this.zone);
-    const wDone = witness ? !!this.save.flags[witness.doneFlag] : true;
-    const oDone = op ? !!this.save.flags[op.doneFlag] : true;
     const ready = sunTrialReady(this.save);
-    const progress = sunZoneAftermath(this.zone, wDone, oDone, ready);
-    addSunAftermath(this, this.aftermathLayer, this.zone, progress);
+    addSunHallAftermath(this, this.aftermathLayer, (zone) => {
+      const witness = this.witnessForZone(zone);
+      const op = this.opForZone(zone);
+      const wDone = witness ? !!this.save.flags[witness.doneFlag] : true;
+      const oDone = op ? !!this.save.flags[op.doneFlag] : true;
+      return sunZoneAftermath(zone, wDone, oDone, ready);
+    });
   }
 
   private zoneSubtitle(zone: SunZoneId): string {

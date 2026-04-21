@@ -338,3 +338,207 @@ export function addSunAftermath(
       break;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ *  UNIFIED HALL BACKDROP
+ *
+ *  Phase 2 of the Sun rebuild: instead of swapping a per-zone painting
+ *  every time the player crosses an anchor, we paint the Hall as one
+ *  continuous room. Six bays sit shoulder-to-shoulder, each carrying a
+ *  miniaturised version of its zone's hero motif. A shared ceiling,
+ *  cornice, and floor run the full width so movement feels like a
+ *  procession rather than a slideshow.
+ * ------------------------------------------------------------------ */
+
+const HALL_BAY_X: { id: SunZoneId; cx: number }[] = [
+  { id: "vestibule", cx: 18 },
+  { id: "testimony", cx: 46 },
+  { id: "archive", cx: 70 },
+  { id: "mirrors", cx: 94 },
+  { id: "warmth", cx: 120 },
+  { id: "threshold", cx: 146 },
+];
+
+function bayPlinth(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(PAL.shadow, 1).fillRect(cx - 12, 84, 24, 6);
+  g.lineStyle(1, PAL.gold, 0.35).strokeRect(cx - 12, 84, 24, 6);
+}
+
+function bayPilasters(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(PAL.maroon, 0.9).fillRect(cx - 13, 30, 2, 54);
+  g.fillStyle(PAL.maroon, 0.9).fillRect(cx + 11, 30, 2, 54);
+  g.fillStyle(PAL.gold, 0.7).fillRect(cx - 14, 28, 4, 2);
+  g.fillStyle(PAL.gold, 0.7).fillRect(cx + 10, 28, 4, 2);
+}
+
+function bayVestibule(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(PAL.gold, 0.85).fillRect(cx - 10, 30, 20, 3);
+  g.fillStyle(PAL.paleGold, 0.18).fillEllipse(cx, 32, 22, 8);
+  g.lineStyle(1, PAL.gold, 0.55).strokeEllipse(cx, 32, 22, 8);
+  g.fillStyle(PAL.amber, 1).fillRect(cx - 4, 56, 8, 14);
+  g.lineStyle(1, PAL.gold, 0.7).strokeRect(cx - 4, 56, 8, 14);
+  g.fillStyle(PAL.ivory, 0.9).fillRect(cx - 6, 18, 12, 4);
+  g.lineStyle(1, PAL.gold, 0.9).strokeRect(cx - 6, 18, 12, 4);
+}
+
+function bayTestimony(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.lineStyle(1, PAL.hush, 0.9);
+  g.beginPath();
+  g.moveTo(cx, 6);
+  g.lineTo(cx, 22);
+  g.strokePath();
+  g.fillStyle(PAL.maroon, 0.85).fillRect(cx - 8, 22, 16, 16);
+  g.lineStyle(1, PAL.gold, 0.8).strokeRect(cx - 8, 22, 16, 16);
+  g.fillStyle(PAL.gold, 0.9).fillRect(cx - 6, 28, 12, 1);
+  g.fillStyle(PAL.gold, 0.9).fillRect(cx - 6, 32, 12, 1);
+  g.fillStyle(PAL.amber, 1).fillRect(cx - 5, 60, 10, 18);
+  g.lineStyle(1, PAL.gold, 0.9).strokeRect(cx - 5, 60, 10, 18);
+  g.fillStyle(PAL.gold, 1).fillRect(cx - 6, 58, 12, 2);
+}
+
+function bayArchive(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(PAL.ivory, 0.12).fillRect(cx - 11, 26, 22, 50);
+  g.lineStyle(1, PAL.gold, 0.5).strokeRect(cx - 11, 26, 22, 50);
+  g.lineStyle(1, PAL.amber, 0.6);
+  g.beginPath();
+  g.moveTo(cx - 8, 26);
+  g.lineTo(cx - 8, 76);
+  g.strokePath();
+  g.fillStyle(PAL.ivory, 0.55);
+  for (let r = 0; r < 6; r++) g.fillRect(cx - 5, 32 + r * 6, 14, 1);
+  g.fillStyle(PAL.maroon, 0.85).fillRect(cx - 5, 46, 14, 2);
+  g.fillStyle(PAL.amber, 1).fillRect(cx - 1, 64, 3, 3);
+  g.lineStyle(1, PAL.ivory, 0.85);
+  g.beginPath();
+  g.moveTo(cx + 1, 64);
+  g.lineTo(cx + 5, 56);
+  g.strokePath();
+}
+
+function bayMirrors(g: Phaser.GameObjects.Graphics, cx: number) {
+  for (let m = 0; m < 2; m++) {
+    const mx = cx - 6 + m * 12;
+    g.fillStyle(PAL.amber, 1).fillRect(mx - 4, 26, 8, 50);
+    g.fillStyle(PAL.inkBlue, 1).fillRect(mx - 3, 27, 6, 48);
+    g.fillStyle(PAL.paleGold, 0.35);
+    for (let r = 0; r < 48; r += 2) {
+      const off = Math.round(Math.sin((r + m * 4) * 0.4) * 1.5);
+      g.fillRect(mx + off, 27 + r, 1, 1);
+    }
+    g.lineStyle(1, PAL.gold, 0.6).strokeRect(mx - 4, 26, 8, 50);
+  }
+}
+
+function bayWarmth(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(0xe0a060, 0.18).fillEllipse(cx, 56, 30, 30);
+  g.fillStyle(0xff9040, 0.5).fillEllipse(cx, 62, 12, 6);
+  g.fillStyle(PAL.maroon, 1).fillRect(cx - 11, 50, 22, 4);
+  g.fillStyle(PAL.shadow, 1).fillRect(cx - 11, 54, 22, 14);
+  g.lineStyle(1, PAL.amber, 0.6).strokeRect(cx - 11, 54, 22, 14);
+  g.fillStyle(PAL.ivory, 0.9).fillRect(cx - 3, 78, 6, 3);
+}
+
+function bayThreshold(g: Phaser.GameObjects.Graphics, cx: number) {
+  g.fillStyle(0xffd070, 0.16).fillEllipse(cx, 48, 36, 56);
+  g.lineStyle(1, PAL.gold, 0.7).strokeEllipse(cx, 48, 36, 56);
+  g.lineStyle(1, PAL.gold, 0.4).strokeEllipse(cx, 48, 26, 42);
+  g.fillStyle(0x140808, 1).fillRect(cx - 8, 26, 16, 50);
+  g.lineStyle(1, PAL.gold, 0.95).strokeRect(cx - 8, 26, 16, 50);
+  g.fillStyle(PAL.gold, 0.95).fillRect(cx - 1, 26, 2, 50);
+  g.lineStyle(1, PAL.paleGold, 0.5);
+  for (let i = -2; i <= 2; i++) {
+    g.beginPath();
+    g.moveTo(cx + i * 3, 22);
+    g.lineTo(cx + i * 8, 8);
+    g.strokePath();
+  }
+}
+
+export function buildSunHallBackdrop(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+) {
+  const g = scene.add.graphics().setDepth(1);
+  root.add(g);
+
+  g.fillStyle(PAL.void, 1).fillRect(0, 0, GBC_W, GBC_H);
+  // Sky gradient warming toward the threshold (right).
+  g.fillStyle(PAL.maroon, 0.45).fillRect(0, 0, GBC_W, 18);
+  g.fillStyle(PAL.amber, 0.18).fillRect(60, 0, 100, 18);
+  g.fillStyle(PAL.gold, 0.15).fillRect(110, 0, 50, 18);
+  // Cornice beam.
+  g.fillStyle(PAL.shadow, 1).fillRect(0, 18, GBC_W, 4);
+  g.lineStyle(1, PAL.gold, 0.6);
+  g.beginPath();
+  g.moveTo(0, 22);
+  g.lineTo(GBC_W, 22);
+  g.strokePath();
+  // Mid wall wash + warm gradient.
+  g.fillStyle(PAL.mid, 1).fillRect(0, 22, GBC_W, 66);
+  g.fillStyle(PAL.amber, 0.08).fillRect(60, 22, 100, 66);
+  g.fillStyle(PAL.gold, 0.08).fillRect(110, 22, 50, 66);
+  // Floor.
+  g.fillStyle(PAL.ground, 0.78).fillRect(0, 88, GBC_W, 56);
+  g.lineStyle(1, 0x000000, 0.35);
+  for (let i = 0; i < 6; i++) {
+    const y = 92 + i * 8;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(GBC_W, y);
+    g.strokePath();
+  }
+  // Center aisle inlay.
+  g.fillStyle(PAL.maroon, 0.35).fillRect(0, 108, GBC_W, 6);
+  g.lineStyle(1, PAL.gold, 0.35);
+  g.beginPath();
+  g.moveTo(0, 108);
+  g.lineTo(GBC_W, 108);
+  g.strokePath();
+  g.beginPath();
+  g.moveTo(0, 114);
+  g.lineTo(GBC_W, 114);
+  g.strokePath();
+
+  for (const { id, cx } of HALL_BAY_X) {
+    bayPilasters(g, cx);
+    bayPlinth(g, cx);
+    switch (id) {
+      case "vestibule": bayVestibule(g, cx); break;
+      case "testimony": bayTestimony(g, cx); break;
+      case "archive":   bayArchive(g, cx);   break;
+      case "mirrors":   bayMirrors(g, cx);   break;
+      case "warmth":    bayWarmth(g, cx);    break;
+      case "threshold": bayThreshold(g, cx); break;
+    }
+  }
+}
+
+export function addSunHallForeground(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+) {
+  const g = scene.add.graphics().setDepth(90);
+  root.add(g);
+  g.fillStyle(0x000000, 0.28).fillRect(0, 128, GBC_W, 16);
+  g.fillStyle(0x000000, 0.32).fillRect(0, 22, 6, 122);
+  g.fillStyle(0x000000, 0.32).fillRect(GBC_W - 6, 22, 6, 122);
+  g.fillStyle(PAL.paleGold, 0.1).fillEllipse(146, 124, 44, 10);
+}
+
+/**
+ * Hall aftermath: paints every zone whose progress > 0, so multiple
+ * bays can soften simultaneously as the player completes the room.
+ */
+export function addSunHallAftermath(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+  progressFor: (zone: SunZoneId) => number,
+) {
+  const ZONES: SunZoneId[] = [
+    "vestibule", "testimony", "archive", "mirrors", "warmth", "threshold",
+  ];
+  for (const z of ZONES) {
+    const p = progressFor(z);
+    if (p > 0) addSunAftermath(scene, root, z, p);
+  }
+}
