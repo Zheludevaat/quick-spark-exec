@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { GBC_W, GBC_H, TILE, COLOR, GBCText, TILE_INDEX, gbcWipe, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
 import type { ImaginalRegion, SaveSlot } from "../types";
+import { grantAlchemyHint } from "../canon/alchemySecret";
 import { attachHUD, mountImaginalProgressBadge, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { SorynCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
@@ -1294,28 +1295,33 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (cleared >= 3) {
         if (!this.save.flags.corridor_athanor_warned) {
           this.save.flags.corridor_athanor_warned = true;
+          const annexUnlocked = grantAlchemyHint(this.save, "moon_flaw");
           writeSave(this.save);
           this.dialogActive = true;
-          runDialog(
-            this,
-            [
-              { who: "Soryn", text: "This is as far as I go." },
-              { who: "Soryn", text: "The next room is not imaginal in the same way." },
-            ],
-            () => {
-              this.dialogActive = false;
-            },
-          );
+          const lines = annexUnlocked
+            ? [
+                { who: "Soryn", text: "This is as far as I go on this road." },
+                { who: "Soryn", text: "The image fails in the same place each time. Something below it wants to be found." },
+                { who: "Soryn", text: "But the road ahead is Selenos' trial. Step on." },
+              ]
+            : [
+                { who: "Soryn", text: "This is as far as I go on this road." },
+                { who: "Soryn", text: "The beautiful error points downward. Notice it." },
+                { who: "Soryn", text: "Selenos waits beyond. The trial will not wait forever." },
+              ];
+          runDialog(this, lines, () => {
+            this.dialogActive = false;
+          });
           return;
         }
 
-        this.save.scene = "AthanorThreshold";
+        this.save.scene = "MoonTrial";
         writeSave(this.save);
         const a = getAudio();
         a.sfx("boss");
         a.music.stop();
         if (this.companion) this.companion.setVisible(false);
-        gbcWipe(this, () => this.scene.start("AthanorThreshold", { save: this.save }));
+        gbcWipe(this, () => this.scene.start("MoonTrial", { save: this.save }));
         return;
       }
     }
