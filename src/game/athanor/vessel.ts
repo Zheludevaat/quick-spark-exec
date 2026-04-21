@@ -1,15 +1,15 @@
 /**
- * Vessel HUD widget — single centered bottom plate.
+ * Vessel HUD widget — slim right-edge vertical strip.
  *
  * Mounted only in Act 2 / Act 3 gameplay scenes (Athanor + operations +
  * CuratedSelf). NEVER in Imaginal, Prelude, Crossing, SilverThreshold,
  * SealedVessel.
  *
- * Layout (centered above touch-pad safe area):
- *   Row 1: stone pips grouped by color (B W Y R, 3 each)
- *   Row 2 left:   SHD n
- *   Row 2 mid:    stain pips (only if stainsCarried > 0)
- *   Row 2 right:  status chips: ★ if goldStone, ALN if sorynReleased
+ * Layout (right-edge column, leaves the play area unobstructed):
+ *   Top:    4 stone groups stacked (B / W / Y / R), 3 pips each
+ *   Middle: SHD n
+ *   Below:  stain pips (only if stainsCarried > 0)
+ *   Bottom: status chips: ★ if goldStone, ALN if sorynReleased
  *
  * All gain feedback (stone pop, +1 SHD chip, stain flash, ALN fade-in) is
  * driven by HUD events so it never replays on first mount or re-mount.
@@ -38,33 +38,33 @@ export type VesselHud = {
 };
 
 export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
-  // Plate sized & centered, sitting above the bottom touch-pad safe area.
-  const PLATE_W = 96;
-  const PLATE_H = 22;
-  const PLATE_X = Math.floor((GBC_W - PLATE_W) / 2);
-  const PLATE_Y = GBC_H - PLATE_H - 30; // 30 px clear for pad / dialog chrome
+  // Slim right-edge column: 22 px wide, 56 px tall, anchored top-right so the
+  // centre of the screen and the bottom dialog/command band stay unobstructed.
+  const PLATE_W = 22;
+  const PLATE_H = 56;
+  const PLATE_X = GBC_W - PLATE_W - 2;
+  const PLATE_Y = 16; // sits below the global top stat bar (y=0..13)
   const plate = drawGBCPlate(scene, PLATE_X, PLATE_Y, PLATE_W, PLATE_H, 219, "dark");
 
-  // ----- Row 1: stone pips, grouped per color, with a tiny color label -----
+  // ----- Stones: one row per color, label + 3 pips -----
   const pipsByColor: Record<StoneColor, Phaser.GameObjects.Arc[]> = {
     black: [],
     white: [],
     yellow: [],
     red: [],
   };
-  const groupW = 22;
-  const rowY = PLATE_Y + 4;
+  const rowH = 7;
+  const stonesTop = PLATE_Y + 2;
   STONE_ORDER.forEach((c, ci) => {
-    const groupX = PLATE_X + 4 + ci * groupW;
-    // Letter label
-    new GBCText(scene, groupX, rowY, c[0].toUpperCase(), {
+    const ry = stonesTop + ci * rowH;
+    new GBCText(scene, PLATE_X + 2, ry, c[0].toUpperCase(), {
       color: COLOR.textDim,
       depth: 220,
       scrollFactor: 0,
     });
     for (let i = 0; i < 3; i++) {
       const dot = scene.add
-        .circle(groupX + 6 + i * 4, rowY + 3, 1.6, STONE_COLOR[c])
+        .circle(PLATE_X + 9 + i * 4, ry + 3, 1.4, STONE_COLOR[c])
         .setStrokeStyle(0.5, 0x000000, 1)
         .setScrollFactor(0)
         .setDepth(220)
@@ -73,20 +73,20 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     }
   });
 
-  // ----- Row 2 -----
-  const row2Y = PLATE_Y + 13;
-  const shdLabel = new GBCText(scene, PLATE_X + 4, row2Y, "SHD 0", {
+  // ----- SHD count -----
+  const shdY = stonesTop + 4 * rowH + 1;
+  const shdLabel = new GBCText(scene, PLATE_X + 2, shdY, "SHD 0", {
     color: COLOR.textLight,
     depth: 220,
     scrollFactor: 0,
   });
 
-  // Stain pips (mid). Created lazily but allocated up-front to avoid layout shift.
+  // ----- Stain pips (only if any) -----
+  const stainY = shdY + 7;
   const stainDots: Phaser.GameObjects.Arc[] = [];
-  const stainBaseX = PLATE_X + 36;
   for (let i = 0; i < 3; i++) {
     const d = scene.add
-      .circle(stainBaseX + i * 4, row2Y + 3, 1.4, 0x88a0b8, 0)
+      .circle(PLATE_X + 4 + i * 4, stainY + 3, 1.4, 0x88a0b8, 0)
       .setStrokeStyle(0.5, 0x88a0b8, 1)
       .setScrollFactor(0)
       .setDepth(220)
@@ -94,13 +94,14 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     stainDots.push(d);
   }
 
-  // Status chips (right)
-  const goldChip = new GBCText(scene, PLATE_X + PLATE_W - 18, row2Y, "", {
+  // ----- Status chips at bottom of strip -----
+  const chipY = PLATE_Y + PLATE_H - 8;
+  const goldChip = new GBCText(scene, PLATE_X + 2, chipY, "", {
     color: COLOR.textGold,
     depth: 220,
     scrollFactor: 0,
   });
-  const alnChip = new GBCText(scene, PLATE_X + PLATE_W - 12, row2Y, "", {
+  const alnChip = new GBCText(scene, PLATE_X + 8, chipY, "", {
     color: COLOR.textAccent,
     depth: 220,
     scrollFactor: 0,
@@ -130,24 +131,12 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
     } else {
       stainDots.forEach((d) => d.setVisible(false));
     }
-    // Status chips — render compactly: "★" then "ALN" right-aligned-ish
     const showGold = !!save.goldStone;
     const showAln = !!save.sorynReleased;
     goldChip.setText(showGold ? "★" : "");
     alnChip.setText(showAln ? "ALN" : "");
-    // Position: if both, gold sits one chip-width to the left of ALN
-    if (showGold && showAln) {
-      goldChip.obj.setX(PLATE_X + PLATE_W - 22);
-      alnChip.obj.setX(PLATE_X + PLATE_W - 14);
-    } else if (showGold) {
-      goldChip.obj.setX(PLATE_X + PLATE_W - 8);
-    } else if (showAln) {
-      alnChip.obj.setX(PLATE_X + PLATE_W - 16);
-    }
-    // Keep pulse running once ALN ever appeared (no first-mount fade).
     if (showAln && !alnEverShown) {
       alnEverShown = true;
-      // First paint of an existing ALN save: do NOT fade-in, just set alpha 1.
       alnChip.obj.setAlpha(1);
       alnPulseTween?.stop();
       alnPulseTween = scene.tweens.add({
@@ -175,7 +164,6 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
       duration: 380,
       ease: "Back.out",
     });
-    // 2-frame "sparkle"
     const sparkle = scene.add
       .circle(dot.x, dot.y, 3, 0xffffff, 1)
       .setScrollFactor(0)
@@ -191,14 +179,14 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
 
   const onShardGain = (_p: ShardGainedPayload) => {
     refresh();
-    const chip = new GBCText(scene, PLATE_X + 4, row2Y - 2, "+1 SHD", {
+    const chip = new GBCText(scene, PLATE_X + 3, shdY - 2, "+1", {
       color: COLOR.textGold,
       depth: 232,
       scrollFactor: 0,
     });
     scene.tweens.add({
       targets: chip.obj,
-      y: row2Y - 14,
+      y: shdY - 12,
       alpha: { from: 1, to: 0 },
       duration: 1100,
       ease: "Sine.out",
@@ -241,7 +229,6 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   scene.events.on(HUD_EVENTS.stoneFilled, onStoneFilled);
   scene.events.on(HUD_EVENTS.shardGained, onShardGain);
   scene.events.on(HUD_EVENTS.stainAdded, onStainAdded);
-  // Reuse stat-changed bus to refresh; ALN fade-in is rare so polled here:
   scene.events.on("stats-changed", () => {
     if (!alnEverShown && save.sorynReleased) onAlnFirst();
     else refresh();

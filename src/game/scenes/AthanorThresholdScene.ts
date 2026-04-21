@@ -80,9 +80,19 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#1a0e0a");
     spawnMotes(this, { count: 18, color: 0x6a3a2a, alpha: 0.4 });
 
-    // Floor: warm amber radial
+    // Floor: warm amber radial with checker tile shading
     const floor = this.add.rectangle(GBC_W / 2, GBC_H / 2, GBC_W, GBC_H, 0x2a1810).setDepth(-10);
     void floor;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (((r + c) & 1) === 0) continue;
+        this.add
+          .rectangle(8 + c * 16, 80 + r * 14, 14, 12, 0x3a2218, 0.55)
+          .setDepth(-9);
+      }
+    }
+    // Soft warm pool under the vessel
+    this.add.ellipse(GBC_W / 2, GBC_H / 2 + 10, 56, 18, 0x6a3010, 0.35).setDepth(-8);
 
     // Central vessel (alembic glyph)
     this.vessel = this.add.circle(GBC_W / 2, GBC_H / 2 + 8, 9, 0x000000, 0).setStrokeStyle(1, 0xc8a060).setDepth(5);
@@ -93,10 +103,37 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.refreshVesselFill();
     new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 - 6, "VESSEL", { color: COLOR.textGold, depth: 5 });
 
-    // Four doors along the top, color-coded
+    // Drifting embers rising from the vessel
+    for (let i = 0; i < 6; i++) {
+      const ember = this.add
+        .circle(GBC_W / 2 + (i - 3) * 3, GBC_H / 2 + 6, 1, 0xe8a040, 0.85)
+        .setDepth(6);
+      this.tweens.add({
+        targets: ember,
+        y: GBC_H / 2 - 24,
+        alpha: { from: 0.9, to: 0 },
+        duration: 1800 + i * 200,
+        delay: i * 280,
+        repeat: -1,
+        ease: "Sine.out",
+      });
+    }
+
+    // Four doors along the top, color-coded, each with a hanging chain lamp
     DOOR_DEFS.forEach((d, i) => {
       const x = 24 + i * 28;
       const y = 24;
+      // Chain from the ceiling
+      this.add.rectangle(x, 4, 1, 8, 0x6a4020, 0.7).setDepth(2);
+      // Pendant lamp above the door
+      const lamp = this.add.circle(x, 10, 2, d.tint, 0.9).setStrokeStyle(0.5, 0xc8a060).setDepth(3);
+      this.tweens.add({
+        targets: lamp,
+        alpha: { from: 0.9, to: 0.45 },
+        duration: 1100 + i * 130,
+        yoyo: true,
+        repeat: -1,
+      });
       const rect = this.add.rectangle(x, y, 18, 22, d.tint, 1).setStrokeStyle(1, 0xc8a060).setDepth(3);
       const glow = this.add.circle(x, y + 14, 3, 0xc8a060, 0.6).setDepth(4);
       this.tweens.add({ targets: glow, alpha: 0.2, duration: 900, yoyo: true, repeat: -1 });
