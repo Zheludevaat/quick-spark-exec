@@ -262,8 +262,6 @@ export class VenusPlateauScene extends Phaser.Scene {
     // Place player at the zone's entry point
     const entry = this.entryFor(zone);
     this.player.setPosition(entry.x, entry.y);
-    this.prevPlayerPos = { x: entry.x, y: entry.y };
-    this.lastInputDir = { x: 0, y: 0 };
 
     switch (zone) {
       case "atrium":
