@@ -983,6 +983,7 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
 
   c.setData("transitionAmount", skin === "soul" ? 1 : 0);
   c.setData("sprite", skin === "soul" ? soul : living);
+  c.setData("lastTrail", 0);
 
   const dir = (c.getData("dir") as string) ?? "down";
   playRowanPose(c, dir, false);
@@ -1020,6 +1021,7 @@ export function setRowanTransition(
 
   c.setData("transitionAmount", a);
   c.setData("sprite", a >= 0.5 ? soul : living);
+  c.setData("lastTrail", 0);
 
   const dir = (c.getData("dir") as string) ?? "down";
   playRowanPose(c, dir, false);
@@ -1056,8 +1058,12 @@ export function animateRowan(
 
     const now = scene.time.now;
 
-    // Ethereal Ghost Trails — sourced from the currently-active sprite
-    if (now - ((c.getData("lastTrail") as number) || 0) > 120) {
+    const skin = (c.getData("skin") as RowanSkin | undefined) ?? "living";
+    const shouldEmitGhostTrail =
+      skin === "soul" || transitionAmount >= 0.55;
+
+    // Ethereal ghost trails only belong to soul / near-soul states.
+    if (shouldEmitGhostTrail && now - ((c.getData("lastTrail") as number) || 0) > 120) {
       c.setData("lastTrail", now);
       const ghost = scene.add
         .sprite(c.x, c.y, active.texture.key, active.frame.name)
