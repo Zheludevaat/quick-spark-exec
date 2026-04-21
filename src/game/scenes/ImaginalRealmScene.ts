@@ -488,6 +488,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.knots.push({ ...def, cleared, sprite, glow });
       this.regionRoot.add(sprite);
       if (glow) this.regionRoot.add(glow);
+
+      // Per-knot encounter aura + nameplate. Already-cleared knots come up
+      // softened so the room reads as quietly remembered, not dead.
+      const profile = KNOT_PROFILES[def.kind];
+      if (profile) {
+        const presentation = createEncounterPresentation(this, def.x, def.y, profile);
+        if (cleared) presentation.soften();
+        this.knotPresentations[def.kind] = presentation;
+      }
     }
 
     // Spawn souls — presence styling lives in buildSoulSprite/setMood now.
@@ -499,6 +508,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
       this.regionRoot.add(built.halo);
       this.regionRoot.add(built.container);
+
+      // Per-soul encounter aura + nameplate. Resolved souls come up softened
+      // — they remain present, just no longer demanding the player's attention.
+      const profile = SOUL_PROFILES[def.id];
+      if (profile) {
+        const presentation = createEncounterPresentation(this, def.x, def.y, profile);
+        if (done) presentation.soften();
+        this.soulPresentations[def.id] = presentation;
+      }
 
       this.souls.push({
         def,
