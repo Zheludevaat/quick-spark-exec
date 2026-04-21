@@ -29,6 +29,8 @@ import {
 } from "../encounters/EncounterPresentation";
 import { KNOT_PROFILES } from "../encounters/profiles/knots";
 import { SOUL_PROFILES } from "../encounters/profiles/souls";
+import { regionAftermathLevel } from "./imaginal/regionAftermath";
+import { veilKnotUnlocked } from "./imaginal/ImaginalExpandedContent";
 
 type Knot = {
   kind: KnotKind;
@@ -38,6 +40,10 @@ type Knot = {
   cleared: boolean;
   sprite: Phaser.GameObjects.Image;
   glow?: Phaser.GameObjects.Arc;
+  /** Override flag (used by hidden veil knot). Defaults to `knot_${kind}`. */
+  clearFlag?: string;
+  /** Override hint tagline for hidden variants. */
+  taglineOverride?: string;
 };
 
 type SeedEchoMote = {
@@ -117,7 +123,7 @@ function buildMap(region: ImaginalRegion): number[][] {
 }
 
 const KNOT_LAYOUT: Knot[] = [];
-function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y: number }[] {
+function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y: number; clearFlag?: string; taglineOverride?: string }[] {
   return [
     // Pools — soft tutorial, 2 knots
     { kind: "reflection", region: "pools", x: 48, y: 56 },
@@ -127,6 +133,15 @@ function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y:
     { kind: "lantern", region: "field", x: 120, y: 60 },
     // Corridor — narrow, 1 optional knot
     { kind: "crown", region: "corridor", x: 80, y: 56 },
+    // Hidden late knot — appears in corridor only after 3 of 5 quieted.
+    {
+      kind: "crown",
+      region: "corridor",
+      x: 40,
+      y: 96,
+      clearFlag: "knot_veil",
+      taglineOverride: "THE VEIL THAT FLATTERS YOU.",
+    },
   ];
 }
 
@@ -455,9 +470,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.spawnSyllableLanterns();
     }
 
-    // Place knots for this region
-    for (const def of defineLayout().filter((k) => k.region === region)) {
-      const cleared = !!this.save.flags[`knot_${def.kind}`];
+    // Place knots for this region (filter hidden veil until unlocked)
+    for (const def of defineLayout().filter((k) => {
+      if (k.region !== region) return false;
+      if (k.clearFlag === "knot_veil" && !veilKnotUnlocked(this.save.flags)) return false;
+      return true;
+    })) {
+      const flagKey = def.clearFlag ?? `knot_${def.kind}`;
+      const cleared = !!this.save.flags[flagKey];
       const sprite = this.add.image(
         def.x,
         def.y,
@@ -485,7 +505,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
           ease: "Sine.inOut",
         });
       }
-      this.knots.push({ ...def, cleared, sprite, glow });
+      this.knots.push({
+        ...def,
+        cleared,
+        sprite,
+        glow,
+        clearFlag: def.clearFlag,
+        taglineOverride: def.taglineOverride,
+      });
       this.regionRoot.add(sprite);
       if (glow) this.regionRoot.add(glow);
 
@@ -593,8 +620,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
     const soulCount = this.doneSoulsInRegion(this.region);
     const echoCount = this.region === "field" ? this.touchedEchoesCount() : 0;
 
+    const memLevel = regionAftermathLevel(this.save, this.region);
+    const memBoost = memLevel === 2 ? 0.08 : memLevel === 1 ? 0.04 : 0;
+
     if (this.region === "pools") {
-      const alpha = Math.min(0.18, knotCount * 0.04 + soulCount * 0.03);
+      const alpha = Math.min(0.22, knotCount * 0.04 + soulCount * 0.03 + memBoost);
       this.regionToneOverlay = this.add
         .rectangle(0, 22, GBC_W, GBC_H - 22, 0x88c0e8, alpha)
         .setOrigin(0, 0)
@@ -1098,7 +1128,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : 0xa8c8e8;
       this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS KNOT IS QUIET.");
-      else this.hint.setText(`A: ${KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
+      else this.hint.setText(`A: ${near.taglineOverride ?? KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
       // First-meet identity card for this knot. Once per save per knot kind.
       if (!near.cleared) {
         this.knotPresentations[near.kind]?.introOnce(
@@ -1332,7 +1362,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (this.companion) this.companion.setVisible(true);
       if (!r.cleared) return;
       k.cleared = true;
-      this.save.flags[`knot_${k.kind}`] = true;
+      this.save.flags[k.clearFlag ?? `knot_${k.kind}`] = true;
       if (r.stats?.clarity) {
         this.save.stats.clarity += r.stats.clarity;
         emitHudStatChanged(this, "clarity", this.save.stats.clarity);
