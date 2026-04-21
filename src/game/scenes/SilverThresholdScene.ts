@@ -20,6 +20,7 @@ import {
   runDialog,
   shedAccessory,
   setRowanSkin,
+  setRowanTransition,
 } from "./hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
@@ -383,6 +384,10 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
     const initialSkin = this.save.flags.daimon_bound ? "soul" : "living";
     this.rowan = makeRowan(this, 16, 70, initialSkin);
+    // Continuity with Crossing: still partly dissolved until the rite finishes.
+    if (initialSkin === "living") {
+      setRowanTransition(this.rowan, 0.62);
+    }
     // If resuming, also remove already-shed accessories
     if (initialSkin === "living") {
       (["air", "fire", "water", "earth"] as ElemKind[]).forEach((k) => {
@@ -894,9 +899,33 @@ export class SilverThresholdScene extends Phaser.Scene {
         }),
       );
       this.cameras.main.flash(800, 255, 255, 255);
+      this.tweens.add({
+        targets: this.rowanShadow,
+        alpha: 0,
+        duration: 700,
+      });
       this.time.delayedCall(400, () => {
         // Apply soul skin
         setRowanSkin(this.rowan, "soul");
+
+        // Stronger soul-bloom radiance.
+        const soulBloom = this.add
+          .circle(this.rowan.x, this.rowan.y - 4, 6, 0xdde6f5, 0.55)
+          .setDepth(191);
+        this.tweens.add({
+          targets: soulBloom,
+          scale: 6,
+          alpha: 0,
+          duration: 900,
+          ease: "Sine.out",
+          onComplete: () => soulBloom.destroy(),
+        });
+
+        // Re-cast the shadow as a luminous footprint, not a weight.
+        this.rowanShadow.setFillStyle(0xdde6f5, 0.12);
+        this.rowanShadow.setScale(0.82, 0.7);
+        this.rowanShadow.setAlpha(0.16);
+
         this.tweens.add({ targets: dim, alpha: 0, duration: 800, onComplete: () => dim.destroy() });
         // Show after-rites Soryn dialog, then begin daimon binding
         runDialog(this, SORYN_AFTER_RITES, () => this.runDaimonBinding());
