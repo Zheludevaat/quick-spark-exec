@@ -168,28 +168,33 @@ export function clearDialogSnapshot() {
 
 export function setSceneSnapshot(patch: Partial<SceneSnapshot>) {
   const prev = snap.scene;
-  const next: SceneSnapshot = { ...prev, ...patch };
+  const keyChanged = patch.key !== undefined && patch.key !== prev.key;
 
-  const key = patch.key ?? prev.key;
+  // On scene-key change, start from a fresh scene snapshot so stale metadata
+  // from the previous scene cannot leak into the desktop shell.
+  const base: SceneSnapshot = keyChanged ? { ...initial().scene } : prev;
+  const next: SceneSnapshot = { ...base, ...patch };
+
+  const key = next.key;
   const isTitle = key === "Title";
 
-  // Granular defaults: title hides chrome but keeps minimap; gameplay shows all.
-  if (patch.showStatsBar === undefined && patch.key) {
+  // Granular defaults: title hides most chrome, gameplay/hub scenes show it.
+  if (patch.showStatsBar === undefined && patch.key !== undefined) {
     next.showStatsBar = !isTitle;
   }
-  if (patch.showUtilityRail === undefined && patch.key) {
+  if (patch.showUtilityRail === undefined && patch.key !== undefined) {
     next.showUtilityRail = !isTitle;
   }
-  if (patch.showDialogueDock === undefined && patch.key) {
+  if (patch.showDialogueDock === undefined && patch.key !== undefined) {
     next.showDialogueDock = !isTitle;
   }
-  if (patch.showFooter === undefined && patch.key) {
+  if (patch.showFooter === undefined && patch.key !== undefined) {
     next.showFooter = !isTitle;
   }
-  if (patch.allowPlayerHub === undefined && patch.key) {
+  if (patch.allowPlayerHub === undefined && patch.key !== undefined) {
     next.allowPlayerHub = !isTitle;
   }
-  if (patch.showMiniMap === undefined && patch.key) {
+  if (patch.showMiniMap === undefined && patch.key !== undefined) {
     next.showMiniMap = true;
   }
 

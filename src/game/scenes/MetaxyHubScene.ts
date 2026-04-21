@@ -163,7 +163,7 @@ export class MetaxyHubScene extends Phaser.Scene {
     new GBCText(this, subX, 14, subText, { color: COLOR.textDim, depth: 10 });
 
     attachHUD(this, () => this.save.stats);
-    this.publishMinimap();
+    this.publishShellState();
 
     // Build portals
     PORTALS.forEach((p, i) => {
@@ -248,17 +248,37 @@ export class MetaxyHubScene extends Phaser.Scene {
     } else {
       this.hint.setText("Locked. Pass the prior sphere first.");
     }
-    this.publishMinimap();
+    this.publishShellState();
+  }
+
+  private currentPortalState(p: Portal): string {
+    if (p.scene === null) return "NOT BUILT YET";
+    if (!p.unlocked(this.save)) return "LOCKED";
+    if (this.save.garmentsReleased[p.sphere]) return "COMPLETE";
+    return "READY";
+  }
+
+  private currentPortalLead(p: Portal): string {
+    if (p.scene === null) return p.dimLine || "This gate is not built yet.";
+    if (!p.unlocked(this.save)) return p.dimLine || "Pass the prior sphere first.";
+    if (this.save.garmentsReleased[p.sphere]) {
+      return `Garment released. Re-enter ${p.label} to revisit its plateau.`;
+    }
+    return `Press A to enter ${p.label}.`;
   }
 
   /**
-   * Publish the seven-portal ascent as Tier-2 minimap nodes for the React
-   * shell. The currently-cursored portal is marked active.
+   * Publish complete desktop-shell metadata for the hub:
+   * - minimap nodes
+   * - idle/context card text
+   * - footer hint
+   * - visibility flags
    */
-  private publishMinimap() {
+  private publishShellState() {
     const cursorSphere = PORTALS[this.cursor]?.sphere;
-    // Normalized layout: vertical ascent with a slight serpentine wiggle so
-    // the schematic reads as motion, not a column of dots.
+    const active = PORTALS[this.cursor];
+    const releasedCount = Object.values(this.save.garmentsReleased).filter(Boolean).length;
+
     const layout: { sphere: SphereKey; label: string; x: number; y: number }[] = [
       { sphere: "moon", label: "Moon", x: 0.5, y: 0.92 },
       { sphere: "mercury", label: "Mercury", x: 0.4, y: 0.78 },
@@ -268,6 +288,9 @@ export class MetaxyHubScene extends Phaser.Scene {
       { sphere: "jupiter", label: "Jupiter", x: 0.62, y: 0.22 },
       { sphere: "saturn", label: "Saturn", x: 0.5, y: 0.08 },
     ];
+
+    const markerNode = layout.find((n) => n.sphere === cursorSphere) ?? null;
+
     setSceneSnapshot({
       key: "MetaxyHub",
       label: "Metaxy Hub",
@@ -280,7 +303,24 @@ export class MetaxyHubScene extends Phaser.Scene {
         y: n.y,
         active: n.sphere === cursorSphere,
       })),
-      marker: null,
+      marker: markerNode ? { x: markerNode.x, y: markerNode.y } : null,
+
+      idleTitle: "METAXY",
+      idleBody: [
+        `Selected: ${active.label}`,
+        `State: ${this.currentPortalState(active)}`,
+        this.currentPortalLead(active),
+        `Garments released: ${releasedCount}/7`,
+      ].join("\n"),
+
+      footerHint: "UP / DOWN SELECT PORTAL · A ENTER · PLAYER HUB IN LEFT RAIL",
+
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
     });
   }
 
