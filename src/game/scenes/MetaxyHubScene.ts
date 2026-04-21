@@ -1,8 +1,11 @@
 /**
  * MetaxyHub — the connective spine of Acts 3+.
  *
- * Seven planetary portals arranged in a vertical ascent. Currently Moon,
- * Mercury, Venus, Sun, and Mars are wired. Jupiter and Saturn remain dim.
+ * Seven planetary portals arranged in a vertical ascent. Moon, Mercury,
+ * Venus, Sun, and Mars are wired and registered in createGame.ts.
+ * Jupiter and Saturn remain dim portals — their plateau/trial scenes
+ * are intentionally not registered yet to avoid "registered but
+ * unreachable" content; they will land together as one authored pass.
  */
 import * as Phaser from "phaser";
 import {

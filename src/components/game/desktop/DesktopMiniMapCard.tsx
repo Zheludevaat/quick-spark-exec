@@ -16,11 +16,13 @@ import {
   ShellPanelTitle,
 } from "@/components/game/shell/ShellPanel";
 
+// Fallback geometries are intentionally selection-free so a missing
+// scene snapshot can never lie about which portal is selected.
 const TITLE_FALLBACK_NODES: SceneNode[] = [
   { id: "moon", label: "Moon", x: 0.12, y: 0.52 },
   { id: "mercury", label: "Mercury", x: 0.24, y: 0.52 },
   { id: "venus", label: "Venus", x: 0.36, y: 0.52 },
-  { id: "sun", label: "Sun", x: 0.5, y: 0.5, active: true },
+  { id: "sun", label: "Sun", x: 0.5, y: 0.5 },
   { id: "mars", label: "Mars", x: 0.64, y: 0.52 },
   { id: "jupiter", label: "Jupiter", x: 0.78, y: 0.52 },
   { id: "saturn", label: "Saturn", x: 0.9, y: 0.52 },
@@ -30,7 +32,7 @@ const METAXY_FALLBACK_NODES: SceneNode[] = [
   { id: "moon", label: "Moon", x: 0.5, y: 0.92 },
   { id: "mercury", label: "Mercury", x: 0.4, y: 0.78 },
   { id: "venus", label: "Venus", x: 0.6, y: 0.64 },
-  { id: "sun", label: "Sun", x: 0.5, y: 0.5, active: true },
+  { id: "sun", label: "Sun", x: 0.5, y: 0.5 },
   { id: "mars", label: "Mars", x: 0.38, y: 0.36 },
   { id: "jupiter", label: "Jupiter", x: 0.62, y: 0.22 },
   { id: "saturn", label: "Saturn", x: 0.5, y: 0.08 },

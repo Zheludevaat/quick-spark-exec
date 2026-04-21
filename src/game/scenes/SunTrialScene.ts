@@ -420,7 +420,7 @@ export class SunTrialScene extends Phaser.Scene {
     this.logText.setText(
       "The Curated Self loses authority over the lighting.",
     );
-    this.save.flags.act3_complete = true;
+    this.save.flags.sun_trial_complete = true;
     this.save.flags.plateau_remain = false;
     this.save.garmentsReleased = {
       ...this.save.garmentsReleased,
