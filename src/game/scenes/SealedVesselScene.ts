@@ -165,15 +165,58 @@ export class SealedVesselScene extends Phaser.Scene {
         this.save.act2Inscription = chosen.label;
         unlockLore(this.save, "on_the_sealed_vessel");
         showLoreToast(this, "on_the_sealed_vessel");
-        // Complete release_soryn now that the seal carries the variant.
         if (this.save.sorynReleased && questStatus(this.save, "release_soryn") === "active") {
           completeQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_walking_alone");
         }
         writeSave(this.save);
-        this.toAct3();
+        this.performSeal(chosen.label);
       },
     );
+  }
+
+  /** Brief ritual beat: inscription appears, seal closes, motes draw inward. */
+  private performSeal(inscription: string) {
+    const cx = GBC_W / 2;
+    const cy = GBC_H / 2;
+    const inscriptionText = new GBCText(this, cx - inscription.length * 2, cy - 38, inscription, {
+      color: COLOR.textGold,
+      depth: 8,
+    });
+    inscriptionText.obj.setAlpha(0);
+    this.tweens.add({
+      targets: inscriptionText.obj,
+      alpha: 1,
+      y: cy - 42,
+      duration: 900,
+      ease: "Sine.out",
+    });
+    this.tweens.add({
+      targets: this.sealRing,
+      scale: { from: 1, to: 0.85 },
+      duration: 900,
+      ease: "Sine.inOut",
+    });
+    this.tweens.add({
+      targets: this.inscriptionBand,
+      scale: { from: 1, to: 0.92 },
+      duration: 900,
+      ease: "Sine.inOut",
+    });
+    this.tweens.add({
+      targets: this.sealGlow,
+      alpha: 0.45,
+      scale: 1.3,
+      duration: 700,
+      yoyo: true,
+    });
+    this.time.delayedCall(1100, () => {
+      runDialog(
+        this,
+        [{ who: "VESSEL", text: "(The seal accepts. The metal cools.)" }],
+        () => this.toAct3(),
+      );
+    });
   }
 
   private toAct3() {
@@ -190,7 +233,12 @@ export class SealedVesselScene extends Phaser.Scene {
       this.save.garmentsReleased = { ...this.save.garmentsReleased, moon: true };
       this.save.scene = "MetaxyHub";
       writeSave(this.save);
-      gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
+      // Final release: brighten the camera before the wipe so it feels
+      // like a completed work being let go, not just a route change.
+      this.cameras.main.flash(900, 200, 160, 100);
+      this.time.delayedCall(400, () => {
+        gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
+      });
     });
   }
 }
