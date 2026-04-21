@@ -4,13 +4,10 @@ import {
   GBC_H,
   COLOR,
   GBCText,
-  drawGBCBox,
   drawGBCPlate,
   STAT_ICON_FRAME,
   toggleLcd,
   reapplyLcd,
-  textHeightPx,
-  fitSingleLineText,
 } from "../gbcArt";
 import type { SaveSlot, Stats } from "../types";
 import { ACT_BY_SCENE, SCENE_LABEL } from "../types";
@@ -927,68 +924,6 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
-  const isTouchShell = isTouchLandscapeMode();
-  // Shell-owned dialogue tray is now the primary visible surface in
-  // both touch and desktop. Keep the desktop pointer-to-advance
-  // affordance below so canvas clicks still advance dialogue.
-  const useShellDialogSurface = true;
-  const boxX = 4;
-  const boxW = GBC_W - 8;
-  const innerW = boxW - 16;
-  const MIN_H = 44;
-  const MAX_H = 64;
-
-  let box: ReturnType<typeof drawGBCBox> | null = null;
-  let who: GBCText | null = null;
-  let text: GBCText | null = null;
-  let hint: GBCText | null = null;
-  let hintTween: Phaser.Tweens.Tween | null = null;
-
-  const destroyChrome = () => {
-    box?.destroy();
-    who?.destroy();
-    text?.destroy();
-    hint?.destroy();
-    hintTween?.stop();
-    box = null;
-    who = null;
-    text = null;
-    hint = null;
-    hintTween = null;
-  };
-
-  const buildChromeFor = (whoLine: string, bodyLine: string) => {
-    destroyChrome();
-    if (useShellDialogSurface) return; // shell tray owns dialog rendering in both modes
-    const bodyH = textHeightPx(bodyLine.toUpperCase(), innerW);
-    const boxH = Math.max(MIN_H, Math.min(MAX_H, bodyH + 22));
-    const boxY = GBC_H - boxH - 2;
-    box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
-    who = new GBCText(scene, boxX + 6, boxY + 4, fitSingleLineText(whoLine, innerW), {
-      color: COLOR.textAccent,
-      depth: 251,
-      scrollFactor: 0,
-    });
-    text = new GBCText(scene, boxX + 6, boxY + 14, "", {
-      color: COLOR.textLight,
-      depth: 251,
-      scrollFactor: 0,
-      maxWidthPx: innerW,
-    });
-    hint = new GBCText(scene, boxX + boxW - 10, boxY + boxH - 8, "▼", {
-      color: COLOR.textAccent,
-      depth: 251,
-      scrollFactor: 0,
-    });
-    hintTween = scene.tweens.add({
-      targets: hint.obj,
-      alpha: 0.25,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
-  };
-
   let i = 0;
   let active = true;
   let typing = false;
@@ -1008,18 +943,6 @@ export function runDialog(
     });
   };
 
-  const finishTyping = () => {
-    if (typeTimer) {
-      typeTimer.remove(false);
-      typeTimer = null;
-    }
-    text?.setText(fullText);
-    typing = false;
-    hint?.setVisible(true);
-    publishDialog(fullText);
-    scheduleAuto();
-  };
-
   const scheduleAuto = () => {
     autoTimer?.remove(false);
     autoTimer = null;
@@ -1029,12 +952,20 @@ export function runDialog(
     }
   };
 
+  const finishTyping = () => {
+    if (typeTimer) {
+      typeTimer.remove(false);
+      typeTimer = null;
+    }
+    typing = false;
+    publishDialog(fullText);
+    scheduleAuto();
+  };
+
   const startTyping = (s: string) => {
     fullText = s;
     typing = true;
-    hint?.setVisible(false);
     let n = 0;
-    text?.setText("");
     publishDialog("");
     if (typeTimer) typeTimer.remove(false);
     typeTimer = scene.time.addEvent({
@@ -1043,13 +974,11 @@ export function runDialog(
       callback: () => {
         n++;
         const slice = s.slice(0, n);
-        text?.setText(slice);
         publishDialog(slice);
         const ch = s[n - 1];
         if (n % 4 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) {
           typing = false;
-          hint?.setVisible(true);
           typeTimer = null;
           publishDialog(fullText);
           scheduleAuto();
@@ -1073,17 +1002,14 @@ export function runDialog(
     if (i >= lines.length) {
       active = false;
       if (typeTimer) typeTimer.remove(false);
-      destroyChrome();
       cleanupKb();
       scene.events.off("vinput-action", next);
-      scene.input.off("pointerdown", next);
       clearDialogSnapshot();
       onDone?.();
       return;
     }
     const line = lines[i];
     currentWho = line.who;
-    buildChromeFor(line.who, line.text);
     startTyping(line.text.toUpperCase());
     i++;
   };
@@ -1107,15 +1033,6 @@ export function runDialog(
   next();
   window.addEventListener("keydown", onKey);
   scene.events.on("vinput-action", next);
-  // In touch_landscape mode the canvas has no in-canvas dialog box, so a
-  // tap on the gameplay viewport should NOT advance dialog (only the A
-  // button or the dialogue tray should). In desktop mode we keep the
-  // pointer-to-advance affordance.
-  if (!isTouchShell) {
-    scene.time.delayedCall(120, () => {
-      if (active) scene.input.on("pointerdown", next);
-    });
-  }
 
   return { dismiss: () => next() };
 }

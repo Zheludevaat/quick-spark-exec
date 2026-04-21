@@ -1,10 +1,12 @@
 /**
- * Desktop presentation shell. Centers the Phaser host, adds the
- * shared shell dialogue tray below the canvas, and shows a small
- * footer with control hints.
+ * Desktop presentation shell. Centers the Phaser host, renders the
+ * shared shell dialogue tray below the canvas, and presents control
+ * hints inside a compact subdued ShellPanel so the footer belongs to
+ * the same shell-card family as the rest of the UI.
  */
 import type { ReactNode } from "react";
-import { TouchDialogueTray } from "./touch/TouchDialogueTray";
+import { GameDialogueTray } from "./shell/GameDialogueTray";
+import { ShellPanel, ShellPanelMeta } from "./shell/ShellPanel";
 
 type Props = {
   children: ReactNode;
@@ -25,6 +27,7 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         justifyContent: "center",
         gap: 12,
         fontFamily: "monospace",
+        padding: "12px 0",
       }}
     >
       <h1
@@ -57,25 +60,33 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       </div>
 
       <div style={{ width: "min(96vw, 720px)" }}>
-        <TouchDialogueTray />
+        <GameDialogueTray />
       </div>
 
-      <footer
-        style={{
-          fontSize: 10,
-          opacity: 0.6,
-          textAlign: "center",
-          padding: "0 16px",
-          maxWidth: 720,
-        }}
-      >
-        Arrow keys / WASD · Space or Enter = A · B or Q = witness · L = lore · P
-        or Esc = settings · Tap ≡ on touch
-        {!booted && !error && <div style={{ marginTop: 4 }}>Loading the silver…</div>}
-        {error && (
-          <div style={{ marginTop: 4, color: "#d86a6a" }}>Failed to load: {error}</div>
-        )}
-      </footer>
+      <div style={{ width: "min(96vw, 720px)" }}>
+        <ShellPanel tone="subdued" compact>
+          <ShellPanelMeta>
+            ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L =
+            LORE · P OR ESC = SETTINGS
+          </ShellPanelMeta>
+          {!booted && !error && (
+            <div
+              className="mt-1 text-[10px]"
+              style={{ color: "#a8c8e8" }}
+            >
+              Loading the silver…
+            </div>
+          )}
+          {error && (
+            <div
+              className="mt-1 text-[10px]"
+              style={{ color: "#d86a6a" }}
+            >
+              Failed to load: {error}
+            </div>
+          )}
+        </ShellPanel>
+      </div>
     </div>
   );
 }

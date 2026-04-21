@@ -23,7 +23,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TouchJoystick } from "./touch/TouchJoystick";
 import { TouchButton } from "./touch/TouchButton";
 import { TouchStatsStrip } from "./touch/TouchStatsStrip";
-import { TouchDialogueTray } from "./touch/TouchDialogueTray";
+import { GameDialogueTray } from "./shell/GameDialogueTray";
 import { TouchMiniMapPanel } from "./touch/TouchMiniMapPanel";
 import { TouchInventoryOverlay } from "./touch/TouchInventoryOverlay";
 import {
@@ -256,7 +256,7 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
               </div>
             )}
           </div>
-          <TouchDialogueTray />
+          <GameDialogueTray />
         </main>
 
         {/* Right rail (or left rail if left-handed) */}
