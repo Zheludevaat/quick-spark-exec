@@ -1049,6 +1049,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
             scrollFactor: 0,
             maxWidthPx: GBC_W - 8,
           });
+          // First-meet identity card. Idempotent across saves via flag.
+          this.soulPresentations[s.def.id]?.introOnce(
+            `encounter_seen_soul_${s.def.id}`,
+            this.save,
+          );
+          writeSave(this.save);
         }
 
         s.nearTime += dt;
@@ -1274,6 +1280,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
           soul.container.setAlpha(0.45);
           soul.setMood("resolved");
           this.markSoulResolved(soul.def.id, soul.def.x, soul.def.y);
+          // Quiet the encounter aura — soul becomes warm-but-residual.
+          this.soulPresentations[soul.def.id]?.soften();
         }
         this.refreshSoulTracker();
       });
@@ -1349,6 +1357,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow = undefined;
       }
       this.markKnotCleared(k);
+      // Quieted memory state for this knot's encounter aura.
+      this.knotPresentations[k.kind]?.soften();
       this.refreshKnotTracker();
     });
   }
