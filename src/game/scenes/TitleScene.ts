@@ -344,6 +344,8 @@ export class TitleScene extends Phaser.Scene {
       { label: "ACT 3 · RUBEDO", scene: "Rubedo", act: 3 },
       { label: "ACT 3 · SEALED MOON", scene: "SealedVessel", act: 3 },
       { label: "METAXY HUB", scene: "MetaxyHub", act: 3 },
+      { label: "ACT 4 · MERCURY", scene: "MercuryPlateau", act: 4 },
+      { label: "ACT 5 · VENUS", scene: "VenusPlateau", act: 5 },
       { label: "ACT 6 · SUN HALL", scene: "CuratedSelf", act: 6 },
       { label: "ACT 10 · ENDINGS", scene: "Epilogue", act: 10 },
     ];

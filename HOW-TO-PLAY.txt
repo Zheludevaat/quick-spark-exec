@@ -1,0 +1,52 @@
+HERMETIC COMEDY — How to Play
+==============================
+
+ONE-CLICK RUN
+-------------
+Windows : Double-click  RUN-GAME.bat
+macOS   : Double-click  RUN-GAME.command
+          (If blocked: right-click -> Open -> Open)
+Linux   : Run           ./RUN-GAME.sh   in a terminal
+
+The first run installs dependencies (2-5 minutes, needs internet).
+Every run after that starts in seconds.
+
+The game opens automatically in your default browser at:
+    http://localhost:5173
+
+Leave the black terminal window open while you play.
+Close it (or press Ctrl+C) to stop the game.
+
+REQUIREMENTS
+------------
+- Node.js LTS (download from https://nodejs.org/ if missing)
+- Any modern browser (Chrome, Firefox, Edge, Safari)
+
+CONTROLS
+--------
+Movement   : Arrow keys or WASD
+A button   : Space or Enter
+B / Witness: B or Q
+Lore log   : L
+Settings   : P or Esc
+Touch      : Tap the on-screen pad and the menu (≡)
+
+SAVE DATA
+---------
+Your save lives in your browser's localStorage for the URL
+http://localhost:5173. Clearing browser data wipes the save.
+
+TROUBLESHOOTING
+---------------
+"node is not recognized" / "command not found: node"
+    -> Install Node.js LTS from https://nodejs.org/ and re-run.
+
+"Port 5173 already in use"
+    -> Another copy is already running. Close the other terminal
+       window, or open http://localhost:5173 directly.
+
+Browser shows "This site can't be reached"
+    -> Wait a few seconds for the server to finish starting,
+       then refresh the page.
+
+Have fun. Walk gently.

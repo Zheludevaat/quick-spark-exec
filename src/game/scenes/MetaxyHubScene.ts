@@ -68,7 +68,7 @@ const PORTALS: Portal[] = [
   {
     sphere: "venus",
     label: "VENUS",
-    scene: null,
+    scene: "VenusPlateau",
     unlocked: (s) => !!s.garmentsReleased.mercury,
     dimLine: "Venus's biennale calls. Not yet.",
     color: 0xe89bb8,
