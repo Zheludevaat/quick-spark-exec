@@ -34,6 +34,17 @@ const OPENING_RUSHED = [
   { who: "SORYN", text: "Few shards. The fire will work with what you bring." },
 ];
 
+/** Faint accusatory wall whispers heard while idle, before the work begins
+ *  and between shades. Atmospheric only — no save effect. */
+const WALL_WHISPERS = [
+  "you knew. you always knew.",
+  "i waited for you.",
+  "say it. just once.",
+  "she did her best.",
+  "the door was open.",
+  "name us properly.",
+];
+
 export class NigredoScene extends Phaser.Scene {
   private save!: SaveSlot;
   private vesselHud!: VesselHud;
@@ -46,6 +57,12 @@ export class NigredoScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- Furnace progression state ---
+  private furnaceHalo!: Phaser.GameObjects.Ellipse;
+  private progressText!: GBCText;
+  private currentSat = 0;
+  private ambientWhisperEvent?: Phaser.Time.TimerEvent;
+  private activeWhisper?: GBCText;
 
   constructor() {
     super("Nigredo");
@@ -78,6 +95,13 @@ export class NigredoScene extends Phaser.Scene {
     // 2. The Furnace Structure
     const cx = GBC_W / 2;
     const cy = GBC_H / 2 - 5;
+
+    // Furnace halo: a soft glow under the furnace whose color/scale shifts
+    // with the player's choices in applyFurnaceState().
+    this.furnaceHalo = this.add
+      .ellipse(cx, cy + 12, 56, 18, 0xff4400, 0.35)
+      .setDepth(1)
+      .setBlendMode("ADD");
 
     this.add.rectangle(cx, cy + 16, 60, 10, 0x1c1014).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
     this.add.rectangle(cx, cy, 40, 32, 0x11080a).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
@@ -157,6 +181,16 @@ export class NigredoScene extends Phaser.Scene {
       color: COLOR.textWarn,
       depth: 5,
     });
+
+    // Subtle SAT x/3 progress indicator at the top-right.
+    this.progressText = new GBCText(this, GBC_W - 32, 4, "SAT 0/3", {
+      color: COLOR.textDim,
+      depth: 100,
+    });
+
+    // Initial unstable furnace state — fire is hungry until fed.
+    this.applyFurnaceState();
+    this.startAmbientWhispers();
 
     // --- INTERACTIVE UPGRADE: spatial pacing ---
 
@@ -251,6 +285,8 @@ export class NigredoScene extends Phaser.Scene {
           const chosen = opts.find((o) => o.label === picked2.label) ?? opts[0];
           this.save.shadesEncountered[id] = chosen.outcome;
           if (chosen.outcome === "sat_with") {
+            this.currentSat += 1;
+            this.applyFurnaceState("sat_with");
             awardNamedStone(this, this.save, "black", `sat with ${shade.name}`);
             const bene = shade.benediction?.(this.save);
             const tail = bene
@@ -274,8 +310,10 @@ export class NigredoScene extends Phaser.Scene {
             // Wasted shard — note the loss for salvage.
             this.save.flags.act2_shard_destroyed = true;
             activateQuest(this, this.save, "salvage_a_shard");
+            this.applyFurnaceState("destroyed");
           } else {
             this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
+            this.applyFurnaceState("fled");
           }
           writeSave(this.save);
           this.vesselHud.refresh();
@@ -368,5 +406,101 @@ export class NigredoScene extends Phaser.Scene {
       this.hintText.setText("");
       this.beginDissolving();
     }
+  }
+
+  /**
+   * Update furnace halo + progress text + a brief outcome flash so each
+   * shade resolution leaves an immediate, visible aftermath.
+   *
+   * Stops ambient whispers permanently once any shade has been faced —
+   * the room hushes when the work begins in earnest.
+   */
+  private applyFurnaceState(lastOutcome?: "sat_with" | "fled" | "destroyed"): void {
+    this.progressText.setText(`SAT ${this.currentSat}/3`);
+
+    // The furnace steadies as the sat count rises.
+    const steadyAlpha = 0.35 + this.currentSat * 0.12;
+    const haloColor =
+      lastOutcome === "destroyed" ? 0xc83030 : this.currentSat >= 1 ? 0xff6620 : 0xff4400;
+    this.furnaceHalo.setFillStyle(haloColor, Math.min(0.85, steadyAlpha));
+
+    if (lastOutcome === "sat_with") {
+      // Brief coherent flare — the fire steadies.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        scaleX: { from: 1, to: 1.25 },
+        scaleY: { from: 1, to: 1.25 },
+        duration: 350,
+        yoyo: true,
+        ease: "Sine.inOut",
+      });
+    } else if (lastOutcome === "destroyed") {
+      // Harsh red flare, then settle uglier.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        scaleX: { from: 1, to: 1.6 },
+        scaleY: { from: 1, to: 1.6 },
+        alpha: { from: 0.85, to: 0.5 },
+        duration: 300,
+        yoyo: true,
+        ease: "Cubic.out",
+      });
+      // Stop whispers; this room has had enough voices.
+      this.ambientWhisperEvent?.remove(false);
+      this.ambientWhisperEvent = undefined;
+    } else if (lastOutcome === "fled") {
+      // Sputter dim.
+      this.tweens.add({
+        targets: this.furnaceHalo,
+        alpha: { from: steadyAlpha, to: 0.15 },
+        duration: 500,
+        yoyo: true,
+        ease: "Sine.out",
+      });
+    }
+
+    // Once any shade has been faced, the wall whispers fall silent.
+    if (lastOutcome && this.ambientWhisperEvent) {
+      this.ambientWhisperEvent.remove(false);
+      this.ambientWhisperEvent = undefined;
+    }
+  }
+
+  /**
+   * Low-cost ambient wall-whisper system. Pre-shade and between-shade only —
+   * one bark on screen at a time, fades upward. Pure atmosphere; no save
+   * effect. Stopped permanently after any shade is faced.
+   */
+  private startAmbientWhispers(): void {
+    this.ambientWhisperEvent?.remove(false);
+    this.ambientWhisperEvent = this.time.addEvent({
+      delay: Phaser.Math.Between(4500, 7500),
+      loop: true,
+      callback: () => {
+        if (this.isBusy || this.isDone || this.activeWhisper) return;
+        const text = Phaser.Utils.Array.GetRandom(WALL_WHISPERS);
+        // Anchor near a wall edge, away from the furnace.
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? Phaser.Math.Between(6, 30) : Phaser.Math.Between(GBC_W - 70, GBC_W - 36);
+        const y = Phaser.Math.Between(40, 80);
+        const w = new GBCText(this, x, y, text, {
+          color: COLOR.textDim,
+          depth: 8,
+          maxWidthPx: 60,
+        });
+        this.activeWhisper = w;
+        this.tweens.add({
+          targets: w.obj,
+          y: y - 10,
+          alpha: { from: 0.7, to: 0 },
+          duration: 2200,
+          ease: "Sine.out",
+          onComplete: () => {
+            w.destroy();
+            this.activeWhisper = undefined;
+          },
+        });
+      },
+    });
   }
 }

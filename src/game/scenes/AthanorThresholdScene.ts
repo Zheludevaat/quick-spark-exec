@@ -12,7 +12,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot, SceneKey } from "../types";
+import { ACT_BY_SCENE, type SaveSlot, type SceneKey } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { onActionDown } from "../controls";
 import { getAudio, SONG_MOON } from "../audio";
@@ -30,6 +30,12 @@ type Door = {
   y: number;
   rect: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Arc;
+  lamp: Phaser.GameObjects.Arc;
+  lampPulse?: Phaser.Tweens.Tween;
+  glowPulse?: Phaser.Tweens.Tween;
+  bar?: Phaser.GameObjects.Rectangle;
+  seal?: Phaser.GameObjects.Arc;
+  tint: number;
 };
 
 const DOOR_DEFS: { key: Door["key"]; label: string; scene: SceneKey; tint: number }[] = [
@@ -38,6 +44,17 @@ const DOOR_DEFS: { key: Door["key"]; label: string; scene: SceneKey; tint: numbe
   { key: "citrinitas", label: "CITRINITAS", scene: "Citrinitas", tint: 0xe8c860 },
   { key: "rubedo", label: "RUBEDO", scene: "Rubedo", tint: 0xb84040 },
 ];
+
+/** Color of the four memory nodes orbiting the vessel — one per operation. */
+const NODE_COLORS = [0x3a3a48, 0xe8e8f0, 0xe8c860, 0xd03838] as const;
+
+/** Short return-beats spoken once per stage as the player re-enters. */
+const STAGE_BEATS: Record<1 | 2 | 3 | 4, { who: string; text: string }> = {
+  1: { who: "SORYN", text: "The vessel has taken the black." },
+  2: { who: "SORYN", text: "The vessel brightens. Something was forgiven." },
+  3: { who: "SORYN", text: "Yellow gathers along the rim. Meaning condenses." },
+  4: { who: "SORYN", text: "The red has arrived. The vessel waits to be sealed." },
+};
 
 const OPENING_LINES = [
   { who: "SORYN", text: "Down the stair, Rowan. The Plateau ends here." },
@@ -61,9 +78,14 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private vesselHud!: VesselHud;
   private vessel!: Phaser.GameObjects.Arc;
   private vesselFill!: Phaser.GameObjects.Rectangle;
+  private vesselCoreGlow!: Phaser.GameObjects.Arc;
+  private vesselRing!: Phaser.GameObjects.Arc;
+  private vesselNodes: Phaser.GameObjects.Arc[] = [];
+  private workStatus!: GBCText;
   private doors: Door[] = [];
   private busy = false;
   private depositedThisVisit = 0;
+  private thresholdStage = 0;
 
   constructor() {
     super("AthanorThreshold");
@@ -72,8 +94,16 @@ export class AthanorThresholdScene extends Phaser.Scene {
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.save.scene = "AthanorThreshold";
-    this.save.act = 2;
+    // Canonical act mapping — was hard-coded to 2 before.
+    this.save.act = ACT_BY_SCENE.AthanorThreshold;
     writeSave(this.save);
+  }
+
+  /** How many of the four operations have been completed. */
+  private opDoneCount(): number {
+    return (["nigredo", "albedo", "citrinitas", "rubedo"] as const).filter(
+      (k) => !!this.save.flags[`op_${k}_done`],
+    ).length;
   }
 
   create() {
@@ -94,23 +124,49 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Soft warm pool under the vessel
     this.add.ellipse(GBC_W / 2, GBC_H / 2 + 10, 56, 18, 0x6a3010, 0.35).setDepth(-8);
 
-    // Central vessel (alembic glyph)
-    this.vessel = this.add.circle(GBC_W / 2, GBC_H / 2 + 8, 9, 0x000000, 0).setStrokeStyle(1, 0xc8a060).setDepth(5);
+    // Central vessel (alembic glyph). Built in layers so the threshold can
+    // physically reflect each completed operation as a memory anchor.
+    const vx = GBC_W / 2;
+    const vy = GBC_H / 2 + 8;
+    // Outer ring: brightens as operations complete.
+    this.vesselRing = this.add
+      .circle(vx, vy, 13, 0x000000, 0)
+      .setStrokeStyle(1, 0x6a4020, 0.55)
+      .setDepth(4);
+    // Soft core glow: warms up + tints with the latest stage's color.
+    this.vesselCoreGlow = this.add.circle(vx, vy + 2, 7, 0x6a3010, 0.25).setDepth(4);
+    this.vessel = this.add
+      .circle(vx, vy, 9, 0x000000, 0)
+      .setStrokeStyle(1, 0xc8a060)
+      .setDepth(5);
     this.vesselFill = this.add
-      .rectangle(GBC_W / 2, GBC_H / 2 + 12, 12, 1, 0x6a3010)
+      .rectangle(vx, vy + 4, 12, 1, 0x6a3010)
       .setDepth(4)
       .setOrigin(0.5, 1);
     this.refreshVesselFill();
-    new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 - 6, "VESSEL", { color: COLOR.textGold, depth: 5 });
+    new GBCText(this, vx - 14, vy - 14, "VESSEL", { color: COLOR.textGold, depth: 5 });
+
+    // Four memory nodes orbiting the vessel — one per completed operation.
+    // They all start dim; applyThresholdState() lights them in order.
+    NODE_COLORS.forEach((color, i) => {
+      const angle = -Math.PI / 2 + (i * Math.PI) / 2; // top, right, bottom, left
+      const nx = vx + Math.cos(angle) * 17;
+      const ny = vy + Math.sin(angle) * 17;
+      const node = this.add
+        .circle(nx, ny, 2, color, 0.18)
+        .setStrokeStyle(0.5, 0x6a4020, 0.6)
+        .setDepth(6);
+      this.vesselNodes.push(node);
+    });
 
     // Drifting embers rising from the vessel
     for (let i = 0; i < 6; i++) {
       const ember = this.add
-        .circle(GBC_W / 2 + (i - 3) * 3, GBC_H / 2 + 6, 1, 0xe8a040, 0.85)
+        .circle(vx + (i - 3) * 3, vy - 2, 1, 0xe8a040, 0.85)
         .setDepth(6);
       this.tweens.add({
         targets: ember,
-        y: GBC_H / 2 - 24,
+        y: vy - 32,
         alpha: { from: 0.9, to: 0 },
         duration: 1800 + i * 200,
         delay: i * 280,
@@ -119,31 +175,63 @@ export class AthanorThresholdScene extends Phaser.Scene {
       });
     }
 
-    // Four doors along the top, color-coded, each with a hanging chain lamp
+    // Four doors along the top, color-coded, each with a hanging chain lamp.
+    // applyDoorState() handles the visual differentiation between
+    // SEALED / AVAILABLE / DONE so the player can read door progress at a glance.
     DOOR_DEFS.forEach((d, i) => {
       const x = 24 + i * 28;
       const y = 24;
       // Chain from the ceiling
       this.add.rectangle(x, 4, 1, 8, 0x6a4020, 0.7).setDepth(2);
-      // Pendant lamp above the door
-      const lamp = this.add.circle(x, 10, 2, d.tint, 0.9).setStrokeStyle(0.5, 0xc8a060).setDepth(3);
-      this.tweens.add({
-        targets: lamp,
-        alpha: { from: 0.9, to: 0.45 },
-        duration: 1100 + i * 130,
-        yoyo: true,
-        repeat: -1,
-      });
-      const rect = this.add.rectangle(x, y, 18, 22, d.tint, 1).setStrokeStyle(1, 0xc8a060).setDepth(3);
+      const lamp = this.add
+        .circle(x, 10, 2, d.tint, 0.9)
+        .setStrokeStyle(0.5, 0xc8a060)
+        .setDepth(3);
+      const rect = this.add
+        .rectangle(x, y, 18, 22, d.tint, 1)
+        .setStrokeStyle(1, 0xc8a060)
+        .setDepth(3);
       const glow = this.add.circle(x, y + 14, 3, 0xc8a060, 0.6).setDepth(4);
-      this.tweens.add({ targets: glow, alpha: 0.2, duration: 900, yoyo: true, repeat: -1 });
+      // Sealed doors get a horizontal chain bar drawn across their face.
+      const bar = this.add
+        .rectangle(x, y, 20, 2, 0x2a1a10, 0.85)
+        .setStrokeStyle(0.5, 0x6a4020, 0.8)
+        .setDepth(4)
+        .setVisible(false);
+      // Done doors get a small seal pip glowing under the lamp.
+      const seal = this.add
+        .circle(x, y - 8, 2, 0xc8a060, 0)
+        .setStrokeStyle(0.5, 0xffe098, 0)
+        .setDepth(4);
       const lbl = new GBCText(this, x - 8, y + 14, d.label.slice(0, 4), {
         color: COLOR.textDim,
         depth: 5,
       });
       void lbl;
-      this.doors.push({ key: d.key, label: d.label, scene: d.scene, x, y, rect, glow });
+      this.doors.push({
+        key: d.key,
+        label: d.label,
+        scene: d.scene,
+        x,
+        y,
+        rect,
+        glow,
+        lamp,
+        bar,
+        seal,
+        tint: d.tint,
+      });
     });
+
+    // Work-stage status indicator near the top edge.
+    this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
+      color: COLOR.textDim,
+      depth: 100,
+    });
+
+    // Initialize threshold memory state from current save flags.
+    this.thresholdStage = this.opDoneCount();
+    this.applyThresholdState(true);
 
     // Rowan
     this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 24);
@@ -216,6 +304,26 @@ export class AthanorThresholdScene extends Phaser.Scene {
       });
     }
 
+    // Stage return-beat: the first time the player walks back into the
+    // threshold with N completed operations, Soryn (or Rowan, alone)
+    // acknowledges it once. After that the room remembers silently.
+    const stage = this.thresholdStage as 0 | 1 | 2 | 3 | 4;
+    if (stage >= 1 && !this.save.flags[`athanor_stage_${stage}_seen`]) {
+      this.time.delayedCall(900, () => {
+        if (this.busy) return;
+        this.save.flags[`athanor_stage_${stage}_seen`] = true;
+        writeSave(this.save);
+        this.busy = true;
+        const beat = STAGE_BEATS[stage as 1 | 2 | 3 | 4];
+        const line = this.save.sorynReleased
+          ? { who: "ROWAN", text: beat.text }
+          : beat;
+        runDialog(this, [line], () => {
+          this.busy = false;
+        });
+      });
+    }
+
     // If all four operations are done and player returns, prompt the seal.
     if (
       this.save.flags.op_nigredo_done &&
@@ -224,7 +332,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.save.flags.op_rubedo_done &&
       !this.save.act2Inscription
     ) {
-      this.time.delayedCall(600, () => {
+      this.time.delayedCall(stage >= 4 ? 2400 : 600, () => {
         if (this.busy) return;
         this.busy = true;
         runDialog(
@@ -468,5 +576,132 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = false;
       },
     );
+  }
+
+  /**
+   * Update vessel atmosphere + memory nodes + door states to reflect the
+   * current threshold stage (= number of completed operations, 0..4).
+   *
+   * Called on scene entry and after any door's status changes.
+   * @param initial true on first call from create() — skips re-tweens.
+   */
+  private applyThresholdState(initial = false): void {
+    const stage = (this.thresholdStage = this.opDoneCount());
+    this.workStatus.setText(`WORK ${stage}/4`);
+
+    // Vessel core glow tint + alpha follow the most recent stage's color.
+    const stageColors = [0x6a3010, 0x3a3a48, 0xa0a0b8, 0xe8c860, 0xd03838];
+    const stageAlphas = [0.25, 0.4, 0.55, 0.7, 0.85];
+    this.vesselCoreGlow.setFillStyle(stageColors[stage], stageAlphas[stage]);
+
+    // Vessel ring brightens with stage.
+    const ringStrokeAlpha = 0.55 + stage * 0.1;
+    this.vesselRing.setStrokeStyle(1, 0xc8a060, Math.min(1, ringStrokeAlpha));
+    if (stage >= 4 && !initial) {
+      this.tweens.add({
+        targets: this.vesselRing,
+        scale: { from: 1, to: 1.15 },
+        duration: 700,
+        yoyo: true,
+        ease: "Sine.inOut",
+      });
+    }
+
+    // Light up the first `stage` memory nodes.
+    this.vesselNodes.forEach((node, i) => {
+      if (i < stage) {
+        node.setFillStyle(NODE_COLORS[i], 0.95);
+        node.setStrokeStyle(0.5, 0xffe098, 0.85);
+        // A gentle node pulse when the room first acknowledges its stage.
+        if (!initial && i === stage - 1) {
+          this.tweens.add({
+            targets: node,
+            scale: { from: 1, to: 1.6 },
+            alpha: { from: 1, to: 0.7 },
+            duration: 600,
+            yoyo: true,
+            ease: "Sine.inOut",
+          });
+        }
+      } else {
+        node.setFillStyle(NODE_COLORS[i], 0.15);
+        node.setStrokeStyle(0.5, 0x6a4020, 0.55);
+      }
+    });
+
+    // Reapply door states so SEALED/AVAILABLE/DONE all read at a glance.
+    for (const d of this.doors) this.applyDoorState(d);
+  }
+
+  /**
+   * Visual state of one door based on the same status logic used by
+   * doorStatus(). Sealed = chain bar + dim. Available = warm pulse.
+   * Done = calmer glow + lit seal pip.
+   */
+  private applyDoorState(d: Door): void {
+    const status = this.doorStatus(d);
+    // Reset any prior tweens so we don't stack them across stage changes.
+    if (d.lampPulse) {
+      d.lampPulse.stop();
+      d.lampPulse = undefined;
+    }
+    if (d.glowPulse) {
+      d.glowPulse.stop();
+      d.glowPulse = undefined;
+    }
+
+    if (status === "DONE") {
+      d.rect.setAlpha(0.85);
+      d.glow.setFillStyle(d.tint, 0.5);
+      d.glow.setScale(1);
+      d.lamp.setAlpha(0.6);
+      if (d.bar) d.bar.setVisible(false);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0.95);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0.9);
+      }
+      // Calm steady glow — work remembered, not active.
+      d.glowPulse = this.tweens.add({
+        targets: d.glow,
+        alpha: { from: 0.5, to: 0.25 },
+        duration: 1600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    } else if (status === "SEALED" || status === "NEEDS TRANSMUTE") {
+      d.rect.setAlpha(0.55);
+      d.glow.setFillStyle(0x2a1a10, 0.4);
+      d.lamp.setAlpha(0.35);
+      if (d.bar) d.bar.setVisible(true);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0);
+      }
+    } else {
+      // AVAILABLE — active warm pulse on lamp + glow.
+      d.rect.setAlpha(1);
+      d.glow.setFillStyle(0xc8a060, 0.6);
+      d.lamp.setAlpha(0.9);
+      if (d.bar) d.bar.setVisible(false);
+      if (d.seal) {
+        d.seal.setFillStyle(0xc8a060, 0);
+        d.seal.setStrokeStyle(0.5, 0xffe098, 0);
+      }
+      d.lampPulse = this.tweens.add({
+        targets: d.lamp,
+        alpha: { from: 0.9, to: 0.45 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+      });
+      d.glowPulse = this.tweens.add({
+        targets: d.glow,
+        alpha: { from: 0.6, to: 0.2 },
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
   }
 }
