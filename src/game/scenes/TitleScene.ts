@@ -423,6 +423,15 @@ export class TitleScene extends Phaser.Scene {
         the_orphan: "sat_with",
         the_lover: "sat_with",
       };
+      slot.garmentsReleased.moon = j.act >= 4;
+      slot.garmentsReleased.mercury = j.act >= 5;
+      slot.garmentsReleased.venus = j.act >= 6;
+      slot.garmentsReleased.sun = j.act >= 7;
+      slot.garmentsReleased.mars = j.act >= 8;
+      slot.sphereVerbs.name = j.act >= 4;
+      slot.sphereVerbs.attune = j.act >= 5;
+      slot.sphereVerbs.stand = j.act >= 7;
+      slot.flags.legacy_sun_bridge = j.act >= 6;
       try {
         cleanup();
         audio.music.stop();
