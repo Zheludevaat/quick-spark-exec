@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot, Calling } from "../types";
+import { ACT_BY_SCENE, type SaveSlot, type Calling } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { runInquiry } from "../inquiry";
 import { getAudio, SONG_LASTDAY } from "../audio";
@@ -12,7 +12,13 @@ import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
-const MAIN_SEEDS_REQUIRED = 3;
+const MAIN_SEEDS_REQUIRED = 4;
+
+const LASTDAY_DOOR_PREVIEW = [
+  { who: "?", text: "The door is open, but the room does not feel behind you yet." },
+  { who: "?", text: "Beyond it is not a hall. It is a thinning." },
+  { who: "?", text: "If you step through, you will not come back here in the same way." },
+];
 
 type Interactable = {
   kind: ItemKind;
@@ -46,6 +52,9 @@ export class LastDayScene extends Phaser.Scene {
   }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
+    this.save.scene = "LastDay";
+    this.save.act = ACT_BY_SCENE.LastDay;
+    writeSave(this.save);
     this.items = [];
     this.dialogActive = false;
     this.miniActive = false;
@@ -419,6 +428,9 @@ export class LastDayScene extends Phaser.Scene {
           this.breathPulse.x = this.rowan.x;
           this.breathPulse.y = this.rowan.y - 4;
         }
+        if (this.stillMs > 1200 && this.stillMs < 4000) {
+          this.hint.setText("BE STILL. LISTEN.");
+        }
         if (this.stillMs > 4000) {
           this.save.seeds.seed_breath = true;
           writeSave(this.save);
@@ -455,8 +467,13 @@ export class LastDayScene extends Phaser.Scene {
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80,
         dyg = this.rowan.y - (GBC_H - 8);
-      if (dxg * dxg + dyg * dyg < 14 * 14) this.hint.setText("A: STEP THROUGH THE DOOR");
-      else this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
+      if (dxg * dxg + dyg * dyg < 14 * 14) {
+        this.hint.setText(
+          this.save.flags.lastday_door_preview_seen ? "A: STEP THROUGH THE DOOR" : "A: OPEN THE DOOR",
+        );
+      } else {
+        this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
+      }
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
     } else {
@@ -556,7 +573,17 @@ export class LastDayScene extends Phaser.Scene {
       const dxg = this.rowan.x - 80,
         dyg = this.rowan.y - (GBC_H - 8);
       if (dxg * dxg + dyg * dyg < 14 * 14) {
+        if (!this.save.flags.lastday_door_preview_seen) {
+          this.dialogActive = true;
+          this.save.flags.lastday_door_preview_seen = true;
+          writeSave(this.save);
+          runDialog(this, LASTDAY_DOOR_PREVIEW, () => {
+            this.dialogActive = false;
+          });
+          return;
+        }
         this.save.scene = "Crossing";
+        this.save.act = ACT_BY_SCENE.Crossing;
         writeSave(this.save);
         const a = getAudio();
         a.sfx("wipe");
