@@ -8,12 +8,23 @@ import { useEffect, useState } from "react";
 import {
   subscribeGameUi,
   getGameUiSnapshot,
+  type SceneNode,
 } from "@/game/gameUiBridge";
 import {
   ShellPanel,
   ShellPanelMeta,
   ShellPanelTitle,
 } from "@/components/game/shell/ShellPanel";
+
+const TITLE_FALLBACK_NODES: SceneNode[] = [
+  { id: "moon", label: "Moon", x: 0.12, y: 0.52 },
+  { id: "mercury", label: "Mercury", x: 0.24, y: 0.52 },
+  { id: "venus", label: "Venus", x: 0.36, y: 0.52 },
+  { id: "sun", label: "Sun", x: 0.5, y: 0.5, active: true },
+  { id: "mars", label: "Mars", x: 0.64, y: 0.52 },
+  { id: "jupiter", label: "Jupiter", x: 0.78, y: 0.52 },
+  { id: "saturn", label: "Saturn", x: 0.9, y: 0.52 },
+];
 
 export function DesktopMiniMapCard() {
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
@@ -24,14 +35,20 @@ export function DesktopMiniMapCard() {
 
   if (!scene.showMiniMap) return null;
 
-  const hasNodes = !!scene.nodes && scene.nodes.length > 0;
+  const resolvedNodes =
+    scene.nodes && scene.nodes.length > 0
+      ? scene.nodes
+      : scene.key === "Title"
+        ? TITLE_FALLBACK_NODES
+        : null;
+  const hasNodes = !!resolvedNodes;
   const marker = scene.marker;
 
   return (
     <ShellPanel compact>
       <div className="flex items-center justify-between">
         <ShellPanelTitle>MAP</ShellPanelTitle>
-        <ShellPanelMeta>ACT {scene.act || "—"}</ShellPanelMeta>
+        <ShellPanelMeta>{scene.act > 0 ? `ACT ${scene.act}` : "—"}</ShellPanelMeta>
       </div>
 
       <div className="text-[10px] font-mono mt-0.5" style={{ color: "#eef3ff" }}>
@@ -59,8 +76,8 @@ export function DesktopMiniMapCard() {
               preserveAspectRatio="none"
               viewBox="0 0 100 100"
             >
-              {scene.nodes!.map((n, i) => {
-                const next = scene.nodes![i + 1];
+              {resolvedNodes!.map((n, i) => {
+                const next = resolvedNodes![i + 1];
                 if (!next) return null;
                 return (
                   <line
@@ -76,7 +93,7 @@ export function DesktopMiniMapCard() {
                 );
               })}
             </svg>
-            {scene.nodes!.map((n) => (
+            {resolvedNodes!.map((n) => (
               <div
                 key={n.id}
                 className="absolute rounded-full"
@@ -101,7 +118,7 @@ export function DesktopMiniMapCard() {
             className="absolute inset-0 flex items-center justify-center text-[9px] font-mono uppercase tracking-wider"
             style={{ color: "rgba(168,200,232,0.5)" }}
           >
-            SCHEMATIC UNAVAILABLE
+            NO ROUTE CHARTED
           </div>
         )}
 

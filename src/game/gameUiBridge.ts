@@ -34,6 +34,7 @@ export type SceneNode = {
   active?: boolean;
 };
 
+/** @deprecated Kept for back-compat; granular show* flags now drive layout. */
 export type SceneShellMode = "minimal" | "standard";
 
 export type SceneSnapshot = {
@@ -47,21 +48,20 @@ export type SceneSnapshot = {
   /** Optional player marker [0..1, 0..1]. */
   marker: { x: number; y: number } | null;
 
-  /** Scene-aware shell presentation policy. */
-  shellMode: SceneShellMode;
-
   /** Idle dock content used when no dialogue is open. */
   idleTitle: string | null;
   idleBody: string | null;
 
-  /** Optional scene-specific footer hint for standard shell scenes. */
+  /** Optional scene-specific footer hint. */
   footerHint: string | null;
 
-  /** Whether the desktop Player Hub may open in this scene. */
-  allowPlayerHub: boolean;
-
-  /** Whether the desktop minimap card should be shown at all. */
+  /** Granular shell visibility flags. */
+  showStatsBar: boolean;
+  showUtilityRail: boolean;
+  showDialogueDock: boolean;
   showMiniMap: boolean;
+  allowPlayerHub: boolean;
+  showFooter: boolean;
 };
 
 export type OverlaySnapshot = {
@@ -97,12 +97,15 @@ const initial = (): GameUiSnapshot => ({
     zone: null,
     nodes: null,
     marker: null,
-    shellMode: "minimal",
     idleTitle: null,
     idleBody: null,
     footerHint: null,
-    allowPlayerHub: false,
+    showStatsBar: false,
+    showUtilityRail: false,
+    showDialogueDock: false,
     showMiniMap: false,
+    allowPlayerHub: false,
+    showFooter: false,
   },
   overlay: {
     settingsOpen: false,
@@ -167,28 +170,27 @@ export function setSceneSnapshot(patch: Partial<SceneSnapshot>) {
   const prev = snap.scene;
   const next: SceneSnapshot = { ...prev, ...patch };
 
-  // Infer shell mode when callers do not provide one.
-  if (patch.shellMode === undefined) {
-    if (patch.key === "Title") {
-      next.shellMode = "minimal";
-    } else if (patch.key) {
-      next.shellMode = "standard";
-    }
-  }
+  const key = patch.key ?? prev.key;
+  const isTitle = key === "Title";
 
-  // Default player hub policy from shell mode unless explicitly overridden.
+  // Granular defaults: title hides chrome but keeps minimap; gameplay shows all.
+  if (patch.showStatsBar === undefined && patch.key) {
+    next.showStatsBar = !isTitle;
+  }
+  if (patch.showUtilityRail === undefined && patch.key) {
+    next.showUtilityRail = !isTitle;
+  }
+  if (patch.showDialogueDock === undefined && patch.key) {
+    next.showDialogueDock = !isTitle;
+  }
+  if (patch.showFooter === undefined && patch.key) {
+    next.showFooter = !isTitle;
+  }
   if (patch.allowPlayerHub === undefined && patch.key) {
-    next.allowPlayerHub = next.shellMode === "standard";
+    next.allowPlayerHub = !isTitle;
   }
-
-  // Default minimap visibility from actual available map data unless
-  // explicitly overridden.
   if (patch.showMiniMap === undefined && patch.key) {
-    const nextNodes = patch.nodes !== undefined ? patch.nodes : next.nodes;
-    const nextMarker = patch.marker !== undefined ? patch.marker : next.marker;
-    next.showMiniMap =
-      next.shellMode === "standard" &&
-      (!!nextMarker || (!!nextNodes && nextNodes.length > 0));
+    next.showMiniMap = true;
   }
 
   snap = { ...snap, scene: next };
