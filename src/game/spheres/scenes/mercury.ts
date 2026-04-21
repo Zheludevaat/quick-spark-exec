@@ -130,6 +130,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private trueNameLabels: GBCText[] = [];
   private hermaiaPresentation?: EncounterPresentationHandle;
   private roomArt?: MercuryRoomArtHandle;
+  private stationFocus!: Phaser.GameObjects.Arc;
 
   constructor() {
     super("MercuryPlateau");
@@ -172,7 +173,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       key: "MercuryPlateau",
       label: "Mercury — Tower of Reasons",
       act: ACT_BY_SCENE.MercuryPlateau ?? 4,
-      zone: "Tower of Reasons",
+      zone: "Central Hall",
       nodes: null,
       marker: null,
     });
@@ -201,6 +202,22 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.interactPrompt = new GBCText(this, 0, 0, "", {
       color: COLOR.textGold,
       depth: 60,
+    });
+
+    this.stationFocus = this.add
+      .circle(0, 0, 11, WARM, 0)
+      .setStrokeStyle(1, WARM, 0.85)
+      .setDepth(18)
+      .setVisible(false);
+
+    this.tweens.add({
+      targets: this.stationFocus,
+      scale: 1.18,
+      alpha: 0.55,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
     });
 
     // Status (top-right pip count)
@@ -257,109 +274,116 @@ export class MercuryPlateauScene extends Phaser.Scene {
    *  ENVIRONMENT — Tower architecture
    *  ============================================================ */
   private buildTower() {
-    // Stone floor — kept thin so the painter's backdrop reads through.
-    this.add.rectangle(0, 96, GBC_W, GBC_H - 96, 0x0a1220, 0.55).setOrigin(0).setDepth(0.5);
-
-    // --- Distant tower silhouettes — suggest infinite reasoning-halls ---
-    // Two faint, low-contrast spires behind the playable architecture.
+    // Lower floor mass. Keeps the playable band grounded without carpeting it.
     this.add
-      .triangle(36, 90, 0, 60, 12, 0, 24, 60, 0x1a2238, 0.55)
-      .setDepth(0)
-      .setOrigin(0, 0);
+      .rectangle(0, 92, GBC_W, GBC_H - 92, 0x050912, 0.58)
+      .setOrigin(0, 0)
+      .setDepth(0.4);
+
+    // Side masks to compress the composition inward and quiet the edges.
     this.add
-      .triangle(120, 90, 0, 60, 14, 0, 28, 60, 0x1a2238, 0.45)
-      .setDepth(0)
-      .setOrigin(0, 0);
+      .rectangle(0, 24, 18, 92, 0x08101a, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(0.6);
     this.add
-      .triangle(GBC_W / 2 - 10, 96, 0, 70, 10, 0, 20, 70, 0x12182c, 0.4)
-      .setDepth(0)
-      .setOrigin(0, 0);
+      .rectangle(GBC_W - 18, 24, 18, 92, 0x08101a, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(0.6);
 
-    // --- Hanging proof-rails (faint glyph architecture) ---
-    // Two horizontal chalk rails and one vertical, all dim — they imply
-    // logical scaffolding without competing with the chamber.
-    this.add.rectangle(0, 32, GBC_W, 1, INK, 0.18).setOrigin(0, 0).setDepth(1);
-    this.add.rectangle(0, 36, GBC_W, 1, INK, 0.12).setOrigin(0, 0).setDepth(1);
-    // Vertical proof line behind the chamber
-    this.add.rectangle(GBC_W / 2, 26, 1, 16, INK, 0.22).setOrigin(0.5, 0).setDepth(1);
+    // Upper chamber plate.
+    this.add
+      .rectangle(GBC_W / 2, 23, 56, 14, STONE_DARK, 0.78)
+      .setDepth(1.1);
+    this.add
+      .rectangle(GBC_W / 2, 23, 56, 14)
+      .setStrokeStyle(1, COLD, 0.55)
+      .setDepth(1.2);
 
-    // Three vertical pillars suggesting a tower interior
-    for (const px of [22, 80, 138]) {
-      this.add.rectangle(px, 70, 6, 100, STONE_DARK).setOrigin(0.5).setDepth(1);
-      this.add.rectangle(px, 22, 8, 4, STONE).setOrigin(0.5).setDepth(1);
-      this.add.rectangle(px, 118, 8, 4, STONE).setOrigin(0.5).setDepth(1);
-    }
+    // Trial door.
+    this.add
+      .rectangle(GBC_W / 2, 12, 14, 12, 0x000000, 0.84)
+      .setDepth(2);
+    this.trialGlow = this.add
+      .circle(GBC_W / 2, 12, 5, COLD, 0)
+      .setStrokeStyle(1, COLD, 0.4)
+      .setDepth(3);
 
-    // Upper chamber outline (where Cracking Question lives)
-    const chamberY = 24;
-    this.add.rectangle(GBC_W / 2, chamberY, 70, 16, STONE_DARK, 0.6).setDepth(1);
-    this.add.rectangle(GBC_W / 2, chamberY, 70, 16).setStrokeStyle(1, COLD, 0.5).setDepth(1);
+    // Central proof spine. This becomes the room's hero object.
+    this.add
+      .rectangle(GBC_W / 2, 32, 2, 34, INK, 0.24)
+      .setDepth(1.1);
 
-    // --- Mercury sigil above the chamber: caduceus shorthand ---
-    // Stem + two crescents + small wings. Iconic at 160x144.
-    const sigilX = GBC_W / 2;
-    const sigilY = 8;
-    const stem = this.add.rectangle(sigilX, sigilY, 1, 8, COLD, 0.85).setDepth(4);
-    const orb = this.add.circle(sigilX, sigilY - 4, 2, COLD, 0.9).setDepth(4);
-    orb.setStrokeStyle(1, WARM, 0.6);
-    const wingL = this.add.triangle(sigilX - 3, sigilY - 3, 0, 0, -3, -2, 0, 2, COLD, 0.7).setDepth(4);
-    const wingR = this.add.triangle(sigilX + 3, sigilY - 3, 0, 0, 3, -2, 0, 2, COLD, 0.7).setDepth(4);
-    this.chamberSigil = [stem, orb, wingL, wingR];
-    // Subtle sigil pulse — visual memory anchor of the act.
+    const crossbar = this.add
+      .rectangle(GBC_W / 2, 46, 18, 2, WARM, 0.82)
+      .setDepth(2);
+    const hanger = this.add
+      .rectangle(GBC_W / 2, 54, 1, 12, COLD, 0.45)
+      .setDepth(2);
+    void hanger;
+    const proofWeight = this.add
+      .rectangle(GBC_W / 2, 63, 14, 5, 0xc89090, 0.9)
+      .setDepth(2);
+    proofWeight.setStrokeStyle(1, 0xffffff, 0.45);
+
+    // Hero pulse.
     this.tweens.add({
-      targets: orb,
-      alpha: 0.6,
-      duration: 1600,
+      targets: [crossbar, proofWeight],
+      alpha: 0.65,
+      duration: 1200,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
 
-    // Trial door — top center (locked until cracked)
-    this.add.rectangle(GBC_W / 2, 14, 16, 14, 0x000000, 0.8).setDepth(2);
-    this.trialGlow = this.add
-      .circle(GBC_W / 2, 14, 5, COLD, 0.0)
-      .setStrokeStyle(1, COLD, 0.4)
-      .setDepth(3);
+    // Mid and lower tier separators.
+    this.add
+      .rectangle(16, 56, GBC_W - 32, 1, INK, 0.16)
+      .setOrigin(0, 0)
+      .setDepth(1);
+    this.add
+      .rectangle(12, 88, GBC_W - 24, 1, INK, 0.18)
+      .setOrigin(0, 0)
+      .setDepth(1);
 
-    // Stairs down (bottom)
+    // Soft light cones to group the three lower soul alcoves.
+    const coneLeft = this.add
+      .triangle(26, 112, -12, 0, 12, 0, 0, -40, 0x1e2b46, 0.22)
+      .setDepth(0.8);
+    const coneMid = this.add
+      .triangle(80, 112, -12, 0, 12, 0, 0, -48, 0x22314d, 0.26)
+      .setDepth(0.8);
+    const coneRight = this.add
+      .triangle(134, 112, -12, 0, 12, 0, 0, -40, 0x1e2b46, 0.22)
+      .setDepth(0.8);
+    void coneLeft;
+    void coneMid;
+    void coneRight;
+
+    // Cleaner alcove bases.
+    this.add.rectangle(26, 104, 18, 2, STONE, 0.6).setDepth(2);
+    this.add.rectangle(80, 108, 12, 1, INK, 0.45).setDepth(2);
+    this.add.rectangle(134, 104, 18, 2, STONE, 0.5).setDepth(2);
+
+    // Narrow central witness plate under the proof spine.
+    this.add.rectangle(GBC_W / 2, 78, 18, 2, STONE, 0.55).setDepth(2);
+
+    // Bottom stairs.
     for (let i = 0; i < 3; i++) {
       this.add
         .rectangle(GBC_W / 2 - 12 + i * 12, GBC_H - 6, 8, 2, STONE, 0.7)
         .setDepth(1);
     }
-
-    // Floor seams suggesting tiers
-    this.add.rectangle(0, 50, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
-    this.add.rectangle(0, 86, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
-
-    // --- Alcove shape language for each NPC station ---
-    // Defender (left) — squared, rigid plinth. The frame of someone
-    // who has built a fort out of being right.
-    this.add.rectangle(26, 104, 18, 2, STONE, 0.7).setDepth(2);
-    this.add.rectangle(17, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
-    this.add.rectangle(35, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
-    // Pedant (center) — narrow vertical order, like a card catalog.
-    this.add.rectangle(80, 108, 12, 1, INK, 0.5).setDepth(2);
-    this.add.rectangle(75, 90, 1, 18, INK, 0.4).setDepth(2);
-    this.add.rectangle(85, 90, 1, 18, INK, 0.4).setDepth(2);
-    this.add.rectangle(80, 92, 8, 1, INK, 0.4).setDepth(2);
-    // Casuist (right) — slightly skewed, doubled outline. Two stances at once.
-    this.add.rectangle(132, 104, 18, 2, STONE, 0.6).setDepth(2);
-    this.add.rectangle(132, 102, 14, 1, STONE_DARK, 0.55).setDepth(2);
-    this.add.line(0, 0, 124, 90, 138, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
-    this.add.line(0, 0, 144, 90, 130, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
   }
 
   /** ============================================================
    *  STATIONS — placed objects the player walks up to
    *  ============================================================ */
   private buildStations() {
-    // -- NPCs (lower tier, y ~ 96-104) --
+    // Lower tier voices
     this.placeStation(
       "npc_defender",
       26,
-      96,
+      98,
       "DEFENDER",
       `sphere_mercury_soul_${mercuryConfig.souls[0].id}`,
       0xc89090,
@@ -367,7 +391,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.placeStation(
       "npc_pedant",
       80,
-      100,
+      102,
       "PEDANT",
       `sphere_mercury_soul_${mercuryConfig.souls[1].id}`,
       0xc8c890,
@@ -375,18 +399,17 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.placeStation(
       "npc_casuist",
       134,
-      96,
+      98,
       "CASUIST",
       `sphere_mercury_soul_${mercuryConfig.souls[2].id}`,
       0x90c8a8,
     );
 
-    // -- Puzzle stations (mid tier, y ~ 60-72) --
-    // Op id maps directly to mercuryConfig.operations[i].id
+    // Mid tier operations
     this.placeStation(
       "puzzle_syllogism",
       28,
-      62,
+      64,
       "PROOF",
       `sphere_mercury_op_proof`,
       COLD,
@@ -395,7 +418,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.placeStation(
       "puzzle_refutation",
       80,
-      66,
+      68,
       "REFUTATION",
       `sphere_mercury_op_refutation`,
       0xe89090,
@@ -404,41 +427,41 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.placeStation(
       "puzzle_silence",
       132,
-      62,
+      64,
       "SILENCE",
       `sphere_mercury_op_silence`,
       0xa8a8c8,
       "silence",
     );
 
-    // -- Environmental (the 4th op = "argument" lives at the chalkboard) --
+    // Secondary environmental reads
     this.placeStation(
       "chalkboard",
-      22,
-      40,
+      20,
+      42,
       "CHALKBOARD",
       `sphere_mercury_op_argument`,
       0x88c0a0,
       "argument",
     );
-    this.placeStation("statue", 138, 40, "STATUE");
-    this.placeStation("scrolls", 80, 44, "SCROLLS");
+    this.placeStation("scrolls", 138, 42, "SCROLLS");
+    this.placeStation("statue", 138, 24, "STATUE");
 
-    // -- Cracking chamber + trial door (top) --
-    this.placeStation("crack_chamber", GBC_W / 2, 24, "CHAMBER", `sphere_mercury_cracked`);
-    this.placeStation("trial_door", GBC_W / 2, 14, "TRIAL");
+    // Upper chamber
+    this.placeStation("crack_chamber", GBC_W / 2, 23, "CHAMBER", `sphere_mercury_cracked`);
+    this.placeStation("trial_door", GBC_W / 2, 12, "TRIAL");
 
-    // -- Hall of Glyphs (lunar/mercurial naming side-chamber) --
+    // Side chamber entry
     this.placeStation(
       "hall_of_glyphs",
-      14,
+      10,
       24,
       "GLYPHS",
       "puzzle_mercury_name_01_solved",
       WARM,
     );
 
-    // -- Exit (bottom) --
+    // Exit
     this.placeStation("exit_stairs", GBC_W / 2, GBC_H - 6, "STAIRS");
   }
 
@@ -453,92 +476,125 @@ export class MercuryPlateauScene extends Phaser.Scene {
   ) {
     const visual: Phaser.GameObjects.GameObject[] = [];
     const done = doneFlag ? !!this.mSave.flags[doneFlag] : false;
+    const isMajor =
+      kind.startsWith("npc_") ||
+      kind === "puzzle_syllogism" ||
+      kind === "puzzle_refutation" ||
+      kind === "puzzle_silence" ||
+      kind === "crack_chamber" ||
+      kind === "trial_door";
+
+    const addMarker = (mx: number, my: number, tint: number, alpha: number) => {
+      const pip = this.add
+        .rectangle(mx, my, 3, 3, tint, alpha)
+        .setAngle(45)
+        .setDepth(16);
+      visual.push(pip);
+      if (!done) {
+        this.tweens.add({
+          targets: pip,
+          alpha: 0.28,
+          duration: 900,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.inOut",
+        });
+      }
+    };
 
     if (kind.startsWith("npc_")) {
-      // NPC sprite: small standing figure
-      const body = this.add.rectangle(x, y, 6, 10, color).setDepth(15);
-      const head = this.add.circle(x, y - 7, 3, color).setDepth(15);
-      visual.push(body, head);
+      const body = this.add.rectangle(x, y, 5, 10, color, 0.9).setDepth(15);
+      const head = this.add.circle(x, y - 7, 2.5, color, 0.9).setDepth(15);
+      const base = this.add.rectangle(x, y + 8, 10, 2, STONE_DARK, 0.7).setDepth(14);
+      body.setStrokeStyle(1, 0x000000, 0.45);
+      head.setStrokeStyle(1, 0x000000, 0.45);
+      visual.push(base, body, head);
+
       if (done) {
-        body.setAlpha(0.55);
-        head.setAlpha(0.55);
+        body.setAlpha(0.5);
+        head.setAlpha(0.5);
       }
-      // Idle bob
+
       this.tweens.add({
         targets: [body, head],
         y: "+=1",
-        duration: 1200 + Math.random() * 400,
+        duration: 1400 + Math.random() * 300,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",
       });
-    } else if (kind === "puzzle_syllogism" || kind === "puzzle_refutation" || kind === "puzzle_silence") {
-      // Puzzle plinth
-      const plinth = this.add.rectangle(x, y, 14, 6, STONE_DARK).setDepth(10);
-      const top = this.add.rectangle(x, y - 4, 12, 3, color, done ? 0.3 : 0.9).setDepth(11);
-      visual.push(plinth, top);
+
+      addMarker(x, y - 14, done ? COLD : WARM, done ? 0.35 : 0.9);
+    } else if (
+      kind === "puzzle_syllogism" ||
+      kind === "puzzle_refutation" ||
+      kind === "puzzle_silence"
+    ) {
+      const stem = this.add.rectangle(x, y + 3, 2, 14, STONE_DARK, 0.8).setDepth(10);
+      const tablet = this.add.rectangle(x, y - 4, 14, 5, color, done ? 0.28 : 0.85).setDepth(11);
+      tablet.setStrokeStyle(1, done ? COLD : 0xffffff, done ? 0.35 : 0.45);
+      visual.push(stem, tablet);
+
       if (!done) {
         this.tweens.add({
-          targets: top,
-          alpha: 0.5,
+          targets: tablet,
+          alpha: 0.45,
           duration: 900,
           yoyo: true,
           repeat: -1,
         });
       }
+
+      addMarker(x, y - 13, done ? COLD : WARM, done ? 0.35 : 0.9);
     } else if (kind === "chalkboard") {
-      const board = this.add.rectangle(x, y, 18, 14, 0x1a2030).setDepth(8);
-      board.setStrokeStyle(1, 0x886040);
-      // Crossed-out lines
-      this.add.line(x, y, -6, -3, 6, 3, 0xc8c8c8, 0.6).setDepth(9);
-      this.add.line(x, y, -6, 0, 6, 0, 0xc8c8c8, 0.6).setDepth(9);
-      this.add.line(x, y, -6, 3, 4, 1, 0xe89090, 0.7).setDepth(9); // crossed
-      visual.push(board);
-      if (done) board.setAlpha(0.5);
+      const board = this.add.rectangle(x, y, 12, 10, 0x182032, 0.72).setDepth(8);
+      board.setStrokeStyle(1, 0x886040, 0.55);
+      const l1 = this.add.line(x, y, -4, -2, 4, -1, 0xc8c8c8, 0.4).setDepth(9);
+      const l2 = this.add.line(x, y, -4, 1, 4, 1, 0xe89090, 0.5).setDepth(9);
+      visual.push(board, l1, l2);
+      if (done) board.setAlpha(0.42);
     } else if (kind === "statue") {
-      // Broken debater
-      const base = this.add.rectangle(x, y + 4, 12, 4, STONE).setDepth(8);
-      const torso = this.add.rectangle(x, y - 3, 6, 10, STONE).setDepth(8);
-      // Missing head — just a jagged top
-      this.add.triangle(x, y - 8, -3, 0, 3, 0, -1, -3, STONE).setDepth(8);
-      visual.push(base, torso);
+      const base = this.add.rectangle(x, y + 4, 8, 3, STONE, 0.45).setDepth(7);
+      const torso = this.add.rectangle(x, y - 1, 4, 8, STONE, 0.45).setDepth(7);
+      const shard = this.add.triangle(x, y - 7, -2, 0, 2, 0, -1, -2, STONE, 0.45).setDepth(7);
+      visual.push(base, torso, shard);
     } else if (kind === "scrolls") {
-      const s1 = this.add.rectangle(x - 4, y, 6, 2, 0xc8b888).setDepth(8);
-      const s2 = this.add.rectangle(x + 3, y + 1, 5, 2, 0xc8b888).setDepth(8);
-      const s3 = this.add.rectangle(x, y - 2, 4, 2, 0xc8b888).setDepth(8);
-      visual.push(s1, s2, s3);
+      const s1 = this.add.rectangle(x - 3, y, 5, 2, 0xc8b888, 0.45).setDepth(7);
+      const s2 = this.add.rectangle(x + 2, y + 1, 4, 2, 0xc8b888, 0.4).setDepth(7);
+      visual.push(s1, s2);
     } else if (kind === "crack_chamber") {
-      // The question altar — glows when ops complete
       const ready =
         opsCompleted(
           this.mSave,
           "mercury",
           mercuryConfig.operations.map((o) => o.id),
         ) >= mercuryConfig.operations.length;
-      const altar = this.add.rectangle(x, y, 12, 8, ready ? COLD : STONE_DARK, 0.9).setDepth(8);
-      altar.setStrokeStyle(1, COLD, ready ? 0.9 : 0.3);
+
+      const altar = this.add
+        .rectangle(x, y, 14, 8, ready ? COLD : STONE_DARK, 0.9)
+        .setDepth(8);
+      altar.setStrokeStyle(1, COLD, ready ? 0.9 : 0.35);
       this.chamberAltar = altar;
       visual.push(altar);
-      // Persistent pulse is applied by refreshChamberGlow() once ready.
+
+      addMarker(x, y - 12, ready ? COLD : WARM, ready ? 0.45 : 0.9);
     } else if (kind === "trial_door") {
-      // glow handled separately; refresh later
+      addMarker(x, y - 10, this.mSave.flags.sphere_mercury_cracked ? COLD : WARM, 0.85);
     } else if (kind === "hall_of_glyphs") {
-      // Small lunar arch with three pip glyphs above it.
-      const arch = this.add.rectangle(x, y, 14, 16, STONE_DARK, 1).setDepth(8);
-      arch.setStrokeStyle(1, done ? COLD : color, 0.85);
-      const inner = this.add.rectangle(x, y + 1, 8, 12, done ? 0x1a2840 : 0x0a0e1a, 1).setDepth(9);
-      const pipL = this.add.circle(x - 4, y - 11, 1, done ? 0x404858 : color, done ? 0.4 : 0.85).setDepth(10);
-      const pipM = this.add.circle(x, y - 12, 1, done ? COLD : color, 0.95).setDepth(10);
-      const pipR = this.add.circle(x + 4, y - 11, 1, done ? 0x404858 : color, done ? 0.4 : 0.85).setDepth(10);
-      visual.push(arch, inner, pipL, pipM, pipR);
-      if (!done) {
-        this.tweens.add({ targets: pipM, alpha: 0.5, duration: 950, yoyo: true, repeat: -1 });
-      }
-    } else if (kind === "exit_stairs") {
-      // already drawn in buildTower; just register the hotspot
+      const arch = this.add.rectangle(x, y, 10, 12, STONE_DARK, 0.7).setDepth(8);
+      arch.setStrokeStyle(1, done ? COLD : color, 0.6);
+      const pipL = this.add.circle(x - 3, y - 9, 1, done ? 0x404858 : color, done ? 0.3 : 0.75).setDepth(9);
+      const pipM = this.add.circle(x, y - 10, 1, done ? COLD : color, 0.8).setDepth(9);
+      const pipR = this.add.circle(x + 3, y - 9, 1, done ? 0x404858 : color, done ? 0.3 : 0.75).setDepth(9);
+      visual.push(arch, pipL, pipM, pipR);
     }
 
     this.stations.push({ kind, x, y, label, doneFlag, opId, visual });
+
+    if (isMajor && kind !== "trial_door") {
+      const aura = this.add.circle(x, y - 1, 9, 0xffffff, 0).setStrokeStyle(1, COLD, 0.16).setDepth(13);
+      visual.push(aura);
+    }
   }
 
   /** ============================================================
@@ -577,10 +633,20 @@ export class MercuryPlateauScene extends Phaser.Scene {
       this.interactPrompt.setPosition(this.rowan.x - 12, this.rowan.y - 18);
       this.hint.setText(this.hintForStation(near));
       this.hint.setColor(COLOR.textGold);
+
+      this.stationFocus
+        .setVisible(true)
+        .setPosition(near.x, near.y - 1)
+        .setStrokeStyle(
+          1,
+          near.doneFlag && this.mSave.flags[near.doneFlag] ? COLD : WARM,
+          0.9,
+        );
     } else {
       this.interactPrompt.setText("");
       this.hint.setText("WALK   B: HUB");
       this.hint.setColor(COLOR.textDim);
+      this.stationFocus.setVisible(false);
     }
   }
 
@@ -637,7 +703,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       "mercury",
       mercuryConfig.operations.map((o) => o.id),
     );
-    this.statusText.setText(`OPS ${done}/${mercuryConfig.operations.length}`);
+    this.statusText.setText(`WORK ${done}/${mercuryConfig.operations.length}`);
   }
 
   /** ============================================================
@@ -1407,7 +1473,7 @@ export class MercuryTrialScene extends Phaser.Scene {
       key: "MercuryTrial",
       label: "Mercury — Hermaia's Trial",
       act: ACT_BY_SCENE.MercuryTrial ?? 4,
-      zone: "Hermaia's Trial",
+      zone: "Three Doors",
       nodes: null,
       marker: null,
     });
