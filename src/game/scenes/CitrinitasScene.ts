@@ -52,7 +52,7 @@ export class CitrinitasScene extends Phaser.Scene {
     spawnMotes(this, { count: 14, color: 0xe8c860, alpha: 0.5 });
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
-    new GBCText(this, GBC_W / 2 - 30, 14, "THE SCRIPTORIUM", {
+    new GBCText(this, GBC_W / 2 - 30, 16, "THE SCRIPTORIUM", {
       color: COLOR.textGold,
       depth: 5,
     });

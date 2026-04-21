@@ -57,7 +57,7 @@ export class RubedoScene extends Phaser.Scene {
     spawnMotes(this, { count: 16, color: 0xb84040, alpha: 0.6 });
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
-    new GBCText(this, GBC_W / 2 - 28, 14, "THE WEDDING", {
+    new GBCText(this, GBC_W / 2 - 28, 16, "THE WEDDING", {
       color: COLOR.textWarn,
       depth: 5,
     });

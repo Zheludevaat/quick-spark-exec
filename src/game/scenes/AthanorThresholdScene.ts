@@ -96,7 +96,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Four doors along the top, color-coded
     DOOR_DEFS.forEach((d, i) => {
       const x = 24 + i * 28;
-      const y = 18;
+      const y = 24;
       const rect = this.add.rectangle(x, y, 18, 22, d.tint, 1).setStrokeStyle(1, 0xc8a060).setDepth(3);
       const glow = this.add.circle(x, y + 14, 3, 0xc8a060, 0.6).setDepth(4);
       this.tweens.add({ targets: glow, alpha: 0.2, duration: 900, yoyo: true, repeat: -1 });
@@ -128,7 +128,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Echo at top of stair if she's been unlocked.
     if (this.save.flags.echo_follower_unlocked) {
       const echo = this.add
-        .circle(GBC_W - 14, GBC_H - 28, 3, 0xa0c8e8, 0.85)
+        .circle(GBC_W - 14, GBC_H - 26, 3, 0xa0c8e8, 0.85)
         .setStrokeStyle(0.5, 0xffffff);
       this.tweens.add({
         targets: echo,
@@ -137,7 +137,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         yoyo: true,
         repeat: -1,
       });
-      new GBCText(this, GBC_W - 24, GBC_H - 22, "ECHO", {
+      new GBCText(this, GBC_W - 24, GBC_H - 20, "ECHO", {
         color: COLOR.textAccent,
         depth: 5,
       });

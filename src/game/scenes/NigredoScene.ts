@@ -56,7 +56,7 @@ export class NigredoScene extends Phaser.Scene {
 
     this.add.rectangle(GBC_W / 2, GBC_H / 2, 32, 24, 0x000000).setStrokeStyle(1, 0x803010);
     this.add.circle(GBC_W / 2, GBC_H / 2, 6, 0xc04020, 0.7);
-    new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 + 18, "FURNACE", {
+    new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 + 14, "FURNACE", {
       color: COLOR.textWarn,
       depth: 5,
     });
