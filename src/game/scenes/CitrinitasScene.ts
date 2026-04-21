@@ -346,15 +346,15 @@ export class CitrinitasScene extends Phaser.Scene {
           unlockLore(this.save, "on_the_torn_teacher");
           showLoreToast(this, "on_the_torn_teacher");
           writeSave(this.save);
-          returnToThreshold(this, this.save, "citrinitas");
+          this.isDone = true;
+          this.isBusy = false;
         },
       );
       return;
     }
-    runDialog(
-      this,
-      [{ who: "SORYN", text: "Enough. The yellow has settled." }],
-      () => returnToThreshold(this, this.save, "citrinitas"),
-    );
+    runDialog(this, [{ who: "SORYN", text: "Enough. The yellow has settled." }], () => {
+      this.isDone = true;
+      this.isBusy = false;
+    });
   }
 }
