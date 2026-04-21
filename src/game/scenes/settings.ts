@@ -8,12 +8,14 @@ import {
   setHaptics,
   setLeftHanded,
   setDialogAutoAdvance,
+  setInterfaceMode,
   resetControls,
   keyLabel,
   normalizeKeyEvent,
   type GameAction,
   type TouchLayout,
   type ButtonSize,
+  type InterfaceMode,
 } from "../controls";
 import { getAudio } from "../audio";
 
@@ -99,6 +101,10 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
 
   // Page body: re-built on each render
   const bodyObjs: Phaser.GameObjects.GameObject[] = [];
+  /** Labels of the main page rows in their currently-rendered order.
+   *  Dispatch routes by label so dynamic rows (e.g. legacy TOUCH OVERLAY) can
+   *  appear/disappear without index drift. */
+  let mainRowLabels: string[] = [];
   const clearBody = () => {
     bodyObjs.forEach((o) => {
       try {
@@ -117,8 +123,12 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       subtitle.setText("DISPLAY & TOUCH");
       const audio = getAudio();
       const volPct = Math.round(audio.volume * 100);
+      const isTouchMode = c.interfaceMode === "touch_landscape";
       const rows: { label: string; value: string }[] = [
-        { label: "TOUCH LAYOUT", value: c.touchLayout.toUpperCase() },
+        {
+          label: "INTERFACE MODE",
+          value: isTouchMode ? "TOUCH" : "DESKTOP",
+        },
         { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
         { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
         { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
@@ -128,12 +138,17 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         },
         { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
         { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
+        // Legacy in-canvas touch overlay — only relevant when not in the
+        // shell-driven touch_landscape mode.
+        ...(isTouchMode
+          ? []
+          : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
         { label: "REBIND KEYS →", value: "" },
         { label: "RESET DEFAULTS", value: "" },
       ];
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
       rows.forEach((r, idx) => {
-        const y = 38 + idx * 10;
+        const y = 38 + idx * 9;
         const isCur = idx === cursor;
         const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
           color: COLOR.textAccent,
@@ -152,6 +167,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         });
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       });
+      // Remember current rows for activate/adjust dispatch.
+      mainRowLabels = rows.map((r) => r.label);
       const hint = new GBCText(
         scene,
         8,
@@ -203,6 +220,11 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   render();
 
   // ---- Input ----
+  const cycleInterfaceMode = () => {
+    const order: InterfaceMode[] = ["desktop", "touch_landscape"];
+    const i = order.indexOf(getControls().interfaceMode);
+    setInterfaceMode(order[(i + 1) % order.length]);
+  };
   const cycleLayout = (dir: 1 | -1) => {
     const order: TouchLayout[] = ["dpad", "swipe", "hybrid", "off"];
     const i = order.indexOf(getControls().touchLayout);
@@ -220,52 +242,57 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     setDialogAutoAdvance(next);
   };
 
+  /** Dispatch a left/right (dir) on the focused main-page row by label. */
   const adjustMain = (dir: 1 | -1) => {
-    switch (cursor) {
-      case 0:
-        cycleLayout(dir);
+    const label = mainRowLabels[cursor];
+    switch (label) {
+      case "INTERFACE MODE":
+        cycleInterfaceMode();
         break;
-      case 1:
+      case "BUTTON SIZE":
         cycleSize(dir);
         break;
-      case 2:
+      case "LEFT-HANDED":
         setLeftHanded(!getControls().leftHanded);
         break;
-      case 3:
+      case "HAPTICS":
         setHaptics(!getControls().haptics);
         break;
-      case 4:
+      case "DIALOG AUTO-ADV":
         cycleAuto(dir);
         break;
-      case 5: {
+      case "VOLUME": {
         const a = getAudio();
-        // 10% steps; if muted, unmute first.
         if (a.muted) a.setMuted(false);
         a.setVolume(a.volume + dir * 0.1);
         break;
       }
-      case 6: {
+      case "AUDIO": {
         const a = getAudio();
         a.setMuted(!a.muted);
         break;
       }
+      case "TOUCH OVERLAY (LEGACY)":
+        cycleLayout(dir);
+        break;
+      default:
+        break;
     }
     getAudio().sfx("cursor");
     render();
   };
 
+  /** Activate (A) on the focused main-page row by label. */
   const activateMain = () => {
-    switch (cursor) {
-      case 7:
-        page = "keys";
-        cursor = 0;
-        break;
-      case 8:
-        resetControls();
-        break;
-      default:
-        adjustMain(1);
-        return;
+    const label = mainRowLabels[cursor];
+    if (label === "REBIND KEYS →") {
+      page = "keys";
+      cursor = 0;
+    } else if (label === "RESET DEFAULTS") {
+      resetControls();
+    } else {
+      adjustMain(1);
+      return;
     }
     getAudio().sfx("confirm");
     render();
@@ -308,7 +335,9 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     }
     if (page === "keys") {
       page = "main";
-      cursor = 7;
+      // Land on REBIND KEYS row when coming back, regardless of dynamic row count.
+      const rebindIdx = mainRowLabels.indexOf("REBIND KEYS →");
+      cursor = rebindIdx >= 0 ? rebindIdx : 0;
       render();
       return;
     }
@@ -321,7 +350,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       getAudio().sfx("cursor");
       render();
     } else if (d === "down") {
-      const max = page === "main" ? 8 : ACTION_ORDER.length - 1;
+      const max = page === "main" ? Math.max(0, mainRowLabels.length - 1) : ACTION_ORDER.length - 1;
       cursor = Math.min(max, cursor + 1);
       getAudio().sfx("cursor");
       render();
