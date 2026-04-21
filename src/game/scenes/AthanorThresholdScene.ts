@@ -444,6 +444,10 @@ export class AthanorThresholdScene extends Phaser.Scene {
     return Math.hypot(this.rowan.x - GBC_W / 2, this.rowan.y - (GBC_H / 2 + 8)) < 16;
   }
 
+  private nearReflection(): boolean {
+    return Math.hypot(this.rowan.x - this.reflectionPortalX, this.rowan.y - this.reflectionPortalY) < 12;
+  }
+
   private refreshHint() {
     if (this.busy) return;
     const door = this.nearestDoor();
@@ -464,6 +468,11 @@ export class AthanorThresholdScene extends Phaser.Scene {
         "encounter_seen_athanor_vessel",
         this.save,
       );
+      return;
+    }
+    if (this.nearReflection()) {
+      const solved = !!this.save.flags.puzzle_moon_reflection_01_solved;
+      this.hint.setText(solved ? "REFLECTION CHAMBER (SOLVED)  A: ENTER" : "A: REFLECTION CHAMBER");
       return;
     }
     this.hint.setText("");
@@ -490,6 +499,14 @@ export class AthanorThresholdScene extends Phaser.Scene {
     }
     if (this.nearVessel()) {
       this.tryDeposit();
+      return;
+    }
+    if (this.nearReflection()) {
+      this.scene.start("PuzzleChamber", {
+        save: this.save,
+        roomId: "moon_reflection_01",
+        returnTo: "AthanorThreshold",
+      });
       return;
     }
     // Coda: if all four operations done, show seal prompt
