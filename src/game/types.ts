@@ -12,6 +12,8 @@ export type SceneKey =
   | "Rubedo"
   | "SealedVessel"
   | "MetaxyHub"
+  | "MercuryPlateau"
+  | "MercuryTrial"
   | "CuratedSelf"
   | "Epilogue";
 
