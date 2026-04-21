@@ -419,16 +419,44 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Spawn souls for this region (skip those already finished — keep the world
-    // feeling alive but uncluttered; finished souls return as faint statues).
+    // Spawn souls for this region with "Alive" Art Direction
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
       const done = isSoulDone(this.save, def.id);
+
       built.setMood(done ? "resolved" : "waiting");
-      // Resolved souls become faint statues — present but visually quieted.
       if (done) built.container.setAlpha(0.45);
-      this.regionRoot.add(built.container);
+
+      // Art Upgrade: Dedicated Soft Shadow
+      const shadow = this.add.ellipse(def.x, def.y + 6, 12, 4, 0x000000, 0.4).setDepth(1);
+      this.regionRoot.add(shadow);
+
+      // Art Upgrade: Organic "Breathing" Micro-animation
+      this.tweens.add({
+        targets: built.container,
+        y: built.container.y - (done ? 1 : 2),
+        scaleY: 1.05,
+        scaleX: 0.98,
+        duration: Phaser.Math.Between(1200, 1600),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+
+      // Art Upgrade: Dynamic, irregular aura pulse
+      this.tweens.add({
+        targets: built.halo,
+        scale: { min: 1.1, max: 1.4 },
+        alpha: { min: 0.1, max: 0.3 },
+        duration: Phaser.Math.Between(2000, 3000),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+
       this.regionRoot.add(built.halo);
+      this.regionRoot.add(built.container);
+
       this.souls.push({
         def,
         container: built.container,
