@@ -1072,12 +1072,14 @@ export class VenusPlateauScene extends Phaser.Scene {
     }
     markVenusFlag(this.save, "trialThresholdSeen");
     writeSave(this.save);
+    this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("VenusTrial", { save: this.save }));
   }
 
   private toHub() {
     this.save.scene = "MetaxyHub";
     writeSave(this.save);
+    this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
   }
 
@@ -1166,11 +1168,16 @@ export class VenusPlateauScene extends Phaser.Scene {
           });
           return;
         }
-        this.tryAttune(m.id, m.zone, m.requiredMs, () => {
-          this.save.flags[m.doneFlag] = true;
-          writeSave(this.save);
-          runDialog(this, m.lines);
-        });
+        this.tryAttune(
+          m.id,
+          m.zone,
+          m.requiredMs,
+          () => {
+            this.save.flags[m.doneFlag] = true;
+            writeSave(this.save);
+          },
+          m.lines,
+        );
       },
     });
   }
