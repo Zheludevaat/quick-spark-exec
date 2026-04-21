@@ -493,6 +493,20 @@ export class VenusPlateauScene extends Phaser.Scene {
     door.setStrokeStyle(1, 0xe89bb8, 0.9);
     this.root.add(door);
 
+    // Kypria presence at the threshold doorway — restrained shimmer aura
+    // and a one-time intro sting on the first arrival.
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      70,
+      KYPRIA_PROFILE,
+    );
+    this.kypriaPresentation.introOnce(
+      "encounter_seen_kypria_threshold",
+      this.save,
+    );
+
     // Glow if ready
     if (venusCrackingReady(this.save)) {
       const glow = this.add.circle(GBC_W / 2, 70, 18, 0xe89bb8, 0.18).setDepth(11);
