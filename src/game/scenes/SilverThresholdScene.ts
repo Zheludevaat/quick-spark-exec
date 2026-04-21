@@ -389,12 +389,31 @@ export class SilverThresholdScene extends Phaser.Scene {
       s.play(`elem_${p.kind}`);
       if (visited) s.setAlpha(0.35);
       this.circles.push({ kind: p.kind, sprite: s, x: p.x, y: p.y, visited });
+
+      // Each guardian gets a small encounter aura + nameplate. Already-named
+      // guardians come up softened so the room reads as partially received.
+      const presentation = createEncounterPresentation(this, p.x, p.y, GUARDIAN_PROFILES[p.kind]);
+      if (visited) presentation.soften();
+      this.guardianPresentations[p.kind] = presentation;
     }
 
     // Soryn (legacy v1 humanoid for the opening conversation, before the daimon reveal)
     this.soryn = this.add.sprite(146, 70, "soryn", 0);
     this.soryn.play("soryn_flicker");
     new GBCText(this, 138, 56, "SORYN", { color: COLOR.textAccent });
+
+    // Threshold-form aura. Will be replaced with the daimon-form profile after
+    // the binding scene (see runDaimonBinding). On returning saves where Soryn
+    // is already bound, jump straight to daimon presentation.
+    const sorynStartProfile = this.save.flags.daimon_bound
+      ? SORYN_DAIMON_PROFILE
+      : SORYN_THRESHOLD_PROFILE;
+    this.sorynPresentation = createEncounterPresentation(
+      this,
+      this.soryn.x,
+      this.soryn.y,
+      sorynStartProfile,
+    );
 
     // Gate at south
     this.gate = this.add.container(GBC_W / 2, GBC_H - 18);
