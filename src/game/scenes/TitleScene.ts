@@ -104,15 +104,24 @@ export class TitleScene extends Phaser.Scene {
       depth: 30,
     });
 
-    // ---- Title block — centered, just the name. ----
-    const titleY = 70;
+    // ---- Title block — "THE HERMETIC COMEDY", with THE as a quieter lead-in. ----
+    const titleY = 58;
+
+    const t0 = "THE";
     const t1 = "HERMETIC";
     const t2 = "COMEDY";
-    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY, t1, {
+
+    new GBCText(this, GBC_W / 2 - measure(t0) / 2, titleY, t0, {
+      color: COLOR.textDim,
+      shadow: "#1a2030",
+    });
+
+    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY + 8, t1, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
-    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 10, t2, {
+
+    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 18, t2, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
@@ -145,37 +154,46 @@ export class TitleScene extends Phaser.Scene {
       });
     };
 
-    // Larger menu box that fits 2-3 options comfortably.
-    const lineH = 11;
-    const boxH = 14 + options.length * lineH;
+    // Tighter menu box — supports the title rather than competing with it.
+    const lineH = 10;
+    const menuBoxX = 18;
+    const menuBoxW = GBC_W - 36;
+    const boxH = 12 + options.length * lineH;
     const menuY = GBC_H - boxH - 8;
-    drawGBCBox(this, 12, menuY, GBC_W - 24, boxH);
+
+    drawGBCBox(this, menuBoxX, menuY, menuBoxW, boxH);
+
+    const menuTextX = menuBoxX + 16;
+    const menuCursorX = menuBoxX + 8;
+    const menuRowY = menuY + 7;
 
     let cursor = 0;
     const labels: GBCText[] = options.map(
       (opt, i) =>
-        new GBCText(this, 26, menuY + 8 + i * lineH, opt.label, {
+        new GBCText(this, menuTextX, menuRowY + i * lineH, opt.label, {
           color: COLOR.textLight,
           depth: 110,
         }),
     );
-    const cursorMark = new GBCText(this, 18, menuY + 8, "▶", {
+
+    const cursorMark = new GBCText(this, menuCursorX, menuRowY, "▶", {
       color: COLOR.textGold,
       depth: 111,
     });
+
     const refresh = () => {
       labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-      cursorMark.setPosition(18, menuY + 8 + cursor * lineH);
+      cursorMark.setPosition(menuCursorX, menuRowY + cursor * lineH);
     };
     refresh();
     this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
     // ---- Top-right DEV button (opens skip-act menu) ----
-    const devBtnX = GBC_W - 32;
+    const devBtnX = GBC_W - 30;
     const devBtnY = 4;
-    drawGBCBox(this, devBtnX - 2, devBtnY, 32, 12, 120);
-    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 3, "DEV▸", {
-      color: COLOR.textGold,
+    drawGBCBox(this, devBtnX - 2, devBtnY, 28, 10, 120);
+    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 2, "DEV", {
+      color: COLOR.textDim,
       depth: 121,
     });
     devBtn.obj
