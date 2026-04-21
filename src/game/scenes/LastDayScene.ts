@@ -306,6 +306,25 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
+
+    // Render small markers for any visible expanded interactions.
+    for (const it of LASTDAY_EXPANDED_INTERACTIONS) {
+      if (!interactionEnabled(this.save.flags, it)) continue;
+      const dim = it.onceFlag && this.save.flags[it.onceFlag];
+      const m = this.add
+        .circle(it.x, it.y, 2, 0xc8d8e8, dim ? 0.18 : 0.45)
+        .setStrokeStyle(0.5, 0xa8c8e8, dim ? 0.3 : 0.7)
+        .setDepth(8);
+      this.tweens.add({
+        targets: m,
+        alpha: dim ? 0.1 : 0.25,
+        duration: 1500 + Math.floor(Math.random() * 600),
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
     this.rowan = makeRowan(this, 80, 82, "living");
 
     attachHUD(this, () => this.save.stats);
