@@ -585,11 +585,55 @@ export class SilverThresholdScene extends Phaser.Scene {
       );
 
     // Auto-trigger guardian encounter on touch
+    // Render small markers for any visible expanded interactions in Reception.
+    // (No-op visually here; hint + tryInteract surface them via proximity.)
+
+    // Auto-trigger guardian encounter on touch
     for (const c of this.circles) {
       if (c.visited) continue;
       const ddx = this.rowan.x - c.x,
         ddy = this.rowan.y - c.y;
       if (ddx * ddx + ddy * ddy < 10 * 10) {
+        this.dialogActive = true;
+        this.runGuardianEncounter(c);
+        return;
+      }
+    }
+
+    // After main hint logic, surface optional Reception interactions when
+    // nothing more important is in proximity.
+    const expanded = this.nearestExpandedReception();
+    if (expanded && this.hint.obj.text === "" === false) {
+      // only override "WALK TO THE GATE" / "TOUCH THE CIRCLES" idle hints
+      const txt = this.hint.obj.text;
+      if (txt.startsWith("WALK") || txt.startsWith("TOUCH") || txt.startsWith("GATE SEALED")) {
+        this.hint.setText(interactionPrompt(this.save.flags, expanded));
+      }
+    }
+  }
+
+  private nearestExpandedReception(): ActInteraction<ReceptionHostScene> | null {
+    return nearestInteraction(
+      this.save.flags,
+      RECEPTION_OPTIONAL_INTERACTIONS,
+      this.rowan.x,
+      this.rowan.y,
+    );
+  }
+
+  private receptionHostShim(): ReceptionHostScene {
+    return {
+      save: this.save,
+      speak: (lines, onDone) => {
+        this.dialogActive = true;
+        runDialog(this, lines, () => {
+          writeSave(this.save);
+          this.dialogActive = false;
+          onDone?.();
+        });
+      },
+    };
+  }
         this.dialogActive = true;
         this.runGuardianEncounter(c);
         return;
