@@ -530,6 +530,151 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.spawnEchoFollower();
   }
 
+  // ============================================================================
+  // ACT II MEMORY HELPERS
+  // ============================================================================
+  private clearedKnotsInRegion(region: ImaginalRegion): number {
+    return defineLayout().filter(
+      (k) => k.region === region && !!this.save.flags[`knot_${k.kind}`],
+    ).length;
+  }
+
+  private doneSoulsInRegion(region: ImaginalRegion): number {
+    return soulsForRegion(this.save, region).filter((s) => isSoulDone(this.save, s.id)).length;
+  }
+
+  private touchedEchoesCount(): number {
+    return Object.keys(this.save.seedEchoes ?? {}).length;
+  }
+
+  private applyRegionMemory(initial = false): void {
+    this.regionToneOverlay?.destroy();
+    this.regionSettledGlow?.destroy();
+    this.regionToneOverlay = undefined;
+    this.regionSettledGlow = undefined;
+
+    const knotCount = this.clearedKnotsInRegion(this.region);
+    const soulCount = this.doneSoulsInRegion(this.region);
+    const echoCount = this.region === "field" ? this.touchedEchoesCount() : 0;
+
+    if (this.region === "pools") {
+      const alpha = Math.min(0.18, knotCount * 0.04 + soulCount * 0.03);
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0x88c0e8, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (knotCount + soulCount > 0) {
+        this.regionSettledGlow = this.add
+          .circle(80, 82, 26, 0xa8c8e8, Math.min(0.18, 0.05 + knotCount * 0.03))
+          .setDepth(2);
+        this.regionRoot.add(this.regionSettledGlow);
+      }
+    } else if (this.region === "field") {
+      const alpha = Math.min(0.16, echoCount * 0.025 + knotCount * 0.03);
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0xffe098, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (echoCount > 0) {
+        this.regionSettledGlow = this.add
+          .circle(80, 72, 28, 0xffe098, Math.min(0.16, 0.04 + echoCount * 0.02))
+          .setDepth(2);
+        this.regionRoot.add(this.regionSettledGlow);
+      }
+    } else {
+      const ready = this.totalCleared() >= 3;
+      const alpha = ready ? 0.14 : 0.05;
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0x10131c, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (ready) {
+        this.regionSettledGlow = this.add
+          .circle(80, GBC_H - 18, 10, 0xc8a060, 0.16)
+          .setDepth(24);
+        this.regionRoot.add(this.regionSettledGlow);
+        this.tweens.add({
+          targets: this.regionSettledGlow,
+          scale: 1.35,
+          alpha: 0.05,
+          duration: 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.inOut",
+        });
+      }
+    }
+
+    if (!initial && this.regionToneOverlay) {
+      const target = this.regionToneOverlay.fillAlpha;
+      this.regionToneOverlay.setAlpha(0);
+      this.tweens.add({
+        targets: this.regionToneOverlay,
+        alpha: target,
+        duration: 220,
+        ease: "Sine.out",
+      });
+    }
+  }
+
+  private markKnotCleared(k: Knot) {
+    let mark: Phaser.GameObjects.GameObject;
+
+    if (k.kind === "reflection") {
+      mark = this.add.circle(k.x, k.y, 6, 0xa8c8e8, 0.18).setDepth(21);
+    } else if (k.kind === "echo") {
+      mark = this.add.rectangle(k.x, k.y, 10, 1, 0xc8a8e8, 0.35).setDepth(21);
+    } else if (k.kind === "glitter") {
+      mark = this.add.circle(k.x, k.y, 4, 0xffe098, 0.22).setDepth(21);
+    } else if (k.kind === "lantern") {
+      mark = this.add.rectangle(k.x, k.y + 2, 4, 1, 0x786858, 0.5).setDepth(21);
+    } else {
+      mark = this.add.circle(k.x, k.y, 5, 0xd8a868, 0.16).setDepth(21);
+    }
+
+    this.regionRoot.add(mark);
+    this.knotMemoryGlyphs.push(mark);
+
+    const flash = this.add.circle(k.x, k.y, 4, 0xffffff, 0.5).setDepth(25);
+    this.regionRoot.add(flash);
+    this.tweens.add({
+      targets: flash,
+      scale: 3,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+
+    this.applyRegionMemory();
+  }
+
+  private markSoulResolved(id: string, x: number, y: number) {
+    void id;
+    const ring = this.add.circle(x, y - 2, 5, 0xa8e8c8, 0.18).setDepth(21);
+    this.regionRoot.add(ring);
+    this.soulMemoryMarks.push(ring);
+
+    const hush = new GBCText(this, x - 10, y - 18, "QUIET.", {
+      color: COLOR.textDim,
+      depth: 23,
+    });
+    this.tweens.add({
+      targets: hush.obj,
+      alpha: 0,
+      y: y - 28,
+      duration: 1400,
+      onComplete: () => hush.destroy(),
+    });
+
+    this.applyRegionMemory();
+  }
+
   private spawnSeedEchoes() {
     const all = ["seed_call", "seed_window", "seed_kettle", "seed_coat", "seed_mirror"];
     const seeds = all.filter((s) => this.save.seeds[s] && !this.save.seedEchoes[s]);
