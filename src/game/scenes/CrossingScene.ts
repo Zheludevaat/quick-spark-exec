@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot } from "../types";
+import { ACT_BY_SCENE, type SaveSlot } from "../types";
 import {
   attachHUD,
   InputState,
@@ -80,6 +80,9 @@ export class CrossingScene extends Phaser.Scene {
   }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
+    this.save.scene = "Crossing";
+    this.save.act = ACT_BY_SCENE.Crossing;
+    writeSave(this.save);
     this.dim = 0;
     this.dialogActive = false;
     this.done = false;
@@ -419,6 +422,7 @@ export class CrossingScene extends Phaser.Scene {
         this.save.flags.refusals_witnessed = true;
       }
       this.save.scene = "SilverThreshold";
+      this.save.act = ACT_BY_SCENE.SilverThreshold;
       writeSave(this.save);
       const a = getAudio();
       a.music.stop();
