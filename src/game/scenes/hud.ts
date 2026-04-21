@@ -1043,6 +1043,16 @@ export function runDialog(
       typing,
       waitingForConfirm: !typing,
     });
+    // Promote dialogue to the shell modal stack on desktop. Touch shell
+    // already routes dialogue through the same tray, so this is a safe
+    // single-source-of-truth signal for both presentation modes.
+    setModalSnapshot({
+      surface: "dialog",
+      mode: "shell",
+      title: currentWho || null,
+      subtitle: null,
+      blocking: true,
+    });
   };
 
   const scheduleAuto = () => {
