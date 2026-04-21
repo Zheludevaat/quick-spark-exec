@@ -49,6 +49,14 @@ export class RubedoScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- CHAMBER MEMORY (Act 3 pass) ---
+  private unionGlow!: Phaser.GameObjects.Arc;
+  private throneMarks: Phaser.GameObjects.Arc[] = [];
+  private tableSeal!: Phaser.GameObjects.Rectangle;
+  private releaseWisp?: Phaser.GameObjects.Arc;
+  private leftThrone!: Phaser.GameObjects.Rectangle;
+  private rightThrone!: Phaser.GameObjects.Rectangle;
+  private thirteenthSilhouette?: Phaser.GameObjects.Ellipse;
 
   constructor() {
     super("Rubedo");
