@@ -119,10 +119,21 @@ export class AthanorThresholdScene extends Phaser.Scene {
       });
     }
 
-    // Four doors along the top, color-coded
+    // Four doors along the top, color-coded, each with a hanging chain lamp
     DOOR_DEFS.forEach((d, i) => {
       const x = 24 + i * 28;
       const y = 24;
+      // Chain from the ceiling
+      this.add.rectangle(x, 4, 1, 8, 0x6a4020, 0.7).setDepth(2);
+      // Pendant lamp above the door
+      const lamp = this.add.circle(x, 10, 2, d.tint, 0.9).setStrokeStyle(0.5, 0xc8a060).setDepth(3);
+      this.tweens.add({
+        targets: lamp,
+        alpha: { from: 0.9, to: 0.45 },
+        duration: 1100 + i * 130,
+        yoyo: true,
+        repeat: -1,
+      });
       const rect = this.add.rectangle(x, y, 18, 22, d.tint, 1).setStrokeStyle(1, 0xc8a060).setDepth(3);
       const glow = this.add.circle(x, y + 14, 3, 0xc8a060, 0.6).setDepth(4);
       this.tweens.add({ targets: glow, alpha: 0.2, duration: 900, yoyo: true, repeat: -1 });
