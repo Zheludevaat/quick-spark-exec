@@ -333,18 +333,19 @@ export class TitleScene extends Phaser.Scene {
     audio.sfx("cursor");
 
     const jumps: { label: string; scene: SceneKey; act: number }[] = [
-      { label: "ACT 1 · LAST DAY", scene: "LastDay", act: 1 },
-      { label: "ACT 1 · CROSSING", scene: "Crossing", act: 1 },
-      { label: "ACT 1 · NIGREDO", scene: "Nigredo", act: 1 },
-      { label: "ACT 2 · ALBEDO", scene: "Albedo", act: 2 },
-      { label: "ACT 2 · CITRINITAS", scene: "Citrinitas", act: 2 },
-      { label: "ACT 2 · RUBEDO", scene: "Rubedo", act: 2 },
-      { label: "ACT 2 · ATHANOR", scene: "AthanorThreshold", act: 2 },
-      { label: "ACT 2 · SILVER THR.", scene: "SilverThreshold", act: 2 },
+      { label: "ACT 0 · LAST DAY", scene: "LastDay", act: 0 },
+      { label: "ACT 0 · CROSSING", scene: "Crossing", act: 0 },
+      { label: "ACT 1 · SILVER THR.", scene: "SilverThreshold", act: 1 },
       { label: "ACT 2 · IMAGINAL", scene: "ImaginalRealm", act: 2 },
-      { label: "ACT 2 · SEALED VESSEL", scene: "SealedVessel", act: 2 },
-      { label: "ACT 3 · CURATED SELF", scene: "CuratedSelf", act: 3 },
-      { label: "ACT 3 · EPILOGUE", scene: "Epilogue", act: 3 },
+      { label: "ACT 3 · MOON THR.", scene: "AthanorThreshold", act: 3 },
+      { label: "ACT 3 · NIGREDO", scene: "Nigredo", act: 3 },
+      { label: "ACT 3 · ALBEDO", scene: "Albedo", act: 3 },
+      { label: "ACT 3 · CITRINITAS", scene: "Citrinitas", act: 3 },
+      { label: "ACT 3 · RUBEDO", scene: "Rubedo", act: 3 },
+      { label: "ACT 3 · SEALED MOON", scene: "SealedVessel", act: 3 },
+      { label: "METAXY HUB", scene: "MetaxyHub", act: 3 },
+      { label: "ACT 6 · SUN HALL", scene: "CuratedSelf", act: 6 },
+      { label: "ACT 10 · ENDINGS", scene: "Epilogue", act: 10 },
     ];
 
     const dim = this.add

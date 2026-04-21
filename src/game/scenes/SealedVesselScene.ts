@@ -131,15 +131,18 @@ export class SealedVesselScene extends Phaser.Scene {
   private toAct3() {
     const lines: { who: string; text: string }[] = [];
     if (this.save.sorynReleased) {
-      lines.push({ who: "ROWAN", text: "Act II ends. The work is sealed. I sealed it." });
+      lines.push({ who: "SORYN", text: "I will not follow further. Walk on." });
     } else {
-      lines.push({ who: "SORYN", text: "Act II ends. The work is sealed." });
-      lines.push({ who: "ROWAN", text: "And now the return." });
+      lines.push({ who: "SORYN", text: "The vessel is sealed. The Moon releases you." });
     }
     runDialog(this, lines, () => {
-      this.save.scene = "CuratedSelf";
+      // METAXY: Moon sphere complete. Release the Moon garment and route
+      // back to the Metaxy hub so the player can choose the next ascent.
+      this.save.flags.moon_done = true;
+      this.save.garmentsReleased = { ...this.save.garmentsReleased, moon: true };
+      this.save.scene = "MetaxyHub";
       writeSave(this.save);
-      gbcWipe(this, () => this.scene.start("CuratedSelf", { save: this.save }));
+      gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
     });
   }
 }
