@@ -25,6 +25,49 @@ export type DialogSnapshot = {
   waitingForConfirm: boolean;
 };
 
+/**
+ * Inquiry presented through the shell. When `open` is true the desktop
+ * modal host renders the choice list inside the dialogue tray styling.
+ * Touch shell currently keeps the canvas-side renderer.
+ */
+export type InquiryChoiceSnapshot = {
+  id: string;
+  label: string;
+};
+
+export type InquirySnapshot = {
+  open: boolean;
+  speaker: string;
+  prompt: string;
+  choices: InquiryChoiceSnapshot[];
+  cursor: number;
+};
+
+/**
+ * Authoritative modal surface. The desktop shell uses this to decide
+ * which (if any) blocking non-diegetic UI is active. Phaser scenes
+ * still own world-space and diegetic feedback; everything else flows
+ * through this snapshot on desktop.
+ */
+export type UiSurface =
+  | "none"
+  | "dialog"
+  | "inquiry"
+  | "settings"
+  | "lore"
+  | "inventory"
+  | "playerHub";
+
+export type UiPresentationMode = "canvas" | "shell";
+
+export type ModalSnapshot = {
+  surface: UiSurface;
+  mode: UiPresentationMode;
+  title: string | null;
+  subtitle: string | null;
+  blocking: boolean;
+};
+
 export type SceneNode = {
   id: string;
   label: string;
