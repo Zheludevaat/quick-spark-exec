@@ -452,6 +452,120 @@ export class SunPlateauScene extends Phaser.Scene {
     // Cheap re-label after a flag changes; positions don't move.
     this.stations = [];
     this.buildStations();
+    this.buildNameplates();
+    this.refreshGatePulse();
+  }
+
+  /**
+   * Static dim labels under each "named" station (witnesses, ops, threshold
+   * meta) so the Hall reads as inhabited even at a distance. Env reads are
+   * intentionally left unlabelled — they're discoveries, not landmarks.
+   */
+  private buildNameplates() {
+    for (const np of this.nameplates) np.destroy();
+    this.nameplates = [];
+    for (const s of this.stations) {
+      if (s.kind === "env") continue;
+      const done = !!(s.doneFlag && this.save.flags[s.doneFlag]);
+      let text = "";
+      if (s.kind === "witness") {
+        const w = SUN_WITNESSES.find((x) => x.id === s.id);
+        text = w ? w.name : s.id.toUpperCase();
+      } else if (s.kind === "operation") {
+        const op = SUN_OPERATIONS.find((o) => o.id === s.id);
+        text = op ? op.title.toUpperCase() : s.id.toUpperCase();
+      } else if (s.kind === "crack") {
+        text = "QUESTION";
+      } else if (s.kind === "trial") {
+        text = "GATE";
+      } else if (s.kind === "settle") {
+        text = "REMAIN";
+      }
+      if (!text) continue;
+      // Truncate so adjacent bays don't collide.
+      const short = text.length > 14 ? text.slice(0, 13) + "." : text;
+      const w = short.length * 3.5;
+      const np = new GBCText(this, s.x - w / 2, s.y + 12, short, {
+        color: done ? COLOR.textDim : COLOR.textAccent,
+        depth: 17,
+        maxWidthPx: 56,
+      });
+      this.nameplates.push(np);
+    }
+  }
+
+  /**
+   * Soft pulsing ring at the trial gate bay once `sunTrialReady`. Goes
+   * away if the player walks back into the threshold and re-checks.
+   */
+  private buildGatePulse() {
+    this.gatePulse = this.add
+      .circle(ZONE_ANCHOR_X.threshold + 4, 70, 12, WARM, 0)
+      .setStrokeStyle(1, WARM, 0.7)
+      .setDepth(16)
+      .setVisible(false);
+    this.refreshGatePulse();
+  }
+
+  private refreshGatePulse() {
+    if (!this.gatePulse) return;
+    const ready = sunTrialReady(this.save);
+    this.gatePulse.setVisible(ready);
+    this.gatePulseTween?.stop();
+    if (ready) {
+      this.gatePulseTween = this.tweens.add({
+        targets: this.gatePulse,
+        scale: 1.25,
+        alpha: 0.45,
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+  }
+
+  /**
+   * Ambient witness murmurs while the player walks the Hall. Picks an
+   * incomplete witness at random every 6-9 seconds and floats one of its
+   * `barks` upward above its station. Skipped while busy or while a bark
+   * is already on screen.
+   */
+  private startAmbientBarks() {
+    this.ambientBarkEvent?.remove(false);
+    this.ambientBarkEvent = this.time.addEvent({
+      delay: Phaser.Math.Between(6000, 9000),
+      loop: true,
+      callback: () => {
+        if (this.busy || this.activeBark) return;
+        const candidates = this.stations.filter(
+          (s) =>
+            s.kind === "witness" &&
+            !(s.doneFlag && this.save.flags[s.doneFlag]),
+        );
+        if (!candidates.length) return;
+        const st = Phaser.Utils.Array.GetRandom(candidates) as Station;
+        const w = SUN_WITNESSES.find((x) => x.id === st.id);
+        if (!w || !w.barks.length) return;
+        const line = Phaser.Utils.Array.GetRandom(w.barks) as string;
+        const bark = new GBCText(this, st.x - 28, st.y - 22, line, {
+          color: COLOR.textDim,
+          depth: 41,
+          maxWidthPx: 64,
+        });
+        this.activeBark = bark;
+        this.tweens.add({
+          targets: bark.obj,
+          alpha: 0,
+          y: st.y - 32,
+          duration: 2000,
+          onComplete: () => {
+            bark.destroy();
+            if (this.activeBark === bark) this.activeBark = undefined;
+          },
+        });
+      },
+    });
   }
 
   private nearestStation(): Station | null {
