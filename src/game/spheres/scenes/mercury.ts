@@ -208,6 +208,29 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Stone floor
     this.add.rectangle(0, 0, GBC_W, GBC_H, 0x0a1220).setOrigin(0).setDepth(0);
 
+    // --- Distant tower silhouettes — suggest infinite reasoning-halls ---
+    // Two faint, low-contrast spires behind the playable architecture.
+    this.add
+      .triangle(36, 90, 0, 60, 12, 0, 24, 60, 0x1a2238, 0.55)
+      .setDepth(0)
+      .setOrigin(0, 0);
+    this.add
+      .triangle(120, 90, 0, 60, 14, 0, 28, 60, 0x1a2238, 0.45)
+      .setDepth(0)
+      .setOrigin(0, 0);
+    this.add
+      .triangle(GBC_W / 2 - 10, 96, 0, 70, 10, 0, 20, 70, 0x12182c, 0.4)
+      .setDepth(0)
+      .setOrigin(0, 0);
+
+    // --- Hanging proof-rails (faint glyph architecture) ---
+    // Two horizontal chalk rails and one vertical, all dim — they imply
+    // logical scaffolding without competing with the chamber.
+    this.add.rectangle(0, 32, GBC_W, 1, INK, 0.18).setOrigin(0, 0).setDepth(1);
+    this.add.rectangle(0, 36, GBC_W, 1, INK, 0.12).setOrigin(0, 0).setDepth(1);
+    // Vertical proof line behind the chamber
+    this.add.rectangle(GBC_W / 2, 26, 1, 16, INK, 0.22).setOrigin(0.5, 0).setDepth(1);
+
     // Three vertical pillars suggesting a tower interior
     for (const px of [22, 80, 138]) {
       this.add.rectangle(px, 70, 6, 100, STONE_DARK).setOrigin(0.5).setDepth(1);
@@ -219,6 +242,26 @@ export class MercuryPlateauScene extends Phaser.Scene {
     const chamberY = 24;
     this.add.rectangle(GBC_W / 2, chamberY, 70, 16, STONE_DARK, 0.6).setDepth(1);
     this.add.rectangle(GBC_W / 2, chamberY, 70, 16).setStrokeStyle(1, COLD, 0.5).setDepth(1);
+
+    // --- Mercury sigil above the chamber: caduceus shorthand ---
+    // Stem + two crescents + small wings. Iconic at 160x144.
+    const sigilX = GBC_W / 2;
+    const sigilY = 8;
+    const stem = this.add.rectangle(sigilX, sigilY, 1, 8, COLD, 0.85).setDepth(4);
+    const orb = this.add.circle(sigilX, sigilY - 4, 2, COLD, 0.9).setDepth(4);
+    orb.setStrokeStyle(1, WARM, 0.6);
+    const wingL = this.add.triangle(sigilX - 3, sigilY - 3, 0, 0, -3, -2, 0, 2, COLD, 0.7).setDepth(4);
+    const wingR = this.add.triangle(sigilX + 3, sigilY - 3, 0, 0, 3, -2, 0, 2, COLD, 0.7).setDepth(4);
+    this.chamberSigil = [stem, orb, wingL, wingR];
+    // Subtle sigil pulse — visual memory anchor of the act.
+    this.tweens.add({
+      targets: orb,
+      alpha: 0.6,
+      duration: 1600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
     // Trial door — top center (locked until cracked)
     this.add.rectangle(GBC_W / 2, 14, 16, 14, 0x000000, 0.8).setDepth(2);
@@ -237,6 +280,23 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Floor seams suggesting tiers
     this.add.rectangle(0, 50, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
     this.add.rectangle(0, 86, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
+
+    // --- Alcove shape language for each NPC station ---
+    // Defender (left) — squared, rigid plinth. The frame of someone
+    // who has built a fort out of being right.
+    this.add.rectangle(26, 104, 18, 2, STONE, 0.7).setDepth(2);
+    this.add.rectangle(17, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
+    this.add.rectangle(35, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
+    // Pedant (center) — narrow vertical order, like a card catalog.
+    this.add.rectangle(80, 108, 12, 1, INK, 0.5).setDepth(2);
+    this.add.rectangle(75, 90, 1, 18, INK, 0.4).setDepth(2);
+    this.add.rectangle(85, 90, 1, 18, INK, 0.4).setDepth(2);
+    this.add.rectangle(80, 92, 8, 1, INK, 0.4).setDepth(2);
+    // Casuist (right) — slightly skewed, doubled outline. Two stances at once.
+    this.add.rectangle(132, 104, 18, 2, STONE, 0.6).setDepth(2);
+    this.add.rectangle(132, 102, 14, 1, STONE_DARK, 0.55).setDepth(2);
+    this.add.line(0, 0, 124, 90, 138, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
+    this.add.line(0, 0, 144, 90, 130, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
   }
 
   /** ============================================================
