@@ -48,6 +48,13 @@ import {
 } from "../venus/VenusZoneState";
 import { VENUS_NPCS, VENUS_AMBIENT_NPCS } from "../venus/VenusNpcDefs";
 import {
+  sideGuestsForZone,
+  attuneMicrosForZone,
+  venusZoneSoftening,
+  type VenusSideGuest,
+  type VenusAttuneMicro,
+} from "../venus/VenusExpandedContent";
+import {
   createAttuneTarget,
   startAttune,
   breakAttune,
