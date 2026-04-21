@@ -35,6 +35,7 @@ import {
   ATHANOR_VESSEL_INSPECT_FLAG,
   type AthanorHostScene,
 } from "./athanor/AthanorExpandedContent";
+import { ATHANOR_PERIMETER_INSPECTABLES } from "./athanor/AthanorPerimeterContent";
 import {
   nearestInteraction,
   interactionPrompt,
@@ -497,9 +498,17 @@ export class AthanorThresholdScene extends Phaser.Scene {
   }
 
   private nearestNodeMemory(): ActInteraction<AthanorHostScene> | null {
-    return nearestInteraction(
+    // Vessel-orbit nodes take priority; if none in range, look at perimeter.
+    const node = nearestInteraction(
       this.save.flags,
       ATHANOR_NODE_INSPECTABLES,
+      this.rowan.x,
+      this.rowan.y,
+    );
+    if (node) return node;
+    return nearestInteraction(
+      this.save.flags,
+      ATHANOR_PERIMETER_INSPECTABLES,
       this.rowan.x,
       this.rowan.y,
     );
