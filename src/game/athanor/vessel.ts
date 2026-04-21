@@ -15,7 +15,7 @@
  * driven by HUD events so it never replays on first mount or re-mount.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, GBCText, COLOR, drawGBCPlate } from "../gbcArt";
+import { GBC_W, GBCText, COLOR, drawGBCPlate } from "../gbcArt";
 import type { SaveSlot, StoneColor } from "../types";
 import {
   HUD_EVENTS,
@@ -40,7 +40,8 @@ export type VesselHud = {
 export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   // Slim right-edge column: 22 px wide, 56 px tall, anchored top-right so the
   // centre of the screen and the bottom dialog/command band stay unobstructed.
-  const PLATE_W = 22;
+  // Slim right-edge column. Widened so "SHD n" and "ALN" never clip.
+  const PLATE_W = 34;
   const PLATE_H = 56;
   const PLATE_X = GBC_W - PLATE_W - 2;
   const PLATE_Y = 16; // sits below the global top stat bar (y=0..13)
@@ -57,14 +58,14 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   const stonesTop = PLATE_Y + 2;
   STONE_ORDER.forEach((c, ci) => {
     const ry = stonesTop + ci * rowH;
-    new GBCText(scene, PLATE_X + 2, ry, c[0].toUpperCase(), {
+    new GBCText(scene, PLATE_X + 3, ry, c[0].toUpperCase(), {
       color: COLOR.textDim,
       depth: 220,
       scrollFactor: 0,
     });
     for (let i = 0; i < 3; i++) {
       const dot = scene.add
-        .circle(PLATE_X + 9 + i * 4, ry + 3, 1.4, STONE_COLOR[c])
+        .circle(PLATE_X + 12 + i * 5, ry + 3, 1.4, STONE_COLOR[c])
         .setStrokeStyle(0.5, 0x000000, 1)
         .setScrollFactor(0)
         .setDepth(220)
@@ -75,7 +76,7 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
 
   // ----- SHD count -----
   const shdY = stonesTop + 4 * rowH + 1;
-  const shdLabel = new GBCText(scene, PLATE_X + 2, shdY, "SHD 0", {
+  const shdLabel = new GBCText(scene, PLATE_X + 3, shdY, "SHD 0", {
     color: COLOR.textLight,
     depth: 220,
     scrollFactor: 0,
@@ -86,7 +87,7 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   const stainDots: Phaser.GameObjects.Arc[] = [];
   for (let i = 0; i < 3; i++) {
     const d = scene.add
-      .circle(PLATE_X + 4 + i * 4, stainY + 3, 1.4, 0x88a0b8, 0)
+      .circle(PLATE_X + 5 + i * 5, stainY + 3, 1.4, 0x88a0b8, 0)
       .setStrokeStyle(0.5, 0x88a0b8, 1)
       .setScrollFactor(0)
       .setDepth(220)
@@ -96,12 +97,12 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
 
   // ----- Status chips at bottom of strip -----
   const chipY = PLATE_Y + PLATE_H - 8;
-  const goldChip = new GBCText(scene, PLATE_X + 2, chipY, "", {
+  const goldChip = new GBCText(scene, PLATE_X + 3, chipY, "", {
     color: COLOR.textGold,
     depth: 220,
     scrollFactor: 0,
   });
-  const alnChip = new GBCText(scene, PLATE_X + 8, chipY, "", {
+  const alnChip = new GBCText(scene, PLATE_X + 11, chipY, "", {
     color: COLOR.textAccent,
     depth: 220,
     scrollFactor: 0,

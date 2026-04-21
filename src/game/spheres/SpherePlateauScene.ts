@@ -9,7 +9,7 @@
  * Reuses runDialog + runInquiry; no new framework. Keeps Phaser overhead low.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes, fitSingleLineText } from "../gbcArt";
 import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
@@ -42,6 +42,11 @@ export class SpherePlateauScene extends Phaser.Scene {
   private mark!: GBCText;
   private hint!: GBCText;
   private title!: GBCText;
+  private listStart = 0;
+  private visibleRows = 0;
+  private rowH = 9;
+  private listTop = 30;
+  private labelFitW = 0;
 
   constructor(sceneKey: string = "SpherePlateau") {
     super(sceneKey);
@@ -122,21 +127,31 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.stations.push({ kind: "trial", label: `>> ${this.cfg.governor}'s Trial` });
     this.stations.push({ kind: "settle", label: "[Settle Here]" });
 
-    drawGBCBox(this, 6, 26, GBC_W - 12, GBC_H - 50, 5);
-    this.stations.forEach((s, i) => {
+    const boxX = 6;
+    const boxY = 26;
+    const boxW = GBC_W - 12;
+    const boxH = GBC_H - 50;
+    drawGBCBox(this, boxX, boxY, boxW, boxH, 5);
+
+    // Windowed list: stations are menu rows — they MUST stay one line each.
+    this.listTop = boxY + 4;
+    const usable = boxH - 8;
+    this.visibleRows = Math.max(1, Math.min(this.stations.length, Math.floor(usable / this.rowH)));
+    this.labelFitW = boxW - 20;
+    for (let i = 0; i < this.visibleRows; i++) {
       this.stationTexts.push(
-        new GBCText(this, 14, 30 + i * 8, s.label, {
+        new GBCText(this, 14, this.listTop + i * this.rowH, "", {
           color: COLOR.textLight,
           depth: 11,
-          maxWidthPx: GBC_W - 28,
         }),
       );
-    });
-    this.mark = new GBCText(this, 8, 30, ">", { color: COLOR.textGold, depth: 12 });
+    }
+    this.mark = new GBCText(this, 8, this.listTop, ">", { color: COLOR.textGold, depth: 12 });
 
     this.hint = new GBCText(this, 6, GBC_H - 14, "A: select   B: hub", {
       color: COLOR.textDim,
       depth: 12,
+      maxWidthPx: GBC_W - 12,
     });
 
     this.cursor = this.defaultCursorIndex();
@@ -170,25 +185,36 @@ export class SpherePlateauScene extends Phaser.Scene {
 
   private refreshCursor() {
     const s = this.stations[this.cursor];
-    this.mark.setPosition(8, 30 + this.cursor * 8);
 
-    this.stationTexts.forEach((t, i) => {
-      const st = this.stations[i];
+    // Scroll window so cursor stays visible
+    const half = Math.floor(this.visibleRows / 2);
+    const maxStart = Math.max(0, this.stations.length - this.visibleRows);
+    this.listStart = Math.max(0, Math.min(maxStart, this.cursor - half));
+    const visibleIdx = this.cursor - this.listStart;
+    this.mark.setPosition(8, this.listTop + visibleIdx * this.rowH);
+
+    this.stationTexts.forEach((t, row) => {
+      const abs = this.listStart + row;
+      const st = this.stations[abs];
+      if (!st) {
+        t.setText("");
+        return;
+      }
       let color = COLOR.textLight;
       let suffix = "";
 
       if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
         color = COLOR.textDim;
-        suffix = "  *";
+        suffix = " *";
       }
 
       if (st.kind === "settle" && !this.isCracked()) {
         color = COLOR.textDim;
-        suffix = "  -";
+        suffix = " -";
       }
 
-      if (i === this.cursor) color = COLOR.textGold;
-      t.setText(st.label + suffix);
+      if (abs === this.cursor) color = COLOR.textGold;
+      t.setText(fitSingleLineText(st.label + suffix, this.labelFitW));
       t.setColor(color);
     });
 
