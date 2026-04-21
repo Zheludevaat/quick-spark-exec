@@ -184,35 +184,42 @@ export type Command = "observe" | "address" | "remember" | "release" | "witness"
 export function migrateSave(raw: unknown): SaveSlot | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<SaveSlot> & { scene?: string; [k: string]: unknown };
+
   let scene = (r.scene ?? "LastDay") as string;
   if (scene === "MoonHall" || scene === "MoonGate") scene = "ImaginalRealm";
-  const allowed: SceneKey[] = [
-    "LastDay",
-    "Crossing",
-    "SilverThreshold",
-    "ImaginalRealm",
-    "AthanorThreshold",
-    "Nigredo",
-    "Albedo",
-    "Citrinitas",
-    "Rubedo",
-    "SealedVessel",
-    "MetaxyHub",
-    "CuratedSelf",
-    "Epilogue",
-  ];
-  if (!allowed.includes(scene as SceneKey)) scene = "LastDay";
+
+  const allowed = new Set<SceneKey>(Object.keys(ACT_BY_SCENE) as SceneKey[]);
+  if (!allowed.has(scene as SceneKey)) scene = "LastDay";
+
   const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
   const region =
     (r.region as ImaginalRegion | null | undefined) ?? (scene === "ImaginalRealm" ? "pools" : null);
   const shardFrags = r.shardFragments;
   const loreList = r.lore;
   const verbsRaw = (r.verbs ?? {}) as { witness?: boolean; transmute?: boolean };
+
+  const flags: Record<string, boolean> = { ...(r.flags ?? {}) };
+  const garmentsReleased =
+    (r.garmentsReleased as Partial<Record<SphereKey, boolean>> | undefined) ?? {};
+
+  // One-time compatibility bridge for saves that had already crossed into
+  // Sun-era content before Mercury/Venus gating was introduced.
+  if (
+    flags.legacy_sun_bridge !== true &&
+    (
+      scene === "CuratedSelf" ||
+      scene === "Epilogue" ||
+      (typeof r.act === "number" && r.act >= 6)
+    )
+  ) {
+    flags.legacy_sun_bridge = true;
+  }
+
   return {
     scene: scene as SceneKey,
-    act: typeof r.act === "number" ? r.act : act,
+    act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
-    flags: r.flags ?? {},
+    flags,
     fragments: r.fragments ?? 0,
     verbs: { witness: verbsRaw.witness ?? false, transmute: verbsRaw.transmute ?? false },
     shards: Array.isArray(r.shards) ? r.shards : [],
@@ -246,8 +253,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     calling: (r.calling as Calling | null | undefined) ?? null,
     coherence: typeof r.coherence === "number" ? r.coherence : 100,
     daimonBond: typeof r.daimonBond === "number" ? r.daimonBond : 0,
-    garmentsReleased:
-      (r.garmentsReleased as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
+    garmentsReleased,
     sphereVerbs: {
       name: (r.sphereVerbs as { name?: boolean } | undefined)?.name ?? false,
       attune: (r.sphereVerbs as { attune?: boolean } | undefined)?.attune ?? false,
