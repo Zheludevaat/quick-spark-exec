@@ -430,6 +430,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       g.fillRect(8, 24, 4, GBC_H - 36);
       g.fillRect(GBC_W - 12, 24, 4, GBC_H - 36);
       this.regionRoot.add(g);
+      this.corridorGateGlow = this.add.circle(80, GBC_H - 18, 7, 0xc8a060, 0).setDepth(24);
+      this.corridorSouthSigil = this.add.circle(80, GBC_H - 10, 3, 0xc8a060, 0).setDepth(24);
+      this.regionRoot.add(this.corridorGateGlow);
+      this.regionRoot.add(this.corridorSouthSigil);
       this.spawnSyllableLanterns();
     }
 
