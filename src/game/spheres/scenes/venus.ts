@@ -70,6 +70,11 @@ import {
   publishVenusTrialMinimap,
 } from "../venus/VenusMinimap";
 import { makeAttuneRing } from "../venus/VenusUi";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../../encounters/EncounterPresentation";
+import { KYPRIA_PROFILE } from "../../encounters/profiles/governors";
 
 // =====================================================================
 // VenusPlateauScene
@@ -124,6 +129,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private attuneRing: ReturnType<typeof makeAttuneRing> | null = null;
   private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
   private prevPlayerPos = { x: 0, y: 0 };
+  private kypriaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("VenusPlateau");
@@ -486,6 +492,20 @@ export class VenusPlateauScene extends Phaser.Scene {
     const door = this.add.rectangle(GBC_W / 2, 70, 24, 50, 0x2a1428, 1).setDepth(10);
     door.setStrokeStyle(1, 0xe89bb8, 0.9);
     this.root.add(door);
+
+    // Kypria presence at the threshold doorway — restrained shimmer aura
+    // and a one-time intro sting on the first arrival.
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      70,
+      KYPRIA_PROFILE,
+    );
+    this.kypriaPresentation.introOnce(
+      "encounter_seen_kypria_threshold",
+      this.save,
+    );
 
     // Glow if ready
     if (venusCrackingReady(this.save)) {
@@ -1038,6 +1058,7 @@ export class VenusTrialScene extends Phaser.Scene {
   private save!: SaveSlot;
   private state: VenusTrialState = initialVenusTrialState();
   private busy = false;
+  private kypriaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("VenusTrial");
@@ -1065,9 +1086,21 @@ export class VenusTrialScene extends Phaser.Scene {
       depth: 30,
     });
 
-    this.time.delayedCall(280, () =>
-      runDialog(this, venusConfig.trialOpening, () => this.runPhase()),
+    // Kypria presides — sovereign mirror aura at the chamber center.
+    this.kypriaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      GBC_H / 2,
+      KYPRIA_PROFILE,
     );
+
+    this.time.delayedCall(280, () => {
+      this.kypriaPresentation?.introOnce(
+        "encounter_seen_kypria_trial",
+        this.save,
+      );
+      runDialog(this, venusConfig.trialOpening, () => this.runPhase());
+    });
   }
 
   private runPhase() {
@@ -1078,6 +1111,14 @@ export class VenusTrialScene extends Phaser.Scene {
 
     const phase = VENUS_TRIAL_PHASES[this.state.phaseIndex];
     publishVenusTrialMinimap(phase.title);
+
+    // Per-phase Kypria intro sting — fires once per phase per save so each
+    // act of the trial feels like a separate sovereign movement.
+    this.kypriaPresentation?.introOnce(
+      `encounter_seen_kypria_phase_${phase.id}`,
+      this.save,
+    );
+    this.kypriaPresentation?.pulse();
 
     // Phase 1: ATTUNE-then-respond
     runDialog(
@@ -1171,6 +1212,24 @@ export class VenusTrialScene extends Phaser.Scene {
     if (venusTrialPassed(this.state)) {
       awardVenusTrialPass(this.save, venusConfig.inscription);
       writeSave(this.save);
+
+      // Delicate mirror-rose memory mark — Venus remembers Kypria's verdict
+      // through a slow, low-bloom ring rather than only through dialog.
+      this.kypriaPresentation?.pulse();
+      const mark = this.add
+        .circle(GBC_W / 2, GBC_H / 2, 4, KYPRIA_PROFILE.palette.primary, 0.18)
+        .setStrokeStyle(1, KYPRIA_PROFILE.palette.glow, 0.55)
+        .setDepth(40);
+      this.tweens.add({
+        targets: mark,
+        scale: { from: 1, to: 1.9 },
+        alpha: { from: 0.18, to: 0.05 },
+        duration: 1500,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
       runDialog(this, venusConfig.trialPass, () => {
         gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
       });

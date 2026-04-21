@@ -21,6 +21,14 @@ import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { runInquiry } from "../inquiry";
 import { hasChoice } from "./imaginal/soulRunner";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../encounters/EncounterPresentation";
+import {
+  VESSEL_PROFILE,
+  ATHANOR_DOOR_PROFILES,
+} from "../encounters/profiles/athanor";
 
 type Door = {
   key: "nigredo" | "albedo" | "citrinitas" | "rubedo";
@@ -86,6 +94,8 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private busy = false;
   private depositedThisVisit = 0;
   private thresholdStage = 0;
+  private vesselPresentation?: EncounterPresentationHandle;
+  private doorPresentations: Partial<Record<Door["key"], EncounterPresentationHandle>> = {};
 
   constructor() {
     super("AthanorThreshold");
@@ -222,6 +232,24 @@ export class AthanorThresholdScene extends Phaser.Scene {
         tint: d.tint,
       });
     });
+
+    // Encounter presentations for the four doors — give each its own
+    // ceremonial identity (intro sting on first approach, pulse on stage
+    // advance, soften when DONE).
+    for (const door of this.doors) {
+      this.doorPresentations[door.key] = createEncounterPresentation(
+        this,
+        door.x,
+        door.y,
+        ATHANOR_DOOR_PROFILES[door.key],
+      );
+      if (this.save.flags[`op_${door.key}_done`]) {
+        this.doorPresentations[door.key]?.soften();
+      }
+    }
+
+    // Vessel presentation — furnace aura + first-approach intro.
+    this.vesselPresentation = createEncounterPresentation(this, vx, vy, VESSEL_PROFILE);
 
     // Work-stage status indicator near the top edge.
     this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
@@ -396,12 +424,20 @@ export class AthanorThresholdScene extends Phaser.Scene {
     if (door) {
       const status = this.doorStatus(door);
       this.hint.setText(`${door.label} - ${status}`);
+      this.doorPresentations[door.key]?.introOnce(
+        `encounter_seen_door_${door.key}`,
+        this.save,
+      );
       return;
     }
     if (this.nearVessel()) {
       const n = this.save.shardInventory.length;
       if (n > 0) this.hint.setText(`A: TRANSMUTE  (${n} SHARDS)`);
       else this.hint.setText("VESSEL");
+      this.vesselPresentation?.introOnce(
+        "encounter_seen_athanor_vessel",
+        this.save,
+      );
       return;
     }
     this.hint.setText("");
@@ -631,6 +667,16 @@ export class AthanorThresholdScene extends Phaser.Scene {
 
     // Reapply door states so SEALED/AVAILABLE/DONE all read at a glance.
     for (const d of this.doors) this.applyDoorState(d);
+
+    // When a stage advances (not on initial entry), pulse the vessel and the
+    // newly-completed door so the room visibly remembers the transmutation.
+    const order: Door["key"][] = ["nigredo", "albedo", "citrinitas", "rubedo"];
+    if (!initial && stage > 0) {
+      const justDoneKey = order[Math.min(stage - 1, order.length - 1)];
+      this.doorPresentations[justDoneKey]?.pulse();
+      this.doorPresentations[justDoneKey]?.soften();
+      this.vesselPresentation?.pulse();
+    }
   }
 
   /**

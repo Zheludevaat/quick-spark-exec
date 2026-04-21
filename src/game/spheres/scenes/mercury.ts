@@ -35,6 +35,11 @@ import { askSphere } from "../SpherePlateauScene";
 import { mercuryConfig } from "../configs/mercury";
 import { markOpDone, opsCompleted, trialPassedKey } from "../types";
 import { runInquiry } from "../../inquiry";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../../encounters/EncounterPresentation";
+import { HERMAIA_PROFILE } from "../../encounters/profiles/governors";
 
 type StationKind =
   | "npc_defender"
@@ -117,6 +122,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private ambientBarkEvent?: Phaser.Time.TimerEvent;
   private activeBark?: GBCText;
   private trueNameLabels: GBCText[] = [];
+  private hermaiaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("MercuryPlateau");
@@ -201,12 +207,24 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Start ambient soul barks — gives the room continuous life.
     this.startAmbientBarks();
 
+    // Hermaia presentation — anchored at the upper chamber altar.
+    this.hermaiaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      24,
+      HERMAIA_PROFILE,
+    );
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
       writeSave(this.mSave);
       this.busy = true;
       this.time.delayedCall(500, () => {
+        this.hermaiaPresentation?.introOnce(
+          "encounter_seen_hermaia_plateau",
+          this.mSave,
+        );
         runDialog(this, mercuryConfig.opening, () => {
           this.busy = false;
         });
@@ -1305,6 +1323,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private mScore = 0;
   private mSave!: SaveSlot;
   private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
+  private hermaiaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("MercuryTrial");
@@ -1407,8 +1426,20 @@ export class MercuryTrialScene extends Phaser.Scene {
     onActionDown(this, "action", () => this.tryInteract());
     this.events.on("vinput-action", () => this.tryInteract());
 
+    // Hermaia presence presides over the trial chamber from the top center.
+    this.hermaiaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      22,
+      HERMAIA_PROFILE,
+    );
+
     this.busy = true;
     this.time.delayedCall(500, () => {
+      this.hermaiaPresentation?.introOnce(
+        "encounter_seen_hermaia_trial",
+        this.mSave,
+      );
       runDialog(this, mercuryConfig.trialOpening, () => {
         this.busy = false;
       });
@@ -1553,6 +1584,24 @@ export class MercuryTrialScene extends Phaser.Scene {
       this.mSave.relics.push(mercuryConfig.inscription);
     }
     writeSave(this.mSave);
+
+    // Mercury seal mark — a quiet expanding ring left at the chamber center
+    // so the trial space remembers Hermaia's verdict, not just the dialog.
+    this.hermaiaPresentation?.pulse();
+    const seal = this.add
+      .circle(GBC_W / 2, 22, 5, HERMAIA_PROFILE.palette.primary, 0.22)
+      .setStrokeStyle(1, HERMAIA_PROFILE.palette.glow, 0.6)
+      .setDepth(40);
+    this.tweens.add({
+      targets: seal,
+      scale: { from: 1, to: 2.4 },
+      alpha: { from: 0.22, to: 0.05 },
+      duration: 1300,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
     runDialog(this, mercuryConfig.trialPass, () => {
       gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.mSave }));
     });
