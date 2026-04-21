@@ -589,6 +589,20 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
     sprite.setAlpha(0.85);
     sprite.setTint(0xeaf2ff);
   }
+
+  // --- ART UPGRADE: Player "Illusion of Life" ---
+  scene.tweens.add({
+    targets: sprite,
+    scaleY: 1.04,
+    scaleX: 0.98,
+    y: sprite.y - 0.5,
+    duration: 1100,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.inOut",
+  });
+  // --- END ART UPGRADE ---
+
   return c;
 }
 

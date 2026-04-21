@@ -1557,50 +1557,46 @@ export type MoteOpts = {
   depth?: number;
 };
 
-/** Spawn a slow-drifting mote field. Returns a destroy() fn. */
+/** Spawn a slow-drifting mote field as a particle emitter. Returns a destroy() fn. */
 export function spawnMotes(scene: Phaser.Scene, opts: MoteOpts = {}) {
   const count = opts.count ?? 18;
   const color = opts.color ?? 0xdde6f5;
-  const alpha = opts.alpha ?? 0.7;
+  const alpha = opts.alpha ?? 0.4;
   const driftX = opts.driftX ?? 0.005;
   const driftY = opts.driftY ?? -0.008;
   const b = opts.bounds ?? { x: 0, y: 0, w: GBC_W, h: GBC_H };
   const depth = opts.depth ?? 50;
-  const dots: Phaser.GameObjects.Rectangle[] = [];
-  for (let i = 0; i < count; i++) {
-    const d = scene.add
-      .rectangle(
-        Phaser.Math.Between(b.x, b.x + b.w),
-        Phaser.Math.Between(b.y, b.y + b.h),
-        1,
-        1,
-        color,
-        alpha,
-      )
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(depth);
-    d.setData("vx", driftX * Phaser.Math.FloatBetween(0.5, 1.5));
-    d.setData("vy", driftY * Phaser.Math.FloatBetween(0.5, 1.5));
-    dots.push(d);
+
+  // Generate a soft, glowing pixel texture on the fly if it doesn't exist
+  if (!scene.textures.exists("mote_glow")) {
+    const gr = scene.make.graphics({ x: 0, y: 0 }, false);
+    gr.fillStyle(0xffffff, 1);
+    gr.fillEllipse(2, 2, 4, 4);
+    gr.generateTexture("mote_glow", 4, 4);
+    gr.destroy();
   }
-  const ev = scene.time.addEvent({
-    delay: 16,
-    loop: true,
-    callback: () => {
-      for (const d of dots) {
-        d.x += d.getData("vx");
-        d.y += d.getData("vy");
-        if (d.x < b.x) d.x = b.x + b.w;
-        if (d.x > b.x + b.w) d.x = b.x;
-        if (d.y < b.y) d.y = b.y + b.h;
-        if (d.y > b.y + b.h) d.y = b.y;
-      }
-    },
+
+  const speedX = driftX * 1000;
+  const speedY = driftY * 1000;
+
+  const emitter = scene.add.particles(0, 0, "mote_glow", {
+    x: { min: b.x, max: b.x + b.w },
+    y: { min: b.y, max: b.y + b.h },
+    lifespan: { min: 3000, max: 8000 },
+    speedX: { min: speedX - 2, max: speedX + 2 },
+    speedY: { min: speedY - 2, max: speedY + 2 },
+    scale: { start: 0.6, end: 0 },
+    alpha: { start: alpha, end: 0 },
+    tint: color,
+    frequency: Math.max(50, 3000 / count),
+    blendMode: "ADD",
+    advance: 4000,
   });
+  emitter.setDepth(depth);
+  emitter.setScrollFactor(0);
+
   return () => {
-    ev.remove(false);
-    dots.forEach((d) => d.destroy());
+    emitter.destroy();
   };
 }
 export function reapplyLcd(scene: Phaser.Scene) {
