@@ -50,7 +50,7 @@ const PORTALS: Portal[] = [
   {
     sphere: "mars",
     label: "MARS",
-    scene: null,
+    scene: "MarsPlateau",
     unlocked: (s) => !!s.garmentsReleased.sun,
     dimLine: "The Arena tests what you will stand for. Not yet.",
     color: 0xc04848,

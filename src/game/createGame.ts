@@ -60,6 +60,8 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       MercuryTrialScene,
       VenusPlateauScene,
       VenusTrialScene,
+      MarsPlateauScene,
+      MarsTrialScene,
       CuratedSelfScene,
       EpilogueScene,
     ],
