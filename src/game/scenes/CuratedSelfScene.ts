@@ -104,128 +104,152 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.cameras.main.fadeIn(700);
     getAudio().music.play("boss", SONG_BOSS);
 
-    // Deep-sky gradient (banded, GBC-honest)
+    // --- ART UPGRADE: The Astral Void & Shattered Mirrors ---
+
+    // Ensure a 1x1 pixel texture for particle emitters
+    if (!this.textures.exists("pixel")) {
+      const pg = this.make.graphics({ x: 0, y: 0 }, false);
+      pg.fillStyle(0xffffff, 1);
+      pg.fillRect(0, 0, 2, 2);
+      pg.generateTexture("pixel", 2, 2);
+      pg.destroy();
+    }
+
+    // 1. Deep Void Gradient
     const sky = this.add.graphics().setDepth(0);
     const bands: [number, number][] = [
-      [0x0a0c1a, 6],
-      [0x121634, 8],
-      [0x1c2150, 10],
-      [0x2a2868, 12],
-      [0x3a2a70, 10],
-      [0x4a2868, 8],
-      [0x602848, 6],
-      [0x7a2848, 4],
+      [0x03040a, 12],
+      [0x080a18, 16],
+      [0x0c1228, 18],
+      [0x121a38, 14],
+      [0x182448, 10],
     ];
     let yy = 0;
     for (const [c, h] of bands) {
-      sky.fillStyle(c, 1);
-      sky.fillRect(0, yy, GBC_W, h);
+      sky.fillStyle(c, 1).fillRect(0, yy, GBC_W, h);
       yy += h;
     }
 
-    // Distant nebula clouds (drifting, soft)
-    for (let i = 0; i < 4; i++) {
-      const neb = this.add
-        .ellipse(
-          Phaser.Math.Between(0, GBC_W),
-          Phaser.Math.Between(18, 50),
-          Phaser.Math.Between(36, 60),
-          Phaser.Math.Between(8, 14),
-          [0x6a3a8a, 0x8a3a6a, 0x3a4a8a, 0x5a2a6a][i],
-          0.18,
-        )
-        .setDepth(1);
-      this.tweens.add({
-        targets: neb,
-        x: neb.x + Phaser.Math.Between(-20, 20),
-        alpha: 0.08,
-        duration: 4000 + i * 600,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
+    // 2. Parallax Layer 1: Distant Nebula Dust
+    this.add
+      .particles(0, 0, "pixel", {
+        x: { min: 0, max: GBC_W },
+        y: { min: 0, max: 70 },
+        lifespan: { min: 4000, max: 8000 },
+        speedX: { min: -2, max: 2 },
+        speedY: { min: -1, max: 1 },
+        scale: { start: 1, end: 0 },
+        alpha: { start: 0.15, end: 0 },
+        tint: [0x4a2868, 0x2a2868, 0x6a3a8a],
+        blendMode: "ADD",
+        frequency: 100,
+        advance: 5000,
+      })
+      .setDepth(1);
+
+    // 3. Parallax Layer 2: Slowly drifting shattered glass/mirrors
+    const glassLayer = this.add.graphics().setDepth(2);
+    const shards: { x: number; y: number; pts: number[]; speed: number; rot: number; ang: number }[] = [];
+    for (let i = 0; i < 8; i++) {
+      shards.push({
+        x: Phaser.Math.Between(0, GBC_W),
+        y: Phaser.Math.Between(10, 60),
+        pts: [
+          0, 0,
+          Phaser.Math.Between(4, 12), Phaser.Math.Between(-8, 4),
+          Phaser.Math.Between(2, 8), Phaser.Math.Between(6, 14),
+        ],
+        speed: Phaser.Math.FloatBetween(0.05, 0.2),
+        rot: Phaser.Math.FloatBetween(-0.01, 0.01),
+        ang: Math.random() * Math.PI * 2,
       });
     }
+    this.events.on("update", () => {
+      glassLayer.clear();
+      glassLayer.lineStyle(1, 0x88c0f0, 0.3);
+      glassLayer.fillStyle(0x121634, 0.8);
+      for (const s of shards) {
+        s.x -= s.speed;
+        s.ang += s.rot;
+        if (s.x < -20) {
+          s.x = GBC_W + 20;
+          s.y = Phaser.Math.Between(10, 60);
+        }
+        glassLayer.beginPath();
+        for (let j = 0; j < s.pts.length; j += 2) {
+          const px = s.pts[j] * Math.cos(s.ang) - s.pts[j + 1] * Math.sin(s.ang);
+          const py = s.pts[j] * Math.sin(s.ang) + s.pts[j + 1] * Math.cos(s.ang);
+          if (j === 0) glassLayer.moveTo(s.x + px, s.y + py);
+          else glassLayer.lineTo(s.x + px, s.y + py);
+        }
+        glassLayer.closePath();
+        glassLayer.fillPath();
+        glassLayer.strokePath();
+      }
+    });
 
-    // Stars (twinkling)
-    const g = this.add.graphics().setDepth(2);
-    for (let i = 0; i < 48; i++) {
-      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.25, 0.9));
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(2, 56), 1, 1);
-    }
-    for (let i = 0; i < 10; i++) {
-      const s = this.add
-        .rectangle(
-          Phaser.Math.Between(0, GBC_W),
-          Phaser.Math.Between(2, 50),
-          1,
-          1,
-          0xffffff,
-          1,
-        )
-        .setDepth(3);
-      this.tweens.add({
-        targets: s,
-        alpha: 0.15,
-        duration: Phaser.Math.Between(500, 1500),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 1500),
-      });
-    }
+    // 4. Ethereal Liquid Floor
+    const floor = this.add.graphics().setDepth(3);
+    floor.fillStyle(0x0a0c1a, 1).fillRect(0, 66, GBC_W, 20);
+    floor.fillStyle(0x1c2150, 0.8).fillRect(0, 66, GBC_W, 1);
+    const reflection = this.add
+      .ellipse(GBC_W / 2, 71, 100, 8, 0x4a4a98, 0.3)
+      .setDepth(3)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: reflection,
+      scaleX: 1.1,
+      alpha: 0.15,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
-    // Mountain silhouette (parallax-feel, two layers)
-    const mtn = this.add.graphics().setDepth(4);
-    mtn.fillStyle(0x0c1024, 1);
-    const teeth1 = [0, 60, 8, 50, 22, 58, 38, 48, 56, 60, 74, 52, 92, 60, 110, 50, 128, 60, 144, 56, 160, 62];
-    mtn.beginPath();
-    mtn.moveTo(0, 64);
-    for (let i = 0; i < teeth1.length; i += 2) mtn.lineTo(teeth1[i], teeth1[i + 1]);
-    mtn.lineTo(GBC_W, 64);
-    mtn.closePath();
-    mtn.fillPath();
-
-    // Reflective floor (silver-violet)
-    g.fillStyle(0x1a1838, 1);
-    g.fillRect(0, 64, GBC_W, 2);
-    g.fillStyle(0x2a2858, 1);
-    g.fillRect(0, 66, GBC_W, 10);
-    // Highlight ripple
-    g.fillStyle(0x6a6ac8, 0.35);
-    g.fillRect(0, 67, GBC_W, 1);
-    g.fillStyle(0x4a4a98, 0.5);
-    g.fillEllipse(GBC_W / 2, 71, 90, 4);
-
-    // Boss aura — three concentric rings, breathing in counter-phase
-    const auraOuter = this.add.circle(GBC_W / 2, 46, 28, 0xffb060, 0.08).setDepth(20);
-    const auraMid = this.add.circle(GBC_W / 2, 46, 20, 0xd84a4a, 0.18).setDepth(21);
-    const auraCore = this.add.circle(GBC_W / 2, 46, 12, 0xffe0a0, 0.22).setDepth(22);
+    // 5. Boss Aura — symmetrical, intimidating geometric rings
+    const cx = GBC_W / 2,
+      cy = 46;
+    const auraOuter = this.add
+      .ellipse(cx, cy, 60, 60, 0xffb060, 0)
+      .setStrokeStyle(1, 0xffb060, 0.15)
+      .setDepth(20);
+    const auraMid = this.add
+      .rectangle(cx, cy, 38, 38, 0xd84a4a, 0)
+      .setStrokeStyle(1, 0xd84a4a, 0.25)
+      .setAngle(45)
+      .setDepth(21);
+    const auraCore = this.add
+      .circle(cx, cy, 14, 0xffe0a0, 0.15)
+      .setDepth(22)
+      .setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({
       targets: auraOuter,
-      scale: 1.35,
-      alpha: 0.03,
-      duration: 1800,
+      scale: 1.1,
+      rotation: 0.5,
+      duration: 4000,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
     this.tweens.add({
       targets: auraMid,
-      scale: 1.4,
-      alpha: 0.05,
-      duration: 1100,
+      scale: 1.2,
+      rotation: Phaser.Math.DegToRad(45) - 0.5,
+      duration: 3000,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
     this.tweens.add({
       targets: auraCore,
-      scale: 1.25,
-      alpha: 0.08,
-      duration: 800,
+      scale: 1.3,
+      alpha: 0.25,
+      duration: 1200,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
+    // --- END ART UPGRADE ---
 
     // Drifting motes — warm and cool
     spawnMotes(this, {
@@ -475,24 +499,47 @@ export class CuratedSelfScene extends Phaser.Scene {
       `boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`,
     );
     this.boss.setTint(PHASE_HUE[p]);
-    this.tweens.add({ targets: this.boss, scale: 1.15, duration: 220, yoyo: true });
-    // Phase-shift shockwave
-    const ring = this.add.circle(GBC_W / 2, 46, 6, PHASE_HUE[p], 0).setDepth(40);
-    ring.setStrokeStyle(1, PHASE_HUE[p], 0.9);
-    this.tweens.add({
-      targets: ring,
-      scale: 8,
-      alpha: 0,
-      duration: 700,
-      ease: "Cubic.out",
-      onComplete: () => ring.destroy(),
+
+    // --- ART UPGRADE: Cinematic Phase Shift ---
+    // 1. Visceral hit-stop
+    this.tweens.timeScale = 0.2;
+    this.time.delayedCall(150, () => {
+      this.tweens.timeScale = 1.0;
     });
+
+    // 2. Heavy Screen Shake & Flash
+    this.cameras.main.shake(400, 0.015);
+    this.cameras.main.flash(400, 255, 255, 255);
+
+    // 3. Violent Aura Burst
+    const burst = this.add
+      .circle(GBC_W / 2, 46, 4, PHASE_HUE[p], 1)
+      .setDepth(150)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: burst,
+      scale: 25,
+      alpha: 0,
+      duration: 600,
+      ease: "Expo.out",
+      onComplete: () => burst.destroy(),
+    });
+
+    // 4. Boss sprite impact recoil
+    this.boss.setScale(0.8, 1.3);
+    this.tweens.add({
+      targets: this.boss,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 600,
+      ease: "Elastic.out",
+    });
+    // --- END ART UPGRADE ---
+
     this.refreshAvailable();
     if (p === "fractured") this.spawnFragments();
     if (p === "exposed") {
-      this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
-      // Kill the FACE: cycler from phase 2 before writing PLAN: so they don't ghost.
       this.faceTimer?.remove(false);
       this.faceTimer = null;
       this.shadeLabel.setText("");
