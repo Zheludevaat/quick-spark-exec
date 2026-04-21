@@ -4,6 +4,7 @@ import { loadSave, newSave, clearSave } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
+import { openSettings } from "./settings";
 
 /**
  * Title screen — intentionally minimal.
