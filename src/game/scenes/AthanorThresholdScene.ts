@@ -545,7 +545,18 @@ export class AthanorThresholdScene extends Phaser.Scene {
       return;
     }
     if (this.nearVessel()) {
-      this.tryDeposit();
+      // If the player has shards, deposit; otherwise inspect for stage memory.
+      if (this.save.shardInventory.length > 0) {
+        this.tryDeposit();
+      } else {
+        this.inspectVesselExpanded();
+      }
+      return;
+    }
+    // Vessel-orbit memory nodes — gated on op_*_done.
+    const node = this.nearestNodeMemory();
+    if (node) {
+      node.onInteract({ scene: this.athanorHostShim(), save: this.save });
       return;
     }
     if (this.nearReflection()) {
