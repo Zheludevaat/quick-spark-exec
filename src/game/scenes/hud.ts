@@ -279,7 +279,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     pad?.destroy();
     pad = null;
     const c = getControls();
-    if (c.interfaceMode === "touch_landscape") return;
+    if (isTouchLandscapeMode()) return;
     if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
     pad = buildTouchPad(scene);
   };
