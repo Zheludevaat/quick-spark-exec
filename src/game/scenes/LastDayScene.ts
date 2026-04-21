@@ -9,6 +9,16 @@ import { runRhythmTap } from "./minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "./lore";
 import { onActionDown, onDirection } from "../controls";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
+import {
+  LASTDAY_EXPANDED_INTERACTIONS,
+  type LastDayHostScene,
+} from "./lastday/LastDayExpandedContent";
+import {
+  nearestInteraction,
+  interactionPrompt,
+  interactionEnabled,
+  type ActInteraction,
+} from "../exploration";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
