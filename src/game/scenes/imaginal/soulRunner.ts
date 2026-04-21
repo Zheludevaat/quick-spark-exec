@@ -365,6 +365,21 @@ function revisitLine(id: SoulId, save: SaveSlot): string {
       return "LIGHTER NOW. GO ON.";
     case "lampkeeper_echo":
       return "A FAINTER VERSION OF SOMEONE.";
+    case "drifting_bride":
+      if (ledger.includes("released")) return "THE PAPER VOW IS GONE TO WATER.";
+      if (ledger.includes("carried")) return "SHE DRIFTS LIGHTER. YOU CARRY IT.";
+      return "STILL ALMOST AT THE ALTAR.";
+    case "veiled_mourner":
+      if (ledger.includes("sat_with")) return "THE VEIL THINS. STILL THERE.";
+      return "STILL VEILED. RESTING NOW.";
+    case "hoarder_of_dawns":
+      if (ledger.includes("released")) return "THE JARS ARE OPEN. THE FIELD IS BRIGHTER.";
+      if (ledger.includes("refused")) return "FEWER JARS. SHE NOTICED.";
+      return "STILL COUNTING DAWNS.";
+    case "paper_sovereign":
+      if (ledger.includes("tore")) return "THE KINGDOM IS SMALLER. HE SMILES.";
+      if (ledger.includes("witnessed")) return "THE SEAL IS DOWN. FOR NOW.";
+      return "STILL SIGNING.";
   }
 }
 

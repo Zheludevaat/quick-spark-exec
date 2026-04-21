@@ -1008,6 +1008,261 @@ const ARCS: Record<SoulId, SoulArc> = {
       met: ending({ loreId: "soul_echo", stats: { clarity: 1 } }),
     },
   },
+
+  // ============================================================================
+  // ACT II EXPANSION SOULS
+  // ============================================================================
+
+  /**
+   * Drifting Bride — pools. Promised herself elsewhere; cannot reach the
+   * vow she keeps drifting toward. The work is to release the promise,
+   * not finish it.
+   */
+  drifting_bride: {
+    id: "drifting_bride",
+    defaultEnding: "drifted",
+    steps: [
+      {
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (hasChoice(save, "weeping_twin", "released")) {
+            return [
+              { who: "BRIDE", text: "Your hands look like someone who let a sister laugh." },
+              { who: "BRIDE", text: "I have not been able to laugh at my own promise yet." },
+            ];
+          }
+          return [
+            { who: "BRIDE", text: "I am late to a vow." },
+            { who: "BRIDE", text: "Each step I take, the altar drifts further out." },
+          ];
+        },
+      },
+      {
+        kind: "inquiry",
+        prompt: { who: "BRIDE", text: "Will you carry the vow for me?" },
+        options: [
+          {
+            choice: "carry",
+            label: "I WILL HOLD IT",
+            reply: "Then it weighs on you. Mine. I drift further.",
+            tag: "carried",
+            branch: { to: "end", ending: "burdened" },
+          },
+          {
+            choice: "release",
+            label: "PUT IT DOWN",
+            reply: "Down. Yes. The water takes paper kindly.",
+            tag: "released",
+            branch: { to: "end", ending: "released" },
+          },
+          {
+            choice: "witness",
+            label: "I SEE THE VOW",
+            reply: "Seen. That is almost enough. I will sit a while.",
+            tag: "witnessed",
+            branch: { to: "end", ending: "seen" },
+          },
+        ],
+      },
+    ],
+    endings: {
+      drifted: ending({ loreId: "soul_drifting_bride" }),
+      burdened: ending({ loreId: "soul_drifting_bride", stats: { compassion: 1 } }),
+      released: ending({ loreId: "soul_drifting_bride", stats: { clarity: 2 }, shardFragments: 1 }),
+      seen: ending({ loreId: "soul_drifting_bride", stats: { clarity: 1, compassion: 1 } }),
+    },
+  },
+
+  /**
+   * Veiled Mourner — pools. Will not lift the veil. The work is to grieve
+   * what is concealed without forcing the uncovering.
+   */
+  veiled_mourner: {
+    id: "veiled_mourner",
+    defaultEnding: "untouched",
+    steps: [
+      {
+        kind: "dialog",
+        lines: [
+          { who: "MOURNER", text: "Do not ask me to lift it." },
+          { who: "MOURNER", text: "What is under the veil is not for naming." },
+        ],
+      },
+      {
+        kind: "inquiry",
+        prompt: { who: "MOURNER", text: "Will you stay?" },
+        options: [
+          {
+            choice: "lift",
+            label: "MAY I LIFT IT?",
+            reply: "No. But the asking is its own grief. Thank you.",
+            tag: "asked",
+            branch: { to: "end", ending: "refused" },
+          },
+          {
+            choice: "sit",
+            label: "I WILL SIT",
+            reply: "Sit. The veil thins when no one tugs.",
+            tag: "sat_with",
+            branch: { to: "witness_step" },
+          },
+          {
+            choice: "leave",
+            label: "I'LL LEAVE YOU",
+            reply: "Kind. Go on, then.",
+            tag: "left",
+            branch: { to: "end", ending: "left" },
+          },
+        ],
+      },
+      {
+        label: "witness_step",
+        kind: "witness",
+        lines: [
+          { who: "MOURNER", text: "You stayed without asking. That is rare." },
+          { who: "MOURNER", text: "I will not lift it. But I will rest now." },
+        ],
+        missingHint: { who: "MOURNER", text: "Stand without staring. WITNESS, if you can." },
+        next: { to: "end", ending: "rested" },
+      },
+    ],
+    endings: {
+      untouched: ending({ loreId: "soul_veiled_mourner" }),
+      refused: ending({ loreId: "soul_veiled_mourner", stats: { compassion: 1 } }),
+      left: ending({ loreId: "soul_veiled_mourner" }),
+      rested: ending({
+        loreId: "soul_veiled_mourner",
+        stats: { compassion: 2 },
+        shardFragments: 1,
+      }),
+    },
+  },
+
+  /**
+   * Hoarder of Dawns — field. Stockpiles unlived mornings. Cousin to the
+   * Collector but worse-natured: keeps what was never offered.
+   */
+  hoarder_of_dawns: {
+    id: "hoarder_of_dawns",
+    defaultEnding: "kept",
+    steps: [
+      {
+        kind: "react",
+        build: (save: SaveSlot) => {
+          if (hasChoice(save, "collector", "refused")) {
+            return [
+              { who: "HOARDER", text: "Word travels. You refused the Collector's jar." },
+              { who: "HOARDER", text: "Then you will refuse mine too. I expect it." },
+            ];
+          }
+          return [
+            { who: "HOARDER", text: "Each jar is a morning I never woke into." },
+            { who: "HOARDER", text: "I keep them in case the day runs short." },
+          ];
+        },
+      },
+      {
+        kind: "inquiry",
+        prompt: { who: "HOARDER", text: "Will you take a jar?" },
+        options: [
+          {
+            choice: "take",
+            label: "I'LL TAKE ONE",
+            reply: "There. A morning you did not earn. Use it badly.",
+            tag: "took",
+            branch: { to: "end", ending: "took" },
+          },
+          {
+            choice: "refuse",
+            label: "I HAVE TODAY",
+            reply: "Today. Yes. I had forgotten the word.",
+            tag: "refused",
+            branch: { to: "end", ending: "refused" },
+          },
+          {
+            choice: "open",
+            label: "OPEN ALL OF THEM",
+            reply: "All? At once? The light — the light —",
+            tag: "released",
+            branch: { to: "end", ending: "released" },
+          },
+        ],
+      },
+    ],
+    endings: {
+      kept: ending({ loreId: "soul_hoarder_of_dawns" }),
+      took: ending({ loreId: "soul_hoarder_of_dawns" }),
+      refused: ending({ loreId: "soul_hoarder_of_dawns", stats: { clarity: 1, courage: 1 } }),
+      released: ending({
+        loreId: "soul_hoarder_of_dawns",
+        stats: { courage: 2 },
+        shardFragments: 1,
+      }),
+    },
+  },
+
+  /**
+   * Paper Sovereign — corridor. Crowned in announcements. The work is the
+   * same gesture as the Crowned One, sharper: the entire kingdom is paper.
+   */
+  paper_sovereign: {
+    id: "paper_sovereign",
+    defaultEnding: "ruled",
+    steps: [
+      {
+        kind: "dialog",
+        lines: [
+          { who: "SOVEREIGN", text: "I rule by proclamation. The proclamations rule me." },
+        ],
+      },
+      {
+        kind: "inquiry",
+        prompt: { who: "SOVEREIGN", text: "Will you read the next decree?" },
+        options: [
+          {
+            choice: "read",
+            label: "I'LL READ IT",
+            reply: "Good. Then it is real. Until tomorrow's.",
+            tag: "read",
+            branch: { to: "end", ending: "ratified" },
+          },
+          {
+            choice: "witness",
+            label: "I SEE THE PAPER",
+            reply: "The paper. Yes. The paper.",
+            tag: "witnessed",
+            branch: { to: "witness_step" },
+          },
+          {
+            choice: "tear",
+            label: "TEAR ONE",
+            reply: "You — you — yes. One less. The crown is lighter.",
+            tag: "tore",
+            branch: { to: "end", ending: "torn" },
+          },
+        ],
+      },
+      {
+        label: "witness_step",
+        kind: "witness",
+        lines: [
+          { who: "SOVEREIGN", text: "You did not bow. You did not write. You looked." },
+          { who: "SOVEREIGN", text: "I will set down the seal. For now." },
+        ],
+        missingHint: { who: "SOVEREIGN", text: "WITNESS, or sign. Not both." },
+        next: { to: "end", ending: "abdicated" },
+      },
+    ],
+    endings: {
+      ruled: ending({ loreId: "soul_paper_sovereign" }),
+      ratified: ending({ loreId: "soul_paper_sovereign" }),
+      torn: ending({ loreId: "soul_paper_sovereign", stats: { courage: 2 }, shardFragments: 1 }),
+      abdicated: ending({
+        loreId: "soul_paper_sovereign",
+        stats: { clarity: 1, courage: 1 },
+      }),
+    },
+  },
 };
 
 export function getArc(id: SoulId): SoulArc {
