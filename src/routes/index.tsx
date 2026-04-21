@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DesktopGameShell } from "@/components/game/DesktopGameShell";
 import { TouchLandscapeShell } from "@/components/game/TouchLandscapeShell";
 import {
@@ -30,8 +30,16 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+/**
+ * Single-instance Phaser host kept across shell mode switches.
+ *
+ * We allocate one detached <div> via document.createElement on first mount
+ * and then re-parent it into whichever shell currently owns it. This way
+ * Phaser never sees its canvas unmounted when switching desktop/touch.
+ */
 function GamePage() {
-  const hostRef = useRef<HTMLDivElement | null>(null);
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  const phaserHostRef = useRef<HTMLDivElement | null>(null);
   const [booted, setBooted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<InterfaceMode>(() => {
@@ -39,10 +47,20 @@ function GamePage() {
     return getEffectiveInterfaceMode();
   });
 
-  // Boot Phaser once and keep the same instance across mode toggles.
+  // Create the persistent host node once.
+  if (typeof document !== "undefined" && !phaserHostRef.current) {
+    const node = document.createElement("div");
+    node.id = "phaser-host";
+    node.style.width = "100%";
+    node.style.height = "100%";
+    phaserHostRef.current = node;
+  }
+
+  // Boot Phaser once.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!hostRef.current) return;
+    const host = phaserHostRef.current;
+    if (!host) return;
     let game: import("phaser").Game | null = null;
     let cancelled = false;
 
@@ -52,8 +70,8 @@ function GamePage() {
     (async () => {
       try {
         const mod = await import("@/game/createGame");
-        if (cancelled || !hostRef.current) return;
-        game = mod.createGame(hostRef.current);
+        if (cancelled) return;
+        game = mod.createGame(host);
         setBooted(true);
       } catch (e) {
         console.error("[game] boot failed", e);
@@ -69,6 +87,16 @@ function GamePage() {
     };
   }, []);
 
+  // Re-parent the persistent Phaser host into the current shell's slot.
+  useLayoutEffect(() => {
+    const slot = slotRef.current;
+    const host = phaserHostRef.current;
+    if (!slot || !host) return;
+    if (host.parentNode !== slot) {
+      slot.appendChild(host);
+    }
+  }, [mode]);
+
   // Live-react to interface mode changes from Settings.
   useEffect(() => {
     return subscribeControls(() => {
@@ -78,28 +106,20 @@ function GamePage() {
     });
   }, []);
 
-  // The Phaser host is the single mounted canvas — only one of the two
-  // shells renders it at a time. We keep the *same* DOM node across mode
-  // switches by using a stable ref and a key that flips with the mode,
-  // so that React re-parents instead of unmounting Phaser.
-  const hostNode = (
-    <div
-      ref={hostRef}
-      id="phaser-host"
-      style={{ width: "100%", height: "100%" }}
-    />
+  const hostSlot = (
+    <div ref={slotRef} style={{ width: "100%", height: "100%" }} />
   );
 
   if (mode === "touch_landscape") {
     return (
       <TouchLandscapeShell booted={booted} error={error}>
-        {hostNode}
+        {hostSlot}
       </TouchLandscapeShell>
     );
   }
   return (
     <DesktopGameShell booted={booted} error={error}>
-      {hostNode}
+      {hostSlot}
     </DesktopGameShell>
   );
 }
