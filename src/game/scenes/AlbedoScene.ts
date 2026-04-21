@@ -62,44 +62,67 @@ export class AlbedoScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
-    // Bath
-    this.add.rectangle(GBC_W / 2, GBC_H / 2, 60, 30, 0x506880, 0.6).setStrokeStyle(1, 0xc8d8e8);
-    // Surface ripples — three concentric ellipses pulsing outward
-    for (let i = 0; i < 3; i++) {
-      const ring = this.add
-        .ellipse(GBC_W / 2, GBC_H / 2, 18, 5, 0xc8d8e8, 0)
-        .setStrokeStyle(0.5, 0xc8d8e8, 0.7)
-        .setDepth(4);
-      this.tweens.add({
-        targets: ring,
-        scaleX: { from: 0.5, to: 2.4 },
-        scaleY: { from: 0.5, to: 2.4 },
-        alpha: { from: 0.7, to: 0 },
-        duration: 2400,
-        delay: i * 800,
-        repeat: -1,
-        ease: "Sine.out",
-      });
-    }
-    // Slow-falling star points
-    for (let i = 0; i < 8; i++) {
-      const sx = 20 + Math.floor(Math.random() * 100);
-      const star = this.add
-        .circle(sx, -4 - Math.random() * 30, 1, 0xffffff, 0.9)
-        .setDepth(3);
-      this.tweens.add({
-        targets: star,
-        y: GBC_H / 2 - 18,
-        alpha: { from: 0.9, to: 0 },
-        duration: 3200 + Math.random() * 1800,
-        delay: Math.random() * 2000,
-        repeat: -1,
-      });
-    }
-    new GBCText(this, GBC_W / 2 - 18, GBC_H / 2 - 22, "BATH OF STARS", {
-      color: COLOR.textAccent,
-      depth: 5,
+    // --- ART UPGRADE: Moonlight & Rippling Marble Bath ---
+    const cx = GBC_W / 2;
+    const cy = GBC_H / 2 + 10;
+
+    // 1. Deep Night Sky & Cloud Layer
+    const sky = this.add.graphics().setDepth(0);
+    sky.fillGradientStyle(0x050a14, 0x050a14, 0x121c2c, 0x121c2c, 1, 1, 1, 1);
+    sky.fillRect(0, 0, GBC_W, 50);
+
+    // 2. The Moon & Ethereal Moonbeam
+    this.add.circle(cx, 26, 8, 0xdde6f5).setDepth(1);
+    const glow = this.add.circle(cx, 26, 16, 0x88c0e8, 0.4).setDepth(1).setBlendMode("ADD");
+    this.tweens.add({ targets: glow, scale: 1.2, alpha: 0.2, duration: 2500, yoyo: true, repeat: -1 });
+
+    const moonBeam = this.add
+      .polygon(cx, 60, [-10, -40, 10, -40, 40, 30, -40, 30], 0x88c0e8, 0.15)
+      .setDepth(2)
+      .setBlendMode("ADD");
+    this.tweens.add({
+      targets: moonBeam,
+      alpha: 0.05,
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
     });
+
+    // 3. Foreground Architecture (Marble Pillars)
+    const arch = this.add.graphics().setDepth(3);
+    arch.fillStyle(0x1a2430, 1);
+    arch.fillRect(cx - 50, 0, 12, GBC_H);
+    arch.fillRect(cx + 38, 0, 12, GBC_H);
+    arch.fillStyle(0x2a3440, 1);
+    arch.fillRect(cx - 48, 0, 2, GBC_H);
+    arch.fillRect(cx + 40, 0, 2, GBC_H);
+
+    // 4. The Marble Bath & Water
+    this.add.rectangle(cx, cy, 80, 24, 0x1a2430).setDepth(4);
+    this.add.rectangle(cx, cy, 76, 20, 0x2a3440).setDepth(4);
+    this.add.rectangle(cx, cy + 2, 76, 16, 0x2a3c58).setDepth(5);
+
+    // Rippling water surface highlights (Additive)
+    for (let i = 0; i < 4; i++) {
+      const ripple = this.add
+        .rectangle(cx, cy - 2 + i * 4, 60 + i * 4, 1, 0x88c0e8, 0.4)
+        .setDepth(6)
+        .setBlendMode("ADD");
+      this.tweens.add({
+        targets: ripple,
+        scaleX: 1.1,
+        alpha: 0.1,
+        x: cx + (i % 2 === 0 ? 2 : -2),
+        duration: 1200 + i * 300,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
+    new GBCText(this, cx - 12, cy + 20, "BATH", { color: COLOR.textAccent, depth: 7 });
+    // --- END ART UPGRADE ---
 
     this.murky = this.save.shardsConsumed.length === 0;
     const intro = this.murky ? OPENING_MURKY : OPENING;
