@@ -1,5 +1,15 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes, fitSingleLineState, textHeightPx } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  spawnMotes,
+  fitSingleLineState,
+  textHeightPx,
+  measureText,
+} from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
@@ -47,151 +57,50 @@ export class TitleScene extends Phaser.Scene {
       showFooter: false,
     });
 
-    // ---- Starfield ----
-    const g = this.add.graphics();
-    for (let i = 0; i < 80; i++) {
-      const c = Phaser.Math.RND.pick(["#2a3550", "#7889a8", "#dde6f5"]);
-      g.fillStyle(Phaser.Display.Color.HexStringToColor(c).color, 1);
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(0, GBC_H), 1, 1);
-    }
-    for (let i = 0; i < 12; i++) {
-      const s = this.add.rectangle(
-        Phaser.Math.Between(0, GBC_W),
-        Phaser.Math.Between(0, 80),
-        1,
-        1,
-        0xffffff,
-        1,
-      );
-      this.tweens.add({
-        targets: s,
-        alpha: 0.15,
-        duration: Phaser.Math.Between(500, 1500),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 1500),
-      });
-    }
-
-    // ---- Seven Planetary Spheres (Hermetic order, traditional colors) ----
-    // Moon · Mercury · Venus · Sun · Mars · Jupiter · Saturn
-    const spheres: { name: string; core: number; mid: number; halo: number; r: number }[] = [
-      { name: "Moon", core: 0xdde6f5, mid: 0xa8c8e8, halo: 0x7898c0, r: 5 }, // silver
-      { name: "Mercury", core: 0xf0e0a8, mid: 0xc8a868, halo: 0x886838, r: 4 }, // quicksilver/amber
-      { name: "Venus", core: 0xf0c8d8, mid: 0xc88898, halo: 0x885868, r: 5 }, // rose-copper
-      { name: "Sun", core: 0xfff0a8, mid: 0xf0b048, halo: 0xc06820, r: 7 }, // gold (largest)
-      { name: "Mars", core: 0xf0a888, mid: 0xc85838, halo: 0x782818, r: 5 }, // iron red
-      { name: "Jupiter", core: 0xc8d8f0, mid: 0x6890c8, halo: 0x305078, r: 6 }, // royal blue / tin
-      { name: "Saturn", core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5 }, // lead
-    ];
-    const sphereCY = 44;
-    const spacing = 22;
-    const totalW = spacing * (spheres.length - 1);
-    const startX = GBC_W / 2 - totalW / 2;
-    const saveForSpheres = loadSave();
-    const actReached = saveForSpheres?.act ?? 0;
-    spheres.forEach((sp, i) => {
-      const sx = startX + i * spacing;
-      const reached = i <= actReached;
-      const haloAlpha = reached ? 0.28 : 0.12;
-      const bodyAlpha = reached ? 1 : 0.35;
-
-      const wrap = this.add.container(sx, sphereCY);
-
-      const halo = this.add.circle(0, 0, sp.r + 3, sp.halo, haloAlpha);
-      wrap.add(halo);
-
-      const outer = this.add.circle(0, 0, sp.r, sp.halo, bodyAlpha);
-      const mid = this.add.circle(0, 0, Math.max(1, sp.r - 1), sp.mid, bodyAlpha);
-      const core = this.add.circle(0, 0, Math.max(1, sp.r - 2), sp.core, bodyAlpha);
-      wrap.add([outer, mid, core]);
-
-      if (reached) {
-        const shine = this.add.circle(-1, -1, 1, 0xffffff, 0.55);
-        wrap.add(shine);
-      }
-
-      this.tweens.add({
-        targets: halo,
-        scale: 1.3,
-        alpha: haloAlpha * 0.3,
-        duration: 1800 + i * 140,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-      });
-
-      this.tweens.add({
-        targets: wrap,
-        y: sphereCY - (reached ? 1.5 : 1),
-        duration: 1800 + i * 160,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-        delay: i * 120,
-      });
-
-      this.tweens.add({
-        targets: wrap,
-        scaleX: reached ? 1.04 : 1.02,
-        scaleY: reached ? 1.04 : 1.02,
-        duration: 2200 + i * 130,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-        delay: 200 + i * 90,
-      });
-    });
-
-    spawnMotes(this, {
-      count: 18,
-      color: 0xdde6f5,
-      alpha: 0.5,
-      driftY: -0.01,
-      driftX: 0.003,
-      depth: 30,
-    });
-
-    // ---- Title block — "THE HERMETIC COMEDY", with THE as a quieter lead-in. ----
-    const titleY = 56;
-
-    const t0 = "THE";
-    const t1 = "HERMETIC";
-    const t2 = "COMEDY";
-
-    new GBCText(this, GBC_W / 2 - measure(t0) / 2, titleY, t0, {
-      color: COLOR.textGold,
-      shadow: "#1a2030",
-    });
-
-    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY + 7, t1, {
-      color: COLOR.textLight,
-      shadow: "#1a2030",
-    });
-
-    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 17, t2, {
-      color: COLOR.textLight,
-      shadow: "#1a2030",
-    });
-
     const save = loadSave();
+    const actReached = save?.act ?? 0;
     const remaining = save?.flags?.plateau_remain;
 
-    // ---- Menu options ----
-    const primaryLabel = remaining ? "LEAVE THE IMAGINAL" : save ? "CONTINUE" : "BEGIN";
+    this.buildTitleBackdrop();
+    const sphereFx = this.buildSphereFrieze(actReached);
+    this.buildTitleLockup();
+    this.buildTitleOrnament();
 
-    const options: { label: string; action: "launch" | "erase" | "settings" }[] = save
-      ? [
-          { label: primaryLabel, action: "launch" },
-          { label: "SETTINGS", action: "settings" },
-          { label: "ERASE SAVE", action: "erase" },
-        ]
-      : [
-          { label: primaryLabel, action: "launch" },
-          { label: "SETTINGS", action: "settings" },
-        ];
+    spawnMotes(this, {
+      count: 14,
+      color: 0xdde6f5,
+      alpha: 0.42,
+      driftY: -0.008,
+      driftX: 0.002,
+      depth: 40,
+      bounds: { x: 0, y: 8, w: GBC_W, h: 92 },
+    });
 
-    // Gate to suppress title-menu input while the settings overlay is open.
+    // Signature event: a slow solar wave occasionally passes through the frieze.
+    this.time.addEvent({
+      delay: 11000,
+      loop: true,
+      callback: () => {
+        sphereFx.forEach((fx, i) => {
+          this.tweens.add({
+            targets: [fx.halo, fx.core],
+            alpha: { from: fx.baseAlpha, to: Math.min(0.95, fx.baseAlpha + 0.25) },
+            scale: { from: 1, to: 1.08 },
+            duration: 500,
+            delay: i * 90,
+            yoyo: true,
+            ease: "Sine.inOut",
+          });
+        });
+      },
+    });
+
+    const primaryLabel = remaining ? "RETURN" : save ? "CONTINUE" : "BEGIN";
+    const options: { label: string; action: "launch" | "settings" }[] = [
+      { label: primaryLabel, action: "launch" },
+      { label: "SETTINGS", action: "settings" },
+    ];
+
     let settingsOpen = false;
     const openTitleSettings = () => {
       if (settingsOpen) return;
@@ -202,17 +111,17 @@ export class TitleScene extends Phaser.Scene {
       });
     };
 
-    // Tighter menu box — supports the title rather than competing with it.
+    // Smaller, quieter menu frame so the title art remains dominant.
+    const menuBoxW = 122;
+    const menuBoxX = Math.floor((GBC_W - menuBoxW) / 2);
     const lineH = 10;
-    const menuBoxX = 18;
-    const menuBoxW = GBC_W - 36;
     const boxH = 12 + options.length * lineH;
-    const menuY = GBC_H - boxH - 8;
+    const menuY = 96;
 
     drawGBCBox(this, menuBoxX, menuY, menuBoxW, boxH);
 
-    const menuTextX = menuBoxX + 16;
-    const menuCursorX = menuBoxX + 8;
+    const menuTextX = menuBoxX + 18;
+    const menuCursorX = menuBoxX + 9;
     const menuRowY = menuY + 7;
 
     let cursor = 0;
@@ -230,28 +139,21 @@ export class TitleScene extends Phaser.Scene {
     });
 
     const refresh = () => {
-      labels.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
+      labels.forEach((t, i) => {
+        t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight);
+      });
       cursorMark.setPosition(menuCursorX, menuRowY + cursor * lineH);
     };
     refresh();
-    this.tweens.add({ targets: cursorMark.obj, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
 
-    // ---- Top-right DEV button (opens skip-act menu) ----
-    const devBtnX = GBC_W - 30;
-    const devBtnY = 4;
-    drawGBCBox(this, devBtnX - 2, devBtnY, 28, 10, 120);
-    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 2, "DEV", {
-      color: COLOR.textDim,
-      depth: 121,
+    this.tweens.add({
+      targets: cursorMark.obj,
+      alpha: 0.3,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
     });
-    devBtn.obj
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => {
-        if (settingsOpen) return;
-        this.openSkipMenu();
-      });
 
-    // ---- Boot audio on first user gesture ----
     const audio = getAudio();
     const startMusic = () => {
       audio.resume();
@@ -262,18 +164,21 @@ export class TitleScene extends Phaser.Scene {
     this.events.once("vinput-action", startMusic);
 
     let launching = false;
+
     const launch = () => {
       if (launching) return;
       launching = true;
       audio.sfx("confirm");
+
       const slot = save ?? newSave();
       let next = save ? save.scene : "LastDay";
-      // Guard: if the saved scene key is not registered in this build, fall back.
+
       if (!this.scene.manager.keys[next]) {
         console.warn("[title] saved scene not registered:", next, "— falling back to LastDay");
         next = "LastDay";
         slot.scene = "LastDay";
       }
+
       audio.music.stop();
       try {
         console.log("[title] starting scene:", next);
@@ -283,11 +188,12 @@ export class TitleScene extends Phaser.Scene {
         launching = false;
       }
     };
+
     const erase = () => {
       audio.sfx("cursor");
 
       const dim = this.add
-        .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.82)
+        .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.84)
         .setOrigin(0, 0)
         .setDepth(950)
         .setInteractive();
@@ -389,13 +295,14 @@ export class TitleScene extends Phaser.Scene {
         this.scene.restart();
       });
     };
+
     const confirm = () => {
       if (settingsOpen) return;
       const opt = options[cursor];
       if (opt.action === "launch") launch();
-      else if (opt.action === "erase") erase();
       else if (opt.action === "settings") openTitleSettings();
     };
+
     const move = (d: number) => {
       if (settingsOpen) return;
       if (options.length < 2) return;
@@ -424,18 +331,250 @@ export class TitleScene extends Phaser.Scene {
       if (d === "up") move(-1);
       else if (d === "down") move(1);
     });
+
     onActionDown(this, "action", confirm);
+
+    // Erase stays available, but no longer pollutes the main menu.
     this.input.keyboard?.on("keydown-BACKSPACE", () => {
       if (settingsOpen) return;
-      if (save) {
-        cursor = options.findIndex((o) => o.action === "erase");
-        if (cursor < 0) cursor = 0;
-        refresh();
-        erase();
-      }
+      if (save) erase();
     });
 
-    // (Footer hint omitted — the HTML footer below the canvas already lists controls.)
+    const isDevBuild =
+      typeof import.meta !== "undefined" &&
+      !!(import.meta as { env?: { DEV?: boolean } }).env?.DEV;
+
+    if (isDevBuild) {
+      this.buildDevButton();
+    }
+  }
+
+  private buildTitleBackdrop() {
+    const g = this.add.graphics();
+
+    // Dense deep-space field with controlled clustering.
+    for (let i = 0; i < 92; i++) {
+      const c = Phaser.Math.RND.pick(["#202a40", "#445370", "#7d8eae", "#dde6f5"]);
+      const a = c === "#dde6f5" ? 1 : 0.9;
+      g.fillStyle(Phaser.Display.Color.HexStringToColor(c).color, a);
+      g.fillRect(
+        Phaser.Math.Between(0, GBC_W - 1),
+        Phaser.Math.Between(0, GBC_H - 1),
+        1,
+        1,
+      );
+    }
+
+    // Subtle world-soul lattice behind the spheres and title.
+    g.lineStyle(1, 0x1f2a48, 0.45);
+    g.strokeEllipse(GBC_W / 2, 42, 126, 24);
+    g.strokeEllipse(GBC_W / 2, 42, 98, 18);
+    g.strokeEllipse(GBC_W / 2, 42, 70, 12);
+
+    // Solar axis.
+    g.lineStyle(1, 0x2e3f62, 0.35);
+    g.beginPath();
+    g.moveTo(GBC_W / 2, 18);
+    g.lineTo(GBC_W / 2, 92);
+    g.strokePath();
+
+    // Lower converging beams into the title block.
+    g.lineStyle(1, 0x18233d, 0.32);
+    g.beginPath();
+    g.moveTo(54, 74);
+    g.lineTo(80, 58);
+    g.lineTo(106, 74);
+    g.strokePath();
+
+    // Sparse twinklers.
+    for (let i = 0; i < 10; i++) {
+      const s = this.add.rectangle(
+        Phaser.Math.Between(4, GBC_W - 4),
+        Phaser.Math.Between(6, 96),
+        1,
+        1,
+        0xffffff,
+        1,
+      );
+      this.tweens.add({
+        targets: s,
+        alpha: 0.18,
+        duration: Phaser.Math.Between(700, 1500),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1400),
+      });
+    }
+  }
+
+  private buildSphereFrieze(actReached: number) {
+    const spheres: {
+      name: string;
+      core: number;
+      mid: number;
+      halo: number;
+      r: number;
+      x: number;
+      y: number;
+    }[] = [
+      { name: "Moon",    core: 0xdde6f5, mid: 0xa8c8e8, halo: 0x7898c0, r: 5, x: 12,  y: 41 },
+      { name: "Mercury", core: 0xf0e0a8, mid: 0xc8a868, halo: 0x886838, r: 4, x: 33,  y: 39 },
+      { name: "Venus",   core: 0xf0c8d8, mid: 0xc88898, halo: 0x885868, r: 5, x: 54,  y: 37 },
+      { name: "Sun",     core: 0xfff0a8, mid: 0xf0b048, halo: 0xc06820, r: 8, x: 80,  y: 34 },
+      { name: "Mars",    core: 0xf0a888, mid: 0xc85838, halo: 0x782818, r: 5, x: 106, y: 37 },
+      { name: "Jupiter", core: 0xc8d8f0, mid: 0x6890c8, halo: 0x305078, r: 6, x: 127, y: 39 },
+      { name: "Saturn",  core: 0x988878, mid: 0x584838, halo: 0x281810, r: 5, x: 148, y: 41 },
+    ];
+
+    const connector = this.add.graphics();
+    connector.lineStyle(1, 0x24314d, 0.45);
+    connector.beginPath();
+    connector.moveTo(spheres[0].x, spheres[0].y + 1);
+    for (let i = 1; i < spheres.length; i++) {
+      connector.lineTo(spheres[i].x, spheres[i].y + 1);
+    }
+    connector.strokePath();
+
+    const handles: {
+      halo: Phaser.GameObjects.Arc;
+      core: Phaser.GameObjects.Arc;
+      baseAlpha: number;
+    }[] = [];
+
+    spheres.forEach((sp, i) => {
+      const reached = i <= actReached;
+      const baseAlpha = reached ? 0.24 : 0.10;
+      const bodyAlpha = reached ? 1 : 0.42;
+
+      const wrap = this.add.container(sp.x, sp.y);
+
+      const halo = this.add.circle(0, 0, sp.r + 5, sp.halo, baseAlpha);
+      const corona = this.add.circle(0, 0, sp.r + 2, sp.halo, reached ? 0.18 : 0.08);
+      const outer = this.add.circle(0, 0, sp.r, sp.halo, bodyAlpha);
+      const mid = this.add.circle(0, 0, Math.max(1, sp.r - 1), sp.mid, bodyAlpha);
+      const core = this.add.circle(0, 0, Math.max(1, sp.r - 2), sp.core, bodyAlpha);
+      wrap.add([halo, corona, outer, mid, core]);
+
+      if (reached) {
+        wrap.add(this.add.circle(-1, -1, 1, 0xffffff, 0.6));
+      }
+
+      // Tiny sphere-specific silhouette cues.
+      if (sp.name === "Saturn") {
+        const ring = this.add.ellipse(0, 0, sp.r * 3.1, sp.r * 1.3, 0xc8b090, 0.18);
+        ring.setAngle(-12);
+        wrap.addAt(ring, 1);
+      }
+      if (sp.name === "Mercury") {
+        wrap.add(this.add.rectangle(0, -sp.r - 3, 1, 2, 0xf0e0a8, 0.5));
+      }
+      if (sp.name === "Venus") {
+        wrap.add(this.add.rectangle(0, sp.r + 3, 1, 2, 0xf0c8d8, 0.45));
+      }
+      if (sp.name === "Jupiter") {
+        wrap.add(this.add.circle(sp.r + 3, -1, 1, 0xdde6f5, 0.45));
+      }
+
+      this.tweens.add({
+        targets: halo,
+        scale: reached ? 1.22 : 1.14,
+        alpha: reached ? 0.08 : 0.04,
+        duration: 1900 + i * 120,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      this.tweens.add({
+        targets: wrap,
+        y: sp.y - (reached ? 1.6 : 0.9),
+        duration: 2100 + i * 120,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+        delay: i * 80,
+      });
+
+      handles.push({ halo, core, baseAlpha });
+    });
+
+    return handles;
+  }
+
+  private buildTitleLockup() {
+    const lead = "THE";
+    const mainA = "HERMETIC";
+    const mainB = "COMEDY";
+
+    const leadY = 58;
+    const aY = 67;
+    const bY = 77;
+
+    const leadX = Math.floor(GBC_W / 2 - measureText(lead) / 2);
+    const aX = Math.floor(GBC_W / 2 - measureText(mainA) / 2);
+    const bX = Math.floor(GBC_W / 2 - measureText(mainB) / 2);
+
+    new GBCText(this, leadX, leadY, lead, {
+      color: COLOR.textGold,
+      shadow: "#1a2030",
+      depth: 70,
+    });
+
+    new GBCText(this, aX, aY, mainA, {
+      color: COLOR.textLight,
+      shadow: "#1a2030",
+      depth: 70,
+    });
+
+    new GBCText(this, bX, bY, mainB, {
+      color: COLOR.textLight,
+      shadow: "#1a2030",
+      depth: 70,
+    });
+
+    const g = this.add.graphics();
+    g.lineStyle(1, 0x445370, 0.5);
+    g.beginPath();
+    g.moveTo(48, 61);
+    g.lineTo(66, 61);
+    g.moveTo(94, 61);
+    g.lineTo(112, 61);
+    g.strokePath();
+
+    g.lineStyle(1, 0x24314d, 0.5);
+    g.beginPath();
+    g.moveTo(46, 88);
+    g.lineTo(114, 88);
+    g.strokePath();
+  }
+
+  private buildTitleOrnament() {
+    const g = this.add.graphics();
+
+    // Small central seal between spheres and title.
+    g.lineStyle(1, 0x7889a8, 0.5);
+    g.strokeCircle(80, 52, 4);
+    g.fillStyle(0xdde6f5, 0.7);
+    g.fillRect(79, 49, 2, 2);
+    g.fillRect(79, 53, 2, 2);
+    g.fillRect(77, 51, 2, 2);
+    g.fillRect(81, 51, 2, 2);
+  }
+
+  private buildDevButton() {
+    const devBtnX = GBC_W - 28;
+    const devBtnY = 4;
+    drawGBCBox(this, devBtnX - 2, devBtnY, 24, 10, 120);
+
+    const devBtn = new GBCText(this, devBtnX + 2, devBtnY + 2, "DEV", {
+      color: COLOR.textDim,
+      depth: 121,
+    });
+
+    devBtn.obj.setAlpha(0.78);
+    devBtn.obj
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.openSkipMenu());
   }
 
   /**
