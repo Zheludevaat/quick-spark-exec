@@ -30,7 +30,6 @@ import { RotateDeviceOverlay } from "./touch/RotateDeviceOverlay";
 import {
   emitVirtualDown,
   emitVirtualUp,
-  pulseVirtual,
   clearVirtualInput,
 } from "@/game/virtualInput";
 import {
@@ -376,10 +375,3 @@ function UtilButton({
   );
 }
 
-function useMemoDialogActive() {
-  const [active, setActive] = useState(() => getGameUiSnapshot().dialog.open);
-  useEffect(() => {
-    return subscribeGameUi((s) => setActive(s.dialog.open));
-  }, []);
-  return active;
-}
