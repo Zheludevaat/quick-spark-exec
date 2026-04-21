@@ -1151,6 +1151,21 @@ export class SilverThresholdScene extends Phaser.Scene {
           this.daimonV2 = this.add.sprite(146, 70, "soryn_v2", 0).setOrigin(0.5, 0.5);
           if (this.anims.exists("daimon_idle")) this.daimonV2.play("daimon_idle");
           this.daimonV2.setAlpha(0);
+
+          // Swap Soryn's encounter presentation from threshold form (warm
+          // shimmer, FRIEND OF THE THRESHOLD) to daimon form (cooler orbit,
+          // DAIMON). Same being, second presentation — the visual identity
+          // continuity is the point.
+          this.sorynPresentation?.destroy();
+          this.sorynPresentation = createEncounterPresentation(
+            this,
+            this.daimonV2.x,
+            this.daimonV2.y,
+            SORYN_DAIMON_PROFILE,
+          );
+          this.sorynPresentation.introOnce("encounter_seen_soryn_daimon", this.save);
+          writeSave(this.save);
+
           this.tweens.add({
             targets: this.daimonV2,
             alpha: 1,
