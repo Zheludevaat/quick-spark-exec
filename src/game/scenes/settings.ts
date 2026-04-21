@@ -101,6 +101,10 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
 
   // Page body: re-built on each render
   const bodyObjs: Phaser.GameObjects.GameObject[] = [];
+  /** Labels of the main page rows in their currently-rendered order.
+   *  Dispatch routes by label so dynamic rows (e.g. legacy TOUCH OVERLAY) can
+   *  appear/disappear without index drift. */
+  let mainRowLabels: string[] = [];
   const clearBody = () => {
     bodyObjs.forEach((o) => {
       try {
