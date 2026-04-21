@@ -1323,6 +1323,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private mScore = 0;
   private mSave!: SaveSlot;
   private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
+  private hermaiaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("MercuryTrial");
