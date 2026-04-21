@@ -1,10 +1,8 @@
 /**
- * Desktop shell with scene-aware presentation policy.
+ * Desktop shell with granular per-scene visibility.
  *
- * - minimal shell: viewport only, used for title/front-end scenes
- * - standard shell: stats crown, viewport, bottom dock, footer, player hub
- *
- * The Phaser viewport remains the hero object.
+ * Each scene publishes which shell parts are useful via gameUiBridge.
+ * The shell renders only those parts. The Phaser viewport is always shown.
  */
 import {
   useCallback,
@@ -57,10 +55,10 @@ export function DesktopGameShell({ children, booted, error }: Props) {
   }, [playerHubOpen]);
 
   useEffect(() => {
-    if (scene.shellMode === "minimal" && playerHubOpen) {
+    if (!scene.allowPlayerHub && playerHubOpen) {
       closePlayerHub();
     }
-  }, [scene.shellMode, playerHubOpen, closePlayerHub]);
+  }, [scene.allowPlayerHub, playerHubOpen, closePlayerHub]);
 
   const openSettings = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -83,20 +81,24 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     patchOverlaySnapshot({ playerHubOpen: true });
   }, [overlay, scene.allowPlayerHub]);
 
-  const standardShell = scene.shellMode === "standard";
-  const showMiniMap = standardShell && scene.showMiniMap;
   const footerHint = scene.footerHint || DEFAULT_FOOTER_HINT;
 
-  const dockStyle = useMemo(
-    () => ({
+  const showDock =
+    scene.showUtilityRail || scene.showDialogueDock || scene.showMiniMap;
+
+  const dockStyle = useMemo(() => {
+    const cols: string[] = [];
+    if (scene.showUtilityRail) cols.push("180px");
+    if (scene.showDialogueDock) cols.push("1fr");
+    if (scene.showMiniMap) cols.push("240px");
+    return {
       width: "min(96vw, 1100px)",
       display: "grid",
-      gridTemplateColumns: showMiniMap ? "180px 1fr 240px" : "180px 1fr",
+      gridTemplateColumns: cols.join(" "),
       gap: 10,
       alignItems: "stretch" as const,
-    }),
-    [showMiniMap],
-  );
+    };
+  }, [scene.showUtilityRail, scene.showDialogueDock, scene.showMiniMap]);
 
   return (
     <div
@@ -128,7 +130,7 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         Hermetic Comedy — desktop shell
       </h1>
 
-      {standardShell && (
+      {scene.showStatsBar && (
         <div style={{ width: "min(96vw, 1100px)" }}>
           <DesktopStatsBar />
         </div>
@@ -171,27 +173,29 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         </div>
       </div>
 
-      {standardShell && (
-        <>
-          <div style={dockStyle}>
+      {showDock && (
+        <div style={dockStyle}>
+          {scene.showUtilityRail && (
             <DesktopUtilityRail
               onOpenHub={openPlayerHub}
               onOpenSettings={openSettings}
               hubOpen={playerHubOpen}
             />
-            <DesktopDialogueDock />
-            {showMiniMap ? <DesktopMiniMapCard /> : null}
-          </div>
-
-          <div style={{ width: "min(96vw, 1100px)" }}>
-            <ShellPanel tone="subdued" compact>
-              <ShellPanelMeta>{footerHint}</ShellPanelMeta>
-            </ShellPanel>
-          </div>
-        </>
+          )}
+          {scene.showDialogueDock && <DesktopDialogueDock />}
+          {scene.showMiniMap && <DesktopMiniMapCard />}
+        </div>
       )}
 
-      {standardShell && scene.allowPlayerHub && (
+      {scene.showFooter && (
+        <div style={{ width: "min(96vw, 1100px)" }}>
+          <ShellPanel tone="subdued" compact>
+            <ShellPanelMeta>{footerHint}</ShellPanelMeta>
+          </ShellPanel>
+        </div>
+      )}
+
+      {scene.allowPlayerHub && (
         <DesktopPlayerHubOverlay open={playerHubOpen} onClose={closePlayerHub} />
       )}
     </div>
