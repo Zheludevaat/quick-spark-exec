@@ -126,13 +126,24 @@ export class TitleScene extends Phaser.Scene {
     const options: { label: string; action: "launch" | "erase" | "settings" }[] = save
       ? [
           { label: primaryLabel, action: "launch" },
+          { label: "SETTINGS", action: "settings" },
           { label: "ERASE SAVE", action: "erase" },
-          { label: "SETTINGS (DEV)", action: "settings" },
         ]
       : [
           { label: primaryLabel, action: "launch" },
-          { label: "SETTINGS (DEV)", action: "settings" },
+          { label: "SETTINGS", action: "settings" },
         ];
+
+    // Gate to suppress title-menu input while the settings overlay is open.
+    let settingsOpen = false;
+    const openTitleSettings = () => {
+      if (settingsOpen) return;
+      settingsOpen = true;
+      getAudio().sfx("confirm");
+      openSettings(this, () => {
+        settingsOpen = false;
+      });
+    };
 
     // Larger menu box that fits 2-3 options comfortably.
     const lineH = 11;
