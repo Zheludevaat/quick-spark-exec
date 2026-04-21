@@ -487,7 +487,42 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.hint.setText(solved ? "REFLECTION CHAMBER (SOLVED)  A: ENTER" : "A: REFLECTION CHAMBER");
       return;
     }
+    // Vessel-orbit memory nodes (one per completed operation).
+    const node = this.nearestNodeMemory();
+    if (node) {
+      this.hint.setText(interactionPrompt(this.save.flags, node));
+      return;
+    }
     this.hint.setText("");
+  }
+
+  private nearestNodeMemory(): ActInteraction<AthanorHostScene> | null {
+    return nearestInteraction(
+      this.save.flags,
+      ATHANOR_NODE_INSPECTABLES,
+      this.rowan.x,
+      this.rowan.y,
+    );
+  }
+
+  private athanorHostShim(): AthanorHostScene {
+    return {
+      save: this.save,
+      speak: (lines, onDone) => {
+        this.busy = true;
+        runDialog(this, lines, () => {
+          writeSave(this.save);
+          this.busy = false;
+          onDone?.();
+        });
+      },
+    };
+  }
+
+  private inspectVesselExpanded() {
+    const stage = Math.max(0, Math.min(4, this.thresholdStage)) as 0 | 1 | 2 | 3 | 4;
+    this.save.flags[ATHANOR_VESSEL_INSPECT_FLAG] = true;
+    this.athanorHostShim().speak(ATHANOR_VESSEL_LINES[stage]);
   }
 
   private doorStatus(d: Door): string {
