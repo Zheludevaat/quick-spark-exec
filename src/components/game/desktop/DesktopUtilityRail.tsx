@@ -18,6 +18,7 @@ import {
 type Props = {
   onOpenHub: () => void;
   onOpenSettings: () => void;
+  onOpenInventory: () => void;
   hubOpen: boolean;
 };
 
@@ -53,6 +54,7 @@ function UtilityButton({
 export function DesktopUtilityRail({
   onOpenHub,
   onOpenSettings,
+  onOpenInventory,
   hubOpen,
 }: Props) {
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
@@ -108,6 +110,7 @@ export function DesktopUtilityRail({
 
       <div className="mt-2 flex flex-col gap-2">
         <UtilityButton label="STATS" onClick={onOpenHub} active={hubOpen} />
+        <UtilityButton label="INVENTORY" onClick={onOpenInventory} />
         <UtilityButton label="SETTINGS" onClick={onOpenSettings} />
       </div>
     </ShellPanel>
