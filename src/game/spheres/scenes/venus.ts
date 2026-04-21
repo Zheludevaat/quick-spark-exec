@@ -353,7 +353,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
     // Etiquette clerk NPC at center-back
     this.placeAmbientNpc(
-      VENUS_AMBIENT_NPCS.etiquetteClerk,
+      VENUS_AMBIENT_NPCS.lightingWitness,
       80,
       55,
       0xa8b8d8,
@@ -527,7 +527,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
     // Anniversary keeper
     this.placeAmbientNpc(
-      VENUS_AMBIENT_NPCS.anniversaryKeeper,
+      VENUS_AMBIENT_NPCS.repeaterOfVows,
       35,
       70,
       0xa890b8,
@@ -747,47 +747,48 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number) {
     if (this.modal || this.busy) {
-      // While modal, dampen velocity so re-entry doesn't slide
       this.playerVx = 0;
       this.playerVy = 0;
       return;
     }
 
     const dt = deltaMs / 1000;
+    const input = this.moveInput.poll();
 
-    // Resolve input
-    const target = this.lastInputDir;
-    // Decay direction so a single dpad tick = one nudge but holding the
-    // controls keyboard helper (which fires on every interval) keeps motion
-    this.playerVx = target.x * PLAYER_SPEED;
-    this.playerVy = target.y * PLAYER_SPEED;
-    this.lastInputDir = { x: 0, y: 0 };
+    const rawX = (input.left ? -1 : 0) + (input.right ? 1 : 0);
+    const rawY = (input.up ? -1 : 0) + (input.down ? 1 : 0);
+    const mag = Math.hypot(rawX, rawY);
 
-    // Move player (clamped)
+    if (mag > 0) {
+      this.playerVx = (rawX / mag) * PLAYER_SPEED;
+      this.playerVy = (rawY / mag) * PLAYER_SPEED;
+    } else {
+      this.playerVx = 0;
+      this.playerVy = 0;
+    }
+
     const oldX = this.player.x;
     const oldY = this.player.y;
     const nx = Phaser.Math.Clamp(this.player.x + this.playerVx * dt, 8, GBC_W - 8);
     const ny = Phaser.Math.Clamp(this.player.y + this.playerVy * dt, 30, GBC_H - 16);
     this.player.setPosition(nx, ny);
+
     const moved = Math.abs(nx - oldX) > 0.1 || Math.abs(ny - oldY) > 0.1;
 
-    // ATTUNE: any movement breaks attune (unless explicitly allowed)
     if (this.activeAttune) {
       if (moved && !this.activeAttune.allowMoveWhileAttuning) {
         this.cancelActiveAttune(false);
       } else {
         const completed = updateAttune(this.activeAttune, deltaMs);
-        if (this.attuneRing) this.attuneRing.update(attuneProgress(this.activeAttune));
-        if (completed) {
-          const onDone = this.activeAttune.onComplete;
-          this.cancelActiveAttune(true, /*keepRing*/ false);
-          // onComplete already fired inside updateAttune via target.onComplete
-          void onDone;
+        if (this.attuneRing) {
+          this.attuneRing.update(attuneProgress(this.activeAttune));
+        }
+        if (completed && this.attuneRing) {
+          this.attuneRing.update(1);
         }
       }
     }
 
-    // Door overlap → transition
     for (const d of this.doors) {
       if (
         nx >= d.x &&
@@ -798,8 +799,6 @@ export class VenusPlateauScene extends Phaser.Scene {
         const link = VENUS_ZONE_LINKS[this.zone];
         if (link.includes(d.to)) {
           if (d.to === "threshold" && !venusCrackingReady(this.save) && this.zone === "atrium") {
-            // Atrium → threshold from south door requires readiness; otherwise
-            // bounce them back with a hint
             this.player.setPosition(oldX, oldY);
             this.flashHint("the threshold is not yet for you.");
             return;
@@ -810,7 +809,6 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
     }
 
-    // Hotspot proximity → update hint
     this.refreshHintForProximity();
   }
 
