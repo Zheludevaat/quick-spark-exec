@@ -12,7 +12,15 @@
  */
 
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  spawnMotes,
+  fitSingleLineText,
+} from "../gbcArt";
 import { writeSave } from "../save";
 import type { Command, SaveSlot, SceneKey } from "../types";
 import { ACT_BY_SCENE } from "../types";
@@ -89,14 +97,29 @@ export class SunTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 10, color: 0xffd070, alpha: 0.35, depth: 5 });
     spawnMotes(this, { count: 6, color: 0xc8d8ff, alpha: 0.25, depth: 6 });
 
-    drawGBCBox(this, GBC_W - 72, 15, 68, 12);
-    new GBCText(this, GBC_W - 68, 17, "HELION TRIAL", {
-      color: COLOR.textWarn,
-      depth: 100,
-    });
+    const PHASE_BOX_X = 0;
+    const PHASE_BOX_Y = 15;
+    const PHASE_BOX_W = 106;
 
-    this.stateText = new GBCText(this, 4, 16, "PHASE 1/3 - COMPOSED", {
-      color: COLOR.textGold,
+    const TRIAL_BOX_W = 46;
+    const TRIAL_BOX_X = GBC_W - TRIAL_BOX_W - 4;
+    const TRIAL_BOX_Y = 15;
+
+    drawGBCBox(this, PHASE_BOX_X, PHASE_BOX_Y, PHASE_BOX_W, 12);
+    this.stateText = new GBCText(
+      this,
+      PHASE_BOX_X + 4,
+      PHASE_BOX_Y + 2,
+      fitSingleLineText(this.phaseHeaderLabel(), PHASE_BOX_W - 8),
+      {
+        color: COLOR.textGold,
+        depth: 100,
+      },
+    );
+
+    drawGBCBox(this, TRIAL_BOX_X, TRIAL_BOX_Y, TRIAL_BOX_W, 12);
+    new GBCText(this, TRIAL_BOX_X + 4, TRIAL_BOX_Y + 2, "HELION", {
+      color: COLOR.textWarn,
       depth: 100,
     });
 
@@ -208,24 +231,35 @@ export class SunTrialScene extends Phaser.Scene {
     this.cursorMark.setPosition(x, y);
   }
 
-  private refreshNeeds() {
+  private phaseHeaderLabel() {
+    switch (this.phase) {
+      case "composed":
+        return "P1 COMPOSED";
+      case "fractured":
+        return "P2 FRACTURED";
+      case "exposed":
+        return "P3 EXPOSED";
+    }
+  }
+
+  private needSummary() {
     if (this.phase === "composed") {
       const current = this.masks[this.maskIndex];
-      this.needText.setText(`TARGET: ${current.label}`);
-      this.stateText.setText("PHASE 1/3 - COMPOSED");
-    } else if (this.phase === "fractured") {
-      const good = this.fragments.filter((f) => f.trustworthy).length;
-      this.needText.setText(
-        `FIND TRUSTWORTHY FRAGMENTS · ${good} TRUE / ${this.fragments.length} TOTAL`,
-      );
-      this.stateText.setText("PHASE 2/3 - FRACTURED");
-    } else {
-      const plan = phase3Plan(this.save);
-      this.needText.setText(
-        `W:${Math.min(this.witnessHits, plan.needs.witness)}/${plan.needs.witness}  A:${Math.min(this.addressHits, plan.needs.address)}/${plan.needs.address}  R:${Math.min(this.releaseHits, plan.needs.release)}/${plan.needs.release}`,
-      );
-      this.stateText.setText("PHASE 3/3 - EXPOSED");
+      return `TARGET ${current.label}`;
     }
+
+    if (this.phase === "fractured") {
+      const totalTrue = this.fragments.filter((f) => f.trustworthy).length;
+      return `TRUE FRAGMENTS ${this.witnessHits}/${totalTrue}`;
+    }
+
+    const plan = phase3Plan(this.save);
+    return `W ${Math.min(this.witnessHits, plan.needs.witness)}/${plan.needs.witness}  A ${Math.min(this.addressHits, plan.needs.address)}/${plan.needs.address}  R ${Math.min(this.releaseHits, plan.needs.release)}/${plan.needs.release}`;
+  }
+
+  private refreshNeeds() {
+    this.stateText.setText(fitSingleLineText(this.phaseHeaderLabel(), 98));
+    this.needText.setText(fitSingleLineText(this.needSummary(), GBC_W - 8));
     this.publishSnapshot();
   }
 
