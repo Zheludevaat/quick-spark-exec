@@ -41,6 +41,7 @@ const CMDS: { label: string; cmd: Command }[] = [
 ];
 
 export class SunTrialScene extends Phaser.Scene {
+  private readonly sceneKey: SceneKey;
   private save!: SaveSlot;
   private phase: Phase = "composed";
   private busy = false;
@@ -57,14 +58,15 @@ export class SunTrialScene extends Phaser.Scene {
   private addressHits = 0;
   private releaseHits = 0;
 
-  constructor() {
-    super("SunTrial");
+  constructor(sceneKey: SceneKey = "SunTrial") {
+    super(sceneKey);
+    this.sceneKey = sceneKey;
   }
 
   init(data: { save: SaveSlot }) {
     this.save = data.save;
-    this.save.scene = "SunTrial";
-    this.save.act = ACT_BY_SCENE.SunTrial;
+    this.save.scene = this.sceneKey;
+    this.save.act = ACT_BY_SCENE[this.sceneKey];
     writeSave(this.save);
     this.phase = "composed";
     this.busy = false;
