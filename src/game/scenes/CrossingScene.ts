@@ -351,7 +351,28 @@ export class CrossingScene extends Phaser.Scene {
         w.obj.destroy();
       }
     }
-    this.whispers = this.whispers.filter((w) => w.alive || w.obj);
+
+    // Highlight nearest witnessable whisper for readability.
+    let highlight: Whisper | null = null;
+    let hd = Infinity;
+    for (const w of this.whispers) {
+      if (!w.alive || w.witnessed) continue;
+      const dxh = w.x + 16 - this.rowan.x;
+      const dyh = w.y + 4 - this.rowan.y;
+      const d = dxh * dxh + dyh * dyh;
+      if (d < hd) {
+        hd = d;
+        highlight = w;
+      }
+    }
+    for (const w of this.whispers) {
+      if (!w.alive || w.witnessed) continue;
+      const on = w === highlight && hd <= 60 * 60;
+      w.obj.setColor(on ? COLOR.textGold : COLOR.textLight);
+      w.obj.obj.setAlpha(on ? 1 : 0.85);
+    }
+
+    this.whispers = this.whispers.filter((w) => w.alive);
 
     // Wanderer — appear around 50% progress, walk past Rowan, then disappear.
     if (this.wanderer && !this.wandererSpoken && progress > 0.5) {
