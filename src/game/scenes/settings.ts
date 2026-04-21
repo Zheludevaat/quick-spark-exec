@@ -8,12 +8,14 @@ import {
   setHaptics,
   setLeftHanded,
   setDialogAutoAdvance,
+  setInterfaceMode,
   resetControls,
   keyLabel,
   normalizeKeyEvent,
   type GameAction,
   type TouchLayout,
   type ButtonSize,
+  type InterfaceMode,
 } from "../controls";
 import { getAudio } from "../audio";
 
