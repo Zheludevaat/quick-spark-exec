@@ -94,6 +94,18 @@ export function isSoulDone(save: SaveSlot, id: SoulId): boolean {
   return soulState(save, id) >= DONE_OFFSET;
 }
 
+/**
+ * "Opened" souls have been engaged at least once but not yet resolved —
+ * cursor advanced past 0, but DONE_OFFSET not yet reached. The Imaginal
+ * scene uses this to render in-progress souls with the warmer "engaged"
+ * mood even when the player isn't standing next to them, so the room
+ * visibly remembers which threads are still mid-conversation.
+ */
+export function isSoulOpened(save: SaveSlot, id: SoulId): boolean {
+  const s = soulState(save, id);
+  return s > 0 && s < DONE_OFFSET;
+}
+
 export function recordChoice(save: SaveSlot, id: SoulId, tag: string) {
   if (!save.soulChoices[id]) save.soulChoices[id] = [];
   save.soulChoices[id].push(tag);

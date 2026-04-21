@@ -35,6 +35,7 @@ import {
   ATHANOR_VESSEL_INSPECT_FLAG,
   type AthanorHostScene,
 } from "./athanor/AthanorExpandedContent";
+import { ATHANOR_PERIMETER_INSPECTABLES } from "./athanor/AthanorPerimeterContent";
 import {
   nearestInteraction,
   interactionPrompt,
@@ -113,6 +114,8 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private reflectionPortalY = GBC_H - 30;
   private reflectionPortal?: Phaser.GameObjects.Rectangle;
   private reflectionLabel?: GBCText;
+  /** Stage-gated perimeter traces (soot, basin, filament, seam). */
+  private perimeterTraces: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super("AthanorThreshold");
@@ -497,9 +500,17 @@ export class AthanorThresholdScene extends Phaser.Scene {
   }
 
   private nearestNodeMemory(): ActInteraction<AthanorHostScene> | null {
-    return nearestInteraction(
+    // Vessel-orbit nodes take priority; if none in range, look at perimeter.
+    const node = nearestInteraction(
       this.save.flags,
       ATHANOR_NODE_INSPECTABLES,
+      this.rowan.x,
+      this.rowan.y,
+    );
+    if (node) return node;
+    return nearestInteraction(
+      this.save.flags,
+      ATHANOR_PERIMETER_INSPECTABLES,
       this.rowan.x,
       this.rowan.y,
     );
@@ -769,6 +780,9 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Reapply door states so SEALED/AVAILABLE/DONE all read at a glance.
     for (const d of this.doors) this.applyDoorState(d);
 
+    // Render perimeter traces matching current stage.
+    this.renderPerimeterTraces();
+
     // When a stage advances (not on initial entry), pulse the vessel and the
     // newly-completed door so the room visibly remembers the transmutation.
     const order: Door["key"][] = ["nigredo", "albedo", "citrinitas", "rubedo"];
@@ -777,6 +791,49 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.doorPresentations[justDoneKey]?.pulse();
       this.doorPresentations[justDoneKey]?.soften();
       this.vesselPresentation?.pulse();
+    }
+  }
+
+  /**
+   * Draw a small physical mark for each completed operation at its
+   * matching perimeter inspectable. The marks are visual residue — the
+   * inspectable itself supplies the prose. We rebuild the set on every
+   * stage change so newly-unlocked traces fade in cleanly.
+   */
+  private renderPerimeterTraces(): void {
+    this.perimeterTraces.forEach((g) => g.destroy());
+    this.perimeterTraces = [];
+
+    const traces: { flag: string; x: number; y: number; color: number; shape: "blob" | "ring" | "line" }[] = [
+      { flag: "op_nigredo_done", x: 60, y: 124, color: 0x101010, shape: "blob" },
+      { flag: "op_albedo_done", x: 140, y: 78, color: 0xc8d8e8, shape: "ring" },
+      { flag: "op_citrinitas_done", x: 36, y: 38, color: 0xe8c860, shape: "line" },
+      { flag: "op_rubedo_done", x: 124, y: 38, color: 0xb84040, shape: "line" },
+    ];
+
+    for (const t of traces) {
+      if (!this.save.flags[t.flag]) continue;
+      let g: Phaser.GameObjects.GameObject;
+      if (t.shape === "blob") {
+        g = this.add.ellipse(t.x, t.y, 8, 4, t.color, 0.85).setDepth(2);
+      } else if (t.shape === "ring") {
+        g = this.add
+          .circle(t.x, t.y, 5, 0x000000, 0)
+          .setStrokeStyle(1, t.color, 0.9)
+          .setDepth(2);
+      } else {
+        g = this.add.rectangle(t.x, t.y, 10, 1, t.color, 0.8).setDepth(2);
+      }
+      this.perimeterTraces.push(g);
+      // Faint pulse so the eye finds them when revisiting the chamber.
+      this.tweens.add({
+        targets: g,
+        alpha: { from: (g as Phaser.GameObjects.Shape).alpha, to: 0.35 },
+        duration: 1800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
     }
   }
 

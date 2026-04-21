@@ -20,7 +20,7 @@ import { emitHudStatChanged } from "../ui/hudSignals";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
 import { buildSoulSprite, type SoulMood } from "./imaginal/soulSprites";
-import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
+import { runSoul, isSoulDone, isSoulOpened, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
 import {
@@ -530,7 +530,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
       const done = isSoulDone(this.save, def.id);
-      const initialMood: SoulMood = done ? "resolved" : "waiting";
+      const opened = !done && isSoulOpened(this.save, def.id);
+      // Opened souls (cursor advanced but not finished) read as warmer
+      // even when the player isn't standing next to them, so the room
+      // visibly remembers which threads are mid-conversation.
+      const initialMood: SoulMood = done ? "resolved" : opened ? "engaged" : "waiting";
       built.setMood(initialMood);
 
       this.regionRoot.add(built.halo);
@@ -1105,7 +1109,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
           });
         }
       } else {
-        this.setSoulMood(s, done ? "resolved" : "waiting");
+        // Resting mood: opened souls keep the warmer "engaged" presence
+        // so they remain legible at-a-glance as ongoing threads.
+        const restMood: SoulMood = done
+          ? "resolved"
+          : isSoulOpened(this.save, s.def.id)
+            ? "engaged"
+            : "waiting";
+        this.setSoulMood(s, restMood);
         s.nearTime = 0;
         s.barkShown = false;
 
