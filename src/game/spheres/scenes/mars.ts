@@ -192,12 +192,11 @@ export class MarsTrialScene extends Phaser.Scene {
     });
 
     // Pulse the phase color subtly so the strip reads as ceremonial, not UI.
-    const targets: Phaser.GameObjects.GameObject[] = [box, round.obj, phase.obj];
-    box.setAlpha(0);
+    box.img.setAlpha(0);
     round.obj.setAlpha(0);
     phase.obj.setAlpha(0);
     this.tweens.add({
-      targets,
+      targets: [box.img, round.obj, phase.obj],
       alpha: { from: 0, to: 1 },
       duration: 200,
       yoyo: true,
