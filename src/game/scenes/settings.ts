@@ -73,13 +73,25 @@ const ACTION_LABEL: Record<GameAction, string> = {
   lcd: "CRT OVERLAY",
 };
 
-// Layout constants — keep header/body/detail/footer in fixed regions.
+// Layout constants — derive vertical regions from actual box geometry so
+// footer never clips against the bottom border and detail never collides
+// with footer text.
+const BOX_X = 4;
+const BOX_Y = 8;
+const BOX_W = GBC_W - 8;
+const BOX_H = GBC_H - 16;
+const BOX_BOTTOM = BOX_Y + BOX_H;
+
 const ROW_H = 9;
-const LIST_TOP = 38;
-const VISIBLE_ROWS = 7;
-const DETAIL_Y = 103;
-const FOOTER_Y1 = 120;
-const FOOTER_Y2 = 128;
+const LIST_TOP = 36;
+
+const DETAIL_LINES = 2;
+const DETAIL_H = DETAIL_LINES * 9 - 2;
+
+const FOOTER_PAD = 4;
+const FOOTER_Y2 = BOX_BOTTOM - FOOTER_PAD - 8;
+const FOOTER_Y1 = FOOTER_Y2 - 9;
+const DETAIL_Y = FOOTER_Y1 - DETAIL_H - 3;
 
 const LEFT_X = 16;
 const LEFT_W = 82;
@@ -87,6 +99,8 @@ const RIGHT_X = GBC_W - 54;
 const RIGHT_W = 46;
 const FOOTER_W = GBC_W - 12;
 const DETAIL_W = GBC_W - 16;
+
+const VISIBLE_ROWS = Math.max(5, Math.floor((DETAIL_Y - LIST_TOP - 2) / ROW_H));
 
 /**
  * Settings-local key label that swaps unicode arrows / long names for
@@ -136,7 +150,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     .setScrollFactor(0)
     .setDepth(950)
     .setInteractive();
-  const box = drawGBCBox(scene, 4, 12, GBC_W - 8, GBC_H - 24, 951);
+  const box = drawGBCBox(scene, BOX_X, BOX_Y, BOX_W, BOX_H, 951);
 
   // Header row 1 — title + page-cycle hint (ASCII-safe).
   const title = new GBCText(scene, 8, 16, "SETTINGS", {
@@ -175,11 +189,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
+    maxWidthPx: FOOTER_W,
   });
   const footer2 = new GBCText(scene, 6, FOOTER_Y2, "", {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
+    maxWidthPx: FOOTER_W,
   });
 
   // Body: re-built on each render
@@ -280,8 +296,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       }
 
-      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W * 2));
-      footer1.setText("UP/DN MOVE  A SELECT");
+      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W));
+      footer1.setText(fitSingleLineText("UP/DN MOVE  A SELECT", FOOTER_W));
       footer2.setText(fitSingleLineText("LT/RT CHANGE  B OR ESC CLOSE", FOOTER_W));
     } else {
       // KEYS page
@@ -325,14 +341,19 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       const focusAction = ACTION_ORDER[cursor];
       if (rebindAction) {
         const slot = rebindSlot === "primary" ? "PRIMARY" : "SECONDARY";
-        detail.setText(`PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`);
+        detail.setText(
+          fitSingleLineText(
+            `PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`,
+            DETAIL_W,
+          ),
+        );
         detail.obj.setTint(0xffffff);
-        footer1.setText("PRESS A KEY");
-        footer2.setText("ESC CANCEL");
+        footer1.setText(fitSingleLineText("PRESS A KEY", FOOTER_W));
+        footer2.setText(fitSingleLineText("ESC CANCEL", FOOTER_W));
       } else {
-        detail.setText(keysDetailText(focusAction));
-        footer1.setText("UP/DN MOVE  A REBIND");
-        footer2.setText("TAB ALT SLOT  B BACK");
+        detail.setText(fitSingleLineText(keysDetailText(focusAction), DETAIL_W));
+        footer1.setText(fitSingleLineText("UP/DN MOVE  A REBIND", FOOTER_W));
+        footer2.setText(fitSingleLineText("TAB ALT SLOT  B BACK", FOOTER_W));
       }
     }
   };
