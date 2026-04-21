@@ -1276,6 +1276,11 @@ export class VenusTrialScene extends Phaser.Scene {
   private busy = false;
   private kypriaPresentation?: EncounterPresentationHandle;
 
+  private destroyKypriaPresentation() {
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = undefined;
+  }
+
   constructor() {
     super("VenusTrial");
   }
@@ -1317,6 +1322,9 @@ export class VenusTrialScene extends Phaser.Scene {
       KYPRIA_PROFILE,
     );
 
+    this.events.once("shutdown", () => this.destroyKypriaPresentation());
+    this.events.once("destroy", () => this.destroyKypriaPresentation());
+
     this.time.delayedCall(280, () => {
       this.kypriaPresentation?.introOnce(
         "encounter_seen_kypria_trial",
@@ -1355,8 +1363,6 @@ export class VenusTrialScene extends Phaser.Scene {
   }
 
   private runPhaseAttune(phaseId: string) {
-    // A small ATTUNE prompt before the choice — holding non-action for a
-    // beat earns "attuned" weighting on the response.
     const cx = GBC_W / 2;
     const cy = 70;
     const box = drawGBCBox(this, cx - 60, cy - 14, 120, 28, 30);
@@ -1369,8 +1375,14 @@ export class VenusTrialScene extends Phaser.Scene {
     let elapsed = 0;
     const requiredMs = 1400;
     let resolved = false;
-    let attuned = false;
     let cleanupAct: (() => void) | null = null;
+
+    const finish = (attuned: boolean) => {
+      box.destroy();
+      label.destroy();
+      cleanupAct?.();
+      this.time.delayedCall(220, () => this.runPhaseChoice(phaseId, attuned));
+    };
 
     const tick = this.time.addEvent({
       delay: 30,
@@ -1380,13 +1392,9 @@ export class VenusTrialScene extends Phaser.Scene {
         ring.update(Math.min(1, elapsed / requiredMs));
         if (elapsed >= requiredMs && !resolved) {
           resolved = true;
-          attuned = true;
           tick.remove(false);
-          ring.destroy();
-          box.destroy();
-          label.destroy();
-          cleanupAct?.();
-          this.runPhaseChoice(phaseId, attuned);
+          ring.complete();
+          finish(true);
         }
       },
     });
@@ -1394,13 +1402,9 @@ export class VenusTrialScene extends Phaser.Scene {
     cleanupAct = onActionDown(this, "action", () => {
       if (resolved) return;
       resolved = true;
-      attuned = false;
       tick.remove(false);
-      ring.destroy();
-      box.destroy();
-      label.destroy();
-      cleanupAct?.();
-      this.runPhaseChoice(phaseId, attuned);
+      ring.break();
+      finish(false);
     });
   }
 
@@ -1454,6 +1458,7 @@ export class VenusTrialScene extends Phaser.Scene {
       });
 
       runDialog(this, venusConfig.trialPass, () => {
+        this.destroyKypriaPresentation();
         gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
       });
       return;
@@ -1461,6 +1466,7 @@ export class VenusTrialScene extends Phaser.Scene {
     this.save.coherence = Math.max(0, this.save.coherence - 15);
     writeSave(this.save);
     runDialog(this, venusConfig.trialFail, () => {
+      this.destroyKypriaPresentation();
       gbcWipe(this, () => this.scene.start("VenusPlateau", { save: this.save }));
     });
   }
