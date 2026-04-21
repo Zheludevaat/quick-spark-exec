@@ -242,8 +242,8 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         </div>
       )}
 
-      {scene.showFooter && (
-        <div style={{ width: "min(96vw, 1100px)", ...dimmedChromeStyle }}>
+      {scene.showFooter && !anyShellModalActive && (
+        <div style={{ width: "min(96vw, 1100px)" }}>
           <ShellPanel tone="subdued" compact>
             <ShellPanelMeta>{footerHint}</ShellPanelMeta>
           </ShellPanel>
