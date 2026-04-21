@@ -698,6 +698,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                   if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
                   writeSave(this.mSave);
                   this.refreshStatus();
+                  this.markStationResolved(st);
                   this.refreshChamberGlow();
                   getAudio().sfx("resolve");
                   runDialog(
@@ -766,6 +767,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
               if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
               writeSave(this.mSave);
               this.refreshStatus();
+              this.markStationResolved(st);
               this.refreshChamberGlow();
               getAudio().sfx("resolve");
               runDialog(
@@ -858,6 +860,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
         if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
         writeSave(this.mSave);
         this.refreshStatus();
+        this.markStationResolved(st);
         this.refreshChamberGlow();
         getAudio().sfx("resolve");
         runDialog(
@@ -996,6 +999,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mSave.flags.sphere_mercury_cracked = true;
       writeSave(this.mSave);
+      this.revealTrueNames();
       runDialog(
         this,
         [
