@@ -267,9 +267,47 @@ export function buildSoulSprite(
     });
   };
 
+  // --- ART UPGRADE: Bespoke Silhouettes & Statue Petrification ---
   const setMood = (m: SoulMood) => {
     if (m === currentMood) return;
+    if (m === "resolved") {
+      // Petrification: turn them into a silver stone statue
+      idleTween?.remove();
+      auraTween?.remove();
+      currentMood = m;
+      c.setAlpha(0.6);
+      // Tint each child sprite/shape to silver-grey
+      for (const child of c.list as Phaser.GameObjects.GameObject[]) {
+        const anyChild = child as unknown as { setFillStyle?: (n: number) => void; setTint?: (n: number) => void };
+        if (typeof anyChild.setFillStyle === "function") anyChild.setFillStyle(0x788898);
+        else if (typeof anyChild.setTint === "function") anyChild.setTint(0x788898);
+      }
+      halo.setAlpha(0);
+      return;
+    }
     applyPresence(m);
+
+    // Inject bespoke environmental FX once per soul
+    if (archetype === "drowned" && !c.getData("hasFX")) {
+      c.setData("hasFX", true);
+      // Use a tiny generated 1x1 white texture if missing
+      if (!scene.textures.exists("__pixel1")) {
+        const g = scene.make.graphics({ x: 0, y: 0 }, false);
+        g.fillStyle(0xffffff, 1).fillRect(0, 0, 1, 1);
+        g.generateTexture("__pixel1", 1, 1);
+        g.destroy();
+      }
+      scene.add
+        .particles(c.x, c.y + 4, "__pixel1", {
+          tint: 0x88c0e8,
+          alpha: { start: 0.8, end: 0 },
+          scale: { start: 1, end: 0 },
+          speedY: { min: 10, max: 20 },
+          lifespan: 600,
+          frequency: 400,
+        })
+        .setDepth(c.depth + 1);
+    }
   };
 
   applyPresence("waiting");

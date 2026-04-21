@@ -260,6 +260,42 @@ export class EncounterScene extends Phaser.Scene {
     const audio = getAudio();
     if (cmd === this.def.weakness) {
       this.hp = 0;
+
+      // --- ART UPGRADE: Visceral Combat Impacts ---
+      // 1. Hit-Stop (~80ms time freeze on the killing blow)
+      const prevTimeScale = this.tweens.timeScale;
+      this.tweens.timeScale = 0.05;
+      this.time.delayedCall(80, () => {
+        this.tweens.timeScale = prevTimeScale;
+      });
+
+      // 2. White-out silhouette flash
+      this.enemy.setTintFill(0xffffff);
+
+      // 3. Violent horizontal squish
+      this.tweens.add({
+        targets: this.enemy,
+        scaleX: 1.6,
+        scaleY: 0.5,
+        duration: 100,
+        yoyo: true,
+        ease: "Expo.out",
+      });
+
+      // Glitch effect specifically for "Echo"
+      if (this.def.kind === "echo") {
+        this.enemy.setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: this.enemy,
+          x: this.enemy.x + 10,
+          duration: 30,
+          yoyo: true,
+          repeat: 5,
+          ease: "Stepped",
+        });
+      }
+      // --- END ART UPGRADE ---
+
       this.drawHp();
       this.logText.setText(this.def.resolved);
       this.cameras.main.flash(180, 220, 230, 255);
