@@ -11,7 +11,7 @@ import {
   drawGBCBox,
 } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot } from "../types";
+import { ACT_BY_SCENE, type SaveSlot } from "../types";
 import {
   attachHUD,
   InputState,
@@ -254,8 +254,30 @@ const SORYN_AFTER_RITES = [
 ];
 
 const STONE_LINES = [
-  { who: "Stone", text: "An old marker. Carved with one word: BEGIN." },
+  { who: "Stone", text: "Not every threshold opens by passing through." },
+  { who: "Stone", text: "Some open when you look long enough to stop asking what they are for." },
   { who: "Stone", text: "You feel a small warmth in the chest. +1 COURAGE." },
+];
+
+const STILLNESS_LINES = [
+  { who: "Soryn", text: "Good. The threshold can only receive what stops trying to arrive." },
+  { who: "Soryn", text: "Stillness is not emptiness. It is consent without collapse." },
+];
+
+const CIRCLE_TEACH_LINES = [
+  { who: "Soryn", text: "Three times the guardian circles what it receives." },
+  { who: "Soryn", text: "Reception comes before naming." },
+];
+
+const BASIN_LINES = [
+  { who: "Basin", text: "The basin does not reflect your face." },
+  { who: "Basin", text: "It reflects the space your face used to occupy in the world." },
+];
+
+const GATE_PREVIEW_LINES = [
+  { who: "Soryn", text: "Look." },
+  { who: "Soryn", text: "Beyond the gate, the world loosens without dissolving." },
+  { who: "Soryn", text: "This is only the first edge of what comes next." },
 ];
 
 const MAP_W = 10,
@@ -295,14 +317,20 @@ export class SilverThresholdScene extends Phaser.Scene {
   private daimonV2?: Phaser.GameObjects.Sprite;
   private hint!: GBCText;
   private stone!: Phaser.GameObjects.Rectangle;
+  private basin?: Phaser.GameObjects.Arc;
+  private stillMs = 0;
 
   constructor() {
     super("SilverThreshold");
   }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
+    this.save.scene = "SilverThreshold";
+    this.save.act = ACT_BY_SCENE.SilverThreshold;
+    writeSave(this.save);
     this.circles = [];
     this.dialogActive = false;
+    this.stillMs = 0;
   }
 
   create() {
@@ -380,6 +408,23 @@ export class SilverThresholdScene extends Phaser.Scene {
       });
     }
 
+    // Reflection Basin — optional discovery, available after the rites.
+    const basinSeen = !!this.save.flags.threshold_basin_seen;
+    this.basin = this.add
+      .circle(GBC_W / 2, 104, 6, 0xc8d8f0, basinSeen ? 0.2 : 0.12)
+      .setDepth(3);
+    this.basin.setStrokeStyle(1, 0xdde6f5, basinSeen ? 0.25 : 0.5);
+    if (!basinSeen) {
+      this.tweens.add({
+        targets: this.basin,
+        alpha: 0.28,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
     // Player + soft shadow. Skin: living unless all elements done already (resume case).
     this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
     const initialSkin = this.save.flags.daimon_bound ? "soul" : "living";
@@ -449,6 +494,18 @@ export class SilverThresholdScene extends Phaser.Scene {
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
+    // Tutorial gates: stillness must come first, then observe (the stone),
+    // before guardian circles will auto-trigger.
+    if (this.save.flags.intro_done && !this.save.flags.reception_stillness_taught) {
+      this.updateStillnessTutorial(dx, dy, dt);
+      return;
+    }
+    if (this.save.flags.intro_done && !this.save.flags.reception_observe_taught) {
+      if (this.nearStone()) this.hint.setText("A: INSPECT STONE");
+      else this.hint.setText("FIND THE STONE TO THE WEST");
+      return;
+    }
+
     const visited = this.circles.filter((c) => c.visited).length;
     const sdx = this.rowan.x - this.soryn.x,
       sdy = this.rowan.y - this.soryn.y;
@@ -459,10 +516,20 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SORYN");
     else if (gdx * gdx + gdy * gdy < 16 * 16)
       this.hint.setText(
-        this.save.flags.daimon_bound ? "A: ENTER THE GATE" : `GATE SEALED  ${visited}/4 CIRCLES`,
+        this.save.flags.daimon_bound
+          ? this.save.flags.threshold_gate_preview_seen
+            ? "A: ENTER THE GATE"
+            : "A: APPROACH THE GATE"
+          : `GATE SEALED  ${visited}/4 CIRCLES`,
       );
     else if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found)
       this.hint.setText("A: INSPECT STONE");
+    else if (
+      this.nearBasin() &&
+      this.save.flags.elements_done &&
+      !this.save.flags.threshold_basin_seen
+    )
+      this.hint.setText("A: INSPECT BASIN");
     else
       this.hint.setText(
         this.save.flags.daimon_bound
@@ -481,6 +548,92 @@ export class SilverThresholdScene extends Phaser.Scene {
         return;
       }
     }
+  }
+
+  private nearSoryn(): boolean {
+    const sorynObj = this.daimonV2 ?? this.soryn;
+    const dx = this.rowan.x - sorynObj.x;
+    const dy = this.rowan.y - sorynObj.y;
+    return dx * dx + dy * dy < 16 * 16;
+  }
+
+  private nearStone(): boolean {
+    const dx = this.rowan.x - this.stone.x;
+    const dy = this.rowan.y - this.stone.y;
+    return dx * dx + dy * dy < 12 * 12;
+  }
+
+  private nearBasin(): boolean {
+    if (!this.basin) return false;
+    const dx = this.rowan.x - this.basin.x;
+    const dy = this.rowan.y - this.basin.y;
+    return dx * dx + dy * dy < 14 * 14;
+  }
+
+  private updateStillnessTutorial(dx: number, dy: number, dt: number) {
+    if (this.dialogActive || this.save.flags.reception_stillness_taught) return;
+
+    if (!this.nearSoryn()) {
+      this.stillMs = 0;
+      this.hint.setText("STAND STILL NEAR SORYN");
+      return;
+    }
+    const moving = Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001;
+    if (moving) {
+      this.stillMs = 0;
+      this.hint.setText("BE STILL FOR A BREATH");
+      return;
+    }
+    this.stillMs += dt;
+    this.hint.setText("BE STILL FOR A BREATH");
+    if (this.stillMs >= 900) {
+      this.dialogActive = true;
+      this.save.flags.reception_stillness_taught = true;
+      writeSave(this.save);
+      runDialog(this, STILLNESS_LINES, () => {
+        this.dialogActive = false;
+      });
+    }
+  }
+
+  private runGuardianCircling(
+    kind: ElemKind,
+    c: { x: number; y: number; sprite: Phaser.GameObjects.Sprite },
+    onDone: () => void,
+  ) {
+    const burstColor = ELEM_BURST_COLOR[kind];
+    const motes = [0, 1, 2].map(() =>
+      this.add.circle(this.rowan.x, this.rowan.y - 4, 2, burstColor, 0.7).setDepth(45),
+    );
+    let angle = 0;
+    const radiusX = 12;
+    const radiusY = 8;
+    const totalAngle = Math.PI * 2 * 3;
+    this.tweens.add({
+      targets: c.sprite,
+      scale: 1.18,
+      alpha: 0.8,
+      duration: 180,
+      yoyo: true,
+      repeat: 8,
+    });
+    const tick = this.time.addEvent({
+      delay: 30,
+      loop: true,
+      callback: () => {
+        angle += 0.18;
+        motes.forEach((m, i) => {
+          const a = angle + (i / 3) * Math.PI * 2;
+          m.x = this.rowan.x + Math.cos(a) * radiusX;
+          m.y = this.rowan.y - 4 + Math.sin(a) * radiusY;
+        });
+        if (angle >= totalAngle) {
+          tick.remove(false);
+          motes.forEach((m) => m.destroy());
+          onDone();
+        }
+      },
+    });
   }
 
   // ============================================================================
@@ -506,47 +659,51 @@ export class SilverThresholdScene extends Phaser.Scene {
       onComplete: () => ring.destroy(),
     });
 
-    // PHASE A — RECOGNITION
-    runDialog(this, RECOGNITION[kind], () => {
-      // PHASE B — OFFERING (Inquiry Wheel)
-      const offering = OFFERINGS[kind];
-      runInquiry(this, offering.prompt, offering.options, (picked) => {
-        const opt = picked as OfferingOption;
-        // Consume seed if applicable
-        if (opt.consumesSeed && this.save.seeds[opt.consumesSeed]) {
-          this.save.flags[`ack_${opt.consumesSeed}`] = true;
-        }
-        // Stat bias from inquiry choice
-        if (picked.choice === "confess") this.bumpStatForElement(kind, 2);
-        else if (picked.choice === "observe") this.save.stats.clarity += 1;
-        else if (picked.choice === "ask") this.save.stats.compassion += 1;
-        else if (picked.choice === "silent") this.save.stats.courage += 1;
+    const startRecognition = () => {
+      // PHASE A — RECOGNITION
+      runDialog(this, RECOGNITION[kind], () => {
+        // PHASE B — OFFERING (Inquiry Wheel) — shapes meaning, not stats.
+        const offering = OFFERINGS[kind];
+        runInquiry(this, offering.prompt, offering.options, (picked) => {
+          const opt = picked as OfferingOption;
+          if (opt.consumesSeed && this.save.seeds[opt.consumesSeed]) {
+            this.save.flags[`ack_${opt.consumesSeed}`] = true;
+          }
+          // No direct stat stacking from offering choice — Naming is the gift.
 
-        // PHASE C MINI-MECHANIC — short interactive moment per element
-        this.runMiniMechanic(kind, c, () => {
-          // Then the NAMING dialog + skin shed + stat bump + shard fragment
-          runDialog(this, NAMING[kind], () => {
-            this.bumpStatForElement(kind, 1);
-            // Shed the corresponding accessory
-            shedAccessory(this, this.rowan, ELEM_TO_ACCESSORY[kind]);
-            // Mark visited
-            c.visited = true;
-            this.save.flags[`elem_${kind}`] = true;
-            c.sprite.setAlpha(0.35);
-            // Memory shard fragment (4 = 1 shard) — uses shared feedback
-            awardShardFragment(this, this.save, () => "threshold_1", {
-              x: this.rowan.x,
-              y: this.rowan.y,
+          // PHASE C MINI-MECHANIC — short symbolic interactive moment.
+          this.runMiniMechanic(kind, c, () => {
+            // PHASE D NAMING — single source of the guardian's stat gift.
+            runDialog(this, NAMING[kind], () => {
+              this.bumpStatForElement(kind, 1);
+              shedAccessory(this, this.rowan, ELEM_TO_ACCESSORY[kind]);
+              c.visited = true;
+              this.save.flags[`elem_${kind}`] = true;
+              c.sprite.setAlpha(0.35);
+              awardShardFragment(this, this.save, () => "threshold_1", {
+                x: this.rowan.x,
+                y: this.rowan.y,
+              });
+              this.events.emit("stats-changed");
+              writeSave(this.save);
+              this.cameras.main.flash(120, 240, 240, 255);
+              this.dialogActive = false;
+              this.checkAllElements();
             });
-            this.events.emit("stats-changed");
-            writeSave(this.save);
-            this.cameras.main.flash(120, 240, 240, 255);
-            this.dialogActive = false;
-            this.checkAllElements();
           });
         });
       });
-    });
+    };
+
+    const startCircling = () => this.runGuardianCircling(kind, c, startRecognition);
+
+    if (!this.save.flags.reception_circles_taught) {
+      this.save.flags.reception_circles_taught = true;
+      writeSave(this.save);
+      runDialog(this, CIRCLE_TEACH_LINES, startCircling);
+    } else {
+      startCircling();
+    }
   }
 
   private bumpStatForElement(kind: ElemKind, n: number) {
@@ -754,15 +911,6 @@ export class SilverThresholdScene extends Phaser.Scene {
     };
     const pick = () => {
       cleanup();
-      // TRUE = +clarity (the harder, less flattering reflection).
-      // BRIGHT = +compassion to others, but costs 1 clarity to self.
-      if (cursor === 0) {
-        this.save.stats.clarity += 1;
-      } else {
-        this.save.stats.compassion += 1;
-        this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
-      }
-      this.events.emit("stats-changed");
       onDone();
     };
     let unbindAct: (() => void) | null = null;
@@ -832,11 +980,7 @@ export class SilverThresholdScene extends Phaser.Scene {
           tick.remove(false);
           this.rowan.x = startX;
           this.rowan.y = startY;
-          // Reward scales: 1 lap clean = +1 courage; with restarts = no bonus.
-          if (restarts === 0) {
-            this.save.stats.courage += 1;
-            this.events.emit("stats-changed");
-          }
+          // Lap completed — kept symbolic; stat gift comes from Naming.
           box.destroy();
           prompt.destroy();
           onDone();
@@ -1062,12 +1206,28 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) {
       this.dialogActive = true;
       this.save.flags.stone_found = true;
-      this.save.stats.courage++;
+      this.save.flags.reception_observe_taught = true;
+      this.save.stats.courage += 1;
       this.events.emit("stats-changed");
       writeSave(this.save);
       this.stone.setFillStyle(0x3a4868);
       getAudio().sfx("resolve");
       runDialog(this, STONE_LINES, () => {
+        this.dialogActive = false;
+      });
+      return;
+    }
+    // Reflection Basin — optional discovery after the rites.
+    if (
+      this.nearBasin() &&
+      this.save.flags.elements_done &&
+      !this.save.flags.threshold_basin_seen
+    ) {
+      this.dialogActive = true;
+      this.save.flags.threshold_basin_seen = true;
+      writeSave(this.save);
+      getAudio().sfx("confirm");
+      runDialog(this, BASIN_LINES, () => {
         this.dialogActive = false;
       });
       return;
@@ -1093,11 +1253,22 @@ export class SilverThresholdScene extends Phaser.Scene {
       });
       return;
     }
-    // Gate enter
+    // Gate enter — first touch previews; second touch transitions.
     const gx = this.rowan.x - this.gate.x,
       gy = this.rowan.y - this.gate.y;
     if (gx * gx + gy * gy < 16 * 16 && this.save.flags.daimon_bound) {
+      if (!this.save.flags.threshold_gate_preview_seen) {
+        this.dialogActive = true;
+        this.save.flags.threshold_gate_preview_seen = true;
+        writeSave(this.save);
+        getAudio().sfx("confirm");
+        runDialog(this, GATE_PREVIEW_LINES, () => {
+          this.dialogActive = false;
+        });
+        return;
+      }
       this.save.scene = "ImaginalRealm";
+      this.save.act = ACT_BY_SCENE.ImaginalRealm;
       writeSave(this.save);
       const a = getAudio();
       a.sfx("wipe");
