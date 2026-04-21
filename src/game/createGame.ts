@@ -17,6 +17,7 @@ import { SealedVesselScene } from "./scenes/SealedVesselScene";
 import { MetaxyHubScene } from "./scenes/MetaxyHubScene";
 import { MercuryPlateauScene, MercuryTrialScene } from "./spheres/scenes/mercury";
 import { VenusPlateauScene, VenusTrialScene } from "./spheres/scenes/venus";
+import { MarsPlateauScene, MarsTrialScene } from "./spheres/scenes/mars";
 
 export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
@@ -59,6 +60,8 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       MercuryTrialScene,
       VenusPlateauScene,
       VenusTrialScene,
+      MarsPlateauScene,
+      MarsTrialScene,
       CuratedSelfScene,
       EpilogueScene,
     ],
