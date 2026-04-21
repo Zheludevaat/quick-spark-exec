@@ -1,12 +1,31 @@
 /**
- * Desktop presentation shell. Centers the Phaser host, renders the
- * shared shell dialogue tray below the canvas, and presents control
- * hints inside a compact subdued ShellPanel so the footer belongs to
- * the same shell-card family as the rest of the UI.
+ * Desktop command shell: top crown stats bar, framed central viewport,
+ * bottom command dock (utility rail | dialogue dock | minimap card),
+ * and the Player Hub overlay opened by the STATS button.
+ *
+ * The Phaser viewport remains the hero object. SETTINGS opens the
+ * existing in-canvas settings overlay via the global opener installed
+ * by the HUD scene.
  */
-import type { ReactNode } from "react";
-import { GameDialogueTray } from "./shell/GameDialogueTray";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { DesktopStatsBar } from "./desktop/DesktopStatsBar";
+import { DesktopUtilityRail } from "./desktop/DesktopUtilityRail";
+import { DesktopMiniMapCard } from "./desktop/DesktopMiniMapCard";
+import { DesktopDialogueDock } from "./desktop/DesktopDialogueDock";
+import { DesktopPlayerHubOverlay } from "./desktop/DesktopPlayerHubOverlay";
 import { ShellPanel, ShellPanelMeta } from "./shell/ShellPanel";
+import {
+  subscribeGameUi,
+  getGameUiSnapshot,
+  patchOverlaySnapshot,
+  type OverlaySnapshot,
+} from "@/game/gameUiBridge";
+import { clearVirtualInput } from "@/game/virtualInput";
 
 type Props = {
   children: ReactNode;
@@ -15,6 +34,44 @@ type Props = {
 };
 
 export function DesktopGameShell({ children, booted, error }: Props) {
+  const [playerHubOpen, setPlayerHubOpen] = useState(false);
+  const [overlay, setOverlay] = useState<OverlaySnapshot>(
+    () => getGameUiSnapshot().overlay,
+  );
+
+  useEffect(() => {
+    return subscribeGameUi((s) => setOverlay(s.overlay));
+  }, []);
+
+  useEffect(() => {
+    if (playerHubOpen) clearVirtualInput();
+  }, [playerHubOpen]);
+
+  const openSettings = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const fn = (window as unknown as Record<string, unknown>)
+      .__hermeticOpenSettings as (() => void) | undefined;
+    fn?.();
+  }, []);
+
+  const openPlayerHub = useCallback(() => {
+    if (
+      overlay.settingsOpen ||
+      overlay.loreOpen ||
+      overlay.inventoryOpen ||
+      overlay.inquiryActive
+    ) {
+      return;
+    }
+    setPlayerHubOpen(true);
+    patchOverlaySnapshot({ playerHubOpen: true });
+  }, [overlay]);
+
+  const closePlayerHub = useCallback(() => {
+    setPlayerHubOpen(false);
+    patchOverlaySnapshot({ playerHubOpen: false });
+  }, []);
+
   return (
     <div
       style={{
@@ -24,10 +81,9 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
+        gap: 10,
         fontFamily: "monospace",
-        padding: "12px 0",
+        padding: "10px 12px",
       }}
     >
       <h1
@@ -43,50 +99,78 @@ export function DesktopGameShell({ children, booted, error }: Props) {
           border: 0,
         }}
       >
-        Hermetic Comedy — a pixel-art RPG of small verbs
+        Hermetic Comedy — desktop command shell
       </h1>
 
-      <div
-        style={{
-          width: "min(96vw, 720px)",
-          aspectRatio: "160 / 144",
-          imageRendering: "pixelated",
-          border: "1px solid #2a3550",
-          background: "#05070d",
-          boxShadow: "0 0 60px rgba(74,120,200,0.15)",
-        }}
-      >
-        {children}
+      <div style={{ width: "min(96vw, 1100px)" }}>
+        <DesktopStatsBar />
       </div>
 
-      <div style={{ width: "min(96vw, 720px)" }}>
-        <GameDialogueTray />
-      </div>
+      <div style={{ width: "min(96vw, 1100px)" }}>
+        <div
+          style={{
+            position: "relative",
+            margin: "0 auto",
+            width: "min(100%, 760px)",
+            aspectRatio: "160 / 144",
+            imageRendering: "pixelated",
+            border: "1px solid rgba(232,200,144,0.4)",
+            background: "#05070d",
+            boxShadow:
+              "0 0 60px rgba(74,120,200,0.18), inset 0 0 0 1px rgba(0,0,0,0.6)",
+            borderRadius: 4,
+          }}
+        >
+          {children}
 
-      <div style={{ width: "min(96vw, 720px)" }}>
-        <ShellPanel tone="subdued" compact>
-          <ShellPanelMeta>
-            ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L =
-            LORE · P OR ESC = SETTINGS
-          </ShellPanelMeta>
           {!booted && !error && (
             <div
-              className="mt-1 text-[10px]"
-              style={{ color: "#a8c8e8" }}
+              className="absolute inset-0 flex items-center justify-center text-xs"
+              style={{ color: "#a8c8e8", pointerEvents: "none" }}
             >
               Loading the silver…
             </div>
           )}
+
           {error && (
             <div
-              className="mt-1 text-[10px]"
-              style={{ color: "#d86a6a" }}
+              className="absolute inset-0 flex items-center justify-center text-xs"
+              style={{ color: "#d86a6a", pointerEvents: "none" }}
             >
               Failed to load: {error}
             </div>
           )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          width: "min(96vw, 1100px)",
+          display: "grid",
+          gridTemplateColumns: "180px 1fr 240px",
+          gap: 10,
+          alignItems: "stretch",
+        }}
+      >
+        <DesktopUtilityRail
+          onOpenHub={openPlayerHub}
+          onOpenSettings={openSettings}
+          hubOpen={playerHubOpen}
+        />
+        <DesktopDialogueDock />
+        <DesktopMiniMapCard />
+      </div>
+
+      <div style={{ width: "min(96vw, 1100px)" }}>
+        <ShellPanel tone="subdued" compact>
+          <ShellPanelMeta>
+            ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L =
+            LORE · P OR ESC = SETTINGS · STATS = PLAYER HUB
+          </ShellPanelMeta>
         </ShellPanel>
       </div>
+
+      <DesktopPlayerHubOverlay open={playerHubOpen} onClose={closePlayerHub} />
     </div>
   );
 }
