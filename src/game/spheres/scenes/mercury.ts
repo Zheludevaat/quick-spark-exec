@@ -122,6 +122,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private ambientBarkEvent?: Phaser.Time.TimerEvent;
   private activeBark?: GBCText;
   private trueNameLabels: GBCText[] = [];
+  private hermaiaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("MercuryPlateau");
