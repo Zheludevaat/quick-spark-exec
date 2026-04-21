@@ -338,7 +338,7 @@ export class CuratedSelfScene extends Phaser.Scene {
 
   /** Floating gold whisper that fades after a few seconds. */
   private showWhisper(text: string) {
-    const w = new GBCText(this, 4, 30, text, {
+    const w = new GBCText(this, 4, 40, text, {
       color: COLOR.textGold,
       depth: 150,
       maxWidthPx: GBC_W - 8,
@@ -356,17 +356,16 @@ export class CuratedSelfScene extends Phaser.Scene {
   private speak(event: SorynEvent) {
     const line = sorynBark(this.save, event) ?? narratorLine(event);
     const isNarrator = this.save.sorynReleased;
-    // Position above stateText/boss; keep clear of the log box (y=76+).
-    const t = new GBCText(this, 4, 4, line, {
-      color: isNarrator ? COLOR.textGold : COLOR.textAccent,
-      depth: 160,
-      maxWidthPx: GBC_W - 100,
-    });
-    // Draw a subtle backdrop so the line is readable over stars.
+    // Sit below the phase label / "CURATED SELF" plate (which end ~y=27).
     const bg = this.add
-      .rectangle(2, 2, GBC_W - 96, 10, 0x000000, 0.55)
+      .rectangle(2, 28, GBC_W - 8, 10, 0x000000, 0.55)
       .setOrigin(0, 0)
       .setDepth(159);
+    const t = new GBCText(this, 4, 28, line, {
+      color: isNarrator ? COLOR.textGold : COLOR.textAccent,
+      depth: 160,
+      maxWidthPx: GBC_W - 8,
+    });
     this.tweens.add({
       targets: [t.obj, bg],
       alpha: 0,
@@ -380,9 +379,9 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   private cmdPos(i: number) {
-    if (i < 4) return { x: 8 + (i % 2) * 70, y: 118 + Math.floor(i / 2) * 11 };
-    if (i === 4) return { x: 56, y: 138 };
-    return { x: 100, y: 138 }; // ASCEND slot
+    if (i < 4) return { x: 8 + (i % 2) * 70, y: 112 + Math.floor(i / 2) * 9 };
+    if (i === 4) return { x: 56, y: 130 };
+    return { x: 100, y: 130 }; // ASCEND slot
   }
 
   /** Greys out commands that are not valid in the current phase. */
