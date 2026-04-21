@@ -601,6 +601,29 @@ export class LastDayScene extends Phaser.Scene {
     return bd < 14 * 14 ? best : null;
   }
 
+  private nearestExpanded(): ActInteraction<LastDayHostScene> | null {
+    return nearestInteraction(
+      this.save.flags,
+      LASTDAY_EXPANDED_INTERACTIONS,
+      this.rowan.x,
+      this.rowan.y,
+    );
+  }
+
+  private hostShim(): LastDayHostScene {
+    return {
+      save: this.save,
+      speak: (lines, onDone) => {
+        this.dialogActive = true;
+        runDialog(this, lines, () => {
+          writeSave(this.save);
+          this.dialogActive = false;
+          onDone?.();
+        });
+      },
+    };
+  }
+
   private tryInteract() {
     if (this.dialogActive || this.miniActive) return;
     if (this.exitOpen) {
@@ -629,9 +652,16 @@ export class LastDayScene extends Phaser.Scene {
         return;
       }
     }
+    // Main seed items take priority over expanded inspectables.
     const it = this.nearest();
-    if (!it || it.used) return;
-    this.runItem(it);
+    if (it && !it.used) {
+      this.runItem(it);
+      return;
+    }
+    const expanded = this.nearestExpanded();
+    if (expanded) {
+      expanded.onInteract({ scene: this.hostShim(), save: this.save });
+    }
   }
 
   // ============================================================================
