@@ -362,7 +362,7 @@ export class LastDayScene extends Phaser.Scene {
           [
             { who: "?", text: "Tuesday. The light is doing its small work with unreasonable confidence." },
             { who: "?", text: "You have things to do today. The list has the emotional tone of a trapdoor." },
-            { who: "?", text: "Touch what calls you. There is no rush. This is merely what urgency looks like before it introduces itself." },
+            { who: "?", text: "Touch what calls you. There is no rush. This is what urgency looks like before it names itself." },
             { who: "?", text: "(Press L any time to open your Lore Log.)" },
           ],
           () => {

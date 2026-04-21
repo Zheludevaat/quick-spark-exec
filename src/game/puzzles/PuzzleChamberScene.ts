@@ -44,6 +44,8 @@ import {
 import type { PuzzleRoomDef } from "./types";
 import {
   defaultPuzzleSolveLines,
+  pickAttuneBreakLine,
+  pickAttuneStartLine,
   pickPuzzleSoftFail,
 } from "../writing/humorBanks";
 
@@ -68,6 +70,8 @@ export class PuzzleChamberScene extends Phaser.Scene {
   private holdMs = 0;
   private holdRing?: Phaser.GameObjects.Arc;
   private holding = false;
+  private softFailCounts: Record<string, number> = {};
+  private attuneBreakCount = 0;
 
   constructor() {
     super("PuzzleChamber");
@@ -85,6 +89,21 @@ export class PuzzleChamberScene extends Phaser.Scene {
     this.holding = false;
     this.targets = [];
     this.nodeViews = [];
+    this.softFailCounts = {};
+    this.attuneBreakCount = 0;
+  }
+
+  private nextSoftFailLine(): string {
+    const key = this.room.id;
+    const count = this.softFailCounts[key] ?? 0;
+    this.softFailCounts[key] = count + 1;
+    return pickPuzzleSoftFail(this.room.theme, count);
+  }
+
+  private nextAttuneBreakLine(): string {
+    const line = pickAttuneBreakLine(this.attuneBreakCount);
+    this.attuneBreakCount += 1;
+    return line;
   }
 
   create() {
@@ -127,11 +146,17 @@ export class PuzzleChamberScene extends Phaser.Scene {
       this.input.keyboard?.on("keyup-SPACE", () => (this.holding = false));
     }
 
-    if (this.room.intro && this.room.intro.length > 0) {
+    const introTexts = [...(this.room.intro ?? [])];
+
+    if (this.room.theme === "venusian_harmony") {
+      introTexts.push(pickAttuneStartLine(0));
+    }
+
+    if (introTexts.length > 0) {
       this.busy = true;
       runDialog(
         this,
-        this.room.intro.map((text) => ({ who: "CHAMBER", text })),
+        introTexts.map((text) => ({ who: "CHAMBER", text })),
         () => {
           this.busy = false;
           this.refreshCursor();
@@ -327,7 +352,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
     if (t.id === "basin") {
       const both = !!ns.mirror_a && !!ns.mirror_b;
       if (!both) {
-        this.softFail(pickPuzzleSoftFail(this.room.theme, 0));
+        this.softFail(this.nextSoftFailLine());
         return;
       }
       setPuzzleNodeState(this.save, this.room.id, "basin", true);
@@ -352,7 +377,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
 
     if (!isTrue) {
       // dim all glyphs visually for a moment
-      this.softFail(pickPuzzleSoftFail(this.room.theme, 0));
+      this.softFail(this.nextSoftFailLine());
       for (const n of this.room.nodes) {
         if (n.kind === "name_glyph") {
           setPuzzleNodeState(this.save, this.room.id, n.id, false);
@@ -378,9 +403,15 @@ export class PuzzleChamberScene extends Phaser.Scene {
     const t = this.targets[this.cursor];
     const ns = getPuzzleState(this.save, this.room).nodeState;
     const cur = !!ns[t.id];
+
     setPuzzleNodeState(this.save, this.room.id, t.id, !cur);
     this.flash(t.x, t.y, 0xf0c8d8);
     this.refreshAllNodes();
+
+    if (cur) {
+      this.softFail(this.nextAttuneBreakLine());
+      return;
+    }
 
     const after = getPuzzleState(this.save, this.room).nodeState;
     if (!!after.pair_a && !!after.pair_b) {

@@ -39,7 +39,7 @@ export const HUMOR_BANNED_PATTERNS = [
   "administration",
   "bureaucracy",
   "bureaucratic",
-];
+] as const;
 
 export const HUMOR_GLOBAL_RULES = {
   target:
@@ -115,15 +115,54 @@ export const SPHERE_HUMOR_PROFILES: SphereHumorProfile[] = [
   },
 ];
 
-export function containsBureaucraticHumor(line: string): boolean {
-  const lower = line.toLowerCase();
-  return HUMOR_BANNED_PATTERNS.some((p) => lower.includes(p));
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function assertHumorPolicy(lines: string[]): void {
-  for (const line of lines) {
-    if (containsBureaucraticHumor(line)) {
-      throw new Error(`Humor policy violation: bureaucratic term detected in line: ${line}`);
-    }
+const BUREAUCRATIC_REGEXES = HUMOR_BANNED_PATTERNS.map(
+  (pattern) => new RegExp(`\\b${escapeRegExp(pattern)}\\b`, "i"),
+);
+
+export function containsBureaucraticHumor(line: string): boolean {
+  return BUREAUCRATIC_REGEXES.some((rx) => rx.test(line));
+}
+
+export function findBureaucraticHumorMatches(line: string): string[] {
+  return HUMOR_BANNED_PATTERNS.filter((_pattern, i) =>
+    BUREAUCRATIC_REGEXES[i].test(line),
+  );
+}
+
+export function assertHumorPolicy(
+  lines: string[],
+  options?: {
+    fatal?: boolean;
+    label?: string;
+  },
+): void {
+  const fatal = options?.fatal ?? false;
+  const label = options?.label ?? "humor";
+
+  const violations = lines
+    .map((line) => ({
+      line,
+      matches: findBureaucraticHumorMatches(line),
+    }))
+    .filter((v) => v.matches.length > 0);
+
+  if (violations.length === 0) return;
+
+  const message =
+    `[${label}] Humor policy violation(s):\n` +
+    violations
+      .map((v) => `- ${v.matches.join(", ")} -> ${v.line}`)
+      .join("\n");
+
+  if (fatal) {
+    throw new Error(message);
+  }
+
+  if (typeof console !== "undefined" && console.warn) {
+    console.warn(message);
   }
 }
