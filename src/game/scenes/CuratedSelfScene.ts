@@ -896,8 +896,8 @@ export class EpilogueScene extends Phaser.Scene {
       });
     }
 
-    // Halo behind title
-    const halo = this.add.circle(GBC_W / 2, 22, 24, tint[0], 0.18).setDepth(3);
+    // Halo behind title (lowered to clear the global top stat bar)
+    const halo = this.add.circle(GBC_W / 2, 24, 24, tint[0], 0.18).setDepth(3);
     this.tweens.add({
       targets: halo,
       scale: 1.3,
@@ -920,8 +920,8 @@ export class EpilogueScene extends Phaser.Scene {
       iron: "IRON",
       brittle: "BRITTLE",
     };
-    new GBCText(this, GBC_W / 2 - 22, 14, "ACT THREE", { color: COLOR.textAccent, depth: 10 });
-    new GBCText(this, GBC_W / 2 - 26, 24, `ENDING: ${tierLabel[tier]}`, {
+    new GBCText(this, GBC_W / 2 - 22, 16, "ACT THREE", { color: COLOR.textAccent, depth: 10 });
+    new GBCText(this, GBC_W / 2 - 26, 26, `ENDING: ${tierLabel[tier]}`, {
       color: COLOR.textGold,
       depth: 10,
     });
@@ -934,24 +934,26 @@ export class EpilogueScene extends Phaser.Scene {
     vignette.fillRect(0, 0, 4, GBC_H);
     vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
-    drawGBCBox(this, 8, 36, GBC_W - 16, 70);
-    const paragraphs = endingParagraphs(this.save);
-    let y = 40;
-    for (const para of paragraphs.slice(0, 4)) {
+    // Paragraph box: tighter line spacing, max 3 entries, append overflow to last.
+    drawGBCBox(this, 8, 38, GBC_W - 16, 64);
+    const allParas = endingParagraphs(this.save);
+    const paragraphs =
+      allParas.length <= 3 ? allParas : [...allParas.slice(0, 2), `${allParas[2]} ${allParas.slice(3).join(" ")}`];
+    let y = 42;
+    for (const para of paragraphs) {
       new GBCText(this, 12, y, para, {
         color: COLOR.textLight,
         depth: 110,
         maxWidthPx: GBC_W - 24,
       });
-      y += 16;
+      y += 14;
     }
-
-    // Stats strip
+    // Stats line tucked at the bottom of the paragraph box.
     const ng = this.save.flags.ng_plus ? " ★" : "";
     new GBCText(
       this,
-      8,
-      108,
+      12,
+      94,
       `C:${this.save.stats.clarity} K:${this.save.stats.compassion} V:${this.save.stats.courage} ◆${this.save.shards.length}${ng}`,
       { color: COLOR.textDim, depth: 110 },
     );
@@ -970,12 +972,12 @@ export class EpilogueScene extends Phaser.Scene {
       .setDepth(199);
     this.optionTexts = this.options.map(
       (o, i) =>
-        new GBCText(this, 18, GBC_H - 36 + i * 11, o.label, {
+        new GBCText(this, 18, GBC_H - 34 + i * 10, o.label, {
           color: i === 0 ? COLOR.textGold : COLOR.textDim,
           depth: 200,
         }),
     );
-    this.cursorMark = new GBCText(this, 8, GBC_H - 36, "▶", {
+    this.cursorMark = new GBCText(this, 8, GBC_H - 34, "▶", {
       color: COLOR.textGold,
       depth: 200,
     });
