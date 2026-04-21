@@ -6,7 +6,7 @@ import { runInquiry, type InquiryOption, type InquiryChoice } from "../../inquir
 import { runRhythmTap } from "../minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "../lore";
 import { awardShardFragment } from "../../shardFeedback";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, textHeightPx } from "../../gbcArt";
 import { getAudio } from "../../audio";
 import { setSoulState, soulState, type SoulId, SOULS } from "./souls";
 
@@ -267,20 +267,27 @@ function runIdleStep(
   onDone: () => void,
   onAbort: () => void,
 ) {
+  const boxX = 12;
   const boxW = GBC_W - 24;
-  const box = drawGBCBox(scene, 12, 60, boxW, 28, 800);
-  const title = new GBCText(scene, 16, 64, prompt.toUpperCase(), {
+  const innerW = boxW - 8;
+  const promptUpper = prompt.toUpperCase();
+  const titleH = textHeightPx(promptUpper, innerW);
+  const boxH = Math.max(28, 12 + titleH + 10);
+  const boxY = Math.min(GBC_H - boxH - 4, 60);
+  const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 800);
+  const title = new GBCText(scene, boxX + 4, boxY + 4, promptUpper, {
     color: COLOR.textAccent,
     depth: 801,
     scrollFactor: 0,
-    maxWidthPx: boxW - 8,
+    maxWidthPx: innerW,
   });
+  const barY = boxY + 8 + titleH + 6;
   const bar = scene.add
-    .rectangle(16, 80, 0, 3, 0xffe098, 1)
+    .rectangle(boxX + 4, barY, 0, 3, 0xffe098, 1)
     .setOrigin(0, 0.5)
     .setScrollFactor(0)
     .setDepth(801);
-  const maxW = boxW - 8;
+  const maxW = innerW;
 
   const start = scene.time.now;
   let cancelled = false;
@@ -317,7 +324,6 @@ function runIdleStep(
       }
     },
   });
-  void GBC_H;
 }
 
 function nameOf(id: SoulId): string {

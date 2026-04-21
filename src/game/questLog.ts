@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "./gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, fitSingleLineText } from "./gbcArt";
 import type { SaveSlot } from "./types";
 import { getAudio } from "./audio";
 import { onActionDown, onDirection } from "./controls";
@@ -23,7 +23,8 @@ export function openQuestLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =
     .setScrollFactor(0)
     .setDepth(900);
   const box = drawGBCBox(scene, 6, 14, GBC_W - 12, GBC_H - 28, 901);
-  const title = new GBCText(scene, 12, 18, "QUEST LOG", {
+  // Row 1: static section title + counter
+  const sectionTitle = new GBCText(scene, 12, 18, "QUEST LOG", {
     color: COLOR.textAccent,
     depth: 902,
     scrollFactor: 0,
@@ -33,12 +34,19 @@ export function openQuestLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =
     depth: 902,
     scrollFactor: 0,
   });
-  const status = new GBCText(scene, 12, 30, "", {
+  // Row 2: quest title (single-line fit)
+  const questTitle = new GBCText(scene, 12, 30, "", {
+    color: COLOR.textGold,
+    depth: 902,
+    scrollFactor: 0,
+  });
+  // Row 3: status (single-line fit)
+  const status = new GBCText(scene, 12, 40, "", {
     color: COLOR.textDim,
     depth: 902,
     scrollFactor: 0,
   });
-  const body = new GBCText(scene, 12, 42, "", {
+  const body = new GBCText(scene, 12, 52, "", {
     color: COLOR.textLight,
     depth: 902,
     scrollFactor: 0,
@@ -50,20 +58,22 @@ export function openQuestLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =
     scrollFactor: 0,
   });
 
+  const FIT_W = GBC_W - 24;
   let idx = 0;
   const render = () => {
     if (ordered.length === 0) {
-      title.setText("QUEST LOG");
       counter.setText("");
-      status.setText("(NO QUESTS YET)");
+      questTitle.setText(fitSingleLineText("(NO QUESTS YET)", FIT_W));
+      status.setText("");
       body.setText("WALK. SPEAK. SOULS WILL ASK.");
       return;
     }
     const id = ordered[idx];
     const st = save.sideQuests[id];
-    title.setText(SIDE_QUEST_TITLES[id]);
+    questTitle.setText(fitSingleLineText(SIDE_QUEST_TITLES[id], FIT_W));
     counter.setText(`${idx + 1}/${ordered.length}`);
-    status.setText(st === "done" ? "✓ DONE" : "● ACTIVE");
+    const statusText = st === "done" ? "✓ DONE" : "● ACTIVE";
+    status.setText(fitSingleLineText(statusText, FIT_W));
     status.setColor(st === "done" ? COLOR.textGold : COLOR.textAccent);
     const next = SIDE_QUEST_NEXT_HINT[id];
     if (st === "done" && next && save.sideQuests[next] !== "done") {
@@ -87,8 +97,9 @@ export function openQuestLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =
     scene.events.off("vinput-cancel", close);
     dim.destroy();
     box.destroy();
-    title.destroy();
+    sectionTitle.destroy();
     counter.destroy();
+    questTitle.destroy();
     status.destroy();
     body.destroy();
     hint.destroy();

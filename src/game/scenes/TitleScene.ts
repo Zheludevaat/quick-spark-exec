@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes, fitSingleLineText } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
@@ -362,25 +362,64 @@ export class TitleScene extends Phaser.Scene {
       color: COLOR.textGold,
       depth: 952,
     });
+    const counter = new GBCText(this, GBC_W - 36, 12, "", {
+      color: COLOR.textDim,
+      depth: 952,
+    });
 
     const lineH = 9;
     const startY = 24;
+    const visibleRows = Math.min(10, jumps.length);
+    const ITEM_X = 18;
+    const ITEM_FIT_W = GBC_W - ITEM_X - 8;
     let pick = 0;
 
-    const items: GBCText[] = jumps.map(
-      (j, i) =>
-        new GBCText(this, 18, startY + i * lineH, j.label, {
+    // Render slots are reused; only their text/visibility/color change as we
+    // scroll the windowed list.
+    const items: GBCText[] = [];
+    for (let i = 0; i < visibleRows; i++) {
+      items.push(
+        new GBCText(this, ITEM_X, startY + i * lineH, "", {
           color: COLOR.textLight,
           depth: 952,
         }),
-    );
+      );
+    }
     const mark = new GBCText(this, 10, startY, "▶", {
       color: COLOR.textGold,
       depth: 953,
     });
+
+    const computeStart = (p: number): number => {
+      const half = Math.floor(visibleRows / 2);
+      const max = Math.max(0, jumps.length - visibleRows);
+      return Math.max(0, Math.min(max, p - half));
+    };
+
+    // Map row index → absolute jumps index for current frame, used by pointer
+    // handlers (rebuilt on every refreshSkip).
+    let rowToJump: number[] = [];
+
     const refreshSkip = () => {
-      items.forEach((t, i) => t.setColor(i === pick ? COLOR.textGold : COLOR.textLight));
-      mark.setPosition(10, startY + pick * lineH);
+      const start = computeStart(pick);
+      rowToJump = [];
+      for (let row = 0; row < visibleRows; row++) {
+        const abs = start + row;
+        const j = jumps[abs];
+        if (!j) {
+          items[row].setText("");
+          items[row].obj.setVisible(false);
+          rowToJump.push(-1);
+          continue;
+        }
+        items[row].obj.setVisible(true);
+        items[row].setText(fitSingleLineText(j.label, ITEM_FIT_W));
+        items[row].setColor(abs === pick ? COLOR.textGold : COLOR.textLight);
+        rowToJump.push(abs);
+      }
+      const visiblePick = pick - start;
+      mark.setPosition(10, startY + visiblePick * lineH);
+      counter.setText(`${pick + 1}/${jumps.length}`);
     };
     refreshSkip();
 
@@ -391,12 +430,14 @@ export class TitleScene extends Phaser.Scene {
       dim.destroy();
       box.destroy();
       title.destroy();
+      counter.destroy();
       items.forEach((t) => t.destroy());
       mark.destroy();
     };
 
     const jumpTo = (idx: number) => {
       const j = jumps[idx];
+      if (!j) return;
       audio.sfx("confirm");
       // Fully-stocked save so reactive content (Act 2/3) has something to show.
       const slot = newSave();
@@ -458,13 +499,18 @@ export class TitleScene extends Phaser.Scene {
       }
     });
 
-    items.forEach((t, i) => {
+    items.forEach((t, row) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
-        pick = i;
+        const abs = rowToJump[row];
+        if (abs < 0) return;
+        pick = abs;
         refreshSkip();
       });
-      t.obj.on("pointerdown", () => jumpTo(i));
+      t.obj.on("pointerdown", () => {
+        const abs = rowToJump[row];
+        if (abs >= 0) jumpTo(abs);
+      });
     });
   }
 }
