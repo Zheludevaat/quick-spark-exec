@@ -222,6 +222,18 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.refreshCursor();
   }
 
+  /** Final on-screen string for a station, including the trailing suffix. */
+  private stationDisplay(st: Station): string {
+    let suffix = "";
+    if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
+      suffix = " *";
+    }
+    if (st.kind === "settle" && !this.isCracked()) {
+      suffix = " -";
+    }
+    return st.label + suffix;
+  }
+
   private refreshCursor() {
     const s = this.stations[this.cursor];
 
@@ -240,22 +252,24 @@ export class SpherePlateauScene extends Phaser.Scene {
         return;
       }
       let color = COLOR.textLight;
-      let suffix = "";
+      const display = this.stationDisplay(st);
 
       if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
         color = COLOR.textDim;
-        suffix = " *";
       }
-
       if (st.kind === "settle" && !this.isCracked()) {
         color = COLOR.textDim;
-        suffix = " -";
       }
-
       if (abs === this.cursor) color = COLOR.textGold;
-      t.setText(fitSingleLineText(st.label + suffix, this.labelFitW));
+
+      const state = fitSingleLineState(display, this.labelFitW);
+      t.setText(state.fitted);
       t.setColor(color);
     });
+
+    if (this.selectedReadout) {
+      this.selectedReadout.setText(fitSingleLineState(this.stationDisplay(s), this.labelFitW).full);
+    }
 
     if (s.kind === "trial") {
       this.hint.setText(this.isCracked() ? "A: enter the Trial" : "Answer the Cracking Question first.");
