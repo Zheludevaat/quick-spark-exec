@@ -20,8 +20,8 @@ export const mercuryConfig: SphereConfig = {
 
   opening: [
     { who: "SORYN", text: "Mercury. The Tower of Reasons." },
-    { who: "SORYN", text: "Here every thought is sharpened. Watch the cuts go both ways." },
-    { who: "?", text: "Voices arguing in three corners. None of them stop to listen." },
+    { who: "SORYN", text: "Every thought sharpened twice. Watch which way the cuts run." },
+    { who: "?", text: "Three voices arguing in three corners. None of them stop to listen." },
   ],
 
   souls: [
@@ -35,14 +35,14 @@ export const mercuryConfig: SphereConfig = {
       options: [
         {
           label: "Were you happy being right?",
-          reply: "...No. But I was right.",
+          reply: "...No. Being right was the only company I kept.",
           weight: 3,
           conviction: "rightness_is_lonely",
         },
-        { label: "Show me the argument.", reply: "Here. And here. And here.", weight: 1 },
+        { label: "Show me the argument.", reply: "Here. And here. And here. Look how clean.", weight: 1 },
         {
           label: "What did it cost?",
-          reply: "Everyone. It cost everyone.",
+          reply: "Everyone. It cost everyone. And I would do it again.",
           weight: 3,
           conviction: "rightness_is_lonely",
         },
@@ -56,13 +56,13 @@ export const mercuryConfig: SphereConfig = {
         text: "Define your terms. Define them again. I have not yet heard a clean definition.",
       },
       options: [
-        { label: "I cannot define it.", reply: "Then you have not understood.", weight: 3 },
+        { label: "I cannot define it.", reply: "Then you have not understood. Sit with the gap.", weight: 3 },
         {
           label: "Definitions are a cage.",
-          reply: "A cage is also a shape. Shapes are useful.",
+          reply: "A cage is also a shape. Shapes carry weight.",
           weight: 2,
         },
-        { label: "Try defining yourself.", reply: "...I am a man who asks for definitions.", weight: 3 },
+        { label: "Try defining yourself.", reply: "...I am a man who asks for definitions. That is the whole of me.", weight: 3 },
       ],
     },
     {
@@ -73,9 +73,9 @@ export const mercuryConfig: SphereConfig = {
         text: "I can argue either side. Both are correct. Both are wrong. Pick one and I will defeat it.",
       },
       options: [
-        { label: "Pick the one you believe.", reply: "I believe the argument. Not the side.", weight: 3 },
-        { label: "Then say nothing.", reply: "Silence is also a position.", weight: 2 },
-        { label: "I withdraw the question.", reply: "...That was the only honest move.", weight: 3 },
+        { label: "Pick the one you believe.", reply: "I believe the argument. The side is incidental.", weight: 3 },
+        { label: "Then say nothing.", reply: "Silence is also a position. A coward's, sometimes.", weight: 2 },
+        { label: "I withdraw the question.", reply: "...That was the only honest move you had.", weight: 3 },
       ],
     },
   ],
@@ -142,7 +142,7 @@ export const mercuryConfig: SphereConfig = {
 
   trialOpening: [
     { who: "HERMAIA", text: "I am the messenger. I name what passes through." },
-    { who: "HERMAIA", text: "Three things will come. Name them, or let them keep their names." },
+    { who: "HERMAIA", text: "Three things will arrive wearing faces. Name them — or let them keep their names." },
   ],
 
   trialRounds: [
@@ -176,14 +176,14 @@ export const mercuryConfig: SphereConfig = {
   ],
 
   trialPass: [
-    { who: "HERMAIA", text: "You named what you could. You let the rest pass." },
-    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Use it sparingly." },
-    { who: "SORYN", text: "Mercury releases its garment. The Tower stops arguing for a moment." },
+    { who: "HERMAIA", text: "You named what you could. You let the rest pass with their faces." },
+    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Spend it sparingly." },
+    { who: "SORYN", text: "Mercury releases its garment. The Tower stops arguing — for one held breath." },
   ],
 
   trialFail: [
-    { who: "HERMAIA", text: "You spoke much. You named little." },
-    { who: "SORYN", text: "Sit with the operations again. Try again when you can." },
+    { who: "HERMAIA", text: "You spoke much. You named little. The faces walked past." },
+    { who: "SORYN", text: "Sit with the operations again. Return when the words are quieter." },
   ],
 
   inscription: "I CAN NAME WHAT I DO NOT KNOW",

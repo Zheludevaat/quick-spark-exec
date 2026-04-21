@@ -64,6 +64,36 @@ const COLD = 0xa8c8e8;
 const STONE = 0x4a5468;
 const STONE_DARK = 0x2a3040;
 const INK = 0x88a4c8;
+const WARM = 0xe8c890; // ignition / named accent
+
+/**
+ * Ambient bark lines per soul kind. Used by the plateau's bark loop to
+ * make the Tower feel inhabited even when the player is just walking.
+ */
+const MERCURY_BARKS: Record<"npc_defender" | "npc_pedant" | "npc_casuist", string[]> = {
+  npc_defender: [
+    "NO. THE STRUCTURE MATTERS.",
+    "I PAID FOR BEING RIGHT.",
+    "THE COST WAS NOT THE ARGUMENT.",
+  ],
+  npc_pedant: [
+    "DEFINE IT AGAIN.",
+    "A SHAPE IS ALSO A CAGE.",
+    "YOU HIDE INSIDE THE TERM.",
+  ],
+  npc_casuist: [
+    "I CAN DEFEAT EITHER SIDE.",
+    "WITHDRAWAL IS SOMETIMES HONEST.",
+    "BOTH SIDES WANT TO WIN.",
+  ],
+};
+
+/** True names revealed once Mercury is cracked. NAME made local. */
+const MERCURY_TRUE_NAMES: { kind: StationKind; name: string; dy: number }[] = [
+  { kind: "statue", name: "VICTORY WITHOUT RELATION", dy: 14 },
+  { kind: "scrolls", name: "THE UNSAID", dy: 8 },
+  { kind: "chalkboard", name: "ASSUMPTION", dy: 12 },
+];
 
 /** ============================================================
  *  MERCURY PLATEAU — fully authored explorable scene
@@ -79,6 +109,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private statusText!: GBCText;
   private trialGlow!: Phaser.GameObjects.Arc;
   private mSave!: SaveSlot;
+  private chamberAltar?: Phaser.GameObjects.Rectangle;
+  private chamberSigil?: Phaser.GameObjects.GameObject[];
+  private chamberReadyShown = false;
+  private chamberPulseTween?: Phaser.Tweens.Tween;
+  private trialDoorHumTween?: Phaser.Tweens.Tween;
+  private ambientBarkEvent?: Phaser.Time.TimerEvent;
+  private activeBark?: GBCText;
+  private trueNameLabels: GBCText[] = [];
 
   constructor() {
     super("MercuryPlateau");
@@ -150,6 +188,19 @@ export class MercuryPlateauScene extends Phaser.Scene {
 
     this.refreshStatus();
 
+    // If the chamber is already ignited from a prior session, mark its
+    // ceremony as already shown so we don't replay the Soryn beat.
+    if (this.mSave.flags.sphere_mercury_cracked) this.chamberReadyShown = true;
+    this.refreshChamberGlow(true);
+
+    // If Mercury is cracked, hidden true names become visible immediately.
+    if (this.mSave.flags.sphere_mercury_cracked) {
+      this.revealTrueNames();
+    }
+
+    // Start ambient soul barks — gives the room continuous life.
+    this.startAmbientBarks();
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
@@ -170,6 +221,29 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Stone floor
     this.add.rectangle(0, 0, GBC_W, GBC_H, 0x0a1220).setOrigin(0).setDepth(0);
 
+    // --- Distant tower silhouettes — suggest infinite reasoning-halls ---
+    // Two faint, low-contrast spires behind the playable architecture.
+    this.add
+      .triangle(36, 90, 0, 60, 12, 0, 24, 60, 0x1a2238, 0.55)
+      .setDepth(0)
+      .setOrigin(0, 0);
+    this.add
+      .triangle(120, 90, 0, 60, 14, 0, 28, 60, 0x1a2238, 0.45)
+      .setDepth(0)
+      .setOrigin(0, 0);
+    this.add
+      .triangle(GBC_W / 2 - 10, 96, 0, 70, 10, 0, 20, 70, 0x12182c, 0.4)
+      .setDepth(0)
+      .setOrigin(0, 0);
+
+    // --- Hanging proof-rails (faint glyph architecture) ---
+    // Two horizontal chalk rails and one vertical, all dim — they imply
+    // logical scaffolding without competing with the chamber.
+    this.add.rectangle(0, 32, GBC_W, 1, INK, 0.18).setOrigin(0, 0).setDepth(1);
+    this.add.rectangle(0, 36, GBC_W, 1, INK, 0.12).setOrigin(0, 0).setDepth(1);
+    // Vertical proof line behind the chamber
+    this.add.rectangle(GBC_W / 2, 26, 1, 16, INK, 0.22).setOrigin(0.5, 0).setDepth(1);
+
     // Three vertical pillars suggesting a tower interior
     for (const px of [22, 80, 138]) {
       this.add.rectangle(px, 70, 6, 100, STONE_DARK).setOrigin(0.5).setDepth(1);
@@ -181,6 +255,26 @@ export class MercuryPlateauScene extends Phaser.Scene {
     const chamberY = 24;
     this.add.rectangle(GBC_W / 2, chamberY, 70, 16, STONE_DARK, 0.6).setDepth(1);
     this.add.rectangle(GBC_W / 2, chamberY, 70, 16).setStrokeStyle(1, COLD, 0.5).setDepth(1);
+
+    // --- Mercury sigil above the chamber: caduceus shorthand ---
+    // Stem + two crescents + small wings. Iconic at 160x144.
+    const sigilX = GBC_W / 2;
+    const sigilY = 8;
+    const stem = this.add.rectangle(sigilX, sigilY, 1, 8, COLD, 0.85).setDepth(4);
+    const orb = this.add.circle(sigilX, sigilY - 4, 2, COLD, 0.9).setDepth(4);
+    orb.setStrokeStyle(1, WARM, 0.6);
+    const wingL = this.add.triangle(sigilX - 3, sigilY - 3, 0, 0, -3, -2, 0, 2, COLD, 0.7).setDepth(4);
+    const wingR = this.add.triangle(sigilX + 3, sigilY - 3, 0, 0, 3, -2, 0, 2, COLD, 0.7).setDepth(4);
+    this.chamberSigil = [stem, orb, wingL, wingR];
+    // Subtle sigil pulse — visual memory anchor of the act.
+    this.tweens.add({
+      targets: orb,
+      alpha: 0.6,
+      duration: 1600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
 
     // Trial door — top center (locked until cracked)
     this.add.rectangle(GBC_W / 2, 14, 16, 14, 0x000000, 0.8).setDepth(2);
@@ -199,6 +293,23 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Floor seams suggesting tiers
     this.add.rectangle(0, 50, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
     this.add.rectangle(0, 86, GBC_W, 1, INK, 0.2).setOrigin(0, 0).setDepth(1);
+
+    // --- Alcove shape language for each NPC station ---
+    // Defender (left) — squared, rigid plinth. The frame of someone
+    // who has built a fort out of being right.
+    this.add.rectangle(26, 104, 18, 2, STONE, 0.7).setDepth(2);
+    this.add.rectangle(17, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
+    this.add.rectangle(35, 100, 2, 8, STONE_DARK, 0.85).setDepth(2);
+    // Pedant (center) — narrow vertical order, like a card catalog.
+    this.add.rectangle(80, 108, 12, 1, INK, 0.5).setDepth(2);
+    this.add.rectangle(75, 90, 1, 18, INK, 0.4).setDepth(2);
+    this.add.rectangle(85, 90, 1, 18, INK, 0.4).setDepth(2);
+    this.add.rectangle(80, 92, 8, 1, INK, 0.4).setDepth(2);
+    // Casuist (right) — slightly skewed, doubled outline. Two stances at once.
+    this.add.rectangle(132, 104, 18, 2, STONE, 0.6).setDepth(2);
+    this.add.rectangle(132, 102, 14, 1, STONE_DARK, 0.55).setDepth(2);
+    this.add.line(0, 0, 124, 90, 138, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
+    this.add.line(0, 0, 144, 90, 130, 104, 0x90c8a8, 0.35).setOrigin(0, 0).setDepth(2);
   }
 
   /** ============================================================
@@ -357,16 +468,9 @@ export class MercuryPlateauScene extends Phaser.Scene {
         ) >= mercuryConfig.operations.length;
       const altar = this.add.rectangle(x, y, 12, 8, ready ? COLD : STONE_DARK, 0.9).setDepth(8);
       altar.setStrokeStyle(1, COLD, ready ? 0.9 : 0.3);
+      this.chamberAltar = altar;
       visual.push(altar);
-      if (ready) {
-        this.tweens.add({
-          targets: altar,
-          alpha: 0.6,
-          duration: 800,
-          yoyo: true,
-          repeat: -1,
-        });
-      }
+      // Persistent pulse is applied by refreshChamberGlow() once ready.
     } else if (kind === "trial_door") {
       // glow handled separately; refresh later
     } else if (kind === "exit_stairs") {
@@ -533,6 +637,8 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mSave.flags[doneFlag] = true;
       writeSave(this.mSave);
+      const st = this.stations.find((s) => s.doneFlag === doneFlag);
+      if (st) this.markStationResolved(st);
       this.busy = false;
     });
   }
@@ -594,6 +700,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                   if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
                   writeSave(this.mSave);
                   this.refreshStatus();
+                  this.markStationResolved(st);
                   this.refreshChamberGlow();
                   getAudio().sfx("resolve");
                   runDialog(
@@ -662,6 +769,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
               if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
               writeSave(this.mSave);
               this.refreshStatus();
+              this.markStationResolved(st);
               this.refreshChamberGlow();
               getAudio().sfx("resolve");
               runDialog(
@@ -754,6 +862,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
         if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
         writeSave(this.mSave);
         this.refreshStatus();
+        this.markStationResolved(st);
         this.refreshChamberGlow();
         getAudio().sfx("resolve");
         runDialog(
@@ -824,6 +933,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
       writeSave(this.mSave);
       this.refreshStatus();
+      this.markStationResolved(st);
       this.refreshChamberGlow();
       this.busy = false;
     });
@@ -892,6 +1002,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mSave.flags.sphere_mercury_cracked = true;
       writeSave(this.mSave);
+      this.revealTrueNames();
       runDialog(
         this,
         [
@@ -905,21 +1016,244 @@ export class MercuryPlateauScene extends Phaser.Scene {
     });
   }
 
-  private refreshChamberGlow() {
+  /**
+   * Update chamber readiness visuals. When readiness flips for the first
+   * time this visit, run a one-shot ignition sequence (altar bloom, sigil
+   * warm-up, trial-door hum, Soryn beat). After that, keep the persistent
+   * altar pulse and trial-door hum alive.
+   *
+   * @param force  Allow the routine to run on initial create() even if no
+   *               op was just completed.
+   */
+  private refreshChamberGlow(force = false) {
     const ready =
       opsCompleted(
         this.mSave,
         "mercury",
         mercuryConfig.operations.map((o) => o.id),
       ) >= mercuryConfig.operations.length;
-    if (ready) {
-      // visually rebuild altar glow — find the chamber visual
-      const st = this.stations.find((s) => s.kind === "crack_chamber");
-      if (st && st.visual && st.visual[0]) {
-        const altar = st.visual[0] as Phaser.GameObjects.Rectangle;
-        altar.setFillStyle(COLD, 0.9);
-        altar.setStrokeStyle(1, COLD, 0.9);
+    if (!ready) return;
+    if (!this.chamberAltar) return;
+
+    // First-time ignition: ceremonial.
+    if (!this.chamberReadyShown) {
+      this.chamberReadyShown = true;
+
+      // Sharp bloom on the altar.
+      this.chamberAltar.setFillStyle(COLD, 1);
+      this.chamberAltar.setStrokeStyle(2, WARM, 1);
+      const burst = this.add
+        .circle(this.chamberAltar.x, this.chamberAltar.y, 6, WARM, 0.5)
+        .setDepth(9);
+      this.tweens.add({
+        targets: burst,
+        scale: 5,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => burst.destroy(),
+      });
+
+      // Sigil warms up to gold for one breath.
+      this.chamberSigil?.forEach((g) => {
+        const anyG = g as Phaser.GameObjects.Shape;
+        if ("setFillStyle" in anyG) {
+          (anyG as Phaser.GameObjects.Rectangle).setFillStyle(WARM, 0.95);
+        }
+      });
+      this.time.delayedCall(900, () => {
+        this.chamberSigil?.forEach((g) => {
+          const anyG = g as Phaser.GameObjects.Shape;
+          if ("setFillStyle" in anyG) {
+            (anyG as Phaser.GameObjects.Rectangle).setFillStyle(COLD, 0.85);
+          }
+        });
+      });
+
+      getAudio().sfx("resolve");
+
+      // Persistent altar pulse — slow and stable.
+      this.chamberPulseTween?.stop();
+      this.chamberPulseTween = this.tweens.add({
+        targets: this.chamberAltar,
+        alpha: 0.65,
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      // Trial door gains a stronger hum.
+      this.trialDoorHumTween?.stop();
+      this.trialGlow.setFillStyle(COLD, 0.6);
+      this.trialDoorHumTween = this.tweens.add({
+        targets: this.trialGlow,
+        scale: 1.6,
+        alpha: 0.85,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      // Soryn beat — only on actual ignition, not on revisit.
+      if (!force && !this.busy) {
+        this.busy = true;
+        this.time.delayedCall(700, () => {
+          runDialog(
+            this,
+            [
+              { who: "SORYN", text: "The Tower has finished arranging its premise." },
+              { who: "SORYN", text: "The Question is ready. The door above remembers." },
+            ],
+            () => {
+              this.busy = false;
+            },
+          );
+        });
       }
+      return;
+    }
+
+    // Already-ignited revisit: keep persistent pulses alive if missing.
+    if (!this.chamberPulseTween && this.chamberAltar) {
+      this.chamberPulseTween = this.tweens.add({
+        targets: this.chamberAltar,
+        alpha: 0.65,
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+    if (!this.trialDoorHumTween && this.trialGlow) {
+      this.trialGlow.setFillStyle(COLD, 0.6);
+      this.trialDoorHumTween = this.tweens.add({
+        targets: this.trialGlow,
+        scale: 1.6,
+        alpha: 0.85,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+  }
+
+  /**
+   * Visually mark a station as resolved immediately on success — no scene
+   * reload required. Each station type gets its own settled feel.
+   */
+  private markStationResolved(st: MStation) {
+    if (!st.visual?.length) return;
+    for (const v of st.visual) {
+      const anyV = v as Phaser.GameObjects.Shape;
+      if ("setAlpha" in anyV) (anyV as Phaser.GameObjects.Rectangle).setAlpha(0.55);
+    }
+    const flash = this.add.circle(st.x, st.y - 4, 4, COLD, 0.5).setDepth(30);
+    this.tweens.add({
+      targets: flash,
+      scale: 4,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => flash.destroy(),
+    });
+
+    // Chalkboard gets a visible "resolved" mark — a bright underline.
+    if (st.kind === "chalkboard") {
+      this.add
+        .rectangle(st.x, st.y + 5, 12, 1, WARM, 1)
+        .setDepth(11);
+    }
+    // Puzzle plinths leave a quiet residual top mark.
+    if (
+      st.kind === "puzzle_syllogism" ||
+      st.kind === "puzzle_refutation" ||
+      st.kind === "puzzle_silence"
+    ) {
+      this.add.circle(st.x, st.y - 4, 1, WARM, 0.9).setDepth(12);
+    }
+    // NPC stations get a brief settled halo.
+    if (st.kind.startsWith("npc_")) {
+      const halo = this.add
+        .circle(st.x, st.y - 2, 8, COLD, 0.0)
+        .setStrokeStyle(1, COLD, 0.5)
+        .setDepth(14);
+      this.tweens.add({
+        targets: halo,
+        scale: 1.6,
+        alpha: { from: 0.6, to: 0 },
+        duration: 1000,
+        onComplete: () => halo.destroy(),
+      });
+    }
+  }
+
+  /**
+   * Lightweight ambient bark loop. One bark on screen at a time, only
+   * fires while the player is not busy and the soul is still unsolved.
+   */
+  private startAmbientBarks() {
+    this.ambientBarkEvent?.remove(false);
+    this.ambientBarkEvent = this.time.addEvent({
+      delay: Phaser.Math.Between(5000, 8000),
+      loop: true,
+      callback: () => {
+        if (this.busy || this.activeBark) return;
+        const souls = this.stations.filter(
+          (s) =>
+            (s.kind === "npc_defender" ||
+              s.kind === "npc_pedant" ||
+              s.kind === "npc_casuist") &&
+            !(s.doneFlag && this.mSave.flags[s.doneFlag]),
+        );
+        if (!souls.length) return;
+        const st = Phaser.Utils.Array.GetRandom(souls) as MStation;
+        const lines =
+          MERCURY_BARKS[st.kind as "npc_defender" | "npc_pedant" | "npc_casuist"];
+        const line = Phaser.Utils.Array.GetRandom(lines);
+        const bark = new GBCText(this, st.x - 22, st.y - 20, line, {
+          color: COLOR.textDim,
+          depth: 40,
+          maxWidthPx: 64,
+        });
+        this.activeBark = bark;
+        this.tweens.add({
+          targets: bark.obj,
+          alpha: 0,
+          y: st.y - 30,
+          duration: 1800,
+          onComplete: () => {
+            bark.destroy();
+            if (this.activeBark === bark) this.activeBark = undefined;
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * Reveal hidden true-name captions next to the room's nameable objects.
+   * Triggered when Mercury is cracked. This is the local payoff for NAME:
+   * the verb makes hidden conceptual structure visible inside the act.
+   */
+  private revealTrueNames() {
+    if (this.trueNameLabels.length) return; // idempotent
+    for (const tn of MERCURY_TRUE_NAMES) {
+      const st = this.stations.find((s) => s.kind === tn.kind);
+      if (!st) continue;
+      const label = new GBCText(this, st.x - 28, st.y + tn.dy, tn.name, {
+        color: COLOR.textGold,
+        depth: 18,
+        maxWidthPx: 60,
+      });
+      label.obj.setAlpha(0);
+      this.tweens.add({
+        targets: label.obj,
+        alpha: 0.85,
+        duration: 900,
+        ease: "Sine.inOut",
+      });
+      this.trueNameLabels.push(label);
     }
   }
 
@@ -970,6 +1304,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private busy = false;
   private mScore = 0;
   private mSave!: SaveSlot;
+  private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() {
     super("MercuryTrial");
@@ -1009,23 +1344,42 @@ export class MercuryTrialScene extends Phaser.Scene {
       depth: 50,
     });
 
-    // Three doors arranged across the chamber
+    // Cumulative chamber sigil — gains a segment per door named.
+    this.chamberSigilSegs = [];
+    for (let s = 0; s < 3; s++) {
+      const seg = this.add
+        .rectangle(GBC_W / 2 - 12 + s * 12, 22, 8, 2, COLD, 0.18)
+        .setDepth(8);
+      this.chamberSigilSegs.push(seg);
+    }
+
+    // Three doors — each carries its own visual character.
+    // Doubt: cool, flickering, unstable.
+    // Certainty: rigid, solid, stronger glow.
+    // Silence: dimmer, slower, quieter.
     const ys = 50;
     const xs = [32, 80, 128];
     const labels = ["DOUBT", "CERTAINTY", "SILENCE"];
+    const colors = [0x88a8d8, 0xe8c890, 0x8090b0];
+    const alphas = [0.7, 0.95, 0.55];
+    const pulseDur = [700, 1400, 1900];
+    const easings = ["Sine.inOut", "Quad.inOut", "Sine.inOut"];
     for (let i = 0; i < 3; i++) {
-      const arc = this.add.circle(xs[i], ys, 10, COLD, 0.8).setDepth(10);
-      arc.setStrokeStyle(2, 0xffffff, 0.6);
-      // Door frame
-      this.add.rectangle(xs[i], ys + 14, 18, 4, STONE_DARK).setDepth(9);
-      // Pulse
+      const arc = this.add.circle(xs[i], ys, 10, colors[i], alphas[i]).setDepth(10);
+      arc.setStrokeStyle(i === 1 ? 2 : 1, 0xffffff, i === 1 ? 0.8 : 0.5);
+      // Door frame — Certainty's frame is heavier.
+      this.add
+        .rectangle(xs[i], ys + 14, 18, i === 1 ? 5 : 4, STONE_DARK)
+        .setDepth(9);
+      // Pulse — flicker for Doubt, slow breath for Silence.
       this.tweens.add({
         targets: arc,
-        scale: 1.2,
-        alpha: 0.5,
-        duration: 1100 + i * 200,
+        scale: i === 0 ? 1.35 : i === 1 ? 1.1 : 1.05,
+        alpha: i === 0 ? 0.35 : i === 1 ? 0.7 : 0.35,
+        duration: pulseDur[i],
         yoyo: true,
         repeat: -1,
+        ease: easings[i],
       });
       const lbl = new GBCText(this, xs[i] - 14, ys + 18, labels[i], {
         color: COLOR.textDim,
@@ -1127,15 +1481,57 @@ export class MercuryTrialScene extends Phaser.Scene {
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       this.mScore += picked.weight;
       door.done = true;
-      door.visual.setAlpha(0.25);
+
+      // Brief collapse/exhale on the door, then leave a quiet seal ring.
+      this.tweens.add({
+        targets: door.visual,
+        scale: 0.6,
+        alpha: 0.18,
+        duration: 350,
+        ease: "Quad.in",
+      });
+      const seal = this.add
+        .circle(door.visual.x, door.visual.y, 8, COLD, 0)
+        .setStrokeStyle(1, COLOR.textGold === "#e8c890" ? 0xe8c890 : 0xffd070, 0.7)
+        .setDepth(11);
+      this.tweens.add({
+        targets: seal,
+        scale: 1.4,
+        alpha: { from: 0.9, to: 0.4 },
+        duration: 600,
+      });
+
       door.label.setColor(COLOR.textGold);
       door.label.setText("NAMED");
       getAudio().sfx("resolve");
+
+      // Cumulative chamber indicator — light one sigil segment per name.
+      const namedCount = this.doors.filter((d) => d.done).length;
+      const seg = this.chamberSigilSegs[namedCount - 1];
+      if (seg) {
+        seg.setFillStyle(0xe8c890, 0.95);
+        this.tweens.add({
+          targets: seg,
+          scale: { from: 1.5, to: 1 },
+          duration: 500,
+          ease: "Back.out",
+        });
+      }
+
       writeSave(this.mSave);
 
       const remaining = this.doors.filter((d) => !d.done).length;
       if (remaining === 0) {
-        this.time.delayedCall(400, () => this.resolve());
+        // Brief ceremonial weighing beat before pass/fail.
+        this.time.delayedCall(500, () => {
+          runDialog(
+            this,
+            [
+              { who: "HERMAIA", text: "Three names. I weigh them." },
+            ],
+            () => this.resolve(),
+          );
+        });
       } else {
         this.busy = false;
       }
