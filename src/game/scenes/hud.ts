@@ -84,6 +84,32 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     // the composite overlay state (settings | lore | inventory).
     setOverlaySnapshot({ settingsOpen: true });
     clearVirtualInput();
+
+    if (!isTouchShell) {
+      // Desktop: shell owns the rendering. Publish modal surface and let
+      // DesktopModalHost render the React settings panel. We listen for
+      // a window event the shell fires when the user closes it.
+      setModalSnapshot({
+        surface: "settings",
+        mode: "shell",
+        title: "SETTINGS",
+        subtitle: null,
+        blocking: true,
+      });
+      const onClose = () => {
+        window.removeEventListener("hermetic-settings-close", onClose);
+        settingsOpen = false;
+        scene.data.set("__settingsOpen", false);
+        setOverlaySnapshot({ settingsOpen: false });
+        if (getGameUiSnapshot().modal.surface === "settings") {
+          clearModalSnapshot();
+        }
+        rebuildPad();
+      };
+      window.addEventListener("hermetic-settings-close", onClose);
+      return;
+    }
+
     openSettings(scene, () => {
       settingsOpen = false;
       scene.data.set("__settingsOpen", false);
@@ -99,6 +125,29 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     scene.data.set("__loreOpen", true);
     setOverlaySnapshot({ loreOpen: true });
     clearVirtualInput();
+
+    if (!isTouchShell) {
+      // Desktop: shell-owned lore log.
+      setModalSnapshot({
+        surface: "lore",
+        mode: "shell",
+        title: "LORE LOG",
+        subtitle: null,
+        blocking: true,
+      });
+      const onClose = () => {
+        window.removeEventListener("hermetic-lore-close", onClose);
+        loreOpen = false;
+        scene.data.set("__loreOpen", false);
+        setOverlaySnapshot({ loreOpen: false });
+        if (getGameUiSnapshot().modal.surface === "lore") {
+          clearModalSnapshot();
+        }
+      };
+      window.addEventListener("hermetic-lore-close", onClose);
+      return;
+    }
+
     openLoreLog(scene, s, () => {
       loreOpen = false;
       scene.data.set("__loreOpen", false);
