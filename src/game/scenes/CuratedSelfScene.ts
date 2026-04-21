@@ -1,30 +1,23 @@
 /**
- * Compatibility shim — the legacy CuratedSelf monolith has been split into
- * SunPlateauScene (Act 6 plateau) and SunTrialScene (Helion's trial).
+ * Legacy compatibility wrapper.
  *
- * `CuratedSelf` is kept as a SceneKey alias so any persisted saves with
- * `scene === "CuratedSelf"` still resolve. The class re-exported below is
- * the new SunTrialScene under the legacy "CuratedSelf" Phaser key.
+ * Older saves and older portal wiring may still reference the historical
+ * "CuratedSelf" scene key. We keep a small subclass that reuses the new
+ * SunTrialScene logic while registering under the legacy key.
  *
- * EpilogueScene now lives in its own file.
+ * This is the safe migration path:
+ * - "SunTrial" is the canonical modern scene
+ * - "CuratedSelf" remains a compatibility alias only
+ *
+ * EpilogueScene now lives in its own file and is re-exported here so any
+ * legacy import sites continue to resolve.
  */
-
 import { SunTrialScene } from "./SunTrialScene";
 
-/** Legacy Phaser scene key wrapper — returns the new Sun trial. */
 export class CuratedSelfScene extends SunTrialScene {
   constructor() {
-    super();
-    // Override the Phaser scene key so registration as "CuratedSelf" still
-    // works. Phaser reads the key from the scene config object, so we set it
-    // explicitly here.
-    (this as unknown as { sys: { settings: { key: string } } }).sys = (this as unknown as {
-      sys: { settings: { key: string } };
-    }).sys ?? { settings: { key: "CuratedSelf" } };
+    super("CuratedSelf");
   }
 }
 
-// Phaser reads the key from super(...) in the constructor. Since SunTrialScene
-// passes "SunTrial", we need a clean Scene subclass that registers as
-// "CuratedSelf" but delegates create/update to SunTrialScene logic.
 export { EpilogueScene } from "./EpilogueScene";
