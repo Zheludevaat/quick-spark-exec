@@ -492,6 +492,7 @@ export class LastDayScene extends Phaser.Scene {
     }
 
     const near = this.nearest();
+    const expandedNear = this.nearestExpanded();
     const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80,
@@ -500,11 +501,15 @@ export class LastDayScene extends Phaser.Scene {
         this.hint.setText(
           this.save.flags.lastday_door_preview_seen ? "A: STEP THROUGH THE DOOR" : "A: OPEN THE DOOR",
         );
+      } else if (expandedNear) {
+        this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
       } else {
         this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
       }
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
+    } else if (expandedNear) {
+      this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
     } else {
       this.hint.setText(
         `TOUCH WHAT CALLS YOU  ${Math.min(usedMain, MAIN_SEEDS_REQUIRED)}/${MAIN_SEEDS_REQUIRED} NEEDED`,
