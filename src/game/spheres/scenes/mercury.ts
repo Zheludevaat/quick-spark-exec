@@ -999,6 +999,9 @@ export class MercuryTrialScene extends Phaser.Scene {
       nodes: null,
       marker: null,
     });
+
+    // Title
+    const rawTitle = "HERMAIA'S TRIAL";
     const titleText = fitSingleLineText(rawTitle, GBC_W - 12);
     const titleX = Math.floor((GBC_W - measureText(titleText)) / 2);
     new GBCText(this, titleX, 4, titleText, {
