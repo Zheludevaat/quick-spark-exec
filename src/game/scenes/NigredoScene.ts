@@ -34,6 +34,17 @@ const OPENING_RUSHED = [
   { who: "SORYN", text: "Few shards. The fire will work with what you bring." },
 ];
 
+/** Faint accusatory wall whispers heard while idle, before the work begins
+ *  and between shades. Atmospheric only — no save effect. */
+const WALL_WHISPERS = [
+  "you knew. you always knew.",
+  "i waited for you.",
+  "say it. just once.",
+  "she did her best.",
+  "the door was open.",
+  "name us properly.",
+];
+
 export class NigredoScene extends Phaser.Scene {
   private save!: SaveSlot;
   private vesselHud!: VesselHud;
@@ -46,6 +57,12 @@ export class NigredoScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- Furnace progression state ---
+  private furnaceHalo!: Phaser.GameObjects.Ellipse;
+  private progressText!: GBCText;
+  private currentSat = 0;
+  private ambientWhisperEvent?: Phaser.Time.TimerEvent;
+  private activeWhisper?: GBCText;
 
   constructor() {
     super("Nigredo");
