@@ -102,7 +102,7 @@ export const SOUL_PROFILES: Record<string, EncounterProfile> = {
     category: "soul",
     palette: { primary: 0xc8c8d0, secondary: 0xa8a8b8, glow: 0xd8d8e0 },
     introStyle: "hush",
-    sigilStyle: "seal",
+    sigilStyle: "ring",
   },
   lantern_mathematician: {
     id: "soul_lantern_mathematician",
