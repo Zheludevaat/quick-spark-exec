@@ -201,7 +201,15 @@ export type SaveSlot = {
   /** Per-sphere garment release ledger. True after the sphere's trial is passed. */
   garmentsReleased: Partial<Record<SphereKey, boolean>>;
   /** Sphere verbs unlocked by completing each sphere trial. */
-  sphereVerbs: { name: boolean; attune: boolean; stand: boolean; weigh: boolean; release: boolean };
+  sphereVerbs: {
+    witness: boolean;
+    name: boolean;
+    attune: boolean;
+    expose: boolean;
+    stand: boolean;
+    weigh: boolean;
+    release: boolean;
+  };
   /** Identity-objects collected per sphere; releasable at the Metaxy altar. */
   relics: string[];
   /** Set true only on Saturn if the player accepts the Gnostic offer. */
@@ -213,6 +221,19 @@ export type SaveSlot = {
 
   /** Hermetic puzzle ledger — multi-state node values keyed by `puzzle:{roomId}:{nodeId}`. */
   puzzleState: Record<string, string | number | boolean>;
+
+  // ===== CANONICAL FIELDS (canon-alignment pass) =====
+  /** Canonical primary growth currency. Migrated from stats.clarity for old saves. */
+  clarityPoints: number;
+  /** Canonical garment burden per sphere (0..7). */
+  garmentWeights: Record<GarmentKey, number>;
+  /** Hidden but inspectable resonance profile (-7..7 per axis). */
+  resonanceProfile: ResonanceProfile;
+  /** Canonical memory lattice. */
+  memoryLattice: MemoryShardId[];
+  /** Canonical daimon naming reveal (Sophene). */
+  sopheneNamed: boolean;
+
 
   // ===== SUN SPHERE (Act 6) =====
   /** Current Sun plateau sub-zone (null until first entry). */
