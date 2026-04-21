@@ -307,13 +307,14 @@ export class SunPlateauScene extends Phaser.Scene {
   private repaintAftermath() {
     if (!this.aftermathLayer) return;
     this.aftermathLayer.removeAll(true);
-    const witness = this.witnessForZone(this.zone);
-    const op = this.opForZone(this.zone);
-    const wDone = witness ? !!this.save.flags[witness.doneFlag] : true;
-    const oDone = op ? !!this.save.flags[op.doneFlag] : true;
     const ready = sunTrialReady(this.save);
-    const progress = sunZoneAftermath(this.zone, wDone, oDone, ready);
-    addSunAftermath(this, this.aftermathLayer, this.zone, progress);
+    addSunHallAftermath(this, this.aftermathLayer, (zone) => {
+      const witness = this.witnessForZone(zone);
+      const op = this.opForZone(zone);
+      const wDone = witness ? !!this.save.flags[witness.doneFlag] : true;
+      const oDone = op ? !!this.save.flags[op.doneFlag] : true;
+      return sunZoneAftermath(zone, wDone, oDone, ready);
+    });
   }
 
   private zoneSubtitle(zone: SunZoneId): string {
