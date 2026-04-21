@@ -285,6 +285,8 @@ export class NigredoScene extends Phaser.Scene {
           const chosen = opts.find((o) => o.label === picked2.label) ?? opts[0];
           this.save.shadesEncountered[id] = chosen.outcome;
           if (chosen.outcome === "sat_with") {
+            this.currentSat += 1;
+            this.applyFurnaceState("sat_with");
             awardNamedStone(this, this.save, "black", `sat with ${shade.name}`);
             const bene = shade.benediction?.(this.save);
             const tail = bene
@@ -308,8 +310,10 @@ export class NigredoScene extends Phaser.Scene {
             // Wasted shard — note the loss for salvage.
             this.save.flags.act2_shard_destroyed = true;
             activateQuest(this, this.save, "salvage_a_shard");
+            this.applyFurnaceState("destroyed");
           } else {
             this.save.stats.clarity = Math.max(0, this.save.stats.clarity - 1);
+            this.applyFurnaceState("fled");
           }
           writeSave(this.save);
           this.vesselHud.refresh();
