@@ -48,6 +48,13 @@ import {
 } from "../venus/VenusZoneState";
 import { VENUS_NPCS, VENUS_AMBIENT_NPCS } from "../venus/VenusNpcDefs";
 import {
+  sideGuestsForZone,
+  attuneMicrosForZone,
+  venusZoneSoftening,
+  type VenusSideGuest,
+  type VenusAttuneMicro,
+} from "../venus/VenusExpandedContent";
+import {
   createAttuneTarget,
   startAttune,
   breakAttune,
@@ -260,6 +267,11 @@ export class VenusPlateauScene extends Phaser.Scene {
         this.buildTrialThreshold();
         break;
     }
+
+    // Phase 5 expansion: side guests + ATTUNE micros + softening overlay.
+    this.placeSideGuests(zone);
+    this.placeAttuneMicros(zone);
+    this.applySoftening(zone);
 
     this.drawDoors();
     this.drawHotspots();
@@ -1011,6 +1023,120 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.save.scene = "MetaxyHub";
     writeSave(this.save);
     gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
+  }
+
+  // -----------------------------------------------------------------
+  // Phase 5: side guests, extra ATTUNE micros, room softening
+  // -----------------------------------------------------------------
+
+  private placeSideGuests(zone: VenusZoneId) {
+    for (const g of sideGuestsForZone(zone)) {
+      this.placeSideGuest(g);
+    }
+  }
+
+  private placeSideGuest(g: VenusSideGuest) {
+    const softened = !!this.save.flags[VENUS_FLAGS[g.softFlag]];
+    const baseAlpha = softened ? 0.95 : 0.78;
+    const body = this.add.rectangle(g.x, g.y, 7, 12, g.color, baseAlpha).setDepth(20);
+    body.setStrokeStyle(1, 0x000000, 0.55);
+    const head = this.add.circle(g.x, g.y - 8, 3, g.color, baseAlpha).setDepth(21);
+    head.setStrokeStyle(1, 0x000000, 0.55);
+    const tag = new GBCText(this, g.x - 30, g.y - 20, g.name, {
+      color: softened ? COLOR.textAccent : COLOR.textDim,
+      depth: 22,
+    });
+    this.root.add(body);
+    this.root.add(head);
+    this.root.add(tag.obj);
+
+    this.hotspots.push({
+      id: `side_${g.id}`,
+      x: g.x,
+      y: g.y,
+      r: 11,
+      label: `LISTEN: ${g.name}`,
+      onAct: () => {
+        this.save.flags[g.listenedFlag] = true;
+        writeSave(this.save);
+        const lines = (softened ? g.barksAfter : g.barksBefore).map((t) => ({
+          who: g.name,
+          text: t,
+        }));
+        this.modal = true;
+        runDialog(this, lines, () => {
+          this.modal = false;
+          this.refreshHint();
+        });
+      },
+    });
+  }
+
+  private placeAttuneMicros(zone: VenusZoneId) {
+    for (const m of attuneMicrosForZone(zone)) {
+      this.placeAttuneMicro(m);
+    }
+  }
+
+  private placeAttuneMicro(m: VenusAttuneMicro) {
+    const done = !!this.save.flags[m.doneFlag];
+    const marker = this.add
+      .circle(m.x, m.y, 3, 0xe89bb8, done ? 0.55 : 0.32)
+      .setDepth(11);
+    this.root.add(marker);
+    if (!done) {
+      this.tweens.add({
+        targets: marker,
+        alpha: 0.12,
+        duration: 1300,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+    this.hotspots.push({
+      id: `attune_extra_${m.id}`,
+      x: m.x,
+      y: m.y + 8,
+      r: 9,
+      label: done ? m.doneLabel : m.label,
+      enabled: () => true,
+      badge: () => (this.save.flags[m.doneFlag] ? "*" : null),
+      onAct: () => {
+        if (this.save.flags[m.doneFlag]) {
+          this.modal = true;
+          runDialog(this, [{ who: "?", text: m.doneLabel }], () => {
+            this.modal = false;
+            this.refreshHint();
+          });
+          return;
+        }
+        this.tryAttune(m.id, m.zone, m.requiredMs, () => {
+          this.save.flags[m.doneFlag] = true;
+          writeSave(this.save);
+          runDialog(this, m.lines);
+        });
+      },
+    });
+  }
+
+  private applySoftening(zone: VenusZoneId) {
+    const level = venusZoneSoftening(this.save, zone);
+    if (level === 0) return;
+    // A pale warming overlay that grows slightly with softening level.
+    const alpha = level === 2 ? 0.16 : 0.09;
+    const tone = this.add
+      .rectangle(0, 22, GBC_W, GBC_H - 22, 0xffe2d8, alpha)
+      .setOrigin(0, 0)
+      .setDepth(6);
+    this.root.add(tone);
+    if (level === 2) {
+      // A second, gentler vignette suggesting the room has stopped posing.
+      const halo = this.add
+        .rectangle(0, GBC_H - 28, GBC_W, 28, 0xe89bb8, 0.08)
+        .setOrigin(0, 0)
+        .setDepth(6);
+      this.root.add(halo);
+    }
   }
 
   private refreshHint() {
