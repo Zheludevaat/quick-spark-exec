@@ -204,6 +204,33 @@ export class NigredoScene extends Phaser.Scene {
     const shade = SHADES[shadeIds[i]];
     if (!shade) return this.finish(sat);
 
+    // --- ART UPGRADE: Towering UI-Intrusive Shade Silhouette ---
+    // Spawns above HUD depth (200) so it bleeds visually over the UI.
+    const shadeVisual = this.add
+      .polygon(GBC_W / 2, GBC_H + 20, [0, 0, 40, -100, 60, -120, 80, -100, 120, 0], 0x000000)
+      .setOrigin(0.5, 1)
+      .setDepth(250)
+      .setAlpha(0);
+
+    // Creeping rise
+    this.tweens.add({
+      targets: shadeVisual,
+      y: GBC_H - 10,
+      alpha: 0.95,
+      duration: 2000,
+      ease: "Sine.out",
+    });
+    // Ethereal distortion
+    this.tweens.add({
+      targets: shadeVisual,
+      scaleX: 1.05,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    // --- END ART UPGRADE ---
+
     runDialog(this, shade.opening, () => {
       const opts = shade.options(this.save);
       runInquiry(
@@ -232,10 +259,12 @@ export class NigredoScene extends Phaser.Scene {
             writeSave(this.save);
             this.vesselHud.refresh();
             if (tail.length > 0) {
-              runDialog(this, tail, () =>
-                this.runShade(picked, shadeIds, i + 1, sat + 1),
-              );
+              runDialog(this, tail, () => {
+                shadeVisual.destroy();
+                this.runShade(picked, shadeIds, i + 1, sat + 1);
+              });
             } else {
+              shadeVisual.destroy();
               this.runShade(picked, shadeIds, i + 1, sat + 1);
             }
             return;
@@ -250,6 +279,7 @@ export class NigredoScene extends Phaser.Scene {
           }
           writeSave(this.save);
           this.vesselHud.refresh();
+          shadeVisual.destroy();
           this.runShade(picked, shadeIds, i + 1, sat);
         },
       );

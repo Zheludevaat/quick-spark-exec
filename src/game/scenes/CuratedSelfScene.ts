@@ -58,7 +58,8 @@ export class CuratedSelfScene extends Phaser.Scene {
   private cmdTexts: GBCText[] = [];
   private cursor = 0;
   private busy = false;
-  private boss!: Phaser.GameObjects.Sprite;
+  private boss!: Phaser.GameObjects.Container;
+  private bossParts: Phaser.GameObjects.Sprite[] = [];
   private logText!: GBCText;
   private stateText!: GBCText;
   private cursorMark!: GBCText;
@@ -290,10 +291,17 @@ export class CuratedSelfScene extends Phaser.Scene {
       depth: 101,
     });
 
-    this.boss = this.add
-      .sprite(GBC_W / 2, 46, "boss", PHASE_FRAME[this.phase])
-      .setOrigin(0.5, 0.5);
-    this.boss.play(`boss_${this.phase === "released" ? "released" : this.phase}`);
+    // --- ART UPGRADE: Multi-Part Boss Rig ---
+    this.boss = this.add.container(GBC_W / 2, 46).setDepth(50);
+
+    const halo = this.add.sprite(0, -10, "boss", 8).setAlpha(0.5).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.sprite(0, 0, "boss", 0);
+    const armorL = this.add.sprite(-8, 2, "boss", 4).setTint(0x444444);
+    const armorR = this.add.sprite(8, 2, "boss", 4).setTint(0x444444);
+
+    this.bossParts = [halo, core, armorL, armorR];
+    this.boss.add(this.bossParts);
+
     this.tweens.add({
       targets: this.boss,
       y: 44,
@@ -302,6 +310,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.inOut",
     });
+    // --- END ART UPGRADE ---
 
     // Small label under boss for shade-face cycling readability.
     this.shadeLabel = new GBCText(this, GBC_W / 2 - 30, 60, "", {
@@ -495,10 +504,35 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.phase = p;
     this.stateText.setText(PHASE_LABEL[p]);
     this.logText.setText(phaseTaunt(p, this.save));
-    this.boss.play(
-      `boss_${p === "fractured" ? "fractured" : p === "exposed" ? "exposed" : "released"}`,
-    );
-    this.boss.setTint(PHASE_HUE[p]);
+    // --- ART UPGRADE: Segmented Rig Controller ---
+    const [halo, core, armorL, armorR] = this.bossParts;
+    core.setTint(PHASE_HUE[p]);
+
+    if (p === "fractured") {
+      // Physically push the armor plates away from the core
+      this.tweens.add({ targets: armorL, x: -18, angle: -15, duration: 800, ease: "Back.out" });
+      this.tweens.add({ targets: armorR, x: 18, angle: 15, duration: 800, ease: "Back.out" });
+      this.tweens.add({
+        targets: halo,
+        scale: 1.5,
+        alpha: 0.8,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+      });
+    } else if (p === "exposed") {
+      // Armor falls off the screen entirely
+      this.tweens.add({
+        targets: [armorL, armorR],
+        y: 150,
+        rotation: 2,
+        alpha: 0,
+        duration: 1200,
+        ease: "Cubic.in",
+      });
+      this.tweens.add({ targets: core, scale: 0.8, duration: 800 });
+    }
+    // --- END ART UPGRADE ---
 
     // --- ART UPGRADE: Cinematic Phase Shift ---
     // 1. Visceral hit-stop

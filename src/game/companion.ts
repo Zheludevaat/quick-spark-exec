@@ -117,9 +117,20 @@ export class SorynCompanion {
     }
     const tx = this.follow.x + ox;
     const ty = this.follow.y + oy;
+
+    // --- ART UPGRADE: Dynamic Tethering (Rubber-banding) ---
     this.container.x = Phaser.Math.Linear(this.container.x, tx, 0.08);
     this.container.y = Phaser.Math.Linear(this.container.y, ty, 0.08);
-    this.halo.setPosition(this.container.x, this.container.y);
+
+    // --- ART UPGRADE: Secondary Motion (Ethereal Float) ---
+    const time = this.scene.time.now;
+    const floatOffset = Math.sin(time * 0.003) * 2;
+    this.sprite.y = floatOffset;
+    this.halo.setPosition(this.container.x, this.container.y + floatOffset);
+
+    // Face Rowan's direction slightly
+    if (tx < this.container.x - 2) this.sprite.setFlipX(true);
+    else if (tx > this.container.x + 2) this.sprite.setFlipX(false);
   }
 
   private tryAmbient() {
