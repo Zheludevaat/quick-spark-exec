@@ -1,16 +1,16 @@
 /**
- * Desktop center dock.
+ * Desktop center dock — passive context card only.
  *
- * When dialog is open, render the shared dialogue tray.
- * Otherwise render a richer scene-authored context card. Hub scenes get
- * slightly stronger treatment than normal idle scenes.
+ * Dialogue and inquiry are now rendered by DesktopModalHost as the sole
+ * owner of blocking non-diegetic UI. The dock just presents idle scene
+ * authored context (or a quiet fallback) and steps out of the way when
+ * a modal is active.
  */
 import { useEffect, useState } from "react";
 import {
   subscribeGameUi,
   getGameUiSnapshot,
 } from "@/game/gameUiBridge";
-import { GameDialogueTray } from "@/components/game/shell/GameDialogueTray";
 import {
   ShellPanel,
   ShellPanelMeta,
@@ -18,18 +18,30 @@ import {
 } from "@/components/game/shell/ShellPanel";
 
 export function DesktopDialogueDock() {
-  const [dialog, setDialog] = useState(() => getGameUiSnapshot().dialog);
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
+  const [modal, setModal] = useState(() => getGameUiSnapshot().modal);
 
   useEffect(() => {
     return subscribeGameUi((s) => {
-      setDialog(s.dialog);
       setScene(s.scene);
+      setModal(s.modal);
     });
   }, []);
 
-  if (dialog.open) {
-    return <GameDialogueTray />;
+  // While a blocking modal owns the screen, collapse the dock to a
+  // muted placeholder so attention belongs to the modal host alone.
+  if (modal.blocking && modal.surface !== "none") {
+    return (
+      <ShellPanel tone="subdued" compact style={{ minHeight: 96, opacity: 0.5 }}>
+        <ShellPanelMeta>
+          {modal.surface === "dialog"
+            ? "DIALOGUE IN PROGRESS"
+            : modal.surface === "inquiry"
+              ? "AWAITING YOUR CHOICE"
+              : modal.title || "MODAL ACTIVE"}
+        </ShellPanelMeta>
+      </ShellPanel>
+    );
   }
 
   const isHub = scene.key === "MetaxyHub";

@@ -38,6 +38,9 @@ import {
   setOverlaySnapshot,
   setDialogSnapshot,
   clearDialogSnapshot,
+  setModalSnapshot,
+  clearModalSnapshot,
+  getGameUiSnapshot,
 } from "../gameUiBridge";
 import {
   subscribeVirtualInput,
@@ -81,6 +84,32 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     // the composite overlay state (settings | lore | inventory).
     setOverlaySnapshot({ settingsOpen: true });
     clearVirtualInput();
+
+    if (!isTouchShell) {
+      // Desktop: shell owns the rendering. Publish modal surface and let
+      // DesktopModalHost render the React settings panel. We listen for
+      // a window event the shell fires when the user closes it.
+      setModalSnapshot({
+        surface: "settings",
+        mode: "shell",
+        title: "SETTINGS",
+        subtitle: null,
+        blocking: true,
+      });
+      const onClose = () => {
+        window.removeEventListener("hermetic-settings-close", onClose);
+        settingsOpen = false;
+        scene.data.set("__settingsOpen", false);
+        setOverlaySnapshot({ settingsOpen: false });
+        if (getGameUiSnapshot().modal.surface === "settings") {
+          clearModalSnapshot();
+        }
+        rebuildPad();
+      };
+      window.addEventListener("hermetic-settings-close", onClose);
+      return;
+    }
+
     openSettings(scene, () => {
       settingsOpen = false;
       scene.data.set("__settingsOpen", false);
@@ -96,6 +125,29 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     scene.data.set("__loreOpen", true);
     setOverlaySnapshot({ loreOpen: true });
     clearVirtualInput();
+
+    if (!isTouchShell) {
+      // Desktop: shell-owned lore log.
+      setModalSnapshot({
+        surface: "lore",
+        mode: "shell",
+        title: "LORE LOG",
+        subtitle: null,
+        blocking: true,
+      });
+      const onClose = () => {
+        window.removeEventListener("hermetic-lore-close", onClose);
+        loreOpen = false;
+        scene.data.set("__loreOpen", false);
+        setOverlaySnapshot({ loreOpen: false });
+        if (getGameUiSnapshot().modal.surface === "lore") {
+          clearModalSnapshot();
+        }
+      };
+      window.addEventListener("hermetic-lore-close", onClose);
+      return;
+    }
+
     openLoreLog(scene, s, () => {
       loreOpen = false;
       scene.data.set("__loreOpen", false);
@@ -1041,6 +1093,16 @@ export function runDialog(
       typing,
       waitingForConfirm: !typing,
     });
+    // Promote dialogue to the shell modal stack on desktop. Touch shell
+    // already routes dialogue through the same tray, so this is a safe
+    // single-source-of-truth signal for both presentation modes.
+    setModalSnapshot({
+      surface: "dialog",
+      mode: "shell",
+      title: currentWho || null,
+      subtitle: null,
+      blocking: true,
+    });
   };
 
   const scheduleAuto = () => {
@@ -1105,6 +1167,11 @@ export function runDialog(
       cleanupKb();
       scene.events.off("vinput-action", next);
       clearDialogSnapshot();
+      // Release the modal stack only if it still belongs to dialog —
+      // otherwise an inquiry/settings/lore handoff already replaced it.
+      if (getGameUiSnapshot().modal.surface === "dialog") {
+        clearModalSnapshot();
+      }
       onDone?.();
       return;
     }
