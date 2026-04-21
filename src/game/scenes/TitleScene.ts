@@ -298,19 +298,6 @@ export class TitleScene extends Phaser.Scene {
       });
     };
     const confirm = () => {
-      const opt = options[cursor];
-      if (opt.action === "launch") launch();
-      else if (opt.action === "erase") erase();
-      else this.openSkipMenu();
-    };
-    const move = (d: number) => {
-      if (options.length < 2) return;
-      cursor = (cursor + d + options.length) % options.length;
-      audio.sfx("cursor");
-      refresh();
-    };
-
-    const confirm = () => {
       if (settingsOpen) return;
       const opt = options[cursor];
       if (opt.action === "launch") launch();
