@@ -634,12 +634,6 @@ export class SilverThresholdScene extends Phaser.Scene {
       },
     };
   }
-        this.dialogActive = true;
-        this.runGuardianEncounter(c);
-        return;
-      }
-    }
-  }
 
   private nearSoryn(): boolean {
     const sorynObj = this.daimonV2 ?? this.soryn;
