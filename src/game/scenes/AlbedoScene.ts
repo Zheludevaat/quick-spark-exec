@@ -288,7 +288,9 @@ export class AlbedoScene extends Phaser.Scene {
         writeSave(this.save);
         this.vesselHud.refresh();
         // Aftermath: bath visibly reacts before the Keeper speaks.
-        this.applyBathState(r.judgment, this.save.stainsCarried);
+        const visualJudgment: "great" | "ok" | "poor" =
+          r.judgment === "great" ? "great" : r.judgment === "ok" ? "ok" : "poor";
+        this.applyBathState(visualJudgment, this.save.stainsCarried);
         unlockLore(this.save, "on_albedo");
         showLoreToast(this, "on_albedo");
         runDialog(this, BATH_KEEPER_LINES, () => this.maybeSalvage());
