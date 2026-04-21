@@ -265,9 +265,8 @@ export class SunPlateauScene extends Phaser.Scene {
     const near = this.nearestStation();
     if (near) {
       const verb = this.verbForStation(near);
-      this.interactPrompt
-        .setText(`[A] ${verb}`)
-        .setPosition(this.rowan.x - 12, this.rowan.y - 20);
+      this.interactPrompt.setText(`[A] ${verb}`);
+      this.interactPrompt.setPosition(this.rowan.x - 12, this.rowan.y - 20);
       this.hint.setText(this.hintForStation(near));
       this.hint.setColor(COLOR.textGold);
       const done = near.doneFlag && this.save.flags[near.doneFlag];
