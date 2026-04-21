@@ -388,6 +388,10 @@ export class SunPlateauScene extends Phaser.Scene {
   }
 
   private publishSnapshot() {
+    const witnessCount = Object.values(this.save.sunWitnessHeard).filter(Boolean).length;
+    const opCount = Object.values(this.save.sunOpsDone).filter(Boolean).length;
+    const ready = sunTrialReady(this.save);
+
     setSceneSnapshot({
       key: "SunPlateau",
       label: "Sun - Hall of Testimony",
@@ -402,7 +406,22 @@ export class SunPlateauScene extends Phaser.Scene {
       })),
       marker: null,
       idleTitle: SUN_ZONE_LABEL[this.zone].toUpperCase(),
-      idleBody: this.zoneSubtitle(),
+      idleBody: [
+        this.zoneSubtitle(),
+        `Witnesses ${witnessCount}/3`,
+        `Operations ${opCount}/4`,
+        ready ? "Trial threshold open." : "More testimony required.",
+      ].join("\n"),
+      footerHint:
+        this.zone === "threshold"
+          ? "A INTERACT · COMPLETE WITNESSES / OPERATIONS · ANSWER QUESTION · ENTER TRIAL"
+          : "A INTERACT · USE DOORS TO MOVE BETWEEN CHAMBERS",
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
     });
     void COLOR;
     void GBC_H;

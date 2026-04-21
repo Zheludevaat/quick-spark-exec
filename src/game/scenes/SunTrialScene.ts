@@ -135,6 +135,7 @@ export class SunTrialScene extends Phaser.Scene {
     this.setupPhase1();
     this.refreshCursor();
     this.refreshNeeds();
+    this.publishSnapshot();
 
     onDirection(this, (d) => {
       if (this.busy) return;
@@ -147,6 +148,31 @@ export class SunTrialScene extends Phaser.Scene {
     });
 
     onActionDown(this, "action", () => this.choose());
+  }
+
+  private publishSnapshot() {
+    setSceneSnapshot({
+      key: this.sceneKey,
+      label: "Sun - Helion's Trial",
+      act: ACT_BY_SCENE[this.sceneKey],
+      zone: `Phase: ${this.phase.toUpperCase()}`,
+      nodes: null,
+      marker: null,
+      idleTitle: "HELION TRIAL",
+      idleBody:
+        this.phase === "composed"
+          ? "Address the polished fronts until they lose control of the light."
+          : this.phase === "fractured"
+            ? "Witness trustworthy fragments, not merely brilliant ones."
+            : "Read the current need state and answer with the right verb.",
+      footerHint: "UP / DOWN SELECT VERB · A COMMIT",
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
   }
 
   private setupPhase1() {
@@ -200,6 +226,7 @@ export class SunTrialScene extends Phaser.Scene {
       );
       this.stateText.setText("PHASE 3/3 - EXPOSED");
     }
+    this.publishSnapshot();
   }
 
   private showWhisper(text: string) {
