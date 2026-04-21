@@ -46,25 +46,55 @@ type Props = {
   error: string | null;
 };
 
-function useIsPortrait() {
-  const [portrait, setPortrait] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerHeight > window.innerWidth;
-  });
+/**
+ * Robust viewport orientation hook. Uses visualViewport when available
+ * (more accurate on iOS Safari, where window.innerWidth/Height can lag
+ * behind chrome/safe-area transitions), and rAF-debounces updates so
+ * mid-rotation jitter doesn't trigger spurious portrait flips.
+ */
+function useViewportOrientationState() {
+  const compute = () => {
+    if (typeof window === "undefined") {
+      return { isPortrait: false, aspect: 1, width: 0, height: 0 };
+    }
+    const vv = window.visualViewport;
+    const width = Math.round(vv?.width ?? window.innerWidth);
+    const height = Math.round(vv?.height ?? window.innerHeight);
+    const aspect = width > 0 && height > 0 ? width / height : 1;
+    // Landscape (width >= height) is NEVER considered portrait, no matter
+    // what screen.orientation reports.
+    return { isPortrait: height > width, aspect, width, height };
+  };
+
+  const [state, setState] = useState(compute);
+
   useEffect(() => {
-    const onResize = () => setPortrait(window.innerHeight > window.innerWidth);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
+    let raf = 0;
+    const refresh = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setState(compute()));
+    };
+    window.addEventListener("resize", refresh);
+    window.addEventListener("orientationchange", refresh);
+    window.visualViewport?.addEventListener("resize", refresh);
+    window.visualViewport?.addEventListener("scroll", refresh);
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", refresh);
+      window.removeEventListener("orientationchange", refresh);
+      window.visualViewport?.removeEventListener("resize", refresh);
+      window.visualViewport?.removeEventListener("scroll", refresh);
     };
   }, []);
-  return portrait;
+
+  return state;
 }
 
 export function TouchLandscapeShell({ children, booted, error }: Props) {
-  const portrait = useIsPortrait();
+  const orientation = useViewportOrientationState();
+  // Advisory only — never blocks input. Hint shows only when the viewport
+  // is genuinely portrait AND noticeably narrow.
+  const showRotateHint = orientation.isPortrait && orientation.aspect < 0.9;
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [overlay, setOverlay] = useState<OverlaySnapshot>(
     () => getGameUiSnapshot().overlay,
