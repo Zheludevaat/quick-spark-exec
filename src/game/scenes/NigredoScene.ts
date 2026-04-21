@@ -13,7 +13,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import type { SaveSlot, ShardId } from "../types";
-import { attachHUD, runDialog } from "./hud";
+import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "./hud";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { selectShards, returnToThreshold } from "../athanor/operationScene";
@@ -23,6 +23,7 @@ import { unlockLore, showLoreToast } from "./lore";
 import { shardName } from "../athanor/shards";
 import { SHADES, pickShades } from "../athanor/shades";
 import { activateQuest } from "../sideQuests";
+import { onActionDown } from "../controls";
 
 const OPENING = [
   { who: "SORYN", text: "The furnace is cold until you feed it." },
@@ -37,6 +38,14 @@ export class NigredoScene extends Phaser.Scene {
   private save!: SaveSlot;
   private vesselHud!: VesselHud;
   private destroyedAny = false;
+
+  // --- Interactive spatial-pacing state ---
+  private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
+  private inputState!: InputState;
+  private isBusy = false;
+  private isDone = false;
+  private hintText!: GBCText;
 
   constructor() {
     super("Nigredo");
@@ -149,8 +158,37 @@ export class NigredoScene extends Phaser.Scene {
       depth: 5,
     });
 
-    const opening = this.save.shardInventory.length < 3 ? OPENING_RUSHED : OPENING;
-    runDialog(this, opening, () => this.beginDissolving());
+    // --- INTERACTIVE UPGRADE: spatial pacing ---
+
+    // 1. Spawn Player at the bottom of the room
+    this.rowanShadow = this.add
+      .ellipse(GBC_W / 2, GBC_H - 24, 10, 3, 0x000000, 0.4)
+      .setDepth(9);
+    this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 26, "soul").setDepth(10);
+    this.inputState = new InputState(this);
+
+    // 2. Interaction hint banner
+    this.add
+      .rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85)
+      .setOrigin(0, 0)
+      .setDepth(199);
+    this.hintText = new GBCText(this, 4, GBC_H - 9, "WALK", {
+      color: COLOR.textDim,
+      depth: 200,
+    });
+
+    // 3. Delay opening dialog so the player can absorb the room first.
+    this.isBusy = true;
+    this.time.delayedCall(800, () => {
+      const opening = this.save.shardInventory.length < 3 ? OPENING_RUSHED : OPENING;
+      runDialog(this, opening, () => {
+        this.isBusy = false;
+      });
+    });
+
+    // 4. Bind interaction
+    onActionDown(this, "action", () => this.tryInteract());
+    this.events.on("vinput-action", () => this.tryInteract());
   }
 
   private beginDissolving() {
@@ -232,6 +270,73 @@ export class NigredoScene extends Phaser.Scene {
     } else {
       closing.push({ who: "SORYN", text: "Black sediment, settling. Good." });
     }
-    runDialog(this, closing, () => returnToThreshold(this, this.save, "nigredo"));
+    runDialog(this, closing, () => {
+      this.isDone = true;
+      this.isBusy = false;
+    });
+  }
+
+  update(_time: number, delta: number) {
+    if (this.isBusy) return;
+
+    // Movement (slower than usual to simulate wading through water)
+    const speed = 0.025 * delta;
+    const i = this.inputState.poll();
+    let dx = 0;
+    let dy = 0;
+    if (i.left) dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up) dy -= speed;
+    if (i.down) dy += speed;
+
+    this.rowan.x += dx;
+    this.rowan.y += dy;
+
+    // Clamp to the flooded floor area
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 20, GBC_W - 20);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y, GBC_H / 2 + 10, GBC_H - 10);
+
+    animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+
+    if (this.isDone) {
+      this.hintText.setText("THE FIRE IS DONE. WALK SOUTH.");
+      this.hintText.setColor(COLOR.textDim);
+
+      // Exit trigger: walking off the bottom edge
+      if (this.rowan.y >= GBC_H - 12) {
+        this.isBusy = true;
+        returnToThreshold(this, this.save, "nigredo");
+      }
+    } else {
+      const distToFurnace = Phaser.Math.Distance.Between(
+        this.rowan.x,
+        this.rowan.y,
+        GBC_W / 2,
+        GBC_H / 2 + 14,
+      );
+      if (distToFurnace < 24) {
+        this.hintText.setText("[A] STOKE THE FURNACE");
+        this.hintText.setColor(COLOR.textGold);
+      } else {
+        this.hintText.setText("WALK");
+        this.hintText.setColor(COLOR.textDim);
+      }
+    }
+  }
+
+  private tryInteract() {
+    if (this.isBusy || this.isDone) return;
+    const distToFurnace = Phaser.Math.Distance.Between(
+      this.rowan.x,
+      this.rowan.y,
+      GBC_W / 2,
+      GBC_H / 2 + 14,
+    );
+    if (distToFurnace < 24) {
+      this.isBusy = true;
+      this.hintText.setText("");
+      this.beginDissolving();
+    }
   }
 }
