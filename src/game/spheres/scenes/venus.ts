@@ -1257,6 +1257,13 @@ export class VenusTrialScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(420);
+
+    // Bake bespoke Venus art assets and lay down the chamber.
+    bakeVenusTiles(this);
+    bakeAllVenusSprites(this);
+    const trialRoot = this.add.container(0, 0).setDepth(5);
+    buildVenusTrialArt(this, trialRoot, 0);
+
     spawnMotes(this, { count: 14, color: venusConfig.accent, alpha: 0.55 });
 
     attachHUD(this, () => this.save.stats);
