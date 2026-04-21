@@ -71,6 +71,10 @@ export function newSave(): SaveSlot {
     endingChosen: null,
     plateauSettled: {},
     puzzleState: {},
+    sunZone: null,
+    sunWitnessHeard: {},
+    sunOpsDone: {},
+    sunTrialReady: false,
     updatedAt: Date.now(),
   };
 }
