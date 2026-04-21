@@ -745,22 +745,110 @@ function flipRowsHorizontal(rows: string[]): string[] {
   return rows.map((r) => r.split("").reverse().join(""));
 }
 
-/** Bake Rowan walk sheet: 4 columns × 4 rows. Rows: 0=down, 1=left, 2=right, 3=up. */
-export function bakeRowan(scene: Phaser.Scene, key = "rowan") {
-  const cols = 4,
-    rows = 4;
+// ============================================================================
+// Rowan skin pipeline — two atlases (living/soul) so living-world scenes
+// render with a living head and soul/threshold scenes render with the
+// soul head. Previously a single "rowan" atlas was tinted, which caused
+// living-world scenes to inherit a skull-faced base regardless of skin.
+// ============================================================================
+
+const LIVING_HEAD_DOWN = [
+  "....111111......",
+  "...11111111.....",
+  "...11333311.....",
+  "...13333331.....",
+  "...13311331.....",
+  "....133331......",
+  "....131131......",
+];
+
+const LIVING_HEAD_UP = [
+  "....111111......",
+  "...11111111.....",
+  "...11111111.....",
+  "...11333311.....",
+  "...11111111.....",
+  "....111111......",
+  "....131131......",
+];
+
+const LIVING_HEAD_RIGHT = [
+  ".....11111......",
+  "....1111111.....",
+  "....113331......",
+  "....133331......",
+  "....133131......",
+  ".....13331......",
+  ".....11111......",
+];
+
+const LIVING_HEAD_LEFT = LIVING_HEAD_RIGHT.map((r) =>
+  r.split("").reverse().join(""),
+);
+
+/** Overlay a head pixel block onto a body frame at startY (head occupies rows 3..9). */
+function applyHeadTemplate(frame: string[], headRows: string[], startY = 3): string[] {
+  const out = [...frame];
+  headRows.forEach((row, i) => {
+    out[startY + i] = row;
+  });
+  return out;
+}
+
+function bakeRowanSheet(
+  scene: Phaser.Scene,
+  key: string,
+  dirFrames: string[][][],
+) {
+  const cols = 4;
+  const rows = 4;
   const w = ROWAN_FRAME_W * cols;
   const h = ROWAN_FRAME_H * rows;
   const { ctx, tex } = makeTex(scene, key, w, h);
-  const dir = [ROWAN_DOWN, ROWAN_SIDE.map(flipRowsHorizontal), ROWAN_SIDE, ROWAN_UP];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      paintGrid(ctx, dir[r][c], PAL.rowan, c * ROWAN_FRAME_W, r * ROWAN_FRAME_H);
+      paintGrid(ctx, dirFrames[r][c], PAL.rowan, c * ROWAN_FRAME_W, r * ROWAN_FRAME_H);
     }
   }
   addGridFrames(tex, ROWAN_FRAME_W, ROWAN_FRAME_H, cols, rows);
   tex.refresh();
   return key;
+}
+
+/** Living Rowan: face features applied so the head reads as a living person. */
+export function bakeRowanLiving(scene: Phaser.Scene, key = "rowan_living") {
+  const dirs: string[][][] = [
+    ROWAN_DOWN.map((f) => applyHeadTemplate(f, LIVING_HEAD_DOWN)),
+    ROWAN_SIDE.map(flipRowsHorizontal).map((f) => applyHeadTemplate(f, LIVING_HEAD_LEFT)),
+    ROWAN_SIDE.map((f) => applyHeadTemplate(f, LIVING_HEAD_RIGHT)),
+    ROWAN_UP.map((f) => applyHeadTemplate(f, LIVING_HEAD_UP)),
+  ];
+  return bakeRowanSheet(scene, key, dirs);
+}
+
+/** Soul Rowan: original sparser head art used for threshold/soul states. */
+export function bakeRowanSoul(scene: Phaser.Scene, key = "rowan_soul") {
+  const dirs: string[][][] = [
+    ROWAN_DOWN,
+    ROWAN_SIDE.map(flipRowsHorizontal),
+    ROWAN_SIDE,
+    ROWAN_UP,
+  ];
+  return bakeRowanSheet(scene, key, dirs);
+}
+
+/**
+ * Legacy single-atlas bake. Kept as an alias of the soul sheet so any
+ * code still requesting the bare "rowan" texture (e.g. older scenes,
+ * tooling, or fallback paths) keeps rendering instead of crashing.
+ */
+export function bakeRowan(scene: Phaser.Scene, key = "rowan") {
+  return bakeRowanSheet(scene, key, [
+    ROWAN_DOWN,
+    ROWAN_SIDE.map(flipRowsHorizontal),
+    ROWAN_SIDE,
+    ROWAN_UP,
+  ]);
 }
 
 // ============================================================================
@@ -1913,6 +2001,8 @@ function bakeAccessories(scene: Phaser.Scene, key = "rowan_acc") {
 export function bakeAll(scene: Phaser.Scene) {
   bakeTileset(scene);
   bakeRowan(scene);
+  bakeRowanLiving(scene);
+  bakeRowanSoul(scene);
   bakeSoryn(scene);
   bakeDaimon(scene);
   bakeAccessories(scene);
