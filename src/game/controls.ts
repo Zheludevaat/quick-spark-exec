@@ -29,9 +29,12 @@ export type Binding = { primary: string; secondary?: string };
 
 export type TouchLayout = "dpad" | "swipe" | "hybrid" | "off";
 export type ButtonSize = "s" | "m" | "l" | "xl";
+export type InterfaceMode = "desktop" | "touch_landscape";
 
 export type ControlsState = {
   bindings: Record<GameAction, Binding>;
+  /** Top-level presentation mode. Authoritative — hardware only suggests defaults. */
+  interfaceMode: InterfaceMode;
   touchLayout: TouchLayout;
   buttonSize: ButtonSize;
   haptics: boolean;
@@ -39,6 +42,8 @@ export type ControlsState = {
   dialogAutoAdvanceMs: number;
   /** Mirror the d-pad to the right side (for left-handed players). */
   leftHanded: boolean;
+  /** True once user has explicitly chosen interfaceMode (so we stop auto-suggesting). */
+  interfaceModeChosen: boolean;
 };
 
 const STORAGE_KEY = "hermetic_controls_v1";
@@ -57,11 +62,13 @@ const DEFAULTS: ControlsState = {
     settings: { primary: "P", secondary: "ESC" },
     skip: { primary: "TAB" },
   },
+  interfaceMode: "desktop",
   touchLayout: "hybrid",
   buttonSize: "l",
   haptics: true,
   dialogAutoAdvanceMs: 0,
   leftHanded: false,
+  interfaceModeChosen: false,
 };
 
 let state: ControlsState = load();
@@ -130,6 +137,33 @@ export function setLeftHanded(on: boolean) {
 export function setDialogAutoAdvance(ms: number) {
   state.dialogAutoAdvanceMs = Math.max(0, Math.min(8000, ms));
   saveControls();
+}
+
+export function setInterfaceMode(mode: "desktop" | "touch_landscape") {
+  state.interfaceMode = mode;
+  state.interfaceModeChosen = true;
+  saveControls();
+}
+
+/**
+ * Resolve the effective interface mode. If the user has not yet made an
+ * explicit choice, suggest touch_landscape on touch-only hardware in
+ * landscape orientation, otherwise desktop. Once they pick a mode in
+ * Settings, that saved choice wins forever.
+ */
+export function getEffectiveInterfaceMode(): "desktop" | "touch_landscape" {
+  if (state.interfaceModeChosen) return state.interfaceMode;
+  if (typeof window === "undefined") return "desktop";
+  try {
+    const isTouch =
+      "ontouchstart" in window ||
+      (typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) > 0);
+    const isCoarse = window.matchMedia?.("(pointer: coarse)").matches;
+    if (isTouch && isCoarse) return "touch_landscape";
+  } catch {
+    /* ignore */
+  }
+  return "desktop";
 }
 
 export function resetControls() {
