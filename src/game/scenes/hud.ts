@@ -75,6 +75,38 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   let loreOpen = false;
   let settingsOpen = false;
+  let activeSettingsCloseHandler: (() => void) | null = null;
+  let activeLoreCloseHandler: (() => void) | null = null;
+
+  const removeSettingsCloseListener = () => {
+    if (activeSettingsCloseHandler) {
+      window.removeEventListener("hermetic-settings-close", activeSettingsCloseHandler);
+      activeSettingsCloseHandler = null;
+    }
+  };
+
+  const removeLoreCloseListener = () => {
+    if (activeLoreCloseHandler) {
+      window.removeEventListener("hermetic-lore-close", activeLoreCloseHandler);
+      activeLoreCloseHandler = null;
+    }
+  };
+
+  const forceCloseShellOwnedSurfaces = () => {
+    removeSettingsCloseListener();
+    removeLoreCloseListener();
+
+    settingsOpen = false;
+    loreOpen = false;
+    scene.data.set("__settingsOpen", false);
+    scene.data.set("__loreOpen", false);
+    setOverlaySnapshot({ settingsOpen: false, loreOpen: false });
+
+    const surface = getGameUiSnapshot().modal.surface;
+    if (surface === "settings" || surface === "lore") {
+      clearModalSnapshot();
+    }
+  };
 
   const openSettingsGuarded = () => {
     if (settingsOpen) return;
@@ -96,8 +128,9 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
         subtitle: null,
         blocking: true,
       });
-      const onClose = () => {
-        window.removeEventListener("hermetic-settings-close", onClose);
+      removeSettingsCloseListener();
+      activeSettingsCloseHandler = () => {
+        removeSettingsCloseListener();
         settingsOpen = false;
         scene.data.set("__settingsOpen", false);
         setOverlaySnapshot({ settingsOpen: false });
@@ -106,7 +139,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
         }
         rebuildPad();
       };
-      window.addEventListener("hermetic-settings-close", onClose);
+      window.addEventListener("hermetic-settings-close", activeSettingsCloseHandler);
       return;
     }
 
@@ -135,8 +168,9 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
         subtitle: null,
         blocking: true,
       });
-      const onClose = () => {
-        window.removeEventListener("hermetic-lore-close", onClose);
+      removeLoreCloseListener();
+      activeLoreCloseHandler = () => {
+        removeLoreCloseListener();
         loreOpen = false;
         scene.data.set("__loreOpen", false);
         setOverlaySnapshot({ loreOpen: false });
@@ -144,7 +178,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
           clearModalSnapshot();
         }
       };
-      window.addEventListener("hermetic-lore-close", onClose);
+      window.addEventListener("hermetic-lore-close", activeLoreCloseHandler);
       return;
     }
 
@@ -156,6 +190,8 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   };
   const returnToTitleGuarded = () => {
     if (scene.scene.key === "Title") return;
+
+    forceCloseShellOwnedSurfaces();
 
     // Release shell-owned modal/overlay state first so the desktop shell
     // does not remain visually "stuck" during the scene transition.
@@ -193,15 +229,17 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   }
   // Clear our globals on shutdown ONLY if they still point to this scene's
   // handlers — avoid clobbering a newer scene that has already replaced them.
-  const cleanupShellOpeners = () => {
+  const cleanupShellOpenersAndListeners = () => {
+    forceCloseShellOwnedSurfaces();
+
     if (typeof window === "undefined") return;
     const w = window as unknown as Record<string, unknown>;
     if (w.__hermeticOpenSettings === openSettingsGuarded) delete w.__hermeticOpenSettings;
     if (w.__hermeticOpenLore === openLoreGuarded) delete w.__hermeticOpenLore;
     if (w.__hermeticReturnToTitle === returnToTitleGuarded) delete w.__hermeticReturnToTitle;
   };
-  scene.events.once("shutdown", cleanupShellOpeners);
-  scene.events.once("destroy", cleanupShellOpeners);
+  scene.events.once("shutdown", cleanupShellOpenersAndListeners);
+  scene.events.once("destroy", cleanupShellOpenersAndListeners);
 
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {

@@ -1,31 +1,93 @@
 import { DEFAULT_STATS, SAVE_KEY, migrateSave, type SaveSlot } from "./types";
 
+const SAVE_KEY_BAK = `${SAVE_KEY}_bak`;
+
+export type SaveLoadWarning =
+  | { kind: "backup_recovered" }
+  | { kind: "corrupt_reset" }
+  | null;
+
+let lastSaveLoadWarning: SaveLoadWarning = null;
+
+function parseSlot(raw: string | null): SaveSlot | null {
+  if (!raw) return null;
+  return migrateSave(JSON.parse(raw));
+}
+
+export function consumeSaveLoadWarning(): SaveLoadWarning {
+  const warning = lastSaveLoadWarning;
+  lastSaveLoadWarning = null;
+  return warning;
+}
+
 export function loadSave(): SaveSlot | null {
   if (typeof window === "undefined") return null;
+
+  const primaryRaw = localStorage.getItem(SAVE_KEY);
+  const backupRaw = localStorage.getItem(SAVE_KEY_BAK);
+
+  if (!primaryRaw && !backupRaw) return null;
+
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    return migrateSave(JSON.parse(raw));
+    const primary = parseSlot(primaryRaw);
+    if (primary) return primary;
   } catch {
-    return null;
+    // fall through to backup
   }
+
+  try {
+    const backup = parseSlot(backupRaw);
+    if (backup) {
+      lastSaveLoadWarning = { kind: "backup_recovered" };
+      try {
+        if (backupRaw) localStorage.setItem(SAVE_KEY, backupRaw);
+      } catch {
+        // ignore restore failure
+      }
+      return backup;
+    }
+  } catch {
+    // fall through to corrupt-reset state
+  }
+
+  lastSaveLoadWarning = { kind: "corrupt_reset" };
+  try {
+    window.dispatchEvent(new CustomEvent("hermetic-save-corrupt"));
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 export function writeSave(slot: SaveSlot) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ ...slot, updatedAt: Date.now() }));
-  // Notify HUDs / overlays that a save has been written, so they can show
-  // a transient "SAVED" indicator. Throttled in the listener.
+
+  const payload = JSON.stringify({ ...slot, updatedAt: Date.now() });
+
+  try {
+    const prevPrimary = localStorage.getItem(SAVE_KEY);
+    if (prevPrimary) {
+      localStorage.setItem(SAVE_KEY_BAK, prevPrimary);
+    } else {
+      localStorage.setItem(SAVE_KEY_BAK, payload);
+    }
+  } catch {
+    // ignore backup write failure
+  }
+
+  localStorage.setItem(SAVE_KEY, payload);
+
   try {
     window.dispatchEvent(new CustomEvent("hermetic-saved"));
   } catch {
-    // ignore (older runtimes)
+    // ignore
   }
 }
 
 export function clearSave() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(SAVE_KEY_BAK);
 }
 
 export function newSave(): SaveSlot {

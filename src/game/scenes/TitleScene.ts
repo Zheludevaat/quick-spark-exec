@@ -10,7 +10,7 @@ import {
   textHeightPx,
   measureText,
 } from "../gbcArt";
-import { loadSave, newSave, clearSave } from "../save";
+import { loadSave, newSave, clearSave, consumeSaveLoadWarning } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
@@ -58,12 +58,40 @@ export class TitleScene extends Phaser.Scene {
     });
 
     const save = loadSave();
+    const saveLoadWarning = consumeSaveLoadWarning();
     const actReached = save?.act ?? 0;
     const remaining = save?.flags?.plateau_remain;
 
     this.buildTitleBackdrop();
     const sphereFx = this.buildSphereFrieze(actReached);
     this.buildTitleLockup();
+
+    if (saveLoadWarning?.kind === "backup_recovered") {
+      const note = new GBCText(this, 16, 82, "SAVE RECOVERED FROM BACKUP.", {
+        color: COLOR.textGold,
+        depth: 120,
+      });
+      this.tweens.add({
+        targets: note.obj,
+        alpha: 0,
+        duration: 1800,
+        delay: 1800,
+        onComplete: () => note.destroy(),
+      });
+    } else if (saveLoadWarning?.kind === "corrupt_reset") {
+      const note = new GBCText(this, 16, 82, "SAVE CORRUPTED. STARTING FRESH.", {
+        color: COLOR.textGold,
+        depth: 120,
+      });
+      this.tweens.add({
+        targets: note.obj,
+        alpha: 0,
+        duration: 2200,
+        delay: 2200,
+        onComplete: () => note.destroy(),
+      });
+    }
+
     this.buildTitleOrnament();
 
     spawnMotes(this, {
