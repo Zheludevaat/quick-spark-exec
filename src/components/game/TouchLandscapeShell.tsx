@@ -341,13 +341,9 @@ function UtilButton({
   );
 }
 
-// Subscribe to dialog open state from the gameUiBridge.
-import { useEffect as useEffectAlias, useState as useStateAlias } from "react";
 function useMemoDialogActive() {
-  const [active, setActive] = useStateAlias(
-    () => getGameUiSnapshot().dialog.open,
-  );
-  useEffectAlias(() => {
+  const [active, setActive] = useState(() => getGameUiSnapshot().dialog.open);
+  useEffect(() => {
     return subscribeGameUi((s) => setActive(s.dialog.open));
   }, []);
   return active;
