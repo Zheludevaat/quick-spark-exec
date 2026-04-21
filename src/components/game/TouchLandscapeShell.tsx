@@ -114,11 +114,8 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
     return subscribeControls(() => setLeftHanded(getControls().leftHanded));
   }, []);
 
-  // Clear held virtual input whenever the device flips to portrait so the
-  // rotate interstitial never strands a held direction.
-  useEffect(() => {
-    if (portrait) clearVirtualInput();
-  }, [portrait]);
+  // Clear held virtual input only on real overlay/modal transitions.
+  // The rotate hint is advisory and must NOT clear input or freeze play.
 
   // ---------------------------------------------------------------------
   // Modal input policy — explicit, not a single blanket flag.
