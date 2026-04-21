@@ -352,8 +352,9 @@ export class MarsPlateauScene extends Phaser.Scene {
         ),
     );
 
-    this.interactPrompt.setText(this.currentPrompt());
-    if (this.interactPrompt.obj.text) {
+    const promptText = this.currentPrompt();
+    this.interactPrompt.setText(promptText);
+    if (promptText) {
       this.interactPrompt.setPosition(this.rowan.x - 14, this.rowan.y - 22);
     }
     this.hint.setText(this.currentHint());
