@@ -73,13 +73,25 @@ const ACTION_LABEL: Record<GameAction, string> = {
   lcd: "CRT OVERLAY",
 };
 
-// Layout constants — keep header/body/detail/footer in fixed regions.
+// Layout constants — derive vertical regions from actual box geometry so
+// footer never clips against the bottom border and detail never collides
+// with footer text.
+const BOX_X = 4;
+const BOX_Y = 8;
+const BOX_W = GBC_W - 8;
+const BOX_H = GBC_H - 16;
+const BOX_BOTTOM = BOX_Y + BOX_H;
+
 const ROW_H = 9;
-const LIST_TOP = 38;
-const VISIBLE_ROWS = 7;
-const DETAIL_Y = 103;
-const FOOTER_Y1 = 120;
-const FOOTER_Y2 = 128;
+const LIST_TOP = 36;
+
+const DETAIL_LINES = 2;
+const DETAIL_H = DETAIL_LINES * 9 - 2;
+
+const FOOTER_PAD = 4;
+const FOOTER_Y2 = BOX_BOTTOM - FOOTER_PAD - 8;
+const FOOTER_Y1 = FOOTER_Y2 - 9;
+const DETAIL_Y = FOOTER_Y1 - DETAIL_H - 3;
 
 const LEFT_X = 16;
 const LEFT_W = 82;
@@ -87,6 +99,8 @@ const RIGHT_X = GBC_W - 54;
 const RIGHT_W = 46;
 const FOOTER_W = GBC_W - 12;
 const DETAIL_W = GBC_W - 16;
+
+const VISIBLE_ROWS = Math.max(5, Math.floor((DETAIL_Y - LIST_TOP - 2) / ROW_H));
 
 /**
  * Settings-local key label that swaps unicode arrows / long names for
