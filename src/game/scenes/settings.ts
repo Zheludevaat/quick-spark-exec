@@ -1,5 +1,13 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, fitSingleLineText } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  fitSingleLineState,
+  fitSingleLineText,
+} from "../gbcArt";
 import {
   getControls,
   setBinding,
@@ -23,8 +31,17 @@ import { getAudio } from "../audio";
  * Full-screen settings overlay rendered inside the active scene.
  *
  * Pages:
- *   1) MAIN — touch layout, button size, left-handed, haptics, auto-advance, audio mute, LCD
- *   2) KEYS — rebind every game action (press a key to assign primary; B to clear secondary)
+ *   1) MAIN — display/touch/audio toggles + entry to KEYS
+ *   2) KEYS — rebind every game action
+ *
+ * Layout zones (stable, never overlap):
+ *   header     y=16..26 (title/tab + subtitle/row counter)
+ *   body list  y=38..start+visibleRows*9 (windowed slice of rows)
+ *   detail     y=103   (wrapped full-text readout for selected row)
+ *   footer     y=120, y=128 (two ASCII-safe hint lines)
+ *
+ * All text is restricted to the bitmap font's supported glyph set — no
+ * unicode arrows or ampersands, which would render as "?" placeholders.
  */
 
 type Page = "main" | "keys";
@@ -56,6 +73,57 @@ const ACTION_LABEL: Record<GameAction, string> = {
   lcd: "CRT OVERLAY",
 };
 
+// Layout constants — keep header/body/detail/footer in fixed regions.
+const ROW_H = 9;
+const LIST_TOP = 38;
+const VISIBLE_ROWS = 7;
+const DETAIL_Y = 103;
+const FOOTER_Y1 = 120;
+const FOOTER_Y2 = 128;
+
+const LEFT_X = 16;
+const LEFT_W = 82;
+const RIGHT_X = GBC_W - 54;
+const RIGHT_W = 46;
+const FOOTER_W = GBC_W - 12;
+const DETAIL_W = GBC_W - 16;
+
+/**
+ * Settings-local key label that swaps unicode arrows / long names for
+ * font-safe ASCII so KEYS rows never render as "?". Bindings themselves
+ * are unchanged — this is display only.
+ */
+function settingsKeyLabel(k: string): string {
+  const raw = keyLabel(k);
+  switch (raw) {
+    case "↑":
+      return "UP";
+    case "↓":
+      return "DN";
+    case "←":
+      return "LT";
+    case "→":
+      return "RT";
+    case "SPACE":
+      return "SPC";
+    case "ENTER":
+      return "ENT";
+    default:
+      return raw;
+  }
+}
+
+/**
+ * Compute the first visible row index for a windowed list so that the cursor
+ * is kept roughly centered while clamping at both ends.
+ */
+function windowStart(total: number, cursor: number, visible: number) {
+  if (total <= visible) return 0;
+  const half = Math.floor(visible / 2);
+  const maxStart = Math.max(0, total - visible);
+  return Math.max(0, Math.min(maxStart, cursor - half));
+}
+
 export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   let page: Page = "main";
   let cursor = 0;
@@ -69,40 +137,55 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     .setDepth(950)
     .setInteractive();
   const box = drawGBCBox(scene, 4, 12, GBC_W - 8, GBC_H - 24, 951);
-  // Row 1: static title + tab hint
+
+  // Header row 1 — title + page-cycle hint (ASCII-safe).
   const title = new GBCText(scene, 8, 16, "SETTINGS", {
     color: COLOR.textAccent,
     depth: 952,
     scrollFactor: 0,
   });
-  const tabHint = new GBCText(scene, GBC_W - 56, 16, "← → TABS", {
+  const tabHint = new GBCText(scene, GBC_W - 56, 16, "L/R PAGES", {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
   });
-  // Row 2: page subtitle (re-targeted in render())
+
+  // Header row 2 — page subtitle + row counter (e.g. "3/10").
   const subtitle = new GBCText(scene, 8, 26, "", {
     color: COLOR.textGold,
     depth: 952,
     scrollFactor: 0,
   });
-  const closeHint = new GBCText(scene, 8, GBC_H - 18, "B/ESC: CLOSE", {
+  const rowCount = new GBCText(scene, GBC_W - 32, 26, "", {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
   });
 
-  // Reserved column geometry for left labels and right values.
-  const LEFT_X = 16;
-  const LEFT_W = 78;
-  const RIGHT_X = GBC_W - 56;
-  const RIGHT_W = 48;
-  const HINT_W = GBC_W - 12;
+  // Detail strip — full text of the selected row (wrapped, up to 2 lines).
+  const detail = new GBCText(scene, 8, DETAIL_Y, "", {
+    color: COLOR.textLight,
+    depth: 952,
+    scrollFactor: 0,
+    maxWidthPx: DETAIL_W,
+  });
 
-  // Page body: re-built on each render
+  // Footer hints — fixed two lines, never overlap the body.
+  const footer1 = new GBCText(scene, 6, FOOTER_Y1, "", {
+    color: COLOR.textDim,
+    depth: 952,
+    scrollFactor: 0,
+  });
+  const footer2 = new GBCText(scene, 6, FOOTER_Y2, "", {
+    color: COLOR.textDim,
+    depth: 952,
+    scrollFactor: 0,
+  });
+
+  // Body: re-built on each render
   const bodyObjs: Phaser.GameObjects.GameObject[] = [];
   /** Labels of the main page rows in their currently-rendered order.
-   *  Dispatch routes by label so dynamic rows (e.g. legacy TOUCH OVERLAY) can
+   *  Dispatch routes by label so dynamic rows (legacy TOUCH OVERLAY) can
    *  appear/disappear without index drift. */
   let mainRowLabels: string[] = [];
   const clearBody = () => {
@@ -116,105 +199,141 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     bodyObjs.length = 0;
   };
 
+  type Row = { label: string; value: string };
+
+  const buildMainRows = (): Row[] => {
+    const c = getControls();
+    const audio = getAudio();
+    const volPct = Math.round(audio.volume * 100);
+    const isTouchMode = c.interfaceMode === "touch_landscape";
+    return [
+      { label: "INTERFACE MODE", value: isTouchMode ? "TOUCH" : "DESKTOP" },
+      { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
+      { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
+      { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
+      {
+        label: "DIALOG AUTO-ADV",
+        value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
+      },
+      { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
+      { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
+      // Legacy in-canvas touch overlay — only relevant outside touch_landscape.
+      ...(isTouchMode
+        ? []
+        : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
+      { label: "KEY BINDINGS", value: "" },
+      { label: "RESET DEFAULTS", value: "" },
+    ];
+  };
+
+  /** Format a main row for the detail strip. */
+  const mainDetailText = (r: Row): string => {
+    if (!r.value) return r.label;
+    return `${r.label} : ${r.value}`;
+  };
+
+  /** Format a keys row for the detail strip. */
+  const keysDetailText = (a: GameAction): string => {
+    const b = getControls().bindings[a];
+    const right = `${settingsKeyLabel(b.primary)}${
+      b.secondary ? `/${settingsKeyLabel(b.secondary)}` : ""
+    }`;
+    return `${ACTION_LABEL[a]} : ${right}`;
+  };
+
   const render = () => {
     clearBody();
-    const c = getControls();
+
     if (page === "main") {
-      subtitle.setText("DISPLAY & TOUCH");
-      const audio = getAudio();
-      const volPct = Math.round(audio.volume * 100);
-      const isTouchMode = c.interfaceMode === "touch_landscape";
-      const rows: { label: string; value: string }[] = [
-        {
-          label: "INTERFACE MODE",
-          value: isTouchMode ? "TOUCH" : "DESKTOP",
-        },
-        { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
-        { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
-        { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
-        {
-          label: "DIALOG AUTO-ADV",
-          value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
-        },
-        { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
-        { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
-        // Legacy in-canvas touch overlay — only relevant when not in the
-        // shell-driven touch_landscape mode.
-        ...(isTouchMode
-          ? []
-          : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
-        { label: "REBIND KEYS →", value: "" },
-        { label: "RESET DEFAULTS", value: "" },
-      ];
+      subtitle.setText("DISPLAY AND TOUCH");
+      const rows = buildMainRows();
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
-      rows.forEach((r, idx) => {
-        const y = 38 + idx * 9;
-        const isCur = idx === cursor;
-        const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
+      mainRowLabels = rows.map((r) => r.label);
+
+      rowCount.setText(`${cursor + 1}/${rows.length}`);
+
+      const start = windowStart(rows.length, cursor, VISIBLE_ROWS);
+      const end = Math.min(rows.length, start + VISIBLE_ROWS);
+
+      for (let abs = start; abs < end; abs++) {
+        const r = rows[abs];
+        const visIdx = abs - start;
+        const y = LIST_TOP + visIdx * ROW_H;
+        const isCur = abs === cursor;
+        const lblState = fitSingleLineState(r.label, LEFT_W);
+        const valState = fitSingleLineState(r.value, RIGHT_W);
+        const arrow = new GBCText(scene, 8, y, isCur ? ">" : " ", {
           color: COLOR.textAccent,
           depth: 952,
           scrollFactor: 0,
         });
-        const lbl = new GBCText(scene, LEFT_X, y, fitSingleLineText(r.label, LEFT_W), {
+        const lbl = new GBCText(scene, LEFT_X, y, lblState.fitted, {
           color: isCur ? COLOR.textAccent : COLOR.textLight,
           depth: 952,
           scrollFactor: 0,
         });
-        const val = new GBCText(scene, RIGHT_X, y, fitSingleLineText(r.value, RIGHT_W), {
+        const val = new GBCText(scene, RIGHT_X, y, valState.fitted, {
           color: COLOR.textGold,
           depth: 952,
           scrollFactor: 0,
         });
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
-      });
-      // Remember current rows for activate/adjust dispatch.
-      mainRowLabels = rows.map((r) => r.label);
-      const hint = new GBCText(
-        scene,
-        8,
-        GBC_H - 28,
-        fitSingleLineText("↑↓ NAV  ←→ CHANGE  A SELECT", HINT_W),
-        {
-          color: COLOR.textDim,
-          depth: 952,
-          scrollFactor: 0,
-        },
-      );
-      bodyObjs.push(hint.obj);
-    } else if (page === "keys") {
+      }
+
+      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W * 2));
+      footer1.setText("UP/DN MOVE  A SELECT");
+      footer2.setText(fitSingleLineText("LT/RT CHANGE  B OR ESC CLOSE", FOOTER_W));
+    } else {
+      // KEYS page
       subtitle.setText("KEY BINDINGS");
       cursor = Math.max(0, Math.min(cursor, ACTION_ORDER.length - 1));
-      ACTION_ORDER.forEach((a, idx) => {
-        const y = 38 + idx * 9;
-        const isCur = idx === cursor;
+      rowCount.setText(`${cursor + 1}/${ACTION_ORDER.length}`);
+
+      const start = windowStart(ACTION_ORDER.length, cursor, VISIBLE_ROWS);
+      const end = Math.min(ACTION_ORDER.length, start + VISIBLE_ROWS);
+      const c = getControls();
+
+      for (let abs = start; abs < end; abs++) {
+        const a = ACTION_ORDER[abs];
+        const visIdx = abs - start;
+        const y = LIST_TOP + visIdx * ROW_H;
+        const isCur = abs === cursor;
         const b = c.bindings[a];
-        const arrow = new GBCText(scene, 6, y, isCur ? "▶" : " ", {
+        const right = `${settingsKeyLabel(b.primary)}${
+          b.secondary ? `/${settingsKeyLabel(b.secondary)}` : ""
+        }`;
+        const lblState = fitSingleLineState(ACTION_LABEL[a], LEFT_W);
+        const valState = fitSingleLineState(right, RIGHT_W);
+        const arrow = new GBCText(scene, 6, y, isCur ? ">" : " ", {
           color: COLOR.textAccent,
           depth: 952,
           scrollFactor: 0,
         });
-        const lbl = new GBCText(scene, LEFT_X - 3, y, fitSingleLineText(ACTION_LABEL[a], LEFT_W), {
+        const lbl = new GBCText(scene, LEFT_X - 3, y, lblState.fitted, {
           color: isCur ? COLOR.textAccent : COLOR.textLight,
           depth: 952,
           scrollFactor: 0,
         });
-        const right = `${keyLabel(b.primary)}${b.secondary ? `/${keyLabel(b.secondary)}` : ""}`;
-        const val = new GBCText(scene, RIGHT_X, y, fitSingleLineText(right, RIGHT_W), {
+        const val = new GBCText(scene, RIGHT_X, y, valState.fitted, {
           color: COLOR.textGold,
           depth: 952,
           scrollFactor: 0,
         });
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
-      });
-      const hintText = rebindAction
-        ? `PRESS KEY: ${ACTION_LABEL[rebindAction]} (${rebindSlot.toUpperCase()})`
-        : "A: REBIND PRIMARY  TAB: SECONDARY";
-      const hint = new GBCText(scene, 6, GBC_H - 28, fitSingleLineText(hintText, HINT_W), {
-        color: rebindAction ? COLOR.textAccent : COLOR.textDim,
-        depth: 952,
-        scrollFactor: 0,
-      });
-      bodyObjs.push(hint.obj);
+      }
+
+      const focusAction = ACTION_ORDER[cursor];
+      if (rebindAction) {
+        const slot = rebindSlot === "primary" ? "PRIMARY" : "SECONDARY";
+        detail.setText(`PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`);
+        detail.obj.setTint(0xffffff);
+        footer1.setText("PRESS A KEY");
+        footer2.setText("ESC CANCEL");
+      } else {
+        detail.setText(keysDetailText(focusAction));
+        footer1.setText("UP/DN MOVE  A REBIND");
+        footer2.setText("TAB ALT SLOT  B BACK");
+      }
     }
   };
   render();
@@ -285,7 +404,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   /** Activate (A) on the focused main-page row by label. */
   const activateMain = () => {
     const label = mainRowLabels[cursor];
-    if (label === "REBIND KEYS →") {
+    if (label === "KEY BINDINGS") {
       page = "keys";
       cursor = 0;
     } else if (label === "RESET DEFAULTS") {
@@ -313,7 +432,10 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     title.destroy();
     tabHint.destroy();
     subtitle.destroy();
-    closeHint.destroy();
+    rowCount.destroy();
+    detail.destroy();
+    footer1.destroy();
+    footer2.destroy();
     clearBody();
     onClose?.();
   };
@@ -335,8 +457,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     }
     if (page === "keys") {
       page = "main";
-      // Land on REBIND KEYS row when coming back, regardless of dynamic row count.
-      const rebindIdx = mainRowLabels.indexOf("REBIND KEYS →");
+      // Land on KEY BINDINGS row when coming back, regardless of dynamic count.
+      const rebindIdx = mainRowLabels.indexOf("KEY BINDINGS");
       cursor = rebindIdx >= 0 ? rebindIdx : 0;
       render();
       return;
