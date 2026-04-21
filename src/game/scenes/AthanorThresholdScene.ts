@@ -256,6 +256,29 @@ export class AthanorThresholdScene extends Phaser.Scene {
     // Vessel presentation — furnace aura + first-approach intro.
     this.vesselPresentation = createEncounterPresentation(this, vx, vy, VESSEL_PROFILE);
 
+    // Reflection Chamber portal — pale lunar arch tucked at the lower left.
+    // Solved state shows a calmer, lit arch.
+    const rpSolved = !!this.save.flags.puzzle_moon_reflection_01_solved;
+    this.add
+      .rectangle(this.reflectionPortalX, this.reflectionPortalY - 1, 14, 18, 0x1a2030, 1)
+      .setStrokeStyle(1, rpSolved ? 0xc8d8f0 : 0x4a5878, 0.85)
+      .setDepth(3);
+    this.reflectionPortal = this.add
+      .rectangle(this.reflectionPortalX, this.reflectionPortalY, 10, 14, rpSolved ? 0x4a6090 : 0x0a0e1a, rpSolved ? 0.6 : 0.95)
+      .setDepth(4);
+    this.add
+      .circle(this.reflectionPortalX, this.reflectionPortalY - 6, 2, 0xc8d8f0, rpSolved ? 0.7 : 0.35)
+      .setDepth(5);
+    this.reflectionLabel = new GBCText(
+      this.reflectionPortalX - 14,
+      0,
+      "",
+      { color: COLOR.textDim, depth: 5 },
+    );
+    // Reposition + label
+    this.reflectionLabel.setPosition(this.reflectionPortalX - 12, this.reflectionPortalY + 10);
+    this.reflectionLabel.setText("REFLECT");
+
     // Work-stage status indicator near the top edge.
     this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
       color: COLOR.textDim,
