@@ -183,7 +183,7 @@ export class SpherePlateauScene extends Phaser.Scene {
 
   private runSoul(i: number, doneFlag: string) {
     const soul = this.cfg.souls[i];
-    runInquiry(this, soul.prompt, soul.options, (picked) => {
+    askSphere(this, soul.prompt, soul.options, (picked) => {
       this.applyOption(picked);
       this.save.flags[doneFlag] = true;
       writeSave(this.save);
@@ -194,7 +194,7 @@ export class SpherePlateauScene extends Phaser.Scene {
 
   private runOp(i: number, doneFlag: string) {
     const op = this.cfg.operations[i];
-    runInquiry(this, op.prompt, op.options, (picked) => {
+    askSphere(this, op.prompt, op.options, (picked) => {
       this.applyOption(picked);
       if (op.rewardStat && picked.weight >= 2) {
         this.save.stats[op.rewardStat] = Math.min(9, this.save.stats[op.rewardStat] + 1);
@@ -220,7 +220,7 @@ export class SpherePlateauScene extends Phaser.Scene {
       return;
     }
     const cq = this.cfg.crackingQuestion;
-    runInquiry(this, cq.prompt, cq.options, (picked) => {
+    askSphere(this, cq.prompt, cq.options, (picked) => {
       this.applyOption(picked);
       this.save.flags[doneFlag] = true;
       writeSave(this.save);
