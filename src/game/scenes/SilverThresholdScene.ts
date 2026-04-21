@@ -601,14 +601,10 @@ export class SilverThresholdScene extends Phaser.Scene {
     }
 
     // After main hint logic, surface optional Reception interactions when
-    // nothing more important is in proximity.
+    // nothing more important is in proximity. Always overrides idle hints.
     const expanded = this.nearestExpandedReception();
-    if (expanded && this.hint.obj.text === "" === false) {
-      // only override "WALK TO THE GATE" / "TOUCH THE CIRCLES" idle hints
-      const txt = this.hint.obj.text;
-      if (txt.startsWith("WALK") || txt.startsWith("TOUCH") || txt.startsWith("GATE SEALED")) {
-        this.hint.setText(interactionPrompt(this.save.flags, expanded));
-      }
+    if (expanded) {
+      this.hint.setText(interactionPrompt(this.save.flags, expanded));
     }
   }
 
