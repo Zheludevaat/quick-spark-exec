@@ -1135,6 +1135,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       duration: 600,
       onComplete: () => m.halo.destroy(),
     });
+    const residue = this.add.circle(m.x, m.y, 3, 0xffe098, 0.14).setDepth(18);
+    this.regionRoot.add(residue);
+    this.knotMemoryGlyphs.push(residue);
+    this.applyRegionMemory();
     // Side quest: touch every echo in the field
     if (this.region === "field" && questStatus(this.save, "all_echoes_field") !== "done") {
       activateQuest(this, this.save, "all_echoes_field");
