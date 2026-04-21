@@ -12,6 +12,8 @@ import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" | "book" | "breath";
 
+const MAIN_SEEDS_REQUIRED = 3;
+
 type Interactable = {
   kind: ItemKind;
   x: number;
@@ -33,6 +35,7 @@ export class LastDayScene extends Phaser.Scene {
   private dialogActive = false;
   private miniActive = false;
   private exitOpen = false;
+  private deathBeatActive = false;
 
   // Hidden breath seed: track time spent stationary
   private stillMs = 0;
@@ -47,6 +50,7 @@ export class LastDayScene extends Phaser.Scene {
     this.dialogActive = false;
     this.miniActive = false;
     this.exitOpen = false;
+    this.deathBeatActive = false;
     this.stillMs = 0;
   }
 
@@ -308,7 +312,7 @@ export class LastDayScene extends Phaser.Scene {
     const usedAtLoad = this.items.filter(
       (t) => t.seed && t.seed !== "seed_mirror" && t.used,
     ).length;
-    if (usedAtLoad >= 3) this.exitOpen = true;
+    if (usedAtLoad >= MAIN_SEEDS_REQUIRED) this.exitOpen = true;
 
     if (!this.save.flags.lastday_intro) {
       this.save.flags.lastday_intro = true;
@@ -456,13 +460,56 @@ export class LastDayScene extends Phaser.Scene {
     } else if (near && !near.used) {
       this.hint.setText(`A: ${near.label}`);
     } else {
-      this.hint.setText(`TOUCH WHAT CALLS YOU  ${usedMain}/4`);
+      this.hint.setText(
+        `TOUCH WHAT CALLS YOU  ${Math.min(usedMain, MAIN_SEEDS_REQUIRED)}/${MAIN_SEEDS_REQUIRED} NEEDED`,
+      );
     }
 
-    if (!this.exitOpen && usedMain >= 3) {
+    if (!this.exitOpen && usedMain >= MAIN_SEEDS_REQUIRED) {
       this.exitOpen = true;
-      this.playChestPain();
+      this.beginDeathBeat();
     }
+  }
+
+  private beginDeathBeat() {
+    if (this.deathBeatActive) return;
+    this.deathBeatActive = true;
+    this.dialogActive = true;
+
+    this.playChestPain();
+    this.time.delayedCall(350, () => this.playChestPain());
+    this.time.delayedCall(760, () => this.playChestPain());
+
+    const veil = this.add
+      .rectangle(0, 0, GBC_W, GBC_H, 0x10131c, 0)
+      .setOrigin(0, 0)
+      .setDepth(194);
+    this.tweens.add({
+      targets: veil,
+      alpha: 0.26,
+      duration: 220,
+      yoyo: true,
+      repeat: 2,
+    });
+
+    this.hint.setText("SOMETHING IS WRONG.");
+
+    this.time.delayedCall(950, () => {
+      runDialog(
+        this,
+        [
+          { who: "?", text: "There it is again." },
+          { who: "?", text: "As if the room has stepped one inch away from you." },
+          { who: "?", text: "The door is open." },
+        ],
+        () => {
+          this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
+          this.dialogActive = false;
+          this.deathBeatActive = false;
+          veil.destroy();
+        },
+      );
+    });
   }
 
   private playChestPain() {

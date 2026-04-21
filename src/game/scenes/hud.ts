@@ -705,7 +705,39 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
     sprite.clearTint();
   }
   const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
-  if (accs) Object.values(accs).forEach((a) => a.setVisible(skin === "living"));
+  if (accs) {
+    Object.values(accs).forEach((a) => {
+      a.setVisible(skin === "living");
+      a.setAlpha(1);
+      a.clearTint();
+    });
+  }
+  c.setData("transitionAmount", skin === "soul" ? 1 : 0);
+}
+
+export function setRowanTransition(c: Phaser.GameObjects.Container, amount: number) {
+  const a = Phaser.Math.Clamp(amount, 0, 1);
+  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
+  if (!sprite) return;
+
+  const r = Math.round(Phaser.Math.Linear(255, 234, a));
+  const g = Math.round(Phaser.Math.Linear(255, 242, a));
+  const b = Math.round(Phaser.Math.Linear(255, 255, a));
+  const tint = Phaser.Display.Color.GetColor(r, g, b);
+
+  sprite.setAlpha(Phaser.Math.Linear(1, 0.84, a));
+  sprite.setTint(tint);
+
+  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  if (accs) {
+    Object.values(accs).forEach((acc) => {
+      if (!acc.visible) return;
+      acc.setAlpha(Phaser.Math.Linear(1, 0.3, a));
+      acc.setTint(tint);
+    });
+  }
+
+  c.setData("transitionAmount", a);
 }
 
 export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: number) {
