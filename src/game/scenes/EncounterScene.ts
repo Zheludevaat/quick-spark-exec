@@ -91,8 +91,8 @@ export class EncounterScene extends Phaser.Scene {
   private cursorMark!: GBCText;
   private misses = 0;
   private intentText?: GBCText;
-  private verbHintText!: GBCText;
-  private goalText!: GBCText;
+  private verbHintText?: GBCText;
+  private goalText?: GBCText;
 
   constructor() {
     super("Encounter");
@@ -306,7 +306,7 @@ export class EncounterScene extends Phaser.Scene {
       audio.sfx("miss");
       // Telegraph the weakness after the first miss — replaces the goal banner
       if (this.misses === 1 && !this.intentText) {
-        this.goalText.setText("");
+        this.goalText?.setText("");
         this.intentText = new GBCText(this, 4, 14, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
           color: COLOR.textGold,
           depth: 110,
