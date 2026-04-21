@@ -30,6 +30,12 @@ type Door = {
   y: number;
   rect: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Arc;
+  lamp: Phaser.GameObjects.Arc;
+  lampPulse?: Phaser.Tweens.Tween;
+  glowPulse?: Phaser.Tweens.Tween;
+  bar?: Phaser.GameObjects.Rectangle;
+  seal?: Phaser.GameObjects.Arc;
+  tint: number;
 };
 
 const DOOR_DEFS: { key: Door["key"]; label: string; scene: SceneKey; tint: number }[] = [
@@ -38,6 +44,17 @@ const DOOR_DEFS: { key: Door["key"]; label: string; scene: SceneKey; tint: numbe
   { key: "citrinitas", label: "CITRINITAS", scene: "Citrinitas", tint: 0xe8c860 },
   { key: "rubedo", label: "RUBEDO", scene: "Rubedo", tint: 0xb84040 },
 ];
+
+/** Color of the four memory nodes orbiting the vessel — one per operation. */
+const NODE_COLORS = [0x3a3a48, 0xe8e8f0, 0xe8c860, 0xd03838] as const;
+
+/** Short return-beats spoken once per stage as the player re-enters. */
+const STAGE_BEATS: Record<1 | 2 | 3 | 4, { who: string; text: string }> = {
+  1: { who: "SORYN", text: "The vessel has taken the black." },
+  2: { who: "SORYN", text: "The vessel brightens. Something was forgiven." },
+  3: { who: "SORYN", text: "Yellow gathers along the rim. Meaning condenses." },
+  4: { who: "SORYN", text: "The red has arrived. The vessel waits to be sealed." },
+};
 
 const OPENING_LINES = [
   { who: "SORYN", text: "Down the stair, Rowan. The Plateau ends here." },
