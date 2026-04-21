@@ -23,6 +23,12 @@ import { buildSoulSprite, type SoulMood } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../encounters/EncounterPresentation";
+import { KNOT_PROFILES } from "../encounters/profiles/knots";
+import { SOUL_PROFILES } from "../encounters/profiles/souls";
 
 type Knot = {
   kind: KnotKind;
@@ -180,6 +186,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private soulMemoryMarks: Phaser.GameObjects.GameObject[] = [];
   private corridorGateGlow?: Phaser.GameObjects.Arc;
   private corridorSouthSigil?: Phaser.GameObjects.Arc;
+  /** Per-knot encounter presentation. Rebuilt on region change. */
+  private knotPresentations: Partial<Record<KnotKind, EncounterPresentationHandle>> = {};
+  /** Per-soul encounter presentation, keyed by SoulId. Rebuilt on region change. */
+  private soulPresentations: Record<string, EncounterPresentationHandle> = {};
 
   constructor() {
     super("ImaginalRealm");
@@ -326,6 +336,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     });
     this.souls = [];
 
+    // Tear down per-region encounter presentations before rebuilding for the
+    // new region. They live in this.regionRoot's coordinate space conceptually
+    // but own their own root containers, so destroy them explicitly.
+    Object.values(this.knotPresentations).forEach((p) => p?.destroy());
+    this.knotPresentations = {};
+    Object.values(this.soulPresentations).forEach((p) => p?.destroy());
+    this.soulPresentations = {};
+
     this.knotMemoryGlyphs.forEach((g) => g.destroy());
     this.knotMemoryGlyphs = [];
 
@@ -470,6 +488,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.knots.push({ ...def, cleared, sprite, glow });
       this.regionRoot.add(sprite);
       if (glow) this.regionRoot.add(glow);
+
+      // Per-knot encounter aura + nameplate. Already-cleared knots come up
+      // softened so the room reads as quietly remembered, not dead.
+      const profile = KNOT_PROFILES[def.kind];
+      if (profile) {
+        const presentation = createEncounterPresentation(this, def.x, def.y, profile);
+        if (cleared) presentation.soften();
+        this.knotPresentations[def.kind] = presentation;
+      }
     }
 
     // Spawn souls — presence styling lives in buildSoulSprite/setMood now.
@@ -481,6 +508,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
       this.regionRoot.add(built.halo);
       this.regionRoot.add(built.container);
+
+      // Per-soul encounter aura + nameplate. Resolved souls come up softened
+      // — they remain present, just no longer demanding the player's attention.
+      const profile = SOUL_PROFILES[def.id];
+      if (profile) {
+        const presentation = createEncounterPresentation(this, def.x, def.y, profile);
+        if (done) presentation.soften();
+        this.soulPresentations[def.id] = presentation;
+      }
 
       this.souls.push({
         def,
@@ -1013,6 +1049,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
             scrollFactor: 0,
             maxWidthPx: GBC_W - 8,
           });
+          // First-meet identity card. Idempotent across saves via flag.
+          this.soulPresentations[s.def.id]?.introOnce(
+            `encounter_seen_soul_${s.def.id}`,
+            this.save,
+          );
+          writeSave(this.save);
         }
 
         s.nearTime += dt;
@@ -1057,6 +1099,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS KNOT IS QUIET.");
       else this.hint.setText(`A: ${KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
+      // First-meet identity card for this knot. Once per save per knot kind.
+      if (!near.cleared) {
+        this.knotPresentations[near.kind]?.introOnce(
+          `encounter_seen_knot_${near.kind}`,
+          this.save,
+        );
+        if (this.save.flags[`encounter_seen_knot_${near.kind}`]) writeSave(this.save);
+      }
     } else {
       this.focusGlow.fillAlpha = 0;
       // Region status
@@ -1238,6 +1288,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
           soul.container.setAlpha(0.45);
           soul.setMood("resolved");
           this.markSoulResolved(soul.def.id, soul.def.x, soul.def.y);
+          // Quiet the encounter aura — soul becomes warm-but-residual.
+          this.soulPresentations[soul.def.id]?.soften();
         }
         this.refreshSoulTracker();
       });
@@ -1313,6 +1365,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow = undefined;
       }
       this.markKnotCleared(k);
+      // Quieted memory state for this knot's encounter aura.
+      this.knotPresentations[k.kind]?.soften();
       this.refreshKnotTracker();
     });
   }
