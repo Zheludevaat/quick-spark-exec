@@ -191,6 +191,7 @@ export class MetaxyHubScene extends Phaser.Scene {
       maxWidthPx: GBC_W - 12,
     });
 
+    this.cursor = this.defaultCursor();
     this.refreshCursor();
 
     onDirection(this, (d) => {
