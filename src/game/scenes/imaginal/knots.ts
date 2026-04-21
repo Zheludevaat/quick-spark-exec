@@ -134,9 +134,9 @@ export function runReflectionKnot(
     runDialog(
       scene,
       [
-        { who: "Soryn", text: "You stood and saw it. The mimic had no inside." },
+        { who: "Sophene", text: "You stood and saw it. The mimic had no inside." },
         {
-          who: "Soryn",
+          who: "Sophene",
           text: seedAware(
             save,
             "seed_window",
@@ -155,7 +155,7 @@ export function runReflectionKnot(
     cleanup();
     runDialog(
       scene,
-      [{ who: "Soryn", text: "You release. The mimic dims but stays. It will be here later." }],
+      [{ who: "Sophene", text: "You release. The mimic dims but stays. It will be here later." }],
       () => onDone({ cleared: false }),
     );
   };
@@ -225,7 +225,7 @@ export function runEchoKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kno
   runInquiry(scene, { who: "Echo", text: "WHAT DID YOU MEAN TO SAY?" }, garbled, (picked) => {
     const isCorrect = garbled.indexOf(picked) === correct;
     if (isCorrect) {
-      runDialog(scene, [{ who: "Soryn", text: "Naming what you meant is half of mending." }], () =>
+      runDialog(scene, [{ who: "Sophene", text: "Naming what you meant is half of mending." }], () =>
         onDone({
           cleared: true,
           stats: { compassion: 2 },
@@ -234,7 +234,7 @@ export function runEchoKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kno
         }),
       );
     } else {
-      runDialog(scene, [{ who: "Soryn", text: "Not the line. The echo softens but stays." }], () =>
+      runDialog(scene, [{ who: "Sophene", text: "Not the line. The echo softens but stays." }], () =>
         onDone({ cleared: true, stats: { compassion: 1 } }),
       );
     }
@@ -304,9 +304,9 @@ export function runGlitterKnot(
       runDialog(
         scene,
         [
-          { who: "Soryn", text: "The whole afternoon. Even the dull parts." },
+          { who: "Sophene", text: "The whole afternoon. Even the dull parts." },
           {
-            who: "Soryn",
+            who: "Sophene",
             text: seedAware(
               save,
               "seed_kettle",
@@ -324,7 +324,7 @@ export function runGlitterKnot(
           }),
       );
     } else {
-      runDialog(scene, [{ who: "Soryn", text: "Half-ordered. The shape is enough for now." }], () =>
+      runDialog(scene, [{ who: "Sophene", text: "Half-ordered. The shape is enough for now." }], () =>
         onDone({ cleared: true, stats: { courage: 1 } }),
       );
     }
@@ -411,9 +411,9 @@ export function runLanternKnot(
         runDialog(
           scene,
           [
-            { who: "Soryn", text: "Some lights are not meant to be kept." },
+            { who: "Sophene", text: "Some lights are not meant to be kept." },
             {
-              who: "Soryn",
+              who: "Sophene",
               text: seedAware(
                 save,
                 "seed_coat",
@@ -440,13 +440,13 @@ export function runLanternKnot(
           scene,
           [
             { who: "Lantern", text: "ISN'T IT NICE TO BE TOLD?" },
-            { who: "Soryn", text: "The lantern fattens on attention. Try RELEASE." },
+            { who: "Sophene", text: "The lantern fattens on attention. Try RELEASE." },
           ],
           () => {
             // One forced RELEASE prompt
             runInquiry(
               scene,
-              { who: "Soryn", text: "Let it go?" },
+              { who: "Sophene", text: "Let it go?" },
               [
                 { choice: "confess", label: "RELEASE", reply: "Yes. Let it dim." },
                 {
@@ -489,9 +489,9 @@ export function runCrownKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kn
     runDialog(
       scene,
       [
-        { who: "Soryn", text: "The Crown shows a self you wished you were." },
+        { who: "Sophene", text: "The Crown shows a self you wished you were." },
         {
-          who: "Soryn",
+          who: "Sophene",
           text: "To unmake it you must learn WITNESS. Walk the Crossing and refuse what is not yours.",
         },
       ],
@@ -558,9 +558,9 @@ export function runCrownKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kn
         runDialog(
           scene,
           [
-            { who: "Soryn", text: "The wished-self. Paper, after all." },
+            { who: "Sophene", text: "The wished-self. Paper, after all." },
             {
-              who: "Soryn",
+              who: "Sophene",
               text: "You will carry this in the next sphere. The Curated Self will know.",
             },
           ],
@@ -589,7 +589,7 @@ export function runCrownKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kn
           scene,
           [
             { who: "Crown", text: "GOOD. KEEP LOOKING." },
-            { who: "Soryn", text: "It feeds. WITNESS is the only verb that empties it." },
+            { who: "Sophene", text: "It feeds. WITNESS is the only verb that empties it." },
           ],
           () => {
             scene.tweens.add({

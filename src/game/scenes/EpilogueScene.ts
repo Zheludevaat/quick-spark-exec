@@ -261,7 +261,7 @@ export class EpilogueScene extends Phaser.Scene {
     }
     runInquiry(
       this,
-      { who: "Soryn", text: "Erase the entire journey? This cannot be undone." },
+      { who: "Sophene", text: "Erase the entire journey? This cannot be undone." },
       [
         { choice: "silent", label: "KEEP IT", reply: "We keep it. The shards remain." },
         { choice: "confess", label: "ERASE", reply: "The slate is bare. Begin again, kindly." },

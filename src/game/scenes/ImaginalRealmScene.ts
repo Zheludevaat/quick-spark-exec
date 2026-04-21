@@ -316,16 +316,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
         runDialog(
           this,
           [
-            { who: "Soryn", text: "This is the Imaginal Realm. The Moon's first plateau." },
-            { who: "Soryn", text: "Three regions. Five knots. One door at the south." },
-            { who: "Soryn", text: "Here, thought is landscape. The mirrors are not glass —" },
-            { who: "Soryn", text: "they are images you mistook for self." },
+            { who: "Sophene", text: "This is the Imaginal Realm. The Moon's first plateau." },
+            { who: "Sophene", text: "Three regions. Five knots. One door at the south." },
+            { who: "Sophene", text: "Here, thought is landscape. The mirrors are not glass —" },
+            { who: "Sophene", text: "they are images you mistook for self." },
             {
-              who: "Soryn",
+              who: "Sophene",
               text: "I give you a verb: WITNESS. To stand and see without flinching.",
             },
             {
-              who: "Soryn",
+              who: "Sophene",
               text: "Walk south to leave each region. I will be a half-step behind.",
             },
           ],
@@ -988,28 +988,28 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private regionIntro(region: ImaginalRegion): { who: string; text: string }[] {
     if (region === "pools")
       return [
-        { who: "Soryn", text: "The Pools. Standing silver-water. Things that mimic move slowly." },
+        { who: "Sophene", text: "The Pools. Standing silver-water. Things that mimic move slowly." },
         {
-          who: "Soryn",
+          who: "Sophene",
           text: "Two knots here. The one west copies you. The one east speaks back.",
         },
       ];
     if (region === "field")
       return [
         {
-          who: "Soryn",
+          who: "Sophene",
           text: "The Field. Suspended afternoon-light. Time is paused here, kindly.",
         },
         {
-          who: "Soryn",
+          who: "Sophene",
           text: "The little gold motes are echoes of what you touched in your last day.",
         },
-        { who: "Soryn", text: "Walk through them. They will speak." },
+        { who: "Sophene", text: "Walk through them. They will speak." },
       ];
     return [
-      { who: "Soryn", text: "The Corridor. Narrow. A wished-self waits — optional." },
+      { who: "Sophene", text: "The Corridor. Narrow. A wished-self waits — optional." },
       {
-        who: "Soryn",
+        who: "Sophene",
         text: "The door at the south leads to the Curated Self. I cannot enter it with you.",
       },
     ];
@@ -1300,14 +1300,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
           this.dialogActive = true;
           const lines = annexUnlocked
             ? [
-                { who: "Soryn", text: "This is as far as I go on this road." },
-                { who: "Soryn", text: "The image fails in the same place each time. Something below it wants to be found." },
-                { who: "Soryn", text: "But the road ahead is Selenos' trial. Step on." },
+                { who: "Sophene", text: "This is as far as I go on this road." },
+                { who: "Sophene", text: "The image fails in the same place each time. Something below it wants to be found." },
+                { who: "Sophene", text: "But the road ahead is Selenos' trial. Step on." },
               ]
             : [
-                { who: "Soryn", text: "This is as far as I go on this road." },
-                { who: "Soryn", text: "The beautiful error points downward. Notice it." },
-                { who: "Soryn", text: "Selenos waits beyond. The trial will not wait forever." },
+                { who: "Sophene", text: "This is as far as I go on this road." },
+                { who: "Sophene", text: "The beautiful error points downward. Notice it." },
+                { who: "Sophene", text: "Selenos waits beyond. The trial will not wait forever." },
               ];
           runDialog(this, lines, () => {
             this.dialogActive = false;
@@ -1347,7 +1347,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (k.cleared) {
       // Re-visit reading: short reflection, no state change.
       this.dialogActive = true;
-      runDialog(this, [{ who: "Soryn", text: this.knotEcho(k.kind) }], () => {
+      runDialog(this, [{ who: "Sophene", text: this.knotEcho(k.kind) }], () => {
         this.dialogActive = false;
       });
       return;
@@ -1436,11 +1436,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
       const localSouls = this.doneSoulsInRegion("pools");
       if (localKnots === 0 && localSouls === 0) {
         return [
-          { who: "Soryn", text: "Two knots here. Stand still for the mimic. Speak true to the echo." },
+          { who: "Sophene", text: "Two knots here. Stand still for the mimic. Speak true to the echo." },
         ];
       }
       return [
-        { who: "Soryn", text: `${localKnots} knots quieted. ${localSouls} souls settled. The pools remember.` },
+        { who: "Sophene", text: `${localKnots} knots quieted. ${localSouls} souls settled. The pools remember.` },
       ];
     }
 
@@ -1448,26 +1448,26 @@ export class ImaginalRealmScene extends Phaser.Scene {
       const echoes = this.touchedEchoesCount();
       if (echoes >= 3) {
         return [
-          { who: "Soryn", text: `${echoes} echoes touched. The field knows you better now.` },
-          { who: "Soryn", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
+          { who: "Sophene", text: `${echoes} echoes touched. The field knows you better now.` },
+          { who: "Sophene", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
         ];
       }
       return [
-        { who: "Soryn", text: `${echoes} echoes touched. The motes still carry your last day.` },
-        { who: "Soryn", text: "Walk through what glitters. Do not keep what only comforts." },
+        { who: "Sophene", text: `${echoes} echoes touched. The motes still carry your last day.` },
+        { who: "Sophene", text: "Walk through what glitters. Do not keep what only comforts." },
       ];
     }
 
     if (cleared >= 3) {
       return [
-        { who: "Soryn", text: "South, then. I stop at the threshold." },
-        { who: "Soryn", text: "Take what the plateau taught. Leave the rest here." },
+        { who: "Sophene", text: "South, then. I stop at the threshold." },
+        { who: "Sophene", text: "Take what the plateau taught. Leave the rest here." },
       ];
     }
 
     return [
-      { who: "Soryn", text: "The crown is optional. WITNESS, or do not, and walk south." },
-      { who: "Soryn", text: "I cannot enter the next room with you." },
+      { who: "Sophene", text: "The crown is optional. WITNESS, or do not, and walk south." },
+      { who: "Sophene", text: "I cannot enter the next room with you." },
     ];
   }
 
@@ -1494,8 +1494,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
     const line = map[event];
     if (!line) return null;
     return [
-      { who: "Soryn", text: line },
-      { who: "Soryn", text: "I am still here. Walk on when you are ready." },
+      { who: "Sophene", text: line },
+      { who: "Sophene", text: "I am still here. Walk on when you are ready." },
     ];
   }
 

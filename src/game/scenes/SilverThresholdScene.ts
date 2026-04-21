@@ -64,35 +64,35 @@ const ELEM_BURST_COLOR: Record<ElemKind, number> = {
 const RECOGNITION: Record<ElemKind, { who: string; text: string }[]> = {
   air: [
     {
-      who: "Air",
-      text: "I am Air. Not the wind outside — the breath you held when you should have spoken.",
+      who: "Zephyros",
+      text: "I am Zephyros. Not the wind outside — the breath you held when you should have spoken.",
     },
-    { who: "Air", text: "I am every word you swallowed. I am the wave you did not return." },
+    { who: "Zephyros", text: "I am every word you swallowed. I am the wave you did not return." },
   ],
   fire: [
     {
-      who: "Fire",
-      text: "I am Fire. Not heat — the courage you spent on small angers and saved from large ones.",
+      who: "Pyralis",
+      text: "I am Pyralis. Not heat — the courage you spent on small angers and saved from large ones.",
     },
     {
-      who: "Fire",
+      who: "Pyralis",
       text: "I am the call you let ring. I am the bridges you watched burn from a distance.",
     },
   ],
   water: [
     {
-      who: "Water",
-      text: "I am Water. Not what you drank — what you offered without knowing for whom.",
+      who: "Undine",
+      text: "I am Undine. Not what you drank — what you offered without knowing for whom.",
     },
-    { who: "Water", text: "I am every cup poured for someone who would not come." },
+    { who: "Undine", text: "I am every cup poured for someone who would not come." },
   ],
   earth: [
     {
-      who: "Earth",
-      text: "I am Earth. Not the ground — the weight you carried in pockets you forgot to empty.",
+      who: "Chthonia",
+      text: "I am Chthonia. Not the ground — the weight you carried in pockets you forgot to empty.",
     },
     {
-      who: "Earth",
+      who: "Chthonia",
       text: "I am the keys to doors that are not yours. The receipts. The unsent letters.",
     },
   ],
@@ -106,7 +106,7 @@ const OFFERINGS: Record<
   { prompt: { who: string; text: string }; options: OfferingOption[] }
 > = {
   air: {
-    prompt: { who: "Air", text: "Give me one thing you held back. I will carry it now." },
+    prompt: { who: "Zephyros", text: "Give me one thing you held back. I will carry it now." },
     options: [
       {
         choice: "confess",
@@ -133,7 +133,7 @@ const OFFERINGS: Record<
     ],
   },
   fire: {
-    prompt: { who: "Fire", text: "Give me what you would not burn. I will turn it to light." },
+    prompt: { who: "Pyralis", text: "Give me what you would not burn. I will turn it to light." },
     options: [
       {
         choice: "confess",
@@ -161,7 +161,7 @@ const OFFERINGS: Record<
   },
   water: {
     prompt: {
-      who: "Water",
+      who: "Undine",
       text: "Give me what you poured and were not drunk. I will return it to the river.",
     },
     options: [
@@ -190,7 +190,7 @@ const OFFERINGS: Record<
   },
   earth: {
     prompt: {
-      who: "Earth",
+      who: "Chthonia",
       text: "Give me what you carried that you could have set down. I will hold it as soil.",
     },
     options: [
@@ -223,51 +223,51 @@ const OFFERINGS: Record<
 // PHASE C — Naming. Guardian names what Rowan now *is* in their domain.
 const NAMING: Record<ElemKind, { who: string; text: string }[]> = {
   air: [
-    { who: "Air", text: "You are no longer the one who breathes. You are the one who listens." },
-    { who: "Air", text: "Carry this. CLARITY +1. The scarf is mine now." },
+    { who: "Zephyros", text: "You are no longer the one who breathes. You are the one who listens." },
+    { who: "Zephyros", text: "Carry this. CLARITY +1. The scarf is mine now." },
   ],
   fire: [
     {
-      who: "Fire",
+      who: "Pyralis",
       text: "You are no longer the one who burns. You are the one who chooses what is kept warm.",
     },
-    { who: "Fire", text: "Carry this. COURAGE +1. The coat is mine now." },
+    { who: "Pyralis", text: "Carry this. COURAGE +1. The coat is mine now." },
   ],
   water: [
     {
-      who: "Water",
+      who: "Undine",
       text: "You are no longer the one who pours. You are the one who is poured into.",
     },
-    { who: "Water", text: "Carry this. COMPASSION +1. The boots are mine now." },
+    { who: "Undine", text: "Carry this. COMPASSION +1. The boots are mine now." },
   ],
   earth: [
     {
-      who: "Earth",
+      who: "Chthonia",
       text: "You are no longer the one who carries. You are the one who is carried.",
     },
-    { who: "Earth", text: "Carry this. CLARITY +1. The satchel is mine now." },
+    { who: "Chthonia", text: "Carry this. CLARITY +1. The satchel is mine now." },
   ],
 };
 
 const SORYN_OPENING = [
   { who: "?", text: "Welcome, Rowan. Take a breath you no longer need." },
-  { who: "Soryn", text: "I am Soryn. A friend of the Threshold." },
-  { who: "Soryn", text: "Yes — you have died. There is nothing to fix. Only to receive." },
-  { who: "Soryn", text: "Four old voices wait at four circles. Walk to each. Stand. Listen." },
+  { who: "Sophene", text: "I am Sophene. A friend of the Threshold." },
+  { who: "Sophene", text: "Yes — you have died. There is nothing to fix. Only to receive." },
+  { who: "Sophene", text: "Four old voices wait at four circles. Walk to each. Stand. Listen." },
   {
-    who: "Soryn",
+    who: "Sophene",
     text: "They are not gods. They are the parts of the world that were always inside you, made into voices so you can hear them.",
   },
   {
-    who: "Soryn",
+    who: "Sophene",
     text: "They will take what you no longer need. They will tell you what you are. This is reception, not judgment.",
   },
 ];
 
 const SORYN_AFTER_RITES = [
-  { who: "Soryn", text: "It is done. You have been received." },
-  { who: "Soryn", text: "What you carried into death, you have set down." },
-  { who: "Soryn", text: "What remains is what you are." },
+  { who: "Sophene", text: "It is done. You have been received." },
+  { who: "Sophene", text: "What you carried into death, you have set down." },
+  { who: "Sophene", text: "What remains is what you are." },
 ];
 
 const STONE_LINES = [
@@ -277,13 +277,13 @@ const STONE_LINES = [
 ];
 
 const STILLNESS_LINES = [
-  { who: "Soryn", text: "Good. The threshold can only receive what stops trying to arrive." },
-  { who: "Soryn", text: "Stillness is not emptiness. It is consent without collapse." },
+  { who: "Sophene", text: "Good. The threshold can only receive what stops trying to arrive." },
+  { who: "Sophene", text: "Stillness is not emptiness. It is consent without collapse." },
 ];
 
 const CIRCLE_TEACH_LINES = [
-  { who: "Soryn", text: "Three times the guardian circles what it receives." },
-  { who: "Soryn", text: "Reception comes before naming." },
+  { who: "Sophene", text: "Three times the guardian circles what it receives." },
+  { who: "Sophene", text: "Reception comes before naming." },
 ];
 
 const BASIN_LINES = [
@@ -292,9 +292,9 @@ const BASIN_LINES = [
 ];
 
 const GATE_PREVIEW_LINES = [
-  { who: "Soryn", text: "Look." },
-  { who: "Soryn", text: "Beyond the gate, the world loosens without dissolving." },
-  { who: "Soryn", text: "This is only the first edge of what comes next." },
+  { who: "Sophene", text: "Look." },
+  { who: "Sophene", text: "Beyond the gate, the world loosens without dissolving." },
+  { who: "Sophene", text: "This is only the first edge of what comes next." },
 ];
 
 const MAP_W = 10,
@@ -411,7 +411,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     // Soryn (legacy v1 humanoid for the opening conversation, before the daimon reveal)
     this.soryn = this.add.sprite(146, 70, "soryn", 0);
     this.soryn.play("soryn_flicker");
-    new GBCText(this, 138, 56, "SORYN", { color: COLOR.textAccent });
+    new GBCText(this, 138, 56, "SOPHENE", { color: COLOR.textAccent });
 
     // Threshold-form aura. Will be replaced with the daimon-form profile after
     // the binding scene (see runDaimonBinding). On returning saves where Soryn
@@ -561,7 +561,7 @@ export class SilverThresholdScene extends Phaser.Scene {
       gdy = this.rowan.y - this.gate.y;
     const stx = this.rowan.x - this.stone.x,
       sty = this.rowan.y - this.stone.y;
-    if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SORYN");
+    if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SOPHENE");
     else if (gdx * gdx + gdy * gdy < 16 * 16)
       this.hint.setText(
         this.save.flags.daimon_bound
@@ -1177,13 +1177,13 @@ export class SilverThresholdScene extends Phaser.Scene {
   private runDaimonBinding() {
     // Soryn approaches. Then transforms into the v2 glyph-being.
     const beats1 = [
-      { who: "Soryn", text: "You have been received. Now you must be accompanied." },
-      { who: "Soryn", text: "I am a daimon. Not a guide. Not a god." },
-      { who: "Soryn", text: "I am a piece of the world that chose you the moment you were named." },
-      { who: "Soryn", text: "I have walked beside you your whole life." },
-      { who: "Soryn", text: "You called me intuition. You called me dread." },
-      { who: "Soryn", text: "You called me the feeling of being watched in an empty room." },
-      { who: "Soryn", text: "I was always me. Now look at me as I am." },
+      { who: "Sophene", text: "You have been received. Now you must be accompanied." },
+      { who: "Sophene", text: "I am a daimon. Not a guide. Not a god." },
+      { who: "Sophene", text: "I am a piece of the world that chose you the moment you were named." },
+      { who: "Sophene", text: "I have walked beside you your whole life." },
+      { who: "Sophene", text: "You called me intuition. You called me dread." },
+      { who: "Sophene", text: "You called me the feeling of being watched in an empty room." },
+      { who: "Sophene", text: "I was always me. Now look at me as I am." },
     ];
     runDialog(this, beats1, () => {
       // Transform Soryn humanoid → glyph-being
@@ -1226,7 +1226,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     this.dialogActive = true;
     runInquiry(
       this,
-      { who: "Soryn", text: "Will you accept me as your daimon?" },
+      { who: "Sophene", text: "Will you accept me as your daimon?" },
       [
         {
           choice: "confess",
@@ -1279,16 +1279,16 @@ export class SilverThresholdScene extends Phaser.Scene {
             this,
             [
               {
-                who: "Soryn",
+                who: "Sophene",
                 text: "Bound. Until you no longer need me — and I will know before you do.",
               },
               {
-                who: "Soryn",
+                who: "Sophene",
                 text: "I cannot enter the inner places. At plateaus and sphere tests, you walk alone.",
               },
-              { who: "Soryn", text: "Everywhere else, I am a half-step behind you." },
+              { who: "Sophene", text: "Everywhere else, I am a half-step behind you." },
               {
-                who: "Soryn",
+                who: "Sophene",
                 text: "Beyond the gate lies the Imaginal Realm. Walk south when you are ready.",
               },
             ],
@@ -1363,12 +1363,12 @@ export class SilverThresholdScene extends Phaser.Scene {
       getAudio().sfx("confirm");
       const lines = this.save.flags.daimon_bound
         ? [
-            { who: "Soryn", text: "The gate listens. Step into it when you can." },
-            { who: "Soryn", text: "Whatever you bring, you will not bring alone." },
+            { who: "Sophene", text: "The gate listens. Step into it when you can." },
+            { who: "Sophene", text: "Whatever you bring, you will not bring alone." },
           ]
         : [
-            { who: "Soryn", text: "The threshold likes wanderers. Take your time." },
-            { who: "Soryn", text: "When you are ready, walk to each circle." },
+            { who: "Sophene", text: "The threshold likes wanderers. Take your time." },
+            { who: "Sophene", text: "When you are ready, walk to each circle." },
           ];
       runDialog(this, lines, () => {
         this.dialogActive = false;
