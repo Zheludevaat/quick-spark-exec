@@ -296,8 +296,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       }
 
-      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W * 2));
-      footer1.setText("UP/DN MOVE  A SELECT");
+      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W));
+      footer1.setText(fitSingleLineText("UP/DN MOVE  A SELECT", FOOTER_W));
       footer2.setText(fitSingleLineText("LT/RT CHANGE  B OR ESC CLOSE", FOOTER_W));
     } else {
       // KEYS page
