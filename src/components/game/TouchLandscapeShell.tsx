@@ -280,7 +280,8 @@ type RailProps =
     }
   | {
       kind: "action";
-      hardModal: boolean;
+      actionDisabled: boolean;
+      cancelDisabled: boolean;
       onAPress: () => void;
       onARelease: () => void;
       onBPress: () => void;
@@ -317,7 +318,7 @@ function RailControls(props: RailProps) {
           variant="b"
           size={60}
           ariaLabel="Cancel / Witness"
-          disabled={props.hardModal}
+          disabled={props.cancelDisabled}
           onPress={props.onBPress}
           onRelease={props.onBRelease}
         />
@@ -326,7 +327,7 @@ function RailControls(props: RailProps) {
           variant="a"
           size={72}
           ariaLabel="Confirm / Interact"
-          disabled={false}
+          disabled={props.actionDisabled}
           onPress={props.onAPress}
           onRelease={props.onARelease}
         />
