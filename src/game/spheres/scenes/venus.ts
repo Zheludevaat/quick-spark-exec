@@ -341,6 +341,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   // -----------------------------------------------------------------
 
   private buildAtrium() {
+    buildVenusAtriumArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "atrium");
     // Soft pillars
     for (const px of [50, 110]) {
       const pillar = this.add.rectangle(px, 70, 6, 60, 0x4a2838, 0.7).setDepth(10);
@@ -405,6 +407,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildGallery() {
+    buildVenusGalleryArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "gallery");
     // Frames along the back wall
     for (let i = 0; i < 4; i++) {
       const fx = 30 + i * 28;
@@ -446,6 +450,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildRecognitionHall() {
+    buildVenusRecognitionHallArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "recognition_hall");
     // A long bench
     const bench = this.add.rectangle(GBC_W / 2, 110, 100, 4, 0x3a1a28, 1).setDepth(10);
     bench.setStrokeStyle(1, 0x9a6a7c, 0.6);
@@ -467,6 +473,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildReconstructionStudio() {
+    buildVenusReconstructionArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "reconstruction");
     // A worktable with scattered notes
     const table = this.add.rectangle(GBC_W / 2, 95, 80, 10, 0x4a2838, 1).setDepth(10);
     table.setStrokeStyle(1, 0xc88a9a, 0.6);
@@ -506,6 +514,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildLadder() {
+    buildVenusLadderArt(this, this.root);
     // Vertical "rungs" — the cadence ladder
     for (let i = 0; i < 5; i++) {
       const ry = 50 + i * 14;
@@ -544,6 +553,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildTrialThreshold() {
+    buildVenusThresholdArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "threshold");
     // A single pale doorway
     const door = this.add.rectangle(GBC_W / 2, 70, 24, 50, 0x2a1428, 1).setDepth(10);
     door.setStrokeStyle(1, 0xe89bb8, 0.9);
