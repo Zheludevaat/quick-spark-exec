@@ -188,6 +188,19 @@ export class MercuryPlateauScene extends Phaser.Scene {
 
     this.refreshStatus();
 
+    // If the chamber is already ignited from a prior session, mark its
+    // ceremony as already shown so we don't replay the Soryn beat.
+    if (this.mSave.flags.sphere_mercury_cracked) this.chamberReadyShown = true;
+    this.refreshChamberGlow(true);
+
+    // If Mercury is cracked, hidden true names become visible immediately.
+    if (this.mSave.flags.sphere_mercury_cracked) {
+      this.revealTrueNames();
+    }
+
+    // Start ambient soul barks — gives the room continuous life.
+    this.startAmbientBarks();
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
@@ -1003,21 +1016,244 @@ export class MercuryPlateauScene extends Phaser.Scene {
     });
   }
 
-  private refreshChamberGlow() {
+  /**
+   * Update chamber readiness visuals. When readiness flips for the first
+   * time this visit, run a one-shot ignition sequence (altar bloom, sigil
+   * warm-up, trial-door hum, Soryn beat). After that, keep the persistent
+   * altar pulse and trial-door hum alive.
+   *
+   * @param force  Allow the routine to run on initial create() even if no
+   *               op was just completed.
+   */
+  private refreshChamberGlow(force = false) {
     const ready =
       opsCompleted(
         this.mSave,
         "mercury",
         mercuryConfig.operations.map((o) => o.id),
       ) >= mercuryConfig.operations.length;
-    if (ready) {
-      // visually rebuild altar glow — find the chamber visual
-      const st = this.stations.find((s) => s.kind === "crack_chamber");
-      if (st && st.visual && st.visual[0]) {
-        const altar = st.visual[0] as Phaser.GameObjects.Rectangle;
-        altar.setFillStyle(COLD, 0.9);
-        altar.setStrokeStyle(1, COLD, 0.9);
+    if (!ready) return;
+    if (!this.chamberAltar) return;
+
+    // First-time ignition: ceremonial.
+    if (!this.chamberReadyShown) {
+      this.chamberReadyShown = true;
+
+      // Sharp bloom on the altar.
+      this.chamberAltar.setFillStyle(COLD, 1);
+      this.chamberAltar.setStrokeStyle(2, WARM, 1);
+      const burst = this.add
+        .circle(this.chamberAltar.x, this.chamberAltar.y, 6, WARM, 0.5)
+        .setDepth(9);
+      this.tweens.add({
+        targets: burst,
+        scale: 5,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => burst.destroy(),
+      });
+
+      // Sigil warms up to gold for one breath.
+      this.chamberSigil?.forEach((g) => {
+        const anyG = g as Phaser.GameObjects.Shape;
+        if ("setFillStyle" in anyG) {
+          (anyG as Phaser.GameObjects.Rectangle).setFillStyle(WARM, 0.95);
+        }
+      });
+      this.time.delayedCall(900, () => {
+        this.chamberSigil?.forEach((g) => {
+          const anyG = g as Phaser.GameObjects.Shape;
+          if ("setFillStyle" in anyG) {
+            (anyG as Phaser.GameObjects.Rectangle).setFillStyle(COLD, 0.85);
+          }
+        });
+      });
+
+      getAudio().sfx("resolve");
+
+      // Persistent altar pulse — slow and stable.
+      this.chamberPulseTween?.stop();
+      this.chamberPulseTween = this.tweens.add({
+        targets: this.chamberAltar,
+        alpha: 0.65,
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      // Trial door gains a stronger hum.
+      this.trialDoorHumTween?.stop();
+      this.trialGlow.setFillStyle(COLD, 0.6);
+      this.trialDoorHumTween = this.tweens.add({
+        targets: this.trialGlow,
+        scale: 1.6,
+        alpha: 0.85,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      // Soryn beat — only on actual ignition, not on revisit.
+      if (!force && !this.busy) {
+        this.busy = true;
+        this.time.delayedCall(700, () => {
+          runDialog(
+            this,
+            [
+              { who: "SORYN", text: "The Tower has finished arranging its premise." },
+              { who: "SORYN", text: "The Question is ready. The door above remembers." },
+            ],
+            () => {
+              this.busy = false;
+            },
+          );
+        });
       }
+      return;
+    }
+
+    // Already-ignited revisit: keep persistent pulses alive if missing.
+    if (!this.chamberPulseTween && this.chamberAltar) {
+      this.chamberPulseTween = this.tweens.add({
+        targets: this.chamberAltar,
+        alpha: 0.65,
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+    if (!this.trialDoorHumTween && this.trialGlow) {
+      this.trialGlow.setFillStyle(COLD, 0.6);
+      this.trialDoorHumTween = this.tweens.add({
+        targets: this.trialGlow,
+        scale: 1.6,
+        alpha: 0.85,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+  }
+
+  /**
+   * Visually mark a station as resolved immediately on success — no scene
+   * reload required. Each station type gets its own settled feel.
+   */
+  private markStationResolved(st: MStation) {
+    if (!st.visual?.length) return;
+    for (const v of st.visual) {
+      const anyV = v as Phaser.GameObjects.Shape;
+      if ("setAlpha" in anyV) (anyV as Phaser.GameObjects.Rectangle).setAlpha(0.55);
+    }
+    const flash = this.add.circle(st.x, st.y - 4, 4, COLD, 0.5).setDepth(30);
+    this.tweens.add({
+      targets: flash,
+      scale: 4,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => flash.destroy(),
+    });
+
+    // Chalkboard gets a visible "resolved" mark — a bright underline.
+    if (st.kind === "chalkboard") {
+      this.add
+        .rectangle(st.x, st.y + 5, 12, 1, WARM, 1)
+        .setDepth(11);
+    }
+    // Puzzle plinths leave a quiet residual top mark.
+    if (
+      st.kind === "puzzle_syllogism" ||
+      st.kind === "puzzle_refutation" ||
+      st.kind === "puzzle_silence"
+    ) {
+      this.add.circle(st.x, st.y - 4, 1, WARM, 0.9).setDepth(12);
+    }
+    // NPC stations get a brief settled halo.
+    if (st.kind.startsWith("npc_")) {
+      const halo = this.add
+        .circle(st.x, st.y - 2, 8, COLD, 0.0)
+        .setStrokeStyle(1, COLD, 0.5)
+        .setDepth(14);
+      this.tweens.add({
+        targets: halo,
+        scale: 1.6,
+        alpha: { from: 0.6, to: 0 },
+        duration: 1000,
+        onComplete: () => halo.destroy(),
+      });
+    }
+  }
+
+  /**
+   * Lightweight ambient bark loop. One bark on screen at a time, only
+   * fires while the player is not busy and the soul is still unsolved.
+   */
+  private startAmbientBarks() {
+    this.ambientBarkEvent?.remove(false);
+    this.ambientBarkEvent = this.time.addEvent({
+      delay: Phaser.Math.Between(5000, 8000),
+      loop: true,
+      callback: () => {
+        if (this.busy || this.activeBark) return;
+        const souls = this.stations.filter(
+          (s) =>
+            (s.kind === "npc_defender" ||
+              s.kind === "npc_pedant" ||
+              s.kind === "npc_casuist") &&
+            !(s.doneFlag && this.mSave.flags[s.doneFlag]),
+        );
+        if (!souls.length) return;
+        const st = Phaser.Utils.Array.GetRandom(souls) as MStation;
+        const lines =
+          MERCURY_BARKS[st.kind as "npc_defender" | "npc_pedant" | "npc_casuist"];
+        const line = Phaser.Utils.Array.GetRandom(lines);
+        const bark = new GBCText(this, st.x - 22, st.y - 20, line, {
+          color: COLOR.textDim,
+          depth: 40,
+          maxWidthPx: 64,
+        });
+        this.activeBark = bark;
+        this.tweens.add({
+          targets: bark.obj,
+          alpha: 0,
+          y: st.y - 30,
+          duration: 1800,
+          onComplete: () => {
+            bark.destroy();
+            if (this.activeBark === bark) this.activeBark = undefined;
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * Reveal hidden true-name captions next to the room's nameable objects.
+   * Triggered when Mercury is cracked. This is the local payoff for NAME:
+   * the verb makes hidden conceptual structure visible inside the act.
+   */
+  private revealTrueNames() {
+    if (this.trueNameLabels.length) return; // idempotent
+    for (const tn of MERCURY_TRUE_NAMES) {
+      const st = this.stations.find((s) => s.kind === tn.kind);
+      if (!st) continue;
+      const label = new GBCText(this, st.x - 28, st.y + tn.dy, tn.name, {
+        color: COLOR.textGold,
+        depth: 18,
+        maxWidthPx: 60,
+      });
+      label.obj.setAlpha(0);
+      this.tweens.add({
+        targets: label.obj,
+        alpha: 0.85,
+        duration: 900,
+        ease: "Sine.inOut",
+      });
+      this.trueNameLabels.push(label);
     }
   }
 
