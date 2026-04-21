@@ -96,6 +96,13 @@ export class NigredoScene extends Phaser.Scene {
     const cx = GBC_W / 2;
     const cy = GBC_H / 2 - 5;
 
+    // Furnace halo: a soft glow under the furnace whose color/scale shifts
+    // with the player's choices in applyFurnaceState().
+    this.furnaceHalo = this.add
+      .ellipse(cx, cy + 12, 56, 18, 0xff4400, 0.35)
+      .setDepth(1)
+      .setBlendMode("ADD");
+
     this.add.rectangle(cx, cy + 16, 60, 10, 0x1c1014).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
     this.add.rectangle(cx, cy, 40, 32, 0x11080a).setStrokeStyle(1, 0x2a1a1a).setDepth(2);
     this.add.rectangle(cx, cy + 4, 24, 20, 0x000000).setDepth(3);
