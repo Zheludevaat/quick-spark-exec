@@ -644,17 +644,73 @@ export class InputState {
 }
 
 // ============================================================================
-// Rowan helpers (unchanged)
+// Rowan helpers — layered living/soul sprites with per-skin animation sets.
 // ============================================================================
 export type RowanSkin = "living" | "soul";
 
-export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: RowanSkin = "living") {
+function rowanAnimKey(skin: RowanSkin, dir: string, idle = false) {
+  return `rowan_${skin}_${dir}${idle ? "_idle" : ""}`;
+}
+
+function getRowanSprites(c: Phaser.GameObjects.Container) {
+  return {
+    living: c.getData("livingSprite") as Phaser.GameObjects.Sprite | undefined,
+    soul: c.getData("soulSprite") as Phaser.GameObjects.Sprite | undefined,
+  };
+}
+
+function playRowanPose(
+  c: Phaser.GameObjects.Container,
+  dir: string,
+  moving: boolean,
+) {
+  const { living, soul } = getRowanSprites(c);
+  const anims = c.scene.anims;
+  if (living) {
+    const key = rowanAnimKey("living", dir, !moving);
+    if (anims.exists(key) && living.anims.currentAnim?.key !== key) {
+      living.play(key);
+    }
+  }
+  if (soul) {
+    const key = rowanAnimKey("soul", dir, !moving);
+    if (anims.exists(key) && soul.anims.currentAnim?.key !== key) {
+      soul.play(key);
+    }
+  }
+}
+
+export function makeRowan(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  skin: RowanSkin = "living",
+) {
   const c = scene.add.container(x, y);
-  const sprite = scene.add.sprite(0, 0, "rowan", 0).setOrigin(0.5, 0.7);
-  if (scene.anims.exists("rowan_down_idle")) sprite.play("rowan_down_idle");
-  c.add([sprite]);
+
+  const livingSprite = scene.add
+    .sprite(0, 0, "rowan_living", 0)
+    .setOrigin(0.5, 0.7);
+  const soulSprite = scene.add
+    .sprite(0, 0, "rowan_soul", 0)
+    .setOrigin(0.5, 0.7);
+
+  if (scene.anims.exists(rowanAnimKey("living", "down", true))) {
+    livingSprite.play(rowanAnimKey("living", "down", true));
+  }
+  if (scene.anims.exists(rowanAnimKey("soul", "down", true))) {
+    soulSprite.play(rowanAnimKey("soul", "down", true));
+  }
+
+  livingSprite.setAlpha(skin === "living" ? 1 : 0);
+  soulSprite.setAlpha(skin === "soul" ? 0.85 : 0);
+  soulSprite.setTint(0xeaf2ff);
+
+  c.add([livingSprite, soulSprite]);
   c.setSize(16, 24);
-  c.setData("sprite", sprite);
+  c.setData("livingSprite", livingSprite);
+  c.setData("soulSprite", soulSprite);
+  c.setData("sprite", skin === "soul" ? soulSprite : livingSprite);
   c.setData("dir", "down");
   c.setData("skin", skin);
 
@@ -673,26 +729,30 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   });
   c.setData("accessories", accessories);
 
-  if (skin === "soul") {
-    sprite.setAlpha(0.85);
-    sprite.setTint(0xeaf2ff);
-  }
-
-  // --- ART UPGRADE: Player "Illusion of Life" (idle breathing) ---
-  const idleBop = scene.tweens.add({
-    targets: sprite,
+  // --- ART UPGRADE: idle breathing for both layers ---
+  const idleBopLiving = scene.tweens.add({
+    targets: livingSprite,
     scaleY: 1.04,
     scaleX: 0.98,
-    y: sprite.y - 0.5,
+    y: livingSprite.y - 0.5,
     duration: 1100,
     yoyo: true,
     repeat: -1,
     ease: "Sine.inOut",
   });
-  c.setData("idleBop", idleBop);
-  // --- END ART UPGRADE ---
+  const idleBopSoul = scene.tweens.add({
+    targets: soulSprite,
+    scaleY: 1.04,
+    scaleX: 0.98,
+    y: soulSprite.y - 0.5,
+    duration: 1100,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.inOut",
+  });
+  c.setData("idleBops", [idleBopLiving, idleBopSoul]);
 
-  // --- ART UPGRADE: Contextual Footsteps ---
+  // --- ART UPGRADE: contextual footsteps ---
   if (!scene.textures.exists("footstep_dust")) {
     const gr = scene.make.graphics({ x: 0, y: 0 }, false);
     gr.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 1);
@@ -715,7 +775,6 @@ export function makeRowan(scene: Phaser.Scene, x: number, y: number, skin: Rowan
   c.setData("footsteps", footsteps);
   c.setData("lastTrail", 0);
   c.setData("walkTimer", 0);
-  // --- END ART UPGRADE ---
 
   return c;
 }
@@ -780,17 +839,20 @@ export function shedAccessory(
 }
 
 export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
-  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
-  if (!sprite) return;
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
+
   c.setData("skin", skin);
-  if (skin === "soul") {
-    sprite.setAlpha(0.85);
-    sprite.setTint(0xeaf2ff);
-  } else {
-    sprite.setAlpha(1);
-    sprite.clearTint();
-  }
-  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+
+  living.setAlpha(skin === "living" ? 1 : 0);
+  living.clearTint();
+
+  soul.setAlpha(skin === "soul" ? 0.85 : 0);
+  soul.setTint(0xeaf2ff);
+
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
   if (accs) {
     Object.values(accs).forEach((a) => {
       a.setVisible(skin === "living");
@@ -798,61 +860,87 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
       a.clearTint();
     });
   }
+
   c.setData("transitionAmount", skin === "soul" ? 1 : 0);
+  c.setData("sprite", skin === "soul" ? soul : living);
+
+  const dir = (c.getData("dir") as string) ?? "down";
+  playRowanPose(c, dir, false);
 }
 
-export function setRowanTransition(c: Phaser.GameObjects.Container, amount: number) {
+export function setRowanTransition(
+  c: Phaser.GameObjects.Container,
+  amount: number,
+) {
   const a = Phaser.Math.Clamp(amount, 0, 1);
-  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
-  if (!sprite) return;
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
 
-  const r = Math.round(Phaser.Math.Linear(255, 234, a));
-  const g = Math.round(Phaser.Math.Linear(255, 242, a));
-  const b = Math.round(Phaser.Math.Linear(255, 255, a));
-  const tint = Phaser.Display.Color.GetColor(r, g, b);
+  living.setAlpha(Phaser.Math.Linear(1, 0, a));
+  living.clearTint();
 
-  sprite.setAlpha(Phaser.Math.Linear(1, 0.84, a));
-  sprite.setTint(tint);
+  const r = Math.round(Phaser.Math.Linear(220, 240, a));
+  const g = Math.round(Phaser.Math.Linear(232, 252, a));
+  const b = Math.round(Phaser.Math.Linear(245, 255, a));
+  const soulTint = Phaser.Display.Color.GetColor(r, g, b);
 
-  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  soul.setAlpha(Phaser.Math.Linear(0, 0.85, a));
+  soul.setTint(soulTint);
+
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
   if (accs) {
     Object.values(accs).forEach((acc) => {
       if (!acc.visible) return;
       acc.setAlpha(Phaser.Math.Linear(1, 0.3, a));
-      acc.setTint(tint);
+      acc.setTint(soulTint);
     });
   }
 
   c.setData("transitionAmount", a);
+  c.setData("sprite", a >= 0.5 ? soul : living);
+
+  const dir = (c.getData("dir") as string) ?? "down";
+  playRowanPose(c, dir, false);
 }
 
-export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: number) {
-  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
-  if (!sprite) return;
+export function animateRowan(
+  c: Phaser.GameObjects.Container,
+  dx: number,
+  dy: number,
+) {
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
+
   const scene = c.scene;
   let dir = c.getData("dir") as string;
   const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
-  const anims = sprite.scene.anims;
+  const transitionAmount = (c.getData("transitionAmount") as number) ?? 0;
+  const active =
+    transitionAmount >= 0.5 || c.getData("skin") === "soul" ? soul : living;
 
   if (moving) {
-    // 1. Base directional animation (preserve existing rowan_<dir> keys)
     if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
     else dir = dy > 0 ? "down" : "up";
     c.setData("dir", dir);
-    const key = `rowan_${dir}`;
-    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
 
-    // Pause the idle breathing tween so the procedural walk-bop owns the sprite.
-    const idleBop = c.getData("idleBop") as Phaser.Tweens.Tween | undefined;
-    if (idleBop && idleBop.isPlaying()) idleBop.pause();
+    playRowanPose(c, dir, true);
+
+    const idleBops = c.getData("idleBops") as
+      | Phaser.Tweens.Tween[]
+      | undefined;
+    idleBops?.forEach((t) => {
+      if (t.isPlaying()) t.pause();
+    });
 
     const now = scene.time.now;
 
-    // 2. Ethereal Ghost Trails
+    // Ethereal Ghost Trails — sourced from the currently-active sprite
     if (now - ((c.getData("lastTrail") as number) || 0) > 120) {
       c.setData("lastTrail", now);
       const ghost = scene.add
-        .sprite(c.x, c.y, sprite.texture.key, sprite.frame.name)
+        .sprite(c.x, c.y, active.texture.key, active.frame.name)
         .setOrigin(0.5, 0.7)
         .setDepth(c.depth - 1)
         .setTint(0x88c0e8)
@@ -871,50 +959,62 @@ export function animateRowan(c: Phaser.GameObjects.Container, dx: number, dy: nu
       });
     }
 
-    // 3. Contextual Footstep Particles
-    const footsteps = c.getData("footsteps") as Phaser.GameObjects.Particles.ParticleEmitter | undefined;
+    const footsteps = c.getData("footsteps") as
+      | Phaser.GameObjects.Particles.ParticleEmitter
+      | undefined;
     if (footsteps && now % 250 < 30) {
-      const isWater = ["Albedo", "Nigredo", "ImaginalRealm"].includes(scene.scene.key);
+      const isWater = ["Albedo", "Nigredo", "ImaginalRealm"].includes(
+        scene.scene.key,
+      );
       footsteps.particleTint = isWater ? 0x88c0e8 : 0xd8a060;
       footsteps.emitParticleAt(c.x, c.y + 8, 1);
     }
 
-    // 4. Procedural Walk Bop (Squash & Stretch)
     let walkTimer = (c.getData("walkTimer") as number) || 0;
     walkTimer += scene.game.loop.delta;
     c.setData("walkTimer", walkTimer);
 
     const bopSpeed = 0.015;
-    sprite.y = Math.sin(walkTimer * bopSpeed) * 1.5;
-    sprite.scaleY = 1 + Math.sin(walkTimer * bopSpeed) * 0.04;
-    sprite.scaleX = 1 - Math.sin(walkTimer * bopSpeed) * 0.02;
+    const yOff = Math.sin(walkTimer * bopSpeed) * 1.5;
+    const sy = 1 + Math.sin(walkTimer * bopSpeed) * 0.04;
+    const sx = 1 - Math.sin(walkTimer * bopSpeed) * 0.02;
+    [living, soul].forEach((sprite) => {
+      sprite.y = yOff;
+      sprite.scaleY = sy;
+      sprite.scaleX = sx;
+    });
   } else {
-    const key = `rowan_${dir}_idle`;
-    if (anims.exists(key) && sprite.anims.currentAnim?.key !== key) sprite.play(key);
+    playRowanPose(c, dir, false);
 
-    // Smoothly reset the procedural bop and resume the idle breathing tween.
     if ((c.getData("walkTimer") as number) !== 0) {
       c.setData("walkTimer", 0);
       scene.tweens.add({
-        targets: sprite,
+        targets: [living, soul],
         y: 0,
         scaleX: 1,
         scaleY: 1,
         duration: 150,
         ease: "Sine.out",
         onComplete: () => {
-          const idleBop = c.getData("idleBop") as Phaser.Tweens.Tween | undefined;
-          if (idleBop && idleBop.isPaused()) idleBop.resume();
+          const idleBops = c.getData("idleBops") as
+            | Phaser.Tweens.Tween[]
+            | undefined;
+          idleBops?.forEach((t) => {
+            if (t.isPaused()) t.resume();
+          });
         },
       });
     }
   }
 
-  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
   if (accs) {
     Object.values(accs).forEach((a) => a.setFrame(a.frame.name));
   }
 }
+
 
 // ============================================================================
 // Dialog (now respects autoAdvance + skip key)

@@ -17,8 +17,28 @@ export class BootScene extends Phaser.Scene {
     new GBCText(this, 32, 64, "AWAKENING...", { color: COLOR.textAccent });
     new GBCText(this, 32, 76, "PRESS START", { color: COLOR.textDim });
 
-    // Rowan walk anims
-    const dirs = ["down", "left", "right", "up"];
+    // Rowan walk anims — one family per skin so living scenes render
+    // living art and soul scenes render soul art (no shared "rowan_*").
+    const dirs = ["down", "left", "right", "up"] as const;
+    (["living", "soul"] as const).forEach((skin) => {
+      const tex = skin === "living" ? "rowan_living" : "rowan_soul";
+      dirs.forEach((d, row) => {
+        const start = row * 4;
+        this.anims.create({
+          key: `rowan_${skin}_${d}`,
+          frames: this.anims.generateFrameNumbers(tex, { start, end: start + 3 }),
+          frameRate: 6,
+          repeat: -1,
+        });
+        this.anims.create({
+          key: `rowan_${skin}_${d}_idle`,
+          frames: [{ key: tex, frame: start }],
+          frameRate: 1,
+        });
+      });
+    });
+
+    // Legacy single-skin keys kept so older code still resolves.
     dirs.forEach((d, row) => {
       const start = row * 4;
       this.anims.create({
