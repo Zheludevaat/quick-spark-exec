@@ -16,7 +16,8 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import type { SaveSlot } from "../types";
-import { attachHUD, runDialog } from "./hud";
+import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "./hud";
+import { onActionDown } from "../controls";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { returnToThreshold } from "../athanor/operationScene";
@@ -36,6 +37,13 @@ export class CitrinitasScene extends Phaser.Scene {
   private vesselHud!: VesselHud;
   private read = 0;
   private librarianAsks = 0;
+  // --- INTERACTIVE PROPERTIES ---
+  private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
+  private inputState!: InputState;
+  private isBusy = false;
+  private isDone = false;
+  private hintText!: GBCText;
 
   constructor() {
     super("Citrinitas");
@@ -131,7 +139,73 @@ export class CitrinitasScene extends Phaser.Scene {
     new GBCText(this, cx - 20, cy + 12, "LECTERN", { color: COLOR.textGold, depth: 7 });
     // --- END ART UPGRADE ---
 
-    runDialog(this, OPENING, () => this.maybeMathematician());
+    // --- INTERACTIVE UPGRADE ---
+    this.rowanShadow = this.add.ellipse(GBC_W / 2, GBC_H - 24, 10, 3, 0x000000, 0.4).setDepth(9);
+    this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 26, "soul").setDepth(10);
+    this.inputState = new InputState(this);
+
+    this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
+    this.hintText = new GBCText(this, 4, GBC_H - 9, "WALK", { color: COLOR.textDim, depth: 200 });
+
+    this.isBusy = true;
+    this.time.delayedCall(800, () => {
+      runDialog(this, OPENING, () => {
+        this.isBusy = false;
+      });
+    });
+
+    onActionDown(this, "action", () => this.tryInteract());
+    this.events.on("vinput-action", () => this.tryInteract());
+  }
+
+  update(_time: number, delta: number) {
+    if (this.isBusy) return;
+    const speed = 0.03 * delta;
+    const i = this.inputState.poll();
+    let dx = 0,
+      dy = 0;
+    if (i.left) dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up) dy -= speed;
+    if (i.down) dy += speed;
+
+    this.rowan.x += dx;
+    this.rowan.y += dy;
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 20, GBC_W - 20);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y, GBC_H / 2 + 16, GBC_H - 10);
+
+    animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+
+    if (this.isDone) {
+      this.hintText.setText("THE BOOKS ARE READ. WALK SOUTH.");
+      this.hintText.setColor(COLOR.textDim);
+      if (this.rowan.y >= GBC_H - 12) {
+        this.isBusy = true;
+        returnToThreshold(this, this.save, "citrinitas");
+      }
+    } else {
+      if (
+        Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, GBC_W / 2, GBC_H / 2 + 16) < 24
+      ) {
+        this.hintText.setText("[A] APPROACH THE LECTERN");
+        this.hintText.setColor(COLOR.textGold);
+      } else {
+        this.hintText.setText("WALK");
+        this.hintText.setColor(COLOR.textDim);
+      }
+    }
+  }
+
+  private tryInteract() {
+    if (this.isBusy || this.isDone) return;
+    if (Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, GBC_W / 2, GBC_H / 2 + 16) < 24) {
+      this.isBusy = true;
+      this.hintText.setText("");
+      const sprite = this.rowan.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
+      sprite?.play("walk_up");
+      this.maybeMathematician();
+    }
   }
 
   /** Lantern Mathematician cameo (if his Act 1 arc completed). */
@@ -272,15 +346,15 @@ export class CitrinitasScene extends Phaser.Scene {
           unlockLore(this.save, "on_the_torn_teacher");
           showLoreToast(this, "on_the_torn_teacher");
           writeSave(this.save);
-          returnToThreshold(this, this.save, "citrinitas");
+          this.isDone = true;
+          this.isBusy = false;
         },
       );
       return;
     }
-    runDialog(
-      this,
-      [{ who: "SORYN", text: "Enough. The yellow has settled." }],
-      () => returnToThreshold(this, this.save, "citrinitas"),
-    );
+    runDialog(this, [{ who: "SORYN", text: "Enough. The yellow has settled." }], () => {
+      this.isDone = true;
+      this.isBusy = false;
+    });
   }
 }
