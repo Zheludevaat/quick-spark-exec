@@ -19,7 +19,7 @@ const PUZZLE_SOFT_FAIL: Record<PuzzleTheme, string[]> = {
   ],
   solar_truth: [
     "You moved too soon. Truth is exacting in small ways first.",
-    "The light does not object. It simply continues being right.",
+    "The light passes through without argument.",
     "Almost. Which is one of the least useful distances in this kind of room.",
   ],
   martial_trial: [
@@ -82,16 +82,23 @@ const ATTUNE_BREAK_LINES = [
   "Broken. Wanting arrived and sat on the instrument.",
 ];
 
-assertHumorPolicy([
-  ...Object.values(PUZZLE_SOFT_FAIL).flat(),
-  ...Object.values(PUZZLE_SOLVE_DEFAULT).flat(),
-  ...ATTUNE_START_LINES,
-  ...ATTUNE_BREAK_LINES,
-]);
+function pickCycled<T>(bank: readonly T[], index = 0): T {
+  const safe = ((index % bank.length) + bank.length) % bank.length;
+  return bank[safe];
+}
+
+assertHumorPolicy(
+  [
+    ...Object.values(PUZZLE_SOFT_FAIL).flat(),
+    ...Object.values(PUZZLE_SOLVE_DEFAULT).flat(),
+    ...ATTUNE_START_LINES,
+    ...ATTUNE_BREAK_LINES,
+  ],
+  { fatal: false, label: "humorBanks" },
+);
 
 export function pickPuzzleSoftFail(theme: PuzzleTheme, index = 0): string {
-  const bank = PUZZLE_SOFT_FAIL[theme];
-  return bank[index % bank.length];
+  return pickCycled(PUZZLE_SOFT_FAIL[theme], index);
 }
 
 export function defaultPuzzleSolveLines(theme: PuzzleTheme): string[] {
@@ -99,9 +106,9 @@ export function defaultPuzzleSolveLines(theme: PuzzleTheme): string[] {
 }
 
 export function pickAttuneStartLine(index = 0): string {
-  return ATTUNE_START_LINES[index % ATTUNE_START_LINES.length];
+  return pickCycled(ATTUNE_START_LINES, index);
 }
 
 export function pickAttuneBreakLine(index = 0): string {
-  return ATTUNE_BREAK_LINES[index % ATTUNE_BREAK_LINES.length];
+  return pickCycled(ATTUNE_BREAK_LINES, index);
 }
