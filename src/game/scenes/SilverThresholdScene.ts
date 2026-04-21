@@ -494,6 +494,18 @@ export class SilverThresholdScene extends Phaser.Scene {
     animateRowan(this.rowan, dx, dy);
     this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
 
+    // Tutorial gates: stillness must come first, then observe (the stone),
+    // before guardian circles will auto-trigger.
+    if (this.save.flags.intro_done && !this.save.flags.reception_stillness_taught) {
+      this.updateStillnessTutorial(dx, dy, dt);
+      return;
+    }
+    if (this.save.flags.intro_done && !this.save.flags.reception_observe_taught) {
+      if (this.nearStone()) this.hint.setText("A: INSPECT STONE");
+      else this.hint.setText("FIND THE STONE TO THE WEST");
+      return;
+    }
+
     const visited = this.circles.filter((c) => c.visited).length;
     const sdx = this.rowan.x - this.soryn.x,
       sdy = this.rowan.y - this.soryn.y;
@@ -504,10 +516,20 @@ export class SilverThresholdScene extends Phaser.Scene {
     if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SORYN");
     else if (gdx * gdx + gdy * gdy < 16 * 16)
       this.hint.setText(
-        this.save.flags.daimon_bound ? "A: ENTER THE GATE" : `GATE SEALED  ${visited}/4 CIRCLES`,
+        this.save.flags.daimon_bound
+          ? this.save.flags.threshold_gate_preview_seen
+            ? "A: ENTER THE GATE"
+            : "A: APPROACH THE GATE"
+          : `GATE SEALED  ${visited}/4 CIRCLES`,
       );
     else if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found)
       this.hint.setText("A: INSPECT STONE");
+    else if (
+      this.nearBasin() &&
+      this.save.flags.elements_done &&
+      !this.save.flags.threshold_basin_seen
+    )
+      this.hint.setText("A: INSPECT BASIN");
     else
       this.hint.setText(
         this.save.flags.daimon_bound
@@ -526,6 +548,92 @@ export class SilverThresholdScene extends Phaser.Scene {
         return;
       }
     }
+  }
+
+  private nearSoryn(): boolean {
+    const sorynObj = this.daimonV2 ?? this.soryn;
+    const dx = this.rowan.x - sorynObj.x;
+    const dy = this.rowan.y - sorynObj.y;
+    return dx * dx + dy * dy < 16 * 16;
+  }
+
+  private nearStone(): boolean {
+    const dx = this.rowan.x - this.stone.x;
+    const dy = this.rowan.y - this.stone.y;
+    return dx * dx + dy * dy < 12 * 12;
+  }
+
+  private nearBasin(): boolean {
+    if (!this.basin) return false;
+    const dx = this.rowan.x - this.basin.x;
+    const dy = this.rowan.y - this.basin.y;
+    return dx * dx + dy * dy < 14 * 14;
+  }
+
+  private updateStillnessTutorial(dx: number, dy: number, dt: number) {
+    if (this.dialogActive || this.save.flags.reception_stillness_taught) return;
+
+    if (!this.nearSoryn()) {
+      this.stillMs = 0;
+      this.hint.setText("STAND STILL NEAR SORYN");
+      return;
+    }
+    const moving = Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001;
+    if (moving) {
+      this.stillMs = 0;
+      this.hint.setText("BE STILL FOR A BREATH");
+      return;
+    }
+    this.stillMs += dt;
+    this.hint.setText("BE STILL FOR A BREATH");
+    if (this.stillMs >= 900) {
+      this.dialogActive = true;
+      this.save.flags.reception_stillness_taught = true;
+      writeSave(this.save);
+      runDialog(this, STILLNESS_LINES, () => {
+        this.dialogActive = false;
+      });
+    }
+  }
+
+  private runGuardianCircling(
+    kind: ElemKind,
+    c: { x: number; y: number; sprite: Phaser.GameObjects.Sprite },
+    onDone: () => void,
+  ) {
+    const burstColor = ELEM_BURST_COLOR[kind];
+    const motes = [0, 1, 2].map(() =>
+      this.add.circle(this.rowan.x, this.rowan.y - 4, 2, burstColor, 0.7).setDepth(45),
+    );
+    let angle = 0;
+    const radiusX = 12;
+    const radiusY = 8;
+    const totalAngle = Math.PI * 2 * 3;
+    this.tweens.add({
+      targets: c.sprite,
+      scale: 1.18,
+      alpha: 0.8,
+      duration: 180,
+      yoyo: true,
+      repeat: 8,
+    });
+    const tick = this.time.addEvent({
+      delay: 30,
+      loop: true,
+      callback: () => {
+        angle += 0.18;
+        motes.forEach((m, i) => {
+          const a = angle + (i / 3) * Math.PI * 2;
+          m.x = this.rowan.x + Math.cos(a) * radiusX;
+          m.y = this.rowan.y - 4 + Math.sin(a) * radiusY;
+        });
+        if (angle >= totalAngle) {
+          tick.remove(false);
+          motes.forEach((m) => m.destroy());
+          onDone();
+        }
+      },
+    });
   }
 
   // ============================================================================
