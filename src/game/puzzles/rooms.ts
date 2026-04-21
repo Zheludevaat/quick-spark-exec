@@ -13,10 +13,9 @@ export const PUZZLE_ROOMS: Record<string, PuzzleRoomDef> = {
     persistent: true,
     title: "REFLECTION CHAMBER",
     intro: [
-      { who: "ROWAN", text: "A pale basin. Two mirrors, unaligned." } as unknown as string,
-    ].map(() => "A pale basin. Two mirrors are unaligned.").slice(0, 1).concat([
+      "A pale basin. Two mirrors are unaligned.",
       "WITNESS each mirror, then the basin.",
-    ]),
+    ],
     nodes: [
       { id: "mirror_a", kind: "mirror", x: 40, y: 56, state: false },
       { id: "mirror_b", kind: "mirror", x: 120, y: 56, state: false },
