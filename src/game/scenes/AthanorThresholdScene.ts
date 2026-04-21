@@ -304,6 +304,26 @@ export class AthanorThresholdScene extends Phaser.Scene {
       });
     }
 
+    // Stage return-beat: the first time the player walks back into the
+    // threshold with N completed operations, Soryn (or Rowan, alone)
+    // acknowledges it once. After that the room remembers silently.
+    const stage = this.thresholdStage as 0 | 1 | 2 | 3 | 4;
+    if (stage >= 1 && !this.save.flags[`athanor_stage_${stage}_seen`]) {
+      this.time.delayedCall(900, () => {
+        if (this.busy) return;
+        this.save.flags[`athanor_stage_${stage}_seen`] = true;
+        writeSave(this.save);
+        this.busy = true;
+        const beat = STAGE_BEATS[stage as 1 | 2 | 3 | 4];
+        const line = this.save.sorynReleased
+          ? { who: "ROWAN", text: beat.text }
+          : beat;
+        runDialog(this, [line], () => {
+          this.busy = false;
+        });
+      });
+    }
+
     // If all four operations are done and player returns, prompt the seal.
     if (
       this.save.flags.op_nigredo_done &&
@@ -312,7 +332,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.save.flags.op_rubedo_done &&
       !this.save.act2Inscription
     ) {
-      this.time.delayedCall(600, () => {
+      this.time.delayedCall(stage >= 4 ? 2400 : 600, () => {
         if (this.busy) return;
         this.busy = true;
         runDialog(
