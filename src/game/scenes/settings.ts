@@ -217,7 +217,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     bodyObjs.length = 0;
   };
 
-  type Row = { label: string; value: string };
+  type Row = { label: string; menuLabel?: string; value: string };
 
   const buildMainRows = (): Row[] => {
     const c = getControls();
@@ -225,24 +225,55 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     const volPct = Math.round(audio.volume * 100);
     const isTouchMode = c.interfaceMode === "touch_landscape";
     return [
-      { label: "INTERFACE MODE", value: isTouchMode ? "TOUCH" : "DESKTOP" },
-      { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
-      { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
-      { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
+      {
+        label: "INTERFACE MODE",
+        menuLabel: "INTERFACE",
+        value: isTouchMode ? "TOUCH" : "DESKTOP",
+      },
+      { label: "BUTTON SIZE", menuLabel: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
+      { label: "LEFT-HANDED", menuLabel: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
+      { label: "HAPTICS", menuLabel: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
       {
         label: "DIALOG AUTO-ADV",
+        menuLabel: "DIALOG ADV",
         value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
       },
-      { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
-      { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
-      // Legacy in-canvas touch overlay — only relevant outside touch_landscape.
+      { label: "VOLUME", menuLabel: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
+      { label: "AUDIO", menuLabel: "AUDIO", value: audio.muted ? "OFF" : "ON" },
       ...(isTouchMode
         ? []
-        : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
-      { label: "KEY BINDINGS", value: "" },
-      ...(canReturnToTitle ? [{ label: "RETURN TO TITLE", value: "" }] : []),
-      { label: "RESET DEFAULTS", value: "" },
+        : [
+            {
+              label: "TOUCH OVERLAY (LEGACY)",
+              menuLabel: "TOUCH OVERLAY",
+              value: c.touchLayout.toUpperCase(),
+            },
+          ]),
+      { label: "KEY BINDINGS", menuLabel: "KEY BINDINGS", value: "" },
+      ...(canReturnToTitle
+        ? [{ label: "RETURN TO TITLE", menuLabel: "RETURN TITLE", value: "" }]
+        : []),
+      { label: "RESET DEFAULTS", menuLabel: "RESET DEFAULTS", value: "" },
     ];
+  };
+
+  /** Format a main row for the detail strip. */
+  const mainDetailText = (r: Row): string => {
+    if (!r.value) {
+      if (r.label === "KEY BINDINGS") return "EDIT CONTROL BINDINGS";
+      if (r.label === "RETURN TO TITLE") return "LEAVE THE CURRENT RUN AND GO TO TITLE";
+      if (r.label === "RESET DEFAULTS") return "RESTORE DEFAULT CONTROL AND UI SETTINGS";
+      return r.label;
+    }
+    if (r.label === "INTERFACE MODE") {
+      return r.value === "TOUCH"
+        ? "INTERFACE MODE: TOUCH LANDSCAPE"
+        : "INTERFACE MODE: DESKTOP";
+    }
+    if (r.label === "TOUCH OVERLAY (LEGACY)") {
+      return `TOUCH OVERLAY (LEGACY): ${r.value}`;
+    }
+    return `${r.label}: ${r.value}`;
   };
 
   /** Format a main row for the detail strip. */
