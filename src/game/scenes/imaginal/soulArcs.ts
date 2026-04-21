@@ -1042,21 +1042,21 @@ const ARCS: Record<SoulId, SoulArc> = {
         prompt: { who: "BRIDE", text: "Will you carry the vow for me?" },
         options: [
           {
-            choice: "carry",
+            choice: "ask",
             label: "I WILL HOLD IT",
             reply: "Then it weighs on you. Mine. I drift further.",
             tag: "carried",
             branch: { to: "end", ending: "burdened" },
           },
           {
-            choice: "release",
+            choice: "observe",
             label: "PUT IT DOWN",
             reply: "Down. Yes. The water takes paper kindly.",
             tag: "released",
             branch: { to: "end", ending: "released" },
           },
           {
-            choice: "witness",
+            choice: "observe",
             label: "I SEE THE VOW",
             reply: "Seen. That is almost enough. I will sit a while.",
             tag: "witnessed",
@@ -1093,21 +1093,21 @@ const ARCS: Record<SoulId, SoulArc> = {
         prompt: { who: "MOURNER", text: "Will you stay?" },
         options: [
           {
-            choice: "lift",
+            choice: "ask",
             label: "MAY I LIFT IT?",
             reply: "No. But the asking is its own grief. Thank you.",
             tag: "asked",
             branch: { to: "end", ending: "refused" },
           },
           {
-            choice: "sit",
+            choice: "observe",
             label: "I WILL SIT",
             reply: "Sit. The veil thins when no one tugs.",
             tag: "sat_with",
             branch: { to: "witness_step" },
           },
           {
-            choice: "leave",
+            choice: "silent",
             label: "I'LL LEAVE YOU",
             reply: "Kind. Go on, then.",
             tag: "left",
@@ -1166,21 +1166,21 @@ const ARCS: Record<SoulId, SoulArc> = {
         prompt: { who: "HOARDER", text: "Will you take a jar?" },
         options: [
           {
-            choice: "take",
+            choice: "ask",
             label: "I'LL TAKE ONE",
             reply: "There. A morning you did not earn. Use it badly.",
             tag: "took",
             branch: { to: "end", ending: "took" },
           },
           {
-            choice: "refuse",
+            choice: "observe",
             label: "I HAVE TODAY",
             reply: "Today. Yes. I had forgotten the word.",
             tag: "refused",
             branch: { to: "end", ending: "refused" },
           },
           {
-            choice: "open",
+            choice: "confess",
             label: "OPEN ALL OF THEM",
             reply: "All? At once? The light — the light —",
             tag: "released",
@@ -1220,21 +1220,21 @@ const ARCS: Record<SoulId, SoulArc> = {
         prompt: { who: "SOVEREIGN", text: "Will you read the next decree?" },
         options: [
           {
-            choice: "read",
+            choice: "ask",
             label: "I'LL READ IT",
             reply: "Good. Then it is real. Until tomorrow's.",
             tag: "read",
             branch: { to: "end", ending: "ratified" },
           },
           {
-            choice: "witness",
+            choice: "observe",
             label: "I SEE THE PAPER",
             reply: "The paper. Yes. The paper.",
             tag: "witnessed",
             branch: { to: "witness_step" },
           },
           {
-            choice: "tear",
+            choice: "confess",
             label: "TEAR ONE",
             reply: "You — you — yes. One less. The crown is lighter.",
             tag: "tore",
