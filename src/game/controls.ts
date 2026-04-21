@@ -233,7 +233,7 @@ export function normalizeKeyEvent(e: KeyboardEvent): string | null {
 }
 
 /** True if this Phaser key string matches a held key on the pad. */
-export function isActionDown(scene: Phaser.Scene, action: GameAction): boolean {
+export function isActionDown(scene: Scene, action: GameAction): boolean {
   const kb = scene.input.keyboard;
   if (!kb) return false;
   const b = state.bindings[action];
@@ -247,7 +247,7 @@ export function isActionDown(scene: Phaser.Scene, action: GameAction): boolean {
  * Returns an unbind function. Safe to call from any scene.
  */
 export function onActionDown(
-  scene: Phaser.Scene,
+  scene: Scene,
   action: GameAction,
   handler: () => void,
 ): () => void {
@@ -270,7 +270,7 @@ export function onActionDown(
  * (whichever bindings the player has set). Returns an unbind function.
  */
 export function onDirection(
-  scene: Phaser.Scene,
+  scene: Scene,
   handler: (dir: "up" | "down" | "left" | "right") => void,
 ): () => void {
   const domHandler = (e: KeyboardEvent) => {
