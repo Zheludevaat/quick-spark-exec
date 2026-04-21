@@ -13,6 +13,7 @@ import {
   fitSingleLineText,
 } from "../gbcArt";
 import type { SaveSlot, Stats } from "../types";
+import { ACT_BY_SCENE, SCENE_LABEL } from "../types";
 import { getAudio } from "../audio";
 import { loadSave } from "../save";
 import { openLoreLog } from "./lore";
@@ -33,6 +34,18 @@ import {
   type StatKey,
 } from "../ui/hudSignals";
 import { openSettings } from "./settings";
+import {
+  setHudSnapshot,
+  setSceneSnapshot,
+  setOverlaySnapshot,
+  setDialogSnapshot,
+  clearDialogSnapshot,
+} from "../gameUiBridge";
+import {
+  subscribeVirtualInput,
+  getVirtualState,
+  clearVirtualInput,
+} from "../virtualInput";
 
 /**
  * Reusable on-screen HUD: stats top bar + virtual pad + A/B/menu for touch.
