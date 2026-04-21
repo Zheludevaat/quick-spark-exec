@@ -49,16 +49,16 @@ export function paintMercuryRoom(
   // sit behind authored stations and add silhouette, not clutter.
   switch (zone) {
     case "plateau": {
-      parts.push(placeMercuryRails(scene, zone, 8, 84, 9));
       parts.push(placeMercuryPillars(scene, zone, 4, 50, 1, 0));
       parts.push(placeMercuryPillars(scene, zone, 144, 50, 1, 0));
-      parts.push(placeMercuryObelisk(scene, zone, 70, 56));
+
       const lampSet = placeMercuryLamps(scene, zone, [
-        [22, 30],
-        [134, 30],
+        [24, 28],
+        [132, 28],
       ]);
       parts.push(lampSet.handle, createLampShimmer(scene, lampSet.lamps));
-      parts.push(createMercuryMotes(scene, 8));
+
+      parts.push(createMercuryMotes(scene, 5));
       break;
     }
     case "ascent": {

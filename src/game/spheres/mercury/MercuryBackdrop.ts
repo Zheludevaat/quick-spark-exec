@@ -39,15 +39,21 @@ export function buildMercuryBackdrop(
   );
 
   // Distant skyline blocks (modulated by zone)
-  const blockCount = zone === "trial" || zone === "hermaia" ? 4 : 6;
+  const blockCount =
+    zone === "trial" || zone === "hermaia"
+      ? 4
+      : zone === "plateau"
+        ? 4
+        : 6;
   for (let i = 0; i < blockCount; i++) {
-    const w = 18 + (i % 3) * 8;
-    const h = 22 + (i % 4) * 6;
-    const x = i * 28 - 4;
+    const plateau = zone === "plateau";
+    const w = plateau ? 22 + (i % 2) * 10 : 18 + (i % 3) * 8;
+    const h = plateau ? 26 + (i % 3) * 7 : 22 + (i % 4) * 6;
+    const x = plateau ? i * 36 - 6 : i * 28 - 4;
     const y = 74 - h;
     parts.push(
       scene.add
-        .rectangle(x, y, w, h, hexToColor(pal.bg2), 1)
+        .rectangle(x, y, w, h, hexToColor(pal.bg2), plateau ? 0.82 : 1)
         .setOrigin(0, 0)
         .setDepth(1),
     );
