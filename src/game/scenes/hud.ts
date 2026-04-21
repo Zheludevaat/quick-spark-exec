@@ -839,17 +839,20 @@ export function shedAccessory(
 }
 
 export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
-  const sprite = c.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
-  if (!sprite) return;
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
+
   c.setData("skin", skin);
-  if (skin === "soul") {
-    sprite.setAlpha(0.85);
-    sprite.setTint(0xeaf2ff);
-  } else {
-    sprite.setAlpha(1);
-    sprite.clearTint();
-  }
-  const accs = c.getData("accessories") as Record<string, Phaser.GameObjects.Sprite> | undefined;
+
+  living.setAlpha(skin === "living" ? 1 : 0);
+  living.clearTint();
+
+  soul.setAlpha(skin === "soul" ? 0.85 : 0);
+  soul.setTint(0xeaf2ff);
+
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
   if (accs) {
     Object.values(accs).forEach((a) => {
       a.setVisible(skin === "living");
@@ -857,7 +860,159 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
       a.clearTint();
     });
   }
+
   c.setData("transitionAmount", skin === "soul" ? 1 : 0);
+  c.setData("sprite", skin === "soul" ? soul : living);
+
+  const dir = (c.getData("dir") as string) ?? "down";
+  playRowanPose(c, dir, false);
+}
+
+export function setRowanTransition(
+  c: Phaser.GameObjects.Container,
+  amount: number,
+) {
+  const a = Phaser.Math.Clamp(amount, 0, 1);
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
+
+  living.setAlpha(Phaser.Math.Linear(1, 0, a));
+  living.clearTint();
+
+  const r = Math.round(Phaser.Math.Linear(220, 240, a));
+  const g = Math.round(Phaser.Math.Linear(232, 252, a));
+  const b = Math.round(Phaser.Math.Linear(245, 255, a));
+  const soulTint = Phaser.Display.Color.GetColor(r, g, b);
+
+  soul.setAlpha(Phaser.Math.Linear(0, 0.85, a));
+  soul.setTint(soulTint);
+
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
+  if (accs) {
+    Object.values(accs).forEach((acc) => {
+      if (!acc.visible) return;
+      acc.setAlpha(Phaser.Math.Linear(1, 0.3, a));
+      acc.setTint(soulTint);
+    });
+  }
+
+  c.setData("transitionAmount", a);
+  c.setData("sprite", a >= 0.5 ? soul : living);
+
+  const dir = (c.getData("dir") as string) ?? "down";
+  playRowanPose(c, dir, false);
+}
+
+export function animateRowan(
+  c: Phaser.GameObjects.Container,
+  dx: number,
+  dy: number,
+) {
+  const { living, soul } = getRowanSprites(c);
+  if (!living || !soul) return;
+
+  const scene = c.scene;
+  let dir = c.getData("dir") as string;
+  const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+  const transitionAmount = (c.getData("transitionAmount") as number) ?? 0;
+  const active =
+    transitionAmount >= 0.5 || c.getData("skin") === "soul" ? soul : living;
+
+  if (moving) {
+    if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? "right" : "left";
+    else dir = dy > 0 ? "down" : "up";
+    c.setData("dir", dir);
+
+    playRowanPose(c, dir, true);
+
+    const idleBops = c.getData("idleBops") as
+      | Phaser.Tweens.Tween[]
+      | undefined;
+    idleBops?.forEach((t) => {
+      if (t.isPlaying()) t.pause();
+    });
+
+    const now = scene.time.now;
+
+    // Ethereal Ghost Trails — sourced from the currently-active sprite
+    if (now - ((c.getData("lastTrail") as number) || 0) > 120) {
+      c.setData("lastTrail", now);
+      const ghost = scene.add
+        .sprite(c.x, c.y, active.texture.key, active.frame.name)
+        .setOrigin(0.5, 0.7)
+        .setDepth(c.depth - 1)
+        .setTint(0x88c0e8)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0.4);
+
+      scene.tweens.add({
+        targets: ghost,
+        alpha: 0,
+        scaleX: 1.15,
+        scaleY: 1.15,
+        y: ghost.y - 6,
+        duration: 500,
+        ease: "Quad.out",
+        onComplete: () => ghost.destroy(),
+      });
+    }
+
+    const footsteps = c.getData("footsteps") as
+      | Phaser.GameObjects.Particles.ParticleEmitter
+      | undefined;
+    if (footsteps && now % 250 < 30) {
+      const isWater = ["Albedo", "Nigredo", "ImaginalRealm"].includes(
+        scene.scene.key,
+      );
+      footsteps.particleTint = isWater ? 0x88c0e8 : 0xd8a060;
+      footsteps.emitParticleAt(c.x, c.y + 8, 1);
+    }
+
+    let walkTimer = (c.getData("walkTimer") as number) || 0;
+    walkTimer += scene.game.loop.delta;
+    c.setData("walkTimer", walkTimer);
+
+    const bopSpeed = 0.015;
+    const yOff = Math.sin(walkTimer * bopSpeed) * 1.5;
+    const sy = 1 + Math.sin(walkTimer * bopSpeed) * 0.04;
+    const sx = 1 - Math.sin(walkTimer * bopSpeed) * 0.02;
+    [living, soul].forEach((sprite) => {
+      sprite.y = yOff;
+      sprite.scaleY = sy;
+      sprite.scaleX = sx;
+    });
+  } else {
+    playRowanPose(c, dir, false);
+
+    if ((c.getData("walkTimer") as number) !== 0) {
+      c.setData("walkTimer", 0);
+      scene.tweens.add({
+        targets: [living, soul],
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 150,
+        ease: "Sine.out",
+        onComplete: () => {
+          const idleBops = c.getData("idleBops") as
+            | Phaser.Tweens.Tween[]
+            | undefined;
+          idleBops?.forEach((t) => {
+            if (t.isPaused()) t.resume();
+          });
+        },
+      });
+    }
+  }
+
+  const accs = c.getData("accessories") as
+    | Record<string, Phaser.GameObjects.Sprite>
+    | undefined;
+  if (accs) {
+    Object.values(accs).forEach((a) => a.setFrame(a.frame.name));
+  }
 }
 
 export function setRowanTransition(c: Phaser.GameObjects.Container, amount: number) {
