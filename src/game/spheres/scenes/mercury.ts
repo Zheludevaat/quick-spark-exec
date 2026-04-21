@@ -468,16 +468,9 @@ export class MercuryPlateauScene extends Phaser.Scene {
         ) >= mercuryConfig.operations.length;
       const altar = this.add.rectangle(x, y, 12, 8, ready ? COLD : STONE_DARK, 0.9).setDepth(8);
       altar.setStrokeStyle(1, COLD, ready ? 0.9 : 0.3);
+      this.chamberAltar = altar;
       visual.push(altar);
-      if (ready) {
-        this.tweens.add({
-          targets: altar,
-          alpha: 0.6,
-          duration: 800,
-          yoyo: true,
-          repeat: -1,
-        });
-      }
+      // Persistent pulse is applied by refreshChamberGlow() once ready.
     } else if (kind === "trial_door") {
       // glow handled separately; refresh later
     } else if (kind === "exit_stairs") {
