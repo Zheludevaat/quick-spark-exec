@@ -26,16 +26,17 @@ export type Calling = "scholar" | "caregiver" | "reformer";
 export const ACT_BY_SCENE: Record<SceneKey, number> = {
   LastDay: 0,
   Crossing: 0,
-  SilverThreshold: 0,
-  ImaginalRealm: 1,
-  AthanorThreshold: 2,
-  Nigredo: 2,
-  Albedo: 2,
-  Citrinitas: 2,
-  Rubedo: 2,
-  SealedVessel: 2,
-  CuratedSelf: 3,
-  Epilogue: 3,
+  SilverThreshold: 1,
+  ImaginalRealm: 2,
+  AthanorThreshold: 3,
+  Nigredo: 3,
+  Albedo: 3,
+  Citrinitas: 3,
+  Rubedo: 3,
+  SealedVessel: 3,
+  MetaxyHub: 3,
+  CuratedSelf: 6,
+  Epilogue: 10,
 };
 
 /** Stable shard ID — derived from Act 1 quest completions + 2 prelude defaults. */
