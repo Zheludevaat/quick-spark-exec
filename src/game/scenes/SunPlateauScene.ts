@@ -125,6 +125,11 @@ export class SunPlateauScene extends Phaser.Scene {
   private interactPrompt!: GBCText;
   private stationFocus!: Phaser.GameObjects.Arc;
   private stations: Station[] = [];
+  private nameplates: GBCText[] = [];
+  private gatePulse?: Phaser.GameObjects.Arc;
+  private gatePulseTween?: Phaser.Tweens.Tween;
+  private ambientBarkEvent?: Phaser.Time.TimerEvent;
+  private activeBark?: GBCText;
   private busy = false;
   private lastDx = 0;
   private lastDy = 0;
