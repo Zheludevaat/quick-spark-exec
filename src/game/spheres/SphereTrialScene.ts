@@ -7,7 +7,16 @@
  * Fail: drain coherence, route back to plateau for retry.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  gbcWipe,
+  spawnMotes,
+  fitSingleLineText,
+  measureText,
+} from "../gbcArt";
 import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
@@ -53,7 +62,10 @@ export class SphereTrialScene extends Phaser.Scene {
 
     attachHUD(this, () => this.save.stats);
 
-    new GBCText(this, GBC_W / 2 - 32, 16, `${this.cfg.governor}'S TRIAL`, {
+    const rawTitle = `${this.cfg.governor}'S TRIAL`;
+    const titleText = fitSingleLineText(rawTitle, GBC_W - 12);
+    const titleX = Math.floor((GBC_W - measureText(titleText)) / 2);
+    new GBCText(this, titleX, 16, titleText, {
       color: COLOR.textGold,
       depth: 10,
     });

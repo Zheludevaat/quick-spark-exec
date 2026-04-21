@@ -14,7 +14,17 @@
  * lines for 1 + 5.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  gbcWipe,
+  GBC_LINE_H,
+  textHeightPx,
+  fitSingleLineText,
+} from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot, ShardId } from "../types";
 import { onActionDown, onDirection } from "../controls";
@@ -48,38 +58,74 @@ export function selectShards(
   const picked = new Set<ShardId>();
   let cursor = 0;
 
-  const w = GBC_W - 16;
-  const h = Math.min(GBC_H - 32, 16 + inv.length * 8);
+  const rowH = GBC_LINE_H;
   const x = 8;
-  const y = 16;
-  drawGBCBox(scene, x, y, w, h, 200);
+  const boxW = GBC_W - 16;
+  const innerW = boxW - 8;
 
-  const promptText = new GBCText(scene, x + 4, y + 4, prompt, {
+  const promptUpper = prompt.toUpperCase();
+  const promptH = textHeightPx(promptUpper, innerW);
+
+  const minBoxH = 44;
+  const maxBoxH = GBC_H - 32;
+  const footerBand = GBC_LINE_H + 2;
+
+  // Determine how many rows can be shown while leaving room for prompt + footer.
+  const maxVisibleRows = Math.max(
+    1,
+    Math.floor((maxBoxH - promptH - footerBand - 14) / rowH),
+  );
+  const visibleRows = Math.min(inv.length, maxVisibleRows);
+
+  const boxH = Math.max(minBoxH, promptH + footerBand + visibleRows * rowH + 14);
+  const y = Math.max(8, Math.floor((GBC_H - boxH) / 2));
+
+  const box = drawGBCBox(scene, x, y, boxW, boxH, 200);
+
+  const promptText = new GBCText(scene, x + 4, y + 4, promptUpper, {
     color: COLOR.textGold,
     depth: 201,
-    maxWidthPx: w - 8,
+    maxWidthPx: innerW,
   });
+
+  const listTop = y + 4 + promptH + GBC_LINE_H;
+  const footerY = y + boxH - 8;
+
   const labels: GBCText[] = [];
-  inv.forEach((id, i) => {
-    const t = new GBCText(scene, x + 6, y + 14 + i * 8, "  " + shardName(id), {
-      color: COLOR.textLight,
-      depth: 201,
-    });
-    labels.push(t);
+  for (let row = 0; row < visibleRows; row++) {
+    labels.push(
+      new GBCText(scene, x + 6, listTop + row * rowH, "", {
+        color: COLOR.textLight,
+        depth: 201,
+      }),
+    );
+  }
+
+  const footer = new GBCText(scene, x + 4, footerY, "", {
+    color: COLOR.textDim,
+    depth: 201,
   });
-  const footer = new GBCText(
-    scene,
-    x + 4,
-    y + h - 8,
-    `A: PICK   PICK ${n}`,
-    { color: COLOR.textDim, depth: 201 },
-  );
+
+  const computeStart = () => {
+    if (inv.length <= visibleRows) return 0;
+    const half = Math.floor(visibleRows / 2);
+    const maxStart = Math.max(0, inv.length - visibleRows);
+    return Math.max(0, Math.min(maxStart, cursor - half));
+  };
 
   const refresh = () => {
-    inv.forEach((id, i) => {
-      const mark = picked.has(id) ? "*" : i === cursor ? ">" : " ";
-      labels[i].setText(`${mark} ${shardName(id)}`);
-    });
+    const start = computeStart();
+    for (let row = 0; row < visibleRows; row++) {
+      const abs = start + row;
+      const id = inv[abs];
+      if (!id) {
+        labels[row].setText("");
+        continue;
+      }
+      const mark = picked.has(id) ? "*" : abs === cursor ? ">" : " ";
+      const name = fitSingleLineText(shardName(id), innerW - 12);
+      labels[row].setText(`${mark} ${name}`);
+    }
     footer.setText(`A: PICK   ${picked.size}/${n}`);
   };
   refresh();
@@ -88,6 +134,7 @@ export function selectShards(
   let unbindDir: (() => void) | null = null;
 
   const cleanup = () => {
+    box.destroy();
     promptText.destroy();
     labels.forEach((l) => l.destroy());
     footer.destroy();
