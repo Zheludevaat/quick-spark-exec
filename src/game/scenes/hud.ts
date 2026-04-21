@@ -1056,8 +1056,12 @@ export function animateRowan(
 
     const now = scene.time.now;
 
-    // Ethereal Ghost Trails — sourced from the currently-active sprite
-    if (now - ((c.getData("lastTrail") as number) || 0) > 120) {
+    const skin = (c.getData("skin") as RowanSkin | undefined) ?? "living";
+    const shouldEmitGhostTrail =
+      skin === "soul" || transitionAmount >= 0.55;
+
+    // Ethereal ghost trails only belong to soul / near-soul states.
+    if (shouldEmitGhostTrail && now - ((c.getData("lastTrail") as number) || 0) > 120) {
       c.setData("lastTrail", now);
       const ghost = scene.add
         .sprite(c.x, c.y, active.texture.key, active.frame.name)
