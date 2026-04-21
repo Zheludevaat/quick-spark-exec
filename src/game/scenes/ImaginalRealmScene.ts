@@ -29,6 +29,8 @@ import {
 } from "../encounters/EncounterPresentation";
 import { KNOT_PROFILES } from "../encounters/profiles/knots";
 import { SOUL_PROFILES } from "../encounters/profiles/souls";
+import { regionAftermathLevel } from "./imaginal/regionAftermath";
+import { veilKnotUnlocked } from "./imaginal/ImaginalExpandedContent";
 
 type Knot = {
   kind: KnotKind;
@@ -117,7 +119,7 @@ function buildMap(region: ImaginalRegion): number[][] {
 }
 
 const KNOT_LAYOUT: Knot[] = [];
-function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y: number }[] {
+function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y: number; clearFlag?: string; taglineOverride?: string }[] {
   return [
     // Pools — soft tutorial, 2 knots
     { kind: "reflection", region: "pools", x: 48, y: 56 },
@@ -127,6 +129,15 @@ function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y:
     { kind: "lantern", region: "field", x: 120, y: 60 },
     // Corridor — narrow, 1 optional knot
     { kind: "crown", region: "corridor", x: 80, y: 56 },
+    // Hidden late knot — appears in corridor only after 3 of 5 quieted.
+    {
+      kind: "crown",
+      region: "corridor",
+      x: 40,
+      y: 96,
+      clearFlag: "knot_veil",
+      taglineOverride: "THE VEIL THAT FLATTERS YOU.",
+    },
   ];
 }
 
