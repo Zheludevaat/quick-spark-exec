@@ -253,9 +253,15 @@ export class CuratedSelfScene extends Phaser.Scene {
     vignette.fillRect(0, 0, 4, GBC_H);
     vignette.fillRect(GBC_W - 4, 0, 4, GBC_H);
 
-    drawGBCBox(this, GBC_W - 92, 14, 88, 14);
-    new GBCText(this, GBC_W - 88, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
-    this.stateText = new GBCText(this, 4, 14, PHASE_LABEL[this.phase], {
+    // Right-anchored "CURATED SELF" plate, sits below the global top stat bar (y=0..13)
+    drawGBCBox(this, GBC_W - 76, 15, 72, 12);
+    new GBCText(this, GBC_W - 72, 17, "CURATED SELF", { color: COLOR.textWarn, depth: 101 });
+    // Phase label with a tiny dark backing strip for legibility on the gradient.
+    this.add
+      .rectangle(2, 15, 78, 11, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setDepth(100);
+    this.stateText = new GBCText(this, 4, 16, PHASE_LABEL[this.phase], {
       color: COLOR.textGold,
       depth: 101,
     });
