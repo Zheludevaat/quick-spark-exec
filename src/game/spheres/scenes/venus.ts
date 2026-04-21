@@ -137,6 +137,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private subtitle!: GBCText;
 
   private player!: Phaser.GameObjects.Arc;
+  private moveInput!: InputState;
   private playerVx = 0;
   private playerVy = 0;
 
@@ -146,9 +147,12 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private activeAttune: AttuneTarget | null = null;
   private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
-  private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
-  private prevPlayerPos = { x: 0, y: 0 };
   private kypriaPresentation?: EncounterPresentationHandle;
+
+  private destroyKypriaPresentation() {
+    this.kypriaPresentation?.destroy();
+    this.kypriaPresentation = undefined;
+  }
 
   constructor() {
     super("VenusPlateau");
