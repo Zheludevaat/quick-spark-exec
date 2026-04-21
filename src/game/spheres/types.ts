@@ -15,6 +15,8 @@ export type SphereVerb = "name" | "attune" | "stand" | "weigh" | "release";
 
 /** A small inquiry option used in the cracking question and trial. */
 export type SphereOption = {
+  /** Stable id used to resolve the picked option (independent of label text). */
+  id: string;
   label: string;
   reply: string;
   /** Score weight for trial pass/fail. Higher = more aligned with verb. */
@@ -81,6 +83,8 @@ export type SphereConfig = {
   inscription: string;
   /** Soft-ending text if player chooses "settle here". */
   settleText: string[];
+  /** Optional override for the trial pass threshold. Defaults to ceil(rounds*3*0.5). */
+  trialPassThreshold?: number;
 };
 
 /** Per-sphere progress stored on the save under flags. */

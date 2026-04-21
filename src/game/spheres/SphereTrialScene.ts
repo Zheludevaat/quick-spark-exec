@@ -88,7 +88,10 @@ export class SphereTrialScene extends Phaser.Scene {
 
   private resolve() {
     const max = this.cfg.trialRounds.length * 3;
-    const threshold = Math.ceil(max * 0.5);
+    const threshold =
+      typeof this.cfg.trialPassThreshold === "number"
+        ? this.cfg.trialPassThreshold
+        : Math.ceil(max * 0.5);
     if (this.score >= threshold) return this.pass();
     return this.fail();
   }
