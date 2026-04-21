@@ -25,6 +25,17 @@ export type DialogSnapshot = {
   waitingForConfirm: boolean;
 };
 
+export type SceneNode = {
+  id: string;
+  label: string;
+  /** Normalized 0..1 coords inside the minimap panel. */
+  x: number;
+  y: number;
+  active?: boolean;
+};
+
+export type SceneShellMode = "minimal" | "standard";
+
 export type SceneSnapshot = {
   key: string;
   label: string;
@@ -35,15 +46,22 @@ export type SceneSnapshot = {
   nodes: SceneNode[] | null;
   /** Optional player marker [0..1, 0..1]. */
   marker: { x: number; y: number } | null;
-};
 
-export type SceneNode = {
-  id: string;
-  label: string;
-  /** Normalized 0..1 coords inside the minimap panel. */
-  x: number;
-  y: number;
-  active?: boolean;
+  /** Scene-aware shell presentation policy. */
+  shellMode: SceneShellMode;
+
+  /** Idle dock content used when no dialogue is open. */
+  idleTitle: string | null;
+  idleBody: string | null;
+
+  /** Optional scene-specific footer hint for standard shell scenes. */
+  footerHint: string | null;
+
+  /** Whether the desktop Player Hub may open in this scene. */
+  allowPlayerHub: boolean;
+
+  /** Whether the desktop minimap card should be shown at all. */
+  showMiniMap: boolean;
 };
 
 export type OverlaySnapshot = {
@@ -72,7 +90,20 @@ const initial = (): GameUiSnapshot => ({
     typing: false,
     waitingForConfirm: false,
   },
-  scene: { key: "", label: "", act: 1, zone: null, nodes: null, marker: null },
+  scene: {
+    key: "",
+    label: "",
+    act: 0,
+    zone: null,
+    nodes: null,
+    marker: null,
+    shellMode: "minimal",
+    idleTitle: null,
+    idleBody: null,
+    footerHint: null,
+    allowPlayerHub: false,
+    showMiniMap: false,
+  },
   overlay: {
     settingsOpen: false,
     loreOpen: false,
@@ -133,7 +164,34 @@ export function clearDialogSnapshot() {
 }
 
 export function setSceneSnapshot(patch: Partial<SceneSnapshot>) {
-  snap = { ...snap, scene: { ...snap.scene, ...patch } };
+  const prev = snap.scene;
+  const next: SceneSnapshot = { ...prev, ...patch };
+
+  // Infer shell mode when callers do not provide one.
+  if (patch.shellMode === undefined) {
+    if (patch.key === "Title") {
+      next.shellMode = "minimal";
+    } else if (patch.key) {
+      next.shellMode = "standard";
+    }
+  }
+
+  // Default player hub policy from shell mode unless explicitly overridden.
+  if (patch.allowPlayerHub === undefined && patch.key) {
+    next.allowPlayerHub = next.shellMode === "standard";
+  }
+
+  // Default minimap visibility from actual available map data unless
+  // explicitly overridden.
+  if (patch.showMiniMap === undefined && patch.key) {
+    const nextNodes = patch.nodes !== undefined ? patch.nodes : next.nodes;
+    const nextMarker = patch.marker !== undefined ? patch.marker : next.marker;
+    next.showMiniMap =
+      next.shellMode === "standard" &&
+      (!!nextMarker || (!!nextNodes && nextNodes.length > 0));
+  }
+
+  snap = { ...snap, scene: next };
   emit();
 }
 

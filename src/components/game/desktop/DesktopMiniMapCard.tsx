@@ -1,7 +1,8 @@
 /**
- * Desktop minimap card — schematic node graph with optional player marker.
- * Mirrors the visual language of TouchMiniMapPanel but sized for the
- * desktop bottom dock.
+ * Desktop minimap card.
+ *
+ * Only renders when the scene explicitly allows a minimap.
+ * No more dead black placeholder panel on title/front-end scenes.
  */
 import { useEffect, useState } from "react";
 import {
@@ -20,6 +21,8 @@ export function DesktopMiniMapCard() {
   useEffect(() => {
     return subscribeGameUi((s) => setScene(s.scene));
   }, []);
+
+  if (!scene.showMiniMap) return null;
 
   const hasNodes = !!scene.nodes && scene.nodes.length > 0;
   const marker = scene.marker;
@@ -95,10 +98,10 @@ export function DesktopMiniMapCard() {
           </>
         ) : (
           <div
-            className="absolute inset-0 flex items-center justify-center text-xs font-mono"
+            className="absolute inset-0 flex items-center justify-center text-[9px] font-mono uppercase tracking-wider"
             style={{ color: "rgba(168,200,232,0.5)" }}
           >
-            ◇
+            SCHEMATIC UNAVAILABLE
           </div>
         )}
 

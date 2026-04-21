@@ -1,15 +1,15 @@
 /**
- * Desktop command shell: top crown stats bar, framed central viewport,
- * bottom command dock (utility rail | dialogue dock | minimap card),
- * and the Player Hub overlay opened by the STATS button.
+ * Desktop shell with scene-aware presentation policy.
  *
- * The Phaser viewport remains the hero object. SETTINGS opens the
- * existing in-canvas settings overlay via the global opener installed
- * by the HUD scene.
+ * - minimal shell: viewport only, used for title/front-end scenes
+ * - standard shell: stats crown, viewport, bottom dock, footer, player hub
+ *
+ * The Phaser viewport remains the hero object.
  */
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -23,7 +23,6 @@ import {
   subscribeGameUi,
   getGameUiSnapshot,
   patchOverlaySnapshot,
-  type OverlaySnapshot,
 } from "@/game/gameUiBridge";
 import { clearVirtualInput } from "@/game/virtualInput";
 
@@ -33,19 +32,35 @@ type Props = {
   error: string | null;
 };
 
+const DEFAULT_FOOTER_HINT =
+  "ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L = LORE · P OR ESC = SETTINGS · STATS = PLAYER HUB";
+
 export function DesktopGameShell({ children, booted, error }: Props) {
   const [playerHubOpen, setPlayerHubOpen] = useState(false);
-  const [overlay, setOverlay] = useState<OverlaySnapshot>(
-    () => getGameUiSnapshot().overlay,
-  );
+  const [overlay, setOverlay] = useState(() => getGameUiSnapshot().overlay);
+  const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
 
   useEffect(() => {
-    return subscribeGameUi((s) => setOverlay(s.overlay));
+    return subscribeGameUi((s) => {
+      setOverlay(s.overlay);
+      setScene(s.scene);
+    });
+  }, []);
+
+  const closePlayerHub = useCallback(() => {
+    setPlayerHubOpen(false);
+    patchOverlaySnapshot({ playerHubOpen: false });
   }, []);
 
   useEffect(() => {
     if (playerHubOpen) clearVirtualInput();
   }, [playerHubOpen]);
+
+  useEffect(() => {
+    if (scene.shellMode === "minimal" && playerHubOpen) {
+      closePlayerHub();
+    }
+  }, [scene.shellMode, playerHubOpen, closePlayerHub]);
 
   const openSettings = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -56,6 +71,7 @@ export function DesktopGameShell({ children, booted, error }: Props) {
 
   const openPlayerHub = useCallback(() => {
     if (
+      !scene.allowPlayerHub ||
       overlay.settingsOpen ||
       overlay.loreOpen ||
       overlay.inventoryOpen ||
@@ -65,12 +81,22 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     }
     setPlayerHubOpen(true);
     patchOverlaySnapshot({ playerHubOpen: true });
-  }, [overlay]);
+  }, [overlay, scene.allowPlayerHub]);
 
-  const closePlayerHub = useCallback(() => {
-    setPlayerHubOpen(false);
-    patchOverlaySnapshot({ playerHubOpen: false });
-  }, []);
+  const standardShell = scene.shellMode === "standard";
+  const showMiniMap = standardShell && scene.showMiniMap;
+  const footerHint = scene.footerHint || DEFAULT_FOOTER_HINT;
+
+  const dockStyle = useMemo(
+    () => ({
+      width: "min(96vw, 1100px)",
+      display: "grid",
+      gridTemplateColumns: showMiniMap ? "180px 1fr 240px" : "180px 1fr",
+      gap: 10,
+      alignItems: "stretch" as const,
+    }),
+    [showMiniMap],
+  );
 
   return (
     <div
@@ -99,12 +125,14 @@ export function DesktopGameShell({ children, booted, error }: Props) {
           border: 0,
         }}
       >
-        Hermetic Comedy — desktop command shell
+        Hermetic Comedy — desktop shell
       </h1>
 
-      <div style={{ width: "min(96vw, 1100px)" }}>
-        <DesktopStatsBar />
-      </div>
+      {standardShell && (
+        <div style={{ width: "min(96vw, 1100px)" }}>
+          <DesktopStatsBar />
+        </div>
+      )}
 
       <div style={{ width: "min(96vw, 1100px)" }}>
         <div
@@ -143,34 +171,29 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         </div>
       </div>
 
-      <div
-        style={{
-          width: "min(96vw, 1100px)",
-          display: "grid",
-          gridTemplateColumns: "180px 1fr 240px",
-          gap: 10,
-          alignItems: "stretch",
-        }}
-      >
-        <DesktopUtilityRail
-          onOpenHub={openPlayerHub}
-          onOpenSettings={openSettings}
-          hubOpen={playerHubOpen}
-        />
-        <DesktopDialogueDock />
-        <DesktopMiniMapCard />
-      </div>
+      {standardShell && (
+        <>
+          <div style={dockStyle}>
+            <DesktopUtilityRail
+              onOpenHub={openPlayerHub}
+              onOpenSettings={openSettings}
+              hubOpen={playerHubOpen}
+            />
+            <DesktopDialogueDock />
+            {showMiniMap ? <DesktopMiniMapCard /> : null}
+          </div>
 
-      <div style={{ width: "min(96vw, 1100px)" }}>
-        <ShellPanel tone="subdued" compact>
-          <ShellPanelMeta>
-            ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L =
-            LORE · P OR ESC = SETTINGS · STATS = PLAYER HUB
-          </ShellPanelMeta>
-        </ShellPanel>
-      </div>
+          <div style={{ width: "min(96vw, 1100px)" }}>
+            <ShellPanel tone="subdued" compact>
+              <ShellPanelMeta>{footerHint}</ShellPanelMeta>
+            </ShellPanel>
+          </div>
+        </>
+      )}
 
-      <DesktopPlayerHubOverlay open={playerHubOpen} onClose={closePlayerHub} />
+      {standardShell && scene.allowPlayerHub && (
+        <DesktopPlayerHubOverlay open={playerHubOpen} onClose={closePlayerHub} />
+      )}
     </div>
   );
 }
