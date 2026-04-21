@@ -179,6 +179,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     "Citrinitas",
     "Rubedo",
     "SealedVessel",
+    "MetaxyHub",
     "CuratedSelf",
     "Epilogue",
   ];
