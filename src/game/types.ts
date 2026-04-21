@@ -1,3 +1,5 @@
+import { applyCanonMigration } from "./canon/migrateCanon";
+
 export type Stats = { clarity: number; compassion: number; courage: number };
 
 export type SceneKey =
