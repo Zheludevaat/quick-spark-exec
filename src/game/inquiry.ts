@@ -8,6 +8,7 @@ import {
   GBC_LINE_H,
   textHeightPx,
   fitSingleLineText,
+  fitSingleLineState,
 } from "./gbcArt";
 import { getAudio } from "./audio";
 import { onActionDown, onDirection } from "./controls";
@@ -31,6 +32,9 @@ const PAD = 6;
  *  - speaker name: single-line, "..." trim
  *  - prompt body: wraps; box height computed from wrapped line count
  *  - option labels: single-line ONLY (rows are fixed at GBC_LINE_H)
+ *  - if ANY option label is trimmed, a wrapped readout band is reserved at
+ *    the bottom of the box and shows the FULL text of the currently-selected
+ *    option. Compact rows + readable selection — no hidden meaning.
  */
 export function runInquiry(
   scene: Phaser.Scene,
@@ -43,8 +47,22 @@ export function runInquiry(
   const promptText = prompt.text.toUpperCase();
   const promptH = textHeightPx(promptText, innerW);
 
-  // Layout: who(1 line) + prompt(promptH px) + 1 line spacer + options(M lines) + 1 line hint pad
-  const totalPx = GBC_LINE_H + promptH + GBC_LINE_H + options.length * GBC_LINE_H + GBC_LINE_H;
+  // Per-option compact + full state. Use the same width we render the row at.
+  const optionRowW = innerW - 8;
+  const optionStates = options.map((o) => fitSingleLineState(o.label, optionRowW));
+  const needsOptionReadout = optionStates.some((o) => o.trimmed);
+
+  // Readout uses the full inner width so it can wrap further than the row.
+  const optionReadoutW = innerW;
+  const optionReadoutH = needsOptionReadout
+    ? Math.max(...optionStates.map((o) => textHeightPx(o.full, optionReadoutW)))
+    : 0;
+
+  const rowsH = options.length * GBC_LINE_H;
+  const readoutBandH = needsOptionReadout ? GBC_LINE_H + optionReadoutH : 0;
+
+  // who(1 line) + prompt(promptH) + spacer(1 line) + rows + [spacer + readout] + bottom pad(1 line)
+  const totalPx = GBC_LINE_H + promptH + GBC_LINE_H + rowsH + readoutBandH + GBC_LINE_H;
   const boxH = Math.min(GBC_H - 14, totalPx + PAD * 2);
   const boxX = 4;
   const boxY = GBC_H - boxH - 2;
@@ -68,8 +86,7 @@ export function runInquiry(
   const opts: GBCText[] = [];
   options.forEach((o, i) => {
     const y = optionsTop + i * GBC_LINE_H;
-    const label = fitSingleLineText(o.label, innerW - 8);
-    const t = new GBCText(scene, boxX + PAD + 8, y, label, {
+    const t = new GBCText(scene, boxX + PAD + 8, y, optionStates[i].fitted, {
       color: COLOR.textLight,
       depth: 251,
       scrollFactor: 0,
@@ -81,6 +98,7 @@ export function runInquiry(
       pick();
     });
     opts.push(t);
+    void o;
   });
   const mark = new GBCText(scene, boxX + PAD, optionsTop, "▶", {
     color: COLOR.textGold,
@@ -88,9 +106,21 @@ export function runInquiry(
     scrollFactor: 0,
   });
 
+  // Selected-option full-text readout — only if any option was trimmed.
+  const optionReadoutY = optionsTop + rowsH + GBC_LINE_H;
+  const optionReadout = needsOptionReadout
+    ? new GBCText(scene, boxX + PAD, optionReadoutY, optionStates[0].full, {
+        color: COLOR.textAccent,
+        depth: 251,
+        scrollFactor: 0,
+        maxWidthPx: optionReadoutW,
+      })
+    : null;
+
   const refresh = () => {
     opts.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
     mark.setPosition(boxX + PAD, optionsTop + cursor * GBC_LINE_H);
+    if (optionReadout) optionReadout.setText(optionStates[cursor].full);
   };
   refresh();
 
@@ -163,6 +193,7 @@ export function runInquiry(
     text.destroy();
     mark.destroy();
     opts.forEach((t) => t.destroy());
+    optionReadout?.destroy();
     unbindAct?.();
     unbindDir?.();
     scene.events.off("vinput-action", pick);

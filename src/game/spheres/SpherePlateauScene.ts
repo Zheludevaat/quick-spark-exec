@@ -9,7 +9,18 @@
  * Reuses runDialog + runInquiry; no new framework. Keeps Phaser overhead low.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes, fitSingleLineText } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  gbcWipe,
+  spawnMotes,
+  fitSingleLineState,
+  textHeightPx,
+  GBC_LINE_H,
+} from "../gbcArt";
 import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
@@ -47,6 +58,9 @@ export class SpherePlateauScene extends Phaser.Scene {
   private rowH = 9;
   private listTop = 30;
   private labelFitW = 0;
+  private selectedReadout: GBCText | null = null;
+  private needsReadout = false;
+  private readoutW = 0;
 
   constructor(sceneKey: string = "SpherePlateau") {
     super(sceneKey);
@@ -63,6 +77,8 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.busy = false;
     this.stations = [];
     this.stationTexts = [];
+    this.selectedReadout = null;
+    this.needsReadout = false;
   }
 
   private crackFlag(): string {
@@ -134,10 +150,24 @@ export class SpherePlateauScene extends Phaser.Scene {
     drawGBCBox(this, boxX, boxY, boxW, boxH, 5);
 
     // Windowed list: stations are menu rows — they MUST stay one line each.
+    // If any final display label trims, reserve a wrapped readout band INSIDE
+    // the box so the selected station's full text is always readable.
     this.listTop = boxY + 4;
-    const usable = boxH - 8;
-    this.visibleRows = Math.max(1, Math.min(this.stations.length, Math.floor(usable / this.rowH)));
     this.labelFitW = boxW - 20;
+    this.readoutW = boxW - 8;
+
+    // Compute display state for every station in its final form (label + suffix).
+    const displayStates = this.stations.map((st) =>
+      fitSingleLineState(this.stationDisplay(st), this.labelFitW),
+    );
+    this.needsReadout = displayStates.some((s) => s.trimmed);
+    const readoutH = this.needsReadout
+      ? Math.max(...displayStates.map((s) => textHeightPx(s.full, this.readoutW)))
+      : 0;
+    const readoutBandH = this.needsReadout ? GBC_LINE_H + readoutH : 0;
+
+    const usable = boxH - 8 - readoutBandH;
+    this.visibleRows = Math.max(1, Math.min(this.stations.length, Math.floor(usable / this.rowH)));
     for (let i = 0; i < this.visibleRows; i++) {
       this.stationTexts.push(
         new GBCText(this, 14, this.listTop + i * this.rowH, "", {
@@ -147,6 +177,15 @@ export class SpherePlateauScene extends Phaser.Scene {
       );
     }
     this.mark = new GBCText(this, 8, this.listTop, ">", { color: COLOR.textGold, depth: 12 });
+
+    if (this.needsReadout) {
+      const readoutY = this.listTop + this.visibleRows * this.rowH + GBC_LINE_H;
+      this.selectedReadout = new GBCText(this, boxX + 4, readoutY, "", {
+        color: COLOR.textAccent,
+        depth: 12,
+        maxWidthPx: this.readoutW,
+      });
+    }
 
     this.hint = new GBCText(this, 6, GBC_H - 14, "A: select   B: hub", {
       color: COLOR.textDim,
@@ -183,6 +222,18 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.refreshCursor();
   }
 
+  /** Final on-screen string for a station, including the trailing suffix. */
+  private stationDisplay(st: Station): string {
+    let suffix = "";
+    if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
+      suffix = " *";
+    }
+    if (st.kind === "settle" && !this.isCracked()) {
+      suffix = " -";
+    }
+    return st.label + suffix;
+  }
+
   private refreshCursor() {
     const s = this.stations[this.cursor];
 
@@ -201,22 +252,24 @@ export class SpherePlateauScene extends Phaser.Scene {
         return;
       }
       let color = COLOR.textLight;
-      let suffix = "";
+      const display = this.stationDisplay(st);
 
       if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
         color = COLOR.textDim;
-        suffix = " *";
       }
-
       if (st.kind === "settle" && !this.isCracked()) {
         color = COLOR.textDim;
-        suffix = " -";
       }
-
       if (abs === this.cursor) color = COLOR.textGold;
-      t.setText(fitSingleLineText(st.label + suffix, this.labelFitW));
+
+      const state = fitSingleLineState(display, this.labelFitW);
+      t.setText(state.fitted);
       t.setColor(color);
     });
+
+    if (this.selectedReadout) {
+      this.selectedReadout.setText(fitSingleLineState(this.stationDisplay(s), this.labelFitW).full);
+    }
 
     if (s.kind === "trial") {
       this.hint.setText(this.isCracked() ? "A: enter the Trial" : "Answer the Cracking Question first.");

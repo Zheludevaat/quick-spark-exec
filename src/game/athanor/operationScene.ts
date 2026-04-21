@@ -23,7 +23,7 @@ import {
   gbcWipe,
   GBC_LINE_H,
   textHeightPx,
-  fitSingleLineText,
+  fitSingleLineState,
 } from "../gbcArt";
 import { writeSave } from "../save";
 import type { SaveSlot, ShardId } from "../types";
@@ -70,14 +70,28 @@ export function selectShards(
   const maxBoxH = GBC_H - 32;
   const footerBand = GBC_LINE_H + 2;
 
-  // Determine how many rows can be shown while leaving room for prompt + footer.
+  // Compute final-display state per shard. Reserve a wrapped readout band
+  // inside the box if any shard name would have been trimmed.
+  const rowFitW = innerW - 12;
+  const itemStates = inv.map((id) => fitSingleLineState(shardName(id), rowFitW));
+  const needsReadout = itemStates.some((s) => s.trimmed);
+  const readoutW = innerW;
+  const readoutH = needsReadout
+    ? Math.max(...itemStates.map((s) => textHeightPx(s.full, readoutW)))
+    : 0;
+  const readoutBandH = needsReadout ? GBC_LINE_H + readoutH : 0;
+
+  // Determine how many rows can be shown while leaving room for prompt + readout + footer.
   const maxVisibleRows = Math.max(
     1,
-    Math.floor((maxBoxH - promptH - footerBand - 14) / rowH),
+    Math.floor((maxBoxH - promptH - footerBand - readoutBandH - 14) / rowH),
   );
   const visibleRows = Math.min(inv.length, maxVisibleRows);
 
-  const boxH = Math.max(minBoxH, promptH + footerBand + visibleRows * rowH + 14);
+  const boxH = Math.max(
+    minBoxH,
+    promptH + footerBand + visibleRows * rowH + readoutBandH + 14,
+  );
   const y = Math.max(8, Math.floor((GBC_H - boxH) / 2));
 
   const box = drawGBCBox(scene, x, y, boxW, boxH, 200);
@@ -101,6 +115,15 @@ export function selectShards(
     );
   }
 
+  const readoutY = listTop + visibleRows * rowH + GBC_LINE_H;
+  const selectedReadout = needsReadout
+    ? new GBCText(scene, x + 4, readoutY, "", {
+        color: COLOR.textAccent,
+        depth: 201,
+        maxWidthPx: readoutW,
+      })
+    : null;
+
   const footer = new GBCText(scene, x + 4, footerY, "", {
     color: COLOR.textDim,
     depth: 201,
@@ -123,9 +146,9 @@ export function selectShards(
         continue;
       }
       const mark = picked.has(id) ? "*" : abs === cursor ? ">" : " ";
-      const name = fitSingleLineText(shardName(id), innerW - 12);
-      labels[row].setText(`${mark} ${name}`);
+      labels[row].setText(`${mark} ${itemStates[abs].fitted}`);
     }
+    if (selectedReadout) selectedReadout.setText(itemStates[cursor].full);
     footer.setText(`A: PICK   ${picked.size}/${n}`);
   };
   refresh();
@@ -137,6 +160,7 @@ export function selectShards(
     box.destroy();
     promptText.destroy();
     labels.forEach((l) => l.destroy());
+    selectedReadout?.destroy();
     footer.destroy();
     unbindAct?.();
     unbindDir?.();

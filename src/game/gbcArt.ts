@@ -1396,6 +1396,33 @@ export function fitSingleLineText(text: string, maxPx: number): string {
   return out.length > 0 ? out + suffix : suffix;
 }
 
+/**
+ * Returns true if `text` (uppercased) does not fit on a single line of `maxPx`.
+ * Caller should surface the full text in a wrapped readout area when true.
+ */
+export function isSingleLineTrimmed(text: string, maxPx: number): boolean {
+  return measureText(text.toUpperCase()) > maxPx;
+}
+
+/**
+ * Compute both the compact one-line form and the full uppercased form of a
+ * label, plus a flag that says whether trimming actually occurred. UIs use
+ * `fitted` for stable menu rows and `full` for a wrapped readout area shown
+ * whenever any row in the same UI was trimmed.
+ */
+export function fitSingleLineState(
+  text: string,
+  maxPx: number,
+): { full: string; fitted: string; trimmed: boolean } {
+  const full = text.toUpperCase();
+  const trimmed = measureText(full) > maxPx;
+  return {
+    full,
+    fitted: trimmed ? fitSingleLineText(full, maxPx) : full,
+    trimmed,
+  };
+}
+
 /** Word-wrap text into lines that fit a max pixel width. */
 export function wrapText(text: string, maxPx: number): string[] {
   const words = text.split(" ");
