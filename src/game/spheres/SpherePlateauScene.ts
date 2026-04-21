@@ -264,3 +264,24 @@ export class SpherePlateauScene extends Phaser.Scene {
     if (opt.conviction) this.save.convictions[opt.conviction] = true;
   }
 }
+
+/**
+ * Adapter: SphereOption → InquiryOption. We hand runInquiry the labels it
+ * needs and look up the original SphereOption (with its weight) by label.
+ */
+export function askSphere(
+  scene: Phaser.Scene,
+  prompt: { who: string; text: string },
+  options: SphereOption[],
+  onPicked: (opt: SphereOption) => void,
+): void {
+  const inquiryOpts: InquiryOption[] = options.map((o) => ({
+    choice: o.choice ?? "ask",
+    label: o.label,
+    reply: o.reply,
+  }));
+  runInquiry(scene, prompt, inquiryOpts, (picked) => {
+    const orig = options.find((o) => o.label === picked.label) ?? options[0];
+    onPicked(orig);
+  });
+}

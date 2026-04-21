@@ -11,7 +11,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
 import type { SaveSlot, SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
-import { runInquiry } from "../inquiry";
+import { askSphere } from "./SpherePlateauScene";
 import { getAudio } from "../audio";
 import { type SphereConfig, type SphereOption, type SphereVerb, trialPassedKey } from "./types";
 import { getSphereConfig } from "./registry";
@@ -66,7 +66,7 @@ export class SphereTrialScene extends Phaser.Scene {
     if (this.round >= this.cfg.trialRounds.length) return this.resolve();
     const r = this.cfg.trialRounds[this.round];
     this.round += 1;
-    runInquiry(this, r.prompt, r.options, (picked) => {
+    askSphere(this, r.prompt, r.options, (picked) => {
       this.applyOption(picked);
       this.score += picked.weight;
       this.runRound();
