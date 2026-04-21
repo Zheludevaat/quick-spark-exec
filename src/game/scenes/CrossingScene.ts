@@ -35,6 +35,17 @@ type RefusalDoor = {
   lines: { who: string; text: string }[];
 };
 
+const CROSSING_TUTORIAL_LINES = [
+  { who: "?", text: "Walk south." },
+  { who: "?", text: "Whispers cross your path. Witness them with B or Q." },
+  { who: "?", text: "The side doors show the lives you could still try to return to." },
+];
+
+const REFUSALS_COMPLETE_LINES = [
+  { who: "?", text: "The three refusals close behind you." },
+  { who: "?", text: "None of them are yours now." },
+];
+
 /**
  * The Crossing — corridor of detachment.
  *
@@ -255,6 +266,17 @@ export class CrossingScene extends Phaser.Scene {
     const witness = () => this.witnessNearestWhisper();
     this.events.on("vinput-cancel", witness);
     onActionDown(this, "cancel", witness);
+
+    if (!this.save.flags.crossing_intro) {
+      this.save.flags.crossing_intro = true;
+      writeSave(this.save);
+      this.dialogActive = true;
+      this.time.delayedCall(400, () => {
+        runDialog(this, CROSSING_TUTORIAL_LINES, () => {
+          this.dialogActive = false;
+        });
+      });
+    }
   }
 
   update(t: number, dt: number) {
@@ -345,12 +367,6 @@ export class CrossingScene extends Phaser.Scene {
         this.slowUntil = t + 600;
       } else if (w.x > GBC_W + 40 || w.x < -60) {
         w.alive = false;
-        // Off-screen without collision — passive +clarity drip
-        if (!w.witnessed) {
-          this.save.stats.clarity = Math.min(99, this.save.stats.clarity + 1);
-          writeSave(this.save);
-          this.events.emit("stats-changed");
-        }
         w.obj.destroy();
       }
     }
@@ -499,6 +515,14 @@ export class CrossingScene extends Phaser.Scene {
     this.dialogActive = true;
     if (unlockLore(this.save, d.loreId)) showLoreToast(this, d.loreId);
     runDialog(this, d.lines, () => {
+      if (this.doorsRead() === 3 && !this.save.flags.refusals_witnessed) {
+        this.save.flags.refusals_witnessed = true;
+        writeSave(this.save);
+        runDialog(this, REFUSALS_COMPLETE_LINES, () => {
+          this.dialogActive = false;
+        });
+        return;
+      }
       this.dialogActive = false;
     });
   }
