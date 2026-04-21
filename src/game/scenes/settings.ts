@@ -85,7 +85,7 @@ const BOX_BOTTOM = BOX_Y + BOX_H;
 const ROW_H = 9;
 const LIST_TOP = 36;
 
-const DETAIL_LINES = 2;
+const DETAIL_LINES = 3;
 const DETAIL_H = DETAIL_LINES * 9 - 2;
 
 const FOOTER_PAD = 4;
@@ -94,9 +94,9 @@ const FOOTER_Y1 = FOOTER_Y2 - 9;
 const DETAIL_Y = FOOTER_Y1 - DETAIL_H - 3;
 
 const LEFT_X = 16;
-const LEFT_W = 82;
-const RIGHT_X = GBC_W - 54;
-const RIGHT_W = 46;
+const LEFT_W = 90;
+const RIGHT_X = GBC_W - 48;
+const RIGHT_W = 40;
 const FOOTER_W = GBC_W - 12;
 const DETAIL_W = GBC_W - 16;
 
