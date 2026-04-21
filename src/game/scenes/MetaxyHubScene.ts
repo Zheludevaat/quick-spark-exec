@@ -23,6 +23,13 @@ import { onActionDown, onDirection } from "../controls";
 import { runDialog } from "./hud";
 import { getAudio } from "../audio";
 import { setSceneSnapshot } from "../gameUiBridge";
+import {
+  alchemySecretUnlocked,
+  grantAlchemyHint,
+  hasAlchemyHint,
+  markAlchemySecretSeen,
+  shouldRevealAlchemyEntrance,
+} from "../canon/alchemySecret";
 
 function sunPortalUnlocked(s: SaveSlot): boolean {
   return !!s.garmentsReleased.venus || !!s.garmentsReleased.sun || !!s.flags.legacy_sun_bridge;
@@ -96,13 +103,28 @@ const PORTALS: Portal[] = [
   {
     sphere: "moon",
     label: "MOON",
-    scene: "AthanorThreshold",
+    scene: "ImaginalRealm",
     unlocked: () => true,
     dimLine: "",
     color: 0xc8c8d8,
     y: 98,
   },
 ];
+
+/**
+ * Hidden secret-annex portal. Only appended to PORTALS when
+ * `shouldRevealAlchemyEntrance(save)` returns true. Routes to the secret
+ * Great Work annex (AthanorThreshold). Not on the mainline ladder.
+ */
+const ANNEX_PORTAL: Portal = {
+  sphere: "moon",
+  label: "GREAT WORK ANNEX",
+  scene: "AthanorThreshold",
+  unlocked: () => true,
+  dimLine: "A hidden chamber, not required, but true.",
+  color: 0xb8a070,
+  y: 110,
+};
 
 const PORTAL_X = 60;
 
