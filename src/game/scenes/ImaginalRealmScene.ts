@@ -1234,10 +1234,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.dialogActive = true;
       runSoul(this, this.save, getArc(soul.def.id), () => {
         this.dialogActive = false;
-        // Soul may have completed — refresh visual state on next frame.
         if (isSoulDone(this.save, soul.def.id)) {
           soul.container.setAlpha(0.45);
           soul.setMood("resolved");
+          this.markSoulResolved(soul.def.id, soul.def.x, soul.def.y);
         }
         this.refreshSoulTracker();
       });
