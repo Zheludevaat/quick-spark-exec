@@ -16,6 +16,8 @@ import { onActionDown, onDirection } from "./controls";
 export type InquiryChoice = "observe" | "ask" | "confess" | "silent";
 
 export type InquiryOption = {
+  /** Optional stable id carried through to onDone(picked). */
+  id?: string;
   choice: InquiryChoice;
   label: string;
   /** Reply line shown after choosing (UPPERCASED in render). */

@@ -329,9 +329,10 @@ export class SpherePlateauScene extends Phaser.Scene {
 
   private runOp(i: number, doneFlag: string) {
     const op = this.cfg.operations[i];
+    const alreadyDone = !!this.save.flags[doneFlag];
     askSphere(this, op.prompt, op.options, (picked) => {
       this.applyOption(picked);
-      if (op.rewardStat && picked.weight >= 2) {
+      if (!alreadyDone && op.rewardStat && picked.weight >= 2) {
         this.save.stats[op.rewardStat] = Math.min(9, this.save.stats[op.rewardStat] + 1);
       }
       markOpDone(this.save, this.sphere, op.id);
@@ -432,12 +433,16 @@ export function askSphere(
   onPicked: (opt: SphereOption) => void,
 ): void {
   const inquiryOpts: InquiryOption[] = options.map((o) => ({
+    id: o.id,
     choice: o.choice ?? "ask",
     label: o.label,
     reply: o.reply,
   }));
   runInquiry(scene, prompt, inquiryOpts, (picked) => {
-    const orig = options.find((o) => o.label === picked.label) ?? options[0];
+    const orig =
+      (picked.id ? options.find((o) => o.id === picked.id) : undefined) ??
+      options.find((o) => o.label === picked.label) ??
+      options[0];
     onPicked(orig);
   });
 }
