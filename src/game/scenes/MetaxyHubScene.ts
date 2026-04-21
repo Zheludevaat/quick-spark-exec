@@ -275,12 +275,6 @@ export class MetaxyHubScene extends Phaser.Scene {
   }
 
   private move(d: number) {
-    this.cursor = (this.cursor + d + PORTALS.length) % PORTALS.length;
-    getAudio().sfx("cursor");
-    this.refreshCursor();
-  }
-
-  private move(d: number) {
     this.cursor = (this.cursor + d + this.portals.length) % this.portals.length;
     getAudio().sfx("cursor");
     this.refreshCursor();
@@ -324,8 +318,8 @@ export class MetaxyHubScene extends Phaser.Scene {
    * - visibility flags
    */
   private publishShellState() {
-    const cursorSphere = PORTALS[this.cursor]?.sphere;
-    const active = PORTALS[this.cursor];
+    const cursorSphere = this.portals[this.cursor]?.sphere;
+    const active = this.portals[this.cursor];
     const releasedCount = Object.values(this.save.garmentsReleased).filter(Boolean).length;
 
     const layout: { sphere: SphereKey; label: string; x: number; y: number }[] = [
@@ -374,15 +368,18 @@ export class MetaxyHubScene extends Phaser.Scene {
   }
 
   private choose() {
-    const p = PORTALS[this.cursor];
+    const p = this.portals[this.cursor];
     const lit = p.unlocked(this.save) && p.scene !== null;
     if (!lit) {
       getAudio().sfx("cursor");
-      runDialog(this, [{ who: "SORYN", text: p.dimLine || "Not yet." }]);
+      runDialog(this, [{ who: "Sophene", text: p.dimLine || "Not yet." }]);
       return;
     }
     getAudio().sfx("confirm");
     const target = p.scene as SceneKey;
+    if (target === "AthanorThreshold") {
+      markAlchemySecretSeen(this.save);
+    }
     this.save.scene = target;
     writeSave(this.save);
     gbcWipe(this, () => this.scene.start(target, { save: this.save }));
