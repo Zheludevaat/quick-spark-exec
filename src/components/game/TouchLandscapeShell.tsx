@@ -36,6 +36,7 @@ import {
 import {
   subscribeGameUi,
   getGameUiSnapshot,
+  setOverlaySnapshot,
   type OverlaySnapshot,
 } from "@/game/gameUiBridge";
 import { getControls, subscribeControls } from "@/game/controls";
@@ -69,28 +70,57 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   const [overlay, setOverlay] = useState<OverlaySnapshot>(
     () => getGameUiSnapshot().overlay,
   );
+  const [dialogOpen, setDialogOpen] = useState(
+    () => getGameUiSnapshot().dialog.open,
+  );
   const [leftHanded, setLeftHanded] = useState(() => getControls().leftHanded);
 
   useEffect(() => {
-    return subscribeGameUi((s) => setOverlay(s.overlay));
+    return subscribeGameUi((s) => {
+      setOverlay(s.overlay);
+      setDialogOpen(s.dialog.open);
+    });
   }, []);
   useEffect(() => {
     return subscribeControls(() => setLeftHanded(getControls().leftHanded));
   }, []);
 
-  // Modal priority — anything blocking gameplay must release held input.
-  const hardModal =
-    inventoryOpen ||
-    overlay.settingsOpen ||
-    overlay.loreOpen ||
-    overlay.modalLock;
+  // Clear held virtual input whenever the device flips to portrait so the
+  // rotate interstitial never strands a held direction.
   useEffect(() => {
-    if (hardModal) clearVirtualInput();
-  }, [hardModal]);
+    if (portrait) clearVirtualInput();
+  }, [portrait]);
 
-  const dialogActive = useMemoDialogActive();
-  // During inquiries/dialogs the joystick should be inactive but A/B remain.
-  const joystickDisabled = hardModal || dialogActive;
+  // ---------------------------------------------------------------------
+  // Modal input policy — explicit, not a single blanket flag.
+  //
+  // Joystick: disabled whenever ANY blocking surface is up
+  //   (inventory, settings, lore, dialog, inquiry, modalLock).
+  // A:        disabled when a hard overlay owns the screen
+  //   (inventory, settings, lore). Stays live during dialog/inquiry so
+  //   the player can advance/select with A.
+  // B:        almost never disabled — it's how the player closes
+  //   inventory/lore/settings and backs out of inquiries.
+  // ---------------------------------------------------------------------
+  const settingsOpen = overlay.settingsOpen;
+  const loreOpen = overlay.loreOpen;
+  const inquiryActive = overlay.inquiryActive;
+
+  const joystickDisabled =
+    inventoryOpen ||
+    settingsOpen ||
+    loreOpen ||
+    dialogOpen ||
+    inquiryActive ||
+    overlay.modalLock;
+
+  const actionDisabled = inventoryOpen || settingsOpen || loreOpen;
+  const cancelDisabled = false;
+
+  // Always release any held virtual input when entering a hard modal.
+  useEffect(() => {
+    if (inventoryOpen || settingsOpen || loreOpen) clearVirtualInput();
+  }, [inventoryOpen, settingsOpen, loreOpen]);
 
   const openSettings = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -101,13 +131,16 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   }, []);
 
   const openInventory = useCallback(() => {
-    if (overlay.settingsOpen || overlay.loreOpen) return;
+    if (settingsOpen || loreOpen) return;
     setInventoryOpen(true);
-  }, [overlay.settingsOpen, overlay.loreOpen]);
+    setOverlaySnapshot({ inventoryOpen: true });
+    clearVirtualInput();
+  }, [settingsOpen, loreOpen]);
 
   // Closing the inventory clears any held actions.
   const closeInventory = useCallback(() => {
     setInventoryOpen(false);
+    setOverlaySnapshot({ inventoryOpen: false });
     clearVirtualInput();
   }, []);
 
@@ -123,7 +156,8 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   const rightRail = (
     <RailControls
       kind="action"
-      hardModal={hardModal}
+      actionDisabled={actionDisabled}
+      cancelDisabled={cancelDisabled}
       onAPress={() => emitVirtualDown("action")}
       onARelease={() => emitVirtualUp("action")}
       onBPress={() => emitVirtualDown("cancel")}
