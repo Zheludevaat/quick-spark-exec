@@ -335,7 +335,9 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     }
     if (page === "keys") {
       page = "main";
-      cursor = 7;
+      // Land on REBIND KEYS row when coming back, regardless of dynamic row count.
+      const rebindIdx = mainRowLabels.indexOf("REBIND KEYS →");
+      cursor = rebindIdx >= 0 ? rebindIdx : 0;
       render();
       return;
     }
@@ -348,7 +350,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       getAudio().sfx("cursor");
       render();
     } else if (d === "down") {
-      const max = page === "main" ? 8 : ACTION_ORDER.length - 1;
+      const max = page === "main" ? Math.max(0, mainRowLabels.length - 1) : ACTION_ORDER.length - 1;
       cursor = Math.min(max, cursor + 1);
       getAudio().sfx("cursor");
       render();
