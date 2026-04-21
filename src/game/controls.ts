@@ -166,6 +166,16 @@ export function getEffectiveInterfaceMode(): "desktop" | "touch_landscape" {
   return "desktop";
 }
 
+/**
+ * Convenience: true if the effective presentation mode is touch landscape.
+ * Use this in all runtime presentation branches (HUD, shell, scenes) so that
+ * route shell selection and HUD layout never disagree on first-run touch
+ * devices that haven't yet committed an explicit choice.
+ */
+export function isTouchLandscapeMode(): boolean {
+  return getEffectiveInterfaceMode() === "touch_landscape";
+}
+
 export function resetControls() {
   state = clone(DEFAULTS);
   saveControls();
