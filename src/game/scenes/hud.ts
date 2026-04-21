@@ -63,6 +63,15 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   reapplyLcd(scene);
 
+  // Resolve presentation mode for this HUD instance.
+  const isTouchShell = getControls().interfaceMode === "touch_landscape";
+
+  // Publish scene metadata to React shell.
+  const sceneKey = scene.scene.key;
+  const sceneLabel = (SCENE_LABEL as Record<string, string>)[sceneKey] ?? sceneKey;
+  const act = (ACT_BY_SCENE as Record<string, number>)[sceneKey] ?? 1;
+  setSceneSnapshot({ key: sceneKey, label: sceneLabel, act, zone: null, nodes: null, marker: null });
+
   let loreOpen = false;
   let settingsOpen = false;
 
@@ -70,9 +79,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (settingsOpen) return;
     settingsOpen = true;
     scene.data.set("__settingsOpen", true);
+    setOverlaySnapshot({ settingsOpen: true, modalLock: true });
+    clearVirtualInput();
     openSettings(scene, () => {
       settingsOpen = false;
       scene.data.set("__settingsOpen", false);
+      setOverlaySnapshot({ settingsOpen: false, modalLock: loreOpen });
       rebuildPad();
     });
   };
@@ -82,14 +94,22 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (!s) return;
     loreOpen = true;
     scene.data.set("__loreOpen", true);
+    setOverlaySnapshot({ loreOpen: true, modalLock: true });
+    clearVirtualInput();
     openLoreLog(scene, s, () => {
       loreOpen = false;
       scene.data.set("__loreOpen", false);
+      setOverlaySnapshot({ loreOpen: false, modalLock: settingsOpen });
     });
   };
   // Expose for gear / lore touch buttons.
   scene.data.set("__openSettingsGuarded", openSettingsGuarded);
   scene.data.set("__openLoreGuarded", openLoreGuarded);
+  // Expose globally so the React shell can trigger them too.
+  if (typeof window !== "undefined") {
+    (window as unknown as Record<string, unknown>).__hermeticOpenSettings = openSettingsGuarded;
+    (window as unknown as Record<string, unknown>).__hermeticOpenLore = openLoreGuarded;
+  }
 
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {
