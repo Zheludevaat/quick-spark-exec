@@ -52,6 +52,23 @@ export const PAL = {
   satchel: ["#0a0e1a", "#3a2818", "#785838", "#b89868"] as Palette4, // tan
 };
 
+// --- ART UPGRADE: Themed UI Palettes ---
+// Hex strings (canvas) + numeric (graphics) for the three Act styles.
+export const PALETTES = {
+  silver: { bg: "#0a101a", fill: "#162032", border: "#88c0e8", accent: "#ffffff", borderNum: 0x88c0e8 }, // Act 1: Cold, ethereal
+  brass:  { bg: "#1a0f14", fill: "#2a1a20", border: "#d8a060", accent: "#ffe098", borderNum: 0xd8a060 }, // Act 2: Hot, heavy alchemy
+  void:   { bg: "#05060f", fill: "#111322", border: "#687088", accent: "#c8a8e8", borderNum: 0x687088 }, // Act 3+: Astral obsidian
+} as const;
+
+export type UIStyle = keyof typeof PALETTES;
+
+export function getUIStyle(scene: Phaser.Scene): UIStyle {
+  const key = scene.scene.key;
+  if (["AthanorThreshold", "Nigredo", "Albedo", "Citrinitas", "Rubedo", "SealedVessel"].includes(key)) return "brass";
+  if (["CuratedSelf", "Epilogue", "MetaxyHub", "MercuryPlateau", "VenusPlateau", "MarsPlateau", "MercuryTrial", "VenusTrial", "MarsTrial"].includes(key)) return "void";
+  return "silver";
+}
+
 export const COLOR = {
   void: "#0a0e1a",
   textLight: "#dde6f5",
@@ -1399,7 +1416,8 @@ export class GBCText {
   ) {
     this.scene = scene;
     this.color = opts.color ?? COLOR.textLight;
-    this.shadow = opts.shadow;
+    // ART UPGRADE: default 1px black drop-shadow so text always pops on textured frames.
+    this.shadow = opts.shadow ?? "#000000";
     this.maxWidthPx = opts.maxWidthPx ?? 200;
     this.key = `gbctext_${Math.random().toString(36).slice(2, 9)}`;
     this._lastText = text;
@@ -1621,40 +1639,63 @@ export function drawGBCBox(
   h: number,
   depth = 100,
 ) {
+  const style = getUIStyle(scene);
+  const pal = PALETTES[style];
   const key = `gbcbox_${Math.random().toString(36).slice(2, 9)}`;
   const { ctx, tex } = makeTex(scene, key, w, h);
-  // Fill
-  ctx.fillStyle = COLOR.void;
+
+  // 1. Deep background
+  ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, w, h);
-  // Outer frame
-  ctx.fillStyle = "#dde6f5";
+
+  // 2. Inner fill (lighter base)
+  ctx.fillStyle = pal.fill;
+  ctx.fillRect(2, 2, w - 4, h - 4);
+
+  // 3. Scanline overlay for CRT texture
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  for (let i = 2; i < h - 2; i += 2) {
+    ctx.fillRect(2, i, w - 4, 1);
+  }
+
+  // 4. Main framing border
+  ctx.fillStyle = pal.border;
   ctx.fillRect(0, 0, w, 1);
   ctx.fillRect(0, h - 1, w, 1);
   ctx.fillRect(0, 0, 1, h);
   ctx.fillRect(w - 1, 0, 1, h);
-  // Inner shadow
-  ctx.fillStyle = "#3a4868";
-  ctx.fillRect(2, 2, w - 4, 1);
-  ctx.fillRect(2, h - 3, w - 4, 1);
-  ctx.fillRect(2, 2, 1, h - 4);
-  ctx.fillRect(w - 3, 2, 1, h - 4);
-  // Corner notches (Pokemon-style)
+
+  // 5. Ornate Pixel Corners
   ctx.clearRect(0, 0, 1, 1);
   ctx.clearRect(w - 1, 0, 1, 1);
   ctx.clearRect(0, h - 1, 1, 1);
   ctx.clearRect(w - 1, h - 1, 1, 1);
-  ctx.fillStyle = "#dde6f5";
-  ctx.fillRect(1, 1, 1, 1);
-  ctx.fillRect(w - 2, 1, 1, 1);
-  ctx.fillRect(1, h - 2, 1, 1);
-  ctx.fillRect(w - 2, h - 2, 1, 1);
+  ctx.fillStyle = pal.accent;
+  // Top Left
+  ctx.fillRect(0, 1, 1, 2); ctx.fillRect(1, 0, 2, 1); ctx.fillRect(1, 1, 1, 1);
+  // Top Right
+  ctx.fillRect(w - 1, 1, 1, 2); ctx.fillRect(w - 3, 0, 2, 1); ctx.fillRect(w - 2, 1, 1, 1);
+  // Bottom Left
+  ctx.fillRect(0, h - 3, 1, 2); ctx.fillRect(1, h - 1, 2, 1); ctx.fillRect(1, h - 2, 1, 1);
+  // Bottom Right
+  ctx.fillRect(w - 1, h - 3, 1, 2); ctx.fillRect(w - 3, h - 1, 2, 1); ctx.fillRect(w - 2, h - 2, 1, 1);
+
   tex.refresh();
   const img = scene.add.image(x, y, key).setOrigin(0, 0).setDepth(depth).setScrollFactor(0);
+
+  // 6. Ethereal Additive Glow overlay (separate so it can blend)
+  const glow = scene.add
+    .rectangle(x + w / 2, y + h / 2, w, h, pal.borderNum, 0.06)
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setDepth(depth)
+    .setScrollFactor(0);
+
   return {
     img,
     key,
     destroy: () => {
       img.destroy();
+      glow.destroy();
       if (scene.textures.exists(key)) scene.textures.remove(key);
     },
   };
