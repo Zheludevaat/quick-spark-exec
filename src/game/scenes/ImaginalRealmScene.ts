@@ -508,6 +508,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
     }
     this.lastRegion = region;
 
+    this.applyRegionMemory(true);
+
     // Region-specific intros (one-shot)
     const introFlag = `intro_${region}`;
     if (!this.save.flags[introFlag]) {
