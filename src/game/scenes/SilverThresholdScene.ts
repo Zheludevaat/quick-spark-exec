@@ -659,47 +659,51 @@ export class SilverThresholdScene extends Phaser.Scene {
       onComplete: () => ring.destroy(),
     });
 
-    // PHASE A — RECOGNITION
-    runDialog(this, RECOGNITION[kind], () => {
-      // PHASE B — OFFERING (Inquiry Wheel)
-      const offering = OFFERINGS[kind];
-      runInquiry(this, offering.prompt, offering.options, (picked) => {
-        const opt = picked as OfferingOption;
-        // Consume seed if applicable
-        if (opt.consumesSeed && this.save.seeds[opt.consumesSeed]) {
-          this.save.flags[`ack_${opt.consumesSeed}`] = true;
-        }
-        // Stat bias from inquiry choice
-        if (picked.choice === "confess") this.bumpStatForElement(kind, 2);
-        else if (picked.choice === "observe") this.save.stats.clarity += 1;
-        else if (picked.choice === "ask") this.save.stats.compassion += 1;
-        else if (picked.choice === "silent") this.save.stats.courage += 1;
+    const startRecognition = () => {
+      // PHASE A — RECOGNITION
+      runDialog(this, RECOGNITION[kind], () => {
+        // PHASE B — OFFERING (Inquiry Wheel) — shapes meaning, not stats.
+        const offering = OFFERINGS[kind];
+        runInquiry(this, offering.prompt, offering.options, (picked) => {
+          const opt = picked as OfferingOption;
+          if (opt.consumesSeed && this.save.seeds[opt.consumesSeed]) {
+            this.save.flags[`ack_${opt.consumesSeed}`] = true;
+          }
+          // No direct stat stacking from offering choice — Naming is the gift.
 
-        // PHASE C MINI-MECHANIC — short interactive moment per element
-        this.runMiniMechanic(kind, c, () => {
-          // Then the NAMING dialog + skin shed + stat bump + shard fragment
-          runDialog(this, NAMING[kind], () => {
-            this.bumpStatForElement(kind, 1);
-            // Shed the corresponding accessory
-            shedAccessory(this, this.rowan, ELEM_TO_ACCESSORY[kind]);
-            // Mark visited
-            c.visited = true;
-            this.save.flags[`elem_${kind}`] = true;
-            c.sprite.setAlpha(0.35);
-            // Memory shard fragment (4 = 1 shard) — uses shared feedback
-            awardShardFragment(this, this.save, () => "threshold_1", {
-              x: this.rowan.x,
-              y: this.rowan.y,
+          // PHASE C MINI-MECHANIC — short symbolic interactive moment.
+          this.runMiniMechanic(kind, c, () => {
+            // PHASE D NAMING — single source of the guardian's stat gift.
+            runDialog(this, NAMING[kind], () => {
+              this.bumpStatForElement(kind, 1);
+              shedAccessory(this, this.rowan, ELEM_TO_ACCESSORY[kind]);
+              c.visited = true;
+              this.save.flags[`elem_${kind}`] = true;
+              c.sprite.setAlpha(0.35);
+              awardShardFragment(this, this.save, () => "threshold_1", {
+                x: this.rowan.x,
+                y: this.rowan.y,
+              });
+              this.events.emit("stats-changed");
+              writeSave(this.save);
+              this.cameras.main.flash(120, 240, 240, 255);
+              this.dialogActive = false;
+              this.checkAllElements();
             });
-            this.events.emit("stats-changed");
-            writeSave(this.save);
-            this.cameras.main.flash(120, 240, 240, 255);
-            this.dialogActive = false;
-            this.checkAllElements();
           });
         });
       });
-    });
+    };
+
+    const startCircling = () => this.runGuardianCircling(kind, c, startRecognition);
+
+    if (!this.save.flags.reception_circles_taught) {
+      this.save.flags.reception_circles_taught = true;
+      writeSave(this.save);
+      runDialog(this, CIRCLE_TEACH_LINES, startCircling);
+    } else {
+      startCircling();
+    }
   }
 
   private bumpStatForElement(kind: ElemKind, n: number) {
