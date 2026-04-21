@@ -2,10 +2,11 @@
  * Venus — the Eternal Biennale.
  *
  * Governor: KYPRIA. Verb: ATTUNE.
- * Theme: longing, recognition, imitation, release. Souls who curated their
- * lives for the gaze of others, or who could not bear to be seen at all.
- * The trial asks whether you can attune to a beauty that does not need you
- * to perform it.
+ * Theme: longing, recognition, imitation, release.
+ *
+ * NOTE: For Venus, the bespoke VenusPlateauScene/VenusTrialScene now drive
+ * the in-world chapter. This config still seeds the writing (NPC dialogue
+ * options, trial round texts, opening/closing lines, inscription, settle).
  */
 import type { SphereConfig } from "../types";
 
@@ -18,6 +19,7 @@ export const venusConfig: SphereConfig = {
   accent: 0xe89bb8,
   plateauScene: "VenusPlateau",
   trialScene: "VenusTrial",
+  trialPassThreshold: 7,
 
   opening: [
     { who: "SORYN", text: "Venus. The Eternal Biennale." },
@@ -34,63 +36,29 @@ export const venusConfig: SphereConfig = {
         text: "I arranged my life so the lighting would always flatter. Look — even now.",
       },
       options: [
-        {
-          label: "Who was the show for?",
-          reply: "...A version of me that never came.",
-          weight: 3,
-          conviction: "i_was_the_audience",
-        },
-        { label: "It is beautiful.", reply: "Yes. And empty. Both true.", weight: 2 },
-        {
-          label: "Step out of the frame.",
-          reply: "If I do, what is left?",
-          weight: 3,
-          conviction: "i_can_be_unseen",
-        },
+        { id: "curator_show_for", label: "Who was the show for?", reply: "...A version of me that never came.", weight: 3, conviction: "i_was_the_audience" },
+        { id: "curator_beautiful_empty", label: "It is beautiful.", reply: "Yes. And empty. Both true.", weight: 2 },
+        { id: "curator_step_out", label: "Step out of the frame.", reply: "If I do, what is left?", weight: 3, conviction: "i_can_be_unseen" },
       ],
     },
     {
       id: "the_critic",
       name: "THE CRITIC",
-      prompt: {
-        who: "CRITIC",
-        text: "Nothing here is good enough. Including me. Especially me.",
-      },
+      prompt: { who: "CRITIC", text: "Nothing here is good enough. Including me. Especially me." },
       options: [
-        {
-          label: "What would 'enough' look like?",
-          reply: "...I never let myself imagine it.",
-          weight: 3,
-        },
-        { label: "Then stop looking.", reply: "I do not know how.", weight: 2 },
-        {
-          label: "Be the critic of your kindness instead.",
-          reply: "Oh. That hurts more.",
-          weight: 3,
-          conviction: "softness_is_not_failure",
-        },
+        { id: "critic_what_enough", label: "What would 'enough' look like?", reply: "...I never let myself imagine it.", weight: 3 },
+        { id: "critic_stop_looking", label: "Then stop looking.", reply: "I do not know how.", weight: 2 },
+        { id: "critic_critic_kindness", label: "Be the critic of your kindness instead.", reply: "Oh. That hurts more.", weight: 3, conviction: "softness_is_not_failure" },
       ],
     },
     {
       id: "the_beloved",
       name: "THE BELOVED",
-      prompt: {
-        who: "BELOVED",
-        text: "I was loved beautifully. I do not know if I was ever known.",
-      },
+      prompt: { who: "BELOVED", text: "I was loved beautifully. I do not know if I was ever known." },
       options: [
-        {
-          label: "Did you let yourself be known?",
-          reply: "...Less than I let myself be loved.",
-          weight: 3,
-          conviction: "i_can_be_unseen",
-        },
-        { label: "Loved is something.", reply: "Something. Not enough.", weight: 2 },
-        {
-          label: "Show me the unloved part.",
-          reply: "...You would be the first to ask.",
-          weight: 3,
-        },
+        { id: "beloved_let_known", label: "Did you let yourself be known?", reply: "...Less than I let myself be loved.", weight: 3, conviction: "i_can_be_unseen" },
+        { id: "beloved_loved_something", label: "Loved is something.", reply: "Something. Not enough.", weight: 2 },
+        { id: "beloved_show_unloved", label: "Show me the unloved part.", reply: "...You would be the first to ask.", weight: 3 },
       ],
     },
   ],
@@ -101,14 +69,9 @@ export const venusConfig: SphereConfig = {
       title: "Sit with the longing",
       prompt: { who: "?", text: "A soft ache opens. You can name it or perform it." },
       options: [
-        { label: "Name it. Quietly.", reply: "It thins to something you can hold.", weight: 3 },
-        { label: "Perform it. Loudly.", reply: "It grows louder. It does not soften.", weight: 1 },
-        {
-          label: "Let it pass through.",
-          reply: "It leaves a clean room behind.",
-          weight: 3,
-          conviction: "longing_is_not_lack",
-        },
+        { id: "longing_name_quietly", label: "Name it. Quietly.", reply: "It thins to something you can hold.", weight: 3 },
+        { id: "longing_perform_loudly", label: "Perform it. Loudly.", reply: "It grows louder. It does not soften.", weight: 1 },
+        { id: "longing_let_pass_through", label: "Let it pass through.", reply: "It leaves a clean room behind.", weight: 3, conviction: "longing_is_not_lack" },
       ],
       rewardStat: "compassion",
     },
@@ -117,14 +80,9 @@ export const venusConfig: SphereConfig = {
       title: "Recognise a face",
       prompt: { who: "?", text: "A stranger meets your eye. They look like someone you loved." },
       options: [
-        { label: "Greet the stranger.", reply: "They greet you back. Cleanly.", weight: 3 },
-        { label: "Greet the memory.", reply: "The stranger looks confused. So do you.", weight: 1 },
-        {
-          label: "Hold both at once.",
-          reply: "Hard. Honest. Counted.",
-          weight: 3,
-          conviction: "two_things_can_be_true",
-        },
+        { id: "recognition_greet_stranger", label: "Greet the stranger.", reply: "They greet you back. Cleanly.", weight: 3 },
+        { id: "recognition_greet_memory", label: "Greet the memory.", reply: "The stranger looks confused. So do you.", weight: 1 },
+        { id: "recognition_hold_both", label: "Hold both at once.", reply: "Hard. Honest. Counted.", weight: 3, conviction: "two_things_can_be_true" },
       ],
       rewardStat: "clarity",
     },
@@ -133,14 +91,9 @@ export const venusConfig: SphereConfig = {
       title: "Refuse a borrowed posture",
       prompt: { who: "?", text: "Your shoulders find a pose that is not yours. Whose was it?" },
       options: [
-        {
-          label: "My mother's. I let it go.",
-          reply: "Released, with thanks.",
-          weight: 3,
-          conviction: "i_am_not_the_pose",
-        },
-        { label: "It feels like mine now.", reply: "It fits. It is still borrowed.", weight: 1 },
-        { label: "Try a posture of my own.", reply: "Wobbly. Truer.", weight: 3 },
+        { id: "imitation_mothers_let_go", label: "My mother's. I let it go.", reply: "Released, with thanks.", weight: 3, conviction: "i_am_not_the_pose" },
+        { id: "imitation_feels_mine", label: "It feels like mine now.", reply: "It fits. It is still borrowed.", weight: 1 },
+        { id: "imitation_try_own", label: "Try a posture of my own.", reply: "Wobbly. Truer.", weight: 3 },
       ],
       rewardStat: "courage",
     },
@@ -149,55 +102,21 @@ export const venusConfig: SphereConfig = {
       title: "Release the audience",
       prompt: { who: "?", text: "You realise no one is watching. What changes?" },
       options: [
-        {
-          label: "I keep performing anyway.",
-          reply: "Old grooves. Common.",
-          weight: 1,
-        },
-        {
-          label: "I sit down.",
-          reply: "The hall sighs. So do you.",
-          weight: 3,
-          conviction: "i_can_be_unseen",
-        },
-        {
-          label: "I move how I like.",
-          reply: "Awkward. Real. Counted.",
-          weight: 3,
-        },
+        { id: "release_keep_performing", label: "I keep performing anyway.", reply: "Old grooves. Common.", weight: 1 },
+        { id: "release_sit_down", label: "I sit down.", reply: "The hall sighs. So do you.", weight: 3, conviction: "i_can_be_unseen" },
+        { id: "release_move_how_i_like", label: "I move how I like.", reply: "Awkward. Real. Counted.", weight: 3 },
       ],
       rewardStat: "compassion",
     },
   ],
 
   crackingQuestion: {
-    prompt: {
-      who: "KYPRIA",
-      text: "What beauty can you ATTUNE to that does not need your gaze?",
-    },
+    prompt: { who: "KYPRIA", text: "What beauty can you ATTUNE to that does not need your gaze?" },
     options: [
-      {
-        label: "A morning that no one saw.",
-        reply: "Yes. That counts.",
-        weight: 3,
-        conviction: "longing_is_not_lack",
-      },
-      {
-        label: "A grief I never made into art.",
-        reply: "Yes. That too.",
-        weight: 3,
-      },
-      {
-        label: "A love that did not need me to be lovely.",
-        reply: "Kypria softens.",
-        weight: 3,
-        conviction: "softness_is_not_failure",
-      },
-      {
-        label: "Only what others called beautiful.",
-        reply: "Then nothing is yours yet.",
-        weight: 0,
-      },
+      { id: "crack_morning_unseen", label: "A morning that no one saw.", reply: "Yes. That counts.", weight: 3, conviction: "longing_is_not_lack" },
+      { id: "crack_grief_not_art", label: "A grief I never made into art.", reply: "Yes. That too.", weight: 3 },
+      { id: "crack_love_not_need_lovely", label: "A love that did not need me to be lovely.", reply: "Kypria softens.", weight: 3, conviction: "softness_is_not_failure" },
+      { id: "crack_only_others_called_beautiful", label: "Only what others called beautiful.", reply: "Then nothing is yours yet.", weight: 0 },
     ],
   },
 
@@ -210,28 +129,28 @@ export const venusConfig: SphereConfig = {
     {
       prompt: { who: "KYPRIA", text: "A beauty arrives that asks nothing of you. What do you do?" },
       options: [
-        { label: "Receive it in silence.", reply: "Attuned.", weight: 3 },
-        { label: "Praise it well.", reply: "Praise is also distance. Counted.", weight: 1 },
-        { label: "Match its quiet.", reply: "Attuned, gently.", weight: 3 },
-        { label: "Photograph it.", reply: "Captured. Not attuned.", weight: 0 },
+        { id: "trial_beauty_receive_silence", label: "Receive it in silence.", reply: "Attuned.", weight: 3 },
+        { id: "trial_beauty_praise_it", label: "Praise it well.", reply: "Praise is also distance. Counted.", weight: 1 },
+        { id: "trial_beauty_match_its_quiet", label: "Match its quiet.", reply: "Attuned, gently.", weight: 3 },
+        { id: "trial_beauty_photograph_it", label: "Photograph it.", reply: "Captured. Not attuned.", weight: 0 },
       ],
     },
     {
       prompt: { who: "KYPRIA", text: "A beloved arrives who does not recognise you. What do you do?" },
       options: [
-        { label: "Greet them anyway.", reply: "Attuned.", weight: 3 },
-        { label: "Demand to be remembered.", reply: "The room cools.", weight: 0 },
-        { label: "Stay nearby. Quietly.", reply: "Attuned, with grief.", weight: 3 },
-        { label: "Walk past.", reply: "Honest. Counted.", weight: 2 },
+        { id: "trial_beloved_greet_anyway", label: "Greet them anyway.", reply: "Attuned.", weight: 3 },
+        { id: "trial_beloved_demand_memory", label: "Demand to be remembered.", reply: "The room cools.", weight: 0 },
+        { id: "trial_beloved_stay_nearby", label: "Stay nearby. Quietly.", reply: "Attuned, with grief.", weight: 3 },
+        { id: "trial_beloved_walk_past", label: "Walk past.", reply: "Honest. Counted.", weight: 2 },
       ],
     },
     {
       prompt: { who: "KYPRIA", text: "An ugliness arrives that is your own. What do you do?" },
       options: [
-        { label: "Look at it.", reply: "Attuned.", weight: 3 },
-        { label: "Frame it as art.", reply: "Performance. Counted as one.", weight: 1 },
-        { label: "Sit beside it.", reply: "Attuned, with kindness.", weight: 3 },
-        { label: "Turn away.", reply: "It will follow you.", weight: 0 },
+        { id: "trial_ugliness_look_at_it", label: "Look at it.", reply: "Attuned.", weight: 3 },
+        { id: "trial_ugliness_frame_as_art", label: "Frame it as art.", reply: "Performance. Counted as one.", weight: 1 },
+        { id: "trial_ugliness_sit_beside_it", label: "Sit beside it.", reply: "Attuned, with kindness.", weight: 3 },
+        { id: "trial_ugliness_turn_away", label: "Turn away.", reply: "It will follow you.", weight: 0 },
       ],
     },
   ],
