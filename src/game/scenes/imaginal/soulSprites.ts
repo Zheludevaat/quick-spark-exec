@@ -1,20 +1,13 @@
 import * as Phaser from "phaser";
 import type { SoulArchetype } from "./souls";
 
-/**
- * Tiny GBC-style soul figures, built from primitives (rectangles + arcs).
- * One container per soul — keeps `ImaginalRealmScene` free of asset baking.
- *
- * All presence styling (shadow, idle motion, halo pulse, mood) is owned here.
- * Callers only decide which mood a soul should be in via setMood().
- */
-
 export type SoulMood = "waiting" | "engaged" | "resolved";
 
 export type Built = {
   container: Phaser.GameObjects.Container;
   halo: Phaser.GameObjects.Arc;
   setMood: (m: SoulMood) => void;
+  destroy: () => void;
   archetype: SoulArchetype;
 };
 
@@ -39,8 +32,6 @@ const PALETTE: Record<SoulArchetype, { robe: number; head: number; accent: numbe
   feather: { robe: 0x484058, head: 0xdde6f5, accent: 0xf0f0f0 },
   echo: { robe: 0x586878, head: 0xa8c8e8, accent: 0xdde6f5 },
 };
-
-// --- Presence staging ----------------------------------------------------
 
 type PresenceProfile = {
   baseAlpha: number;
@@ -125,42 +116,68 @@ export function buildSoulSprite(
   const c = scene.add.container(x, y).setDepth(8);
   const p = PALETTE[archetype];
 
+  const appearanceParts: Array<{
+    obj: Phaser.GameObjects.GameObject;
+    fillColor?: number;
+    tintColor?: number;
+  }> = [];
+
+  const registerAppearancePart = <T extends Phaser.GameObjects.GameObject>(
+    obj: T,
+    opts: { fillColor?: number; tintColor?: number } = {},
+  ): T => {
+    appearanceParts.push({ obj, ...opts });
+    return obj;
+  };
+
   // Halo (visible based on mood)
-  const halo = scene.add.circle(0, 0, 9, 0xdde6f5, 0).setDepth(7);
+  const halo = registerAppearancePart(
+    scene.add.circle(0, 0, 9, 0xdde6f5, 0).setDepth(7),
+    { fillColor: 0xdde6f5 },
+  );
 
   // Common body
-  const robe = scene.add.rectangle(0, 2, 6, 8, p.robe, 1).setOrigin(0.5);
-  const head = scene.add.circle(0, -4, 2.5, p.head, 1);
+  const robe = registerAppearancePart(
+    scene.add.rectangle(0, 2, 6, 8, p.robe, 1).setOrigin(0.5),
+    { fillColor: p.robe },
+  );
+  const head = registerAppearancePart(
+    scene.add.circle(0, -4, 2.5, p.head, 1),
+    { fillColor: p.head },
+  );
   c.add([robe, head]);
 
   // Per-archetype tells
   switch (archetype) {
     case "robed": {
-      const scroll = scene.add.rectangle(0, 4, 5, 1.5, p.accent, 1);
+      const scroll = registerAppearancePart(
+        scene.add.rectangle(0, 4, 5, 1.5, p.accent, 1),
+        { fillColor: p.accent },
+      );
       c.add(scroll);
       break;
     }
     case "weeper": {
-      const lt = scene.add.circle(-1.5, -3, 0.6, p.accent, 1);
-      const rt = scene.add.circle(1.5, -3, 0.6, p.accent, 1);
+      const lt = registerAppearancePart(scene.add.circle(-1.5, -3, 0.6, p.accent, 1), { fillColor: p.accent });
+      const rt = registerAppearancePart(scene.add.circle(1.5, -3, 0.6, p.accent, 1), { fillColor: p.accent });
       c.add([lt, rt]);
       break;
     }
     case "drowned": {
-      const wisp = scene.add.rectangle(0, 6, 5, 1, p.accent, 0.7);
-      const hair = scene.add.rectangle(0, -5, 6, 1.5, p.accent, 1);
+      const wisp = registerAppearancePart(scene.add.rectangle(0, 6, 5, 1, p.accent, 0.7), { fillColor: p.accent });
+      const hair = registerAppearancePart(scene.add.rectangle(0, -5, 6, 1.5, p.accent, 1), { fillColor: p.accent });
       c.add([wisp, hair]);
       break;
     }
     case "mirror": {
-      const mirror = scene.add.rectangle(2, 2, 2, 3, p.accent, 1);
+      const mirror = registerAppearancePart(scene.add.rectangle(2, 2, 2, 3, p.accent, 1), { fillColor: p.accent });
       c.add(mirror);
       break;
     }
     case "collector": {
-      const jar = scene.add.rectangle(0, 4, 3, 4, 0x303848, 1);
-      const mote1 = scene.add.circle(-0.5, 4, 0.5, p.accent, 1);
-      const mote2 = scene.add.circle(0.5, 5, 0.5, p.accent, 1);
+      const jar = registerAppearancePart(scene.add.rectangle(0, 4, 3, 4, 0x303848, 1), { fillColor: 0x303848 });
+      const mote1 = registerAppearancePart(scene.add.circle(-0.5, 4, 0.5, p.accent, 1), { fillColor: p.accent });
+      const mote2 = registerAppearancePart(scene.add.circle(0.5, 5, 0.5, p.accent, 1), { fillColor: p.accent });
       c.add([jar, mote1, mote2]);
       break;
     }
@@ -178,20 +195,20 @@ export function buildSoulSprite(
       break;
     }
     case "saint": {
-      const halo2 = scene.add.circle(0, -6, 2, p.accent, 0.6);
-      const f1 = scene.add.rectangle(-1, 7, 1, 1, p.head, 1);
-      const f2 = scene.add.rectangle(1, 7, 1, 1, p.head, 1);
+      const halo2 = registerAppearancePart(scene.add.circle(0, -6, 2, p.accent, 0.6), { fillColor: p.accent });
+      const f1 = registerAppearancePart(scene.add.rectangle(-1, 7, 1, 1, p.head, 1), { fillColor: p.head });
+      const f2 = registerAppearancePart(scene.add.rectangle(1, 7, 1, 1, p.head, 1), { fillColor: p.head });
       c.add([halo2, f1, f2]);
       break;
     }
     case "composer": {
-      const staff1 = scene.add.rectangle(0, 2, 5, 0.5, p.accent, 1);
-      const staff2 = scene.add.rectangle(0, 4, 5, 0.5, p.accent, 1);
+      const staff1 = registerAppearancePart(scene.add.rectangle(0, 2, 5, 0.5, p.accent, 1), { fillColor: p.accent });
+      const staff2 = registerAppearancePart(scene.add.rectangle(0, 4, 5, 0.5, p.accent, 1), { fillColor: p.accent });
       c.add([staff1, staff2]);
       break;
     }
     case "crowned": {
-      const crown = scene.add.rectangle(0, -7, 5, 1.5, p.accent, 1);
+      const crown = registerAppearancePart(scene.add.rectangle(0, -7, 5, 1.5, p.accent, 1), { fillColor: p.accent });
       c.add(crown);
       break;
     }
@@ -203,33 +220,32 @@ export function buildSoulSprite(
       break;
     }
     case "mathematician": {
-      const lantern = scene.add.rectangle(3, 3, 2, 3, p.accent, 1);
-      const flame = scene.add.circle(3, 2, 0.7, 0xffe098, 1);
+      const lantern = registerAppearancePart(scene.add.rectangle(3, 3, 2, 3, p.accent, 1), { fillColor: p.accent });
+      const flame = registerAppearancePart(scene.add.circle(3, 2, 0.7, 0xffe098, 1), { fillColor: 0xffe098 });
       scene.tweens.add({ targets: flame, alpha: 0.5, duration: 700, yoyo: true, repeat: -1 });
       c.add([lantern, flame]);
       break;
     }
     case "feather": {
-      const stem = scene.add.rectangle(2, 1, 0.7, 6, p.accent, 1).setRotation(0.3);
-      const tip = scene.add.circle(3, -2, 0.8, p.accent, 1);
+      const stem = registerAppearancePart(scene.add.rectangle(2, 1, 0.7, 6, p.accent, 1).setRotation(0.3), { fillColor: p.accent });
+      const tip = registerAppearancePart(scene.add.circle(3, -2, 0.8, p.accent, 1), { fillColor: p.accent });
       c.add([stem, tip]);
       break;
     }
     case "echo": {
-      // Visual transparency baked into idle profile via baseAlpha of waiting
       break;
     }
   }
 
-  // Drop shadow (sits behind body inside container so it follows movement)
+  // Drop shadow
   const shadow = scene.add.ellipse(0, 6, 10, 3, 0x000000, 0.35);
   c.add(shadow);
   c.sendToBack(shadow);
 
-  // Mood-driven presence tweens (owned here, recreated on mood change)
   let idleTween: Phaser.Tweens.Tween | undefined;
   let auraTween: Phaser.Tweens.Tween | undefined;
   let currentMood: SoulMood = "waiting";
+  let drownedFx: Phaser.GameObjects.Particles.ParticleEmitter | undefined;
 
   const applyPresence = (m: SoulMood) => {
     currentMood = m;
@@ -267,37 +283,62 @@ export function buildSoulSprite(
     });
   };
 
-  // --- ART UPGRADE: Bespoke Silhouettes & Statue Petrification ---
+  const resetAppearance = () => {
+    c.setAlpha(1);
+    for (const part of appearanceParts) {
+      const anyPart = part.obj as unknown as {
+        setFillStyle?: (color: number, alpha?: number) => void;
+        setTint?: (color: number) => void;
+        clearTint?: () => void;
+        setAlpha?: (alpha: number) => void;
+      };
+      if (part.fillColor !== undefined && typeof anyPart.setFillStyle === "function") {
+        anyPart.setFillStyle(part.fillColor, 1);
+      }
+      if (typeof anyPart.clearTint === "function") {
+        anyPart.clearTint();
+      }
+      if (part.tintColor !== undefined && typeof anyPart.setTint === "function") {
+        anyPart.setTint(part.tintColor);
+      }
+      if (typeof anyPart.setAlpha === "function") {
+        anyPart.setAlpha(1);
+      }
+    }
+    halo.setAlpha(0);
+  };
+
   const setMood = (m: SoulMood) => {
     if (m === currentMood) return;
+    idleTween?.remove();
+    auraTween?.remove();
+    resetAppearance();
+
     if (m === "resolved") {
-      // Petrification: turn them into a silver stone statue
-      idleTween?.remove();
-      auraTween?.remove();
       currentMood = m;
       c.setAlpha(0.6);
-      // Tint each child sprite/shape to silver-grey
-      for (const child of c.list as Phaser.GameObjects.GameObject[]) {
-        const anyChild = child as unknown as { setFillStyle?: (n: number) => void; setTint?: (n: number) => void };
-        if (typeof anyChild.setFillStyle === "function") anyChild.setFillStyle(0x788898);
-        else if (typeof anyChild.setTint === "function") anyChild.setTint(0x788898);
+      for (const child of appearanceParts) {
+        const anyChild = child.obj as unknown as {
+          setFillStyle?: (n: number, alpha?: number) => void;
+          setTint?: (n: number) => void;
+        };
+        if (typeof anyChild.setFillStyle === "function") anyChild.setFillStyle(0x788898, 1);
+        if (typeof anyChild.setTint === "function") anyChild.setTint(0x788898);
       }
       halo.setAlpha(0);
       return;
     }
+
     applyPresence(m);
 
-    // Inject bespoke environmental FX once per soul
-    if (archetype === "drowned" && !c.getData("hasFX")) {
-      c.setData("hasFX", true);
-      // Use a tiny generated 1x1 white texture if missing
+    if (archetype === "drowned" && !drownedFx) {
       if (!scene.textures.exists("__pixel1")) {
         const g = scene.make.graphics({ x: 0, y: 0 }, false);
         g.fillStyle(0xffffff, 1).fillRect(0, 0, 1, 1);
         g.generateTexture("__pixel1", 1, 1);
         g.destroy();
       }
-      scene.add
+      drownedFx = scene.add
         .particles(c.x, c.y + 4, "__pixel1", {
           tint: 0x88c0e8,
           alpha: { start: 0.8, end: 0 },
@@ -312,5 +353,15 @@ export function buildSoulSprite(
 
   applyPresence("waiting");
 
-  return { container: c, halo, setMood, archetype };
+  return {
+    container: c,
+    halo,
+    setMood,
+    destroy: () => {
+      drownedFx?.destroy();
+      c.destroy();
+      halo.destroy();
+    },
+    archetype,
+  };
 }

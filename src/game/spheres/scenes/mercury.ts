@@ -580,7 +580,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                 const p3ok = p3.label === "Therefore I forget.";
                 const valid = p1ok && p2ok && p3ok;
                 if (valid) {
-                  this.mSave.stats.clarity = Math.min(9, this.mSave.stats.clarity + 1);
+                  this.mSave.stats.clarity += 1;
                   if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
                   if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
                   writeSave(this.mSave);
@@ -647,7 +647,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
           (picked) => {
             const ok = picked.label.startsWith("It assumes");
             if (ok) {
-              this.mSave.stats.courage = Math.min(9, this.mSave.stats.courage + 1);
+              this.mSave.stats.courage += 1;
               this.mSave.convictions["i_can_unknow"] = true;
               if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
               if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -739,7 +739,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       sub.destroy();
       timer.remove();
       if (success) {
-        this.mSave.stats.compassion = Math.min(9, this.mSave.stats.compassion + 1);
+        this.mSave.stats.compassion += 1;
         this.mSave.convictions["silence_is_an_answer"] = true;
         if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
         if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -809,7 +809,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.flag) this.mSave.flags[picked.flag] = true;
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       if (op.rewardStat && picked.weight >= 2) {
-        this.mSave.stats[op.rewardStat] = Math.min(9, this.mSave.stats[op.rewardStat] + 1);
+        this.mSave.stats[op.rewardStat] += 1;
       }
       if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
       if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
