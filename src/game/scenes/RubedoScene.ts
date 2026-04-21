@@ -49,6 +49,14 @@ export class RubedoScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- CHAMBER MEMORY (Act 3 pass) ---
+  private unionGlow!: Phaser.GameObjects.Arc;
+  private throneMarks: Phaser.GameObjects.Arc[] = [];
+  private tableSeal!: Phaser.GameObjects.Rectangle;
+  private releaseWisp?: Phaser.GameObjects.Arc;
+  private leftThrone!: Phaser.GameObjects.Rectangle;
+  private rightThrone!: Phaser.GameObjects.Rectangle;
+  private thirteenthSilhouette?: Phaser.GameObjects.Ellipse;
 
   constructor() {
     super("Rubedo");
@@ -203,6 +211,22 @@ export class RubedoScene extends Phaser.Scene {
           showLoreToast(this, "on_releasing_the_daimon");
           writeSave(this.save);
           this.vesselHud.refresh();
+          // Brief departing wisp from the right throne.
+          this.releaseWisp = this.add
+            .circle(GBC_W / 2 + 40, GBC_H / 2, 4, 0xffd0a0, 0.8)
+            .setDepth(8)
+            .setBlendMode("ADD");
+          this.tweens.add({
+            targets: this.releaseWisp,
+            y: GBC_H / 2 - 60,
+            x: GBC_W / 2 + 70,
+            alpha: 0,
+            scale: 0.4,
+            duration: 1400,
+            ease: "Sine.out",
+            onComplete: () => this.releaseWisp?.destroy(),
+          });
+          this.applyWeddingState();
           // Re-prompt this same pairing solo.
           runDialog(
             this,
@@ -256,11 +280,56 @@ export class RubedoScene extends Phaser.Scene {
     return opts;
   }
 
-  private tally(idx: number, _p: typeof PAIRINGS[number], _kind: string, reply: string) {
+  private tally(idx: number, _p: typeof PAIRINGS[number], kind: string, reply: string) {
     awardNamedStone(this, this.save, "red", `the ${idx === 0 ? "first" : "second"} union`);
     writeSave(this.save);
     this.vesselHud.refresh();
+    this.applyWeddingState(kind);
     runDialog(this, [{ who: "SORYN", text: reply }], () => this.runPairing(idx + 1));
+  }
+
+  /** Light throne marks, strengthen the table seal, reflect Soryn's release. */
+  private applyWeddingState(lastKind?: string) {
+    const completed = this.holds + this.yields + this.alones;
+    this.throneMarks.forEach((m, i) => {
+      const target = i < completed ? 1 : 0;
+      this.tweens.add({ targets: m, alpha: target, scale: target ? 1.4 : 1, duration: 500 });
+    });
+    let glow = 0.05 + completed * 0.08;
+    if (lastKind === "yield") glow = Math.max(0.04, glow - 0.05);
+    if (lastKind === "alone") glow = glow + 0.02;
+    this.tweens.add({
+      targets: this.unionGlow,
+      alpha: glow,
+      scale: 1 + completed * 0.08,
+      duration: 700,
+      ease: "Sine.out",
+    });
+    if (completed >= 2) {
+      this.tableSeal.setStrokeStyle(1, 0xe8c060, 1);
+      this.tweens.add({
+        targets: this.tableSeal,
+        fillAlpha: 1,
+        scale: { from: 0.5, to: 1 },
+        duration: 600,
+        ease: "Back.out",
+      });
+    }
+    if (this.save.sorynReleased) {
+      this.rightThrone.setFillStyle(0x201008);
+      this.rightThrone.setStrokeStyle(1, 0x603020);
+      const lone = this.throneMarks[0];
+      if (lone && !lone.getData("loneTweened")) {
+        lone.setData("loneTweened", true);
+        this.tweens.add({
+          targets: lone,
+          alpha: { from: 1, to: 0.55 },
+          duration: 1400,
+          yoyo: true,
+          repeat: -1,
+        });
+      }
+    }
   }
 
   private maybeThirteenth() {
@@ -269,6 +338,15 @@ export class RubedoScene extends Phaser.Scene {
       this.save.goldStone = true;
       writeSave(this.save);
       this.vesselHud.refresh();
+      this.thirteenthSilhouette = this.add
+        .ellipse(GBC_W / 2, GBC_H / 2 - 4, 8, 18, 0x201828, 0)
+        .setDepth(6);
+      this.tweens.add({
+        targets: this.thirteenthSilhouette,
+        alpha: 0.85,
+        duration: 900,
+        ease: "Sine.out",
+      });
       runDialog(
         this,
         [
@@ -279,6 +357,14 @@ export class RubedoScene extends Phaser.Scene {
           completeQuest(this, this.save, "meet_the_thirteenth");
           unlockLore(this.save, "on_the_thirteenth");
           showLoreToast(this, "on_the_thirteenth");
+          if (this.thirteenthSilhouette) {
+            this.tweens.add({
+              targets: this.thirteenthSilhouette,
+              alpha: 0.25,
+              duration: 1500,
+              delay: 300,
+            });
+          }
           this.finish();
         },
       );
