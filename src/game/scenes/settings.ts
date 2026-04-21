@@ -150,7 +150,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     .setScrollFactor(0)
     .setDepth(950)
     .setInteractive();
-  const box = drawGBCBox(scene, 4, 12, GBC_W - 8, GBC_H - 24, 951);
+  const box = drawGBCBox(scene, BOX_X, BOX_Y, BOX_W, BOX_H, 951);
 
   // Header row 1 — title + page-cycle hint (ASCII-safe).
   const title = new GBCText(scene, 8, 16, "SETTINGS", {
@@ -189,11 +189,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
+    maxWidthPx: FOOTER_W,
   });
   const footer2 = new GBCText(scene, 6, FOOTER_Y2, "", {
     color: COLOR.textDim,
     depth: 952,
     scrollFactor: 0,
+    maxWidthPx: FOOTER_W,
   });
 
   // Body: re-built on each render
