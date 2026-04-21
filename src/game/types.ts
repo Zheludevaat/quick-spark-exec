@@ -45,6 +45,8 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   MercuryTrial: 4,
   VenusPlateau: 5,
   VenusTrial: 5,
+  MarsPlateau: 7,
+  MarsTrial: 7,
   CuratedSelf: 6,
   Epilogue: 10,
 };
@@ -98,6 +100,8 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   MercuryTrial: "Mercury - Hermaia's Trial",
   VenusPlateau: "Venus - Eternal Biennale",
   VenusTrial: "Venus - Kypria's Trial",
+  MarsPlateau: "Mars - Arena of the Strong",
+  MarsTrial: "Mars - Areon's Trial",
   CuratedSelf: "Sun Sphere - Hall of Testimony",
   Epilogue: "The Return",
 };
