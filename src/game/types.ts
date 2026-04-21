@@ -12,16 +12,39 @@ export type SceneKey =
   | "Rubedo"
   | "SealedVessel"
   | "MetaxyHub"
+  | "MoonTrial"
   | "MercuryPlateau"
   | "MercuryTrial"
   | "VenusPlateau"
   | "VenusTrial"
+  | "CuratedSelf"
   | "SunPlateau"
   | "SunTrial"
   | "MarsPlateau"
   | "MarsTrial"
-  | "CuratedSelf"
+  | "JupiterPlateau"
+  | "JupiterTrial"
+  | "SaturnPlateau"
+  | "SaturnTrial"
+  | "EndingsRouter"
   | "Epilogue";
+
+// ===== Canonical support types (added in canon-alignment pass) =====
+export type GarmentKey = SphereKey;
+
+export type ResonanceAxis =
+  | "witnessing"
+  | "control"
+  | "possession"
+  | "performance"
+  | "struggle"
+  | "structure"
+  | "surrender";
+
+export type ResonanceProfile = Record<ResonanceAxis, number>;
+
+export type MemoryShardId = string;
+export type RelicId = string;
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
 
