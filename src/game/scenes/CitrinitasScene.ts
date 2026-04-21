@@ -84,6 +84,10 @@ export class CitrinitasScene extends Phaser.Scene {
         ease: "Sine.out",
       });
     }
+    new GBCText(this, GBC_W / 2 - 30, 16, "THE SCRIPTORIUM", {
+      color: COLOR.textGold,
+      depth: 5,
+    });
 
     runDialog(this, OPENING, () => this.maybeMathematician());
   }
