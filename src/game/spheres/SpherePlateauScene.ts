@@ -58,6 +58,9 @@ export class SpherePlateauScene extends Phaser.Scene {
   private rowH = 9;
   private listTop = 30;
   private labelFitW = 0;
+  private selectedReadout: GBCText | null = null;
+  private needsReadout = false;
+  private readoutW = 0;
 
   constructor(sceneKey: string = "SpherePlateau") {
     super(sceneKey);
@@ -74,6 +77,8 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.busy = false;
     this.stations = [];
     this.stationTexts = [];
+    this.selectedReadout = null;
+    this.needsReadout = false;
   }
 
   private crackFlag(): string {
