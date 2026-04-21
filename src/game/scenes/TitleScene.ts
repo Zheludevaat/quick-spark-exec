@@ -123,10 +123,13 @@ export class TitleScene extends Phaser.Scene {
       },
     });
 
-    const primaryLabel = remaining ? "RETURN" : save ? "CONTINUE" : "BEGIN";
-    const options: { label: string; action: "launch" | "settings" }[] = [
+    const hasSave = !!save;
+    const primaryLabel = remaining ? "RETURN" : hasSave ? "CONTINUE" : "BEGIN";
+
+    const options: { label: string; action: "launch" | "settings" | "erase" }[] = [
       { label: primaryLabel, action: "launch" },
       { label: "SETTINGS", action: "settings" },
+      ...(hasSave ? [{ label: "ERASE SAVE", action: "erase" as const }] : []),
     ];
 
     let settingsOpen = false;
@@ -144,7 +147,7 @@ export class TitleScene extends Phaser.Scene {
     const menuBoxX = Math.floor((GBC_W - menuBoxW) / 2);
     const lineH = 10;
     const boxH = 12 + options.length * lineH;
-    const menuY = 96;
+    const menuY = options.length === 3 ? 92 : 96;
 
     drawGBCBox(this, menuBoxX, menuY, menuBoxW, boxH);
 
@@ -168,8 +171,18 @@ export class TitleScene extends Phaser.Scene {
 
     const refresh = () => {
       labels.forEach((t, i) => {
-        t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight);
+        const opt = options[i];
+        const selected = i === cursor;
+
+        if (opt.action === "erase") {
+          t.setColor(selected ? COLOR.textWarn : COLOR.textDim);
+        } else {
+          t.setColor(selected ? COLOR.textGold : COLOR.textLight);
+        }
       });
+
+      const current = options[cursor];
+      cursorMark.setColor(current.action === "erase" ? COLOR.textWarn : COLOR.textGold);
       cursorMark.setPosition(menuCursorX, menuRowY + cursor * lineH);
     };
     refresh();
@@ -327,8 +340,14 @@ export class TitleScene extends Phaser.Scene {
     const confirm = () => {
       if (settingsOpen) return;
       const opt = options[cursor];
-      if (opt.action === "launch") launch();
-      else if (opt.action === "settings") openTitleSettings();
+
+      if (opt.action === "launch") {
+        launch();
+      } else if (opt.action === "settings") {
+        openTitleSettings();
+      } else if (opt.action === "erase") {
+        erase();
+      }
     };
 
     const move = (d: number) => {
