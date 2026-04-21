@@ -1063,9 +1063,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (this.region === "corridor") {
         const cleared = this.totalCleared();
         const needed = 3;
-        if (cleared >= needed && this.rowan.y > GBC_H - 24)
-          this.hint.setText("A: ENTER THE CURATED SELF");
-        else this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
+        const ready = cleared >= needed;
+
+        if (this.corridorGateGlow) this.corridorGateGlow.setAlpha(ready ? 0.18 : 0.04);
+        if (this.corridorSouthSigil) this.corridorSouthSigil.setAlpha(ready ? 0.4 : 0.08);
+
+        if (ready && this.rowan.y > GBC_H - 24) {
+          this.hint.setText("A: DESCEND TO THE ATHANOR");
+        } else {
+          this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
+        }
       } else {
         this.hint.setText(
           this.region === "pools" ? "WALK SOUTH TO THE FIELD" : "WALK SOUTH TO THE CORRIDOR",
