@@ -5,7 +5,8 @@ import type { SaveSlot } from "../types";
 import { getAudio } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 
-export type LoreEntry = {
+export { LORE_ENTRIES, type LoreEntry } from "./loreData";
+import { LORE_ENTRIES } from "./loreData";
   id: string;
   title: string;
   /** Source line, like "POSTCARD ON THE DESK" or "MARGIN NOTE". */
