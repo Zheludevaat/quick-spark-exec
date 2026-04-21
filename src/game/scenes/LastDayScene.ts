@@ -1,8 +1,9 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot } from "../types";
+import type { SaveSlot, Calling } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
+import { runInquiry } from "../inquiry";
 import { getAudio, SONG_LASTDAY } from "../audio";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { unlockLore, showLoreToast } from "./lore";
@@ -323,7 +324,45 @@ export class LastDayScene extends Phaser.Scene {
             { who: "?", text: "(Press L any time to open your Lore Log.)" },
           ],
           () => {
-            this.dialogActive = false;
+            // METAXY: Calling chooser. Asked once; persists on save.calling.
+            if (this.save.calling) {
+              this.dialogActive = false;
+              return;
+            }
+            runInquiry(
+              this,
+              {
+                who: "?",
+                text: "Before today began, what called you most? (Choose how Rowan walked through her life.)",
+              },
+              [
+                {
+                  choice: "ask",
+                  label: "To know things deeply.",
+                  reply: "A scholar's pull. Quiet rooms, long sentences.",
+                },
+                {
+                  choice: "ask",
+                  label: "To care for someone.",
+                  reply: "A caregiver's pull. Tea kept warm for a hand that may not come.",
+                },
+                {
+                  choice: "ask",
+                  label: "To change what was wrong.",
+                  reply: "A reformer's pull. The shape of the world refused to settle.",
+                },
+              ],
+              (picked) => {
+                const map: Record<string, Calling> = {
+                  "To know things deeply.": "scholar",
+                  "To care for someone.": "caregiver",
+                  "To change what was wrong.": "reformer",
+                };
+                this.save.calling = map[picked.label] ?? "scholar";
+                writeSave(this.save);
+                this.dialogActive = false;
+              },
+            );
           },
         ),
       );

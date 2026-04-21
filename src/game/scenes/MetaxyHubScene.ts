@@ -77,7 +77,7 @@ const PORTALS: Portal[] = [
   {
     sphere: "mercury",
     label: "MERCURY",
-    scene: null,
+    scene: "MercuryPlateau",
     unlocked: (s) => !!s.garmentsReleased.moon || !!s.flags.moon_done,
     dimLine: "The Tower of Reasons stands waiting. Not yet.",
     color: 0xa8c8e8,
