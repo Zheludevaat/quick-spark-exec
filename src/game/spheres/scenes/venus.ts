@@ -70,6 +70,11 @@ import {
   publishVenusTrialMinimap,
 } from "../venus/VenusMinimap";
 import { makeAttuneRing } from "../venus/VenusUi";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../../encounters/EncounterPresentation";
+import { KYPRIA_PROFILE } from "../../encounters/profiles/governors";
 
 // =====================================================================
 // VenusPlateauScene
