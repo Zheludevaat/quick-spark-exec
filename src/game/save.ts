@@ -61,6 +61,15 @@ export function newSave(): SaveSlot {
     act2Inscription: null,
     sorynReleased: false,
     stainsCarried: 0,
+    calling: null,
+    coherence: 100,
+    daimonBond: 0,
+    garmentsReleased: {},
+    sphereVerbs: { name: false, attune: false, stand: false, weigh: false, release: false },
+    relics: [],
+    gnosticAccepted: false,
+    endingChosen: null,
+    plateauSettled: {},
     updatedAt: Date.now(),
   };
 }
