@@ -1,3 +1,5 @@
+import { applyCanonMigration } from "./canon/migrateCanon";
+
 export type Stats = { clarity: number; compassion: number; courage: number };
 
 export type SceneKey =
@@ -12,16 +14,39 @@ export type SceneKey =
   | "Rubedo"
   | "SealedVessel"
   | "MetaxyHub"
+  | "MoonTrial"
   | "MercuryPlateau"
   | "MercuryTrial"
   | "VenusPlateau"
   | "VenusTrial"
+  | "CuratedSelf"
   | "SunPlateau"
   | "SunTrial"
   | "MarsPlateau"
   | "MarsTrial"
-  | "CuratedSelf"
+  | "JupiterPlateau"
+  | "JupiterTrial"
+  | "SaturnPlateau"
+  | "SaturnTrial"
+  | "EndingsRouter"
   | "Epilogue";
+
+// ===== Canonical support types (added in canon-alignment pass) =====
+export type GarmentKey = SphereKey;
+
+export type ResonanceAxis =
+  | "witnessing"
+  | "control"
+  | "possession"
+  | "performance"
+  | "struggle"
+  | "structure"
+  | "surrender";
+
+export type ResonanceProfile = Record<ResonanceAxis, number>;
+
+export type MemoryShardId = string;
+export type RelicId = string;
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
 
@@ -36,23 +61,29 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   Crossing: 0,
   SilverThreshold: 1,
   ImaginalRealm: 2,
-  AthanorThreshold: 3,
-  Nigredo: 3,
-  Albedo: 3,
-  Citrinitas: 3,
-  Rubedo: 3,
-  SealedVessel: 3,
-  MetaxyHub: 3,
-  MercuryPlateau: 4,
-  MercuryTrial: 4,
-  VenusPlateau: 5,
-  VenusTrial: 5,
-  SunPlateau: 6,
-  SunTrial: 6,
-  MarsPlateau: 7,
-  MarsTrial: 7,
-  CuratedSelf: 6,
-  Epilogue: 10,
+  AthanorThreshold: 2,
+  Nigredo: 2,
+  Albedo: 2,
+  Citrinitas: 2,
+  Rubedo: 2,
+  SealedVessel: 2,
+  MetaxyHub: 2,
+  MoonTrial: 2,
+  MercuryPlateau: 3,
+  MercuryTrial: 3,
+  VenusPlateau: 4,
+  VenusTrial: 4,
+  CuratedSelf: 5,
+  SunPlateau: 5,
+  SunTrial: 5,
+  MarsPlateau: 6,
+  MarsTrial: 6,
+  JupiterPlateau: 7,
+  JupiterTrial: 7,
+  SaturnPlateau: 8,
+  SaturnTrial: 8,
+  EndingsRouter: 9,
+  Epilogue: 9,
 };
 
 /** Stable shard ID — derived from Act 1 quest completions + 2 prelude defaults. */
@@ -75,41 +106,46 @@ export type WeddingType = "strong" | "gentle" | "fractured";
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
   0: "PRELUDE - THE LAST DAY",
-  1: "ACT I - RECEPTION",
-  2: "ACT II - THE PLATEAU",
-  3: "ACT III - MOON SPHERE",
-  4: "ACT IV - MERCURY SPHERE",
-  5: "ACT V - VENUS SPHERE",
-  6: "ACT VI - SUN SPHERE",
-  7: "ACT VII - MARS SPHERE",
-  8: "ACT VIII - JUPITER SPHERE",
-  9: "ACT IX - SATURN SPHERE",
-  10: "ACT X - THE RETURN",
+  1: "ACT 0 - RECEPTION",
+  2: "ACT I - MOON",
+  3: "ACT II - MERCURY",
+  4: "ACT III - VENUS",
+  5: "ACT IV - SUN",
+  6: "ACT V - MARS",
+  7: "ACT VI - JUPITER",
+  8: "ACT VII - SATURN",
+  9: "EPILOGUE - BEYOND THE SPHERES",
 };
 
 /** Per-scene short label for the Continue row. */
 export const SCENE_LABEL: Record<SceneKey, string> = {
   LastDay: "The Last Day",
   Crossing: "The Crossing",
-  SilverThreshold: "Silver Threshold",
-  ImaginalRealm: "Imaginal Realm",
-  AthanorThreshold: "Moon Sphere - Threshold",
-  Nigredo: "Moon Sphere - Nigredo",
-  Albedo: "Moon Sphere - Albedo",
-  Citrinitas: "Moon Sphere - Citrinitas",
-  Rubedo: "Moon Sphere - Rubedo",
-  SealedVessel: "Moon Sphere - Sealed",
-  MetaxyHub: "Metaxy Hub",
+  SilverThreshold: "Reception - Silver Threshold",
+  ImaginalRealm: "Moon - Mirror's Palace",
+  AthanorThreshold: "Moon - Secret Great Work Annex",
+  Nigredo: "Moon - Secret Nigredo Annex",
+  Albedo: "Moon - Secret Albedo Annex",
+  Citrinitas: "Moon - Secret Citrinitas Annex",
+  Rubedo: "Moon - Secret Rubedo Annex",
+  SealedVessel: "Moon - Secret Sealed Vessel Annex",
+  MetaxyHub: "Metaxy",
+  MoonTrial: "Moon - Selenos' Trial",
   MercuryPlateau: "Mercury - Tower of Reasons",
   MercuryTrial: "Mercury - Hermaia's Trial",
   VenusPlateau: "Venus - Eternal Biennale",
   VenusTrial: "Venus - Kypria's Trial",
-  SunPlateau: "Sun - Hall of Testimony",
+  CuratedSelf: "Sun - Curated Self",
+  SunPlateau: "Sun - Hall of Illuminated Testimony",
   SunTrial: "Sun - Helion's Trial",
   MarsPlateau: "Mars - Arena of the Strong",
   MarsTrial: "Mars - Areon's Trial",
-  CuratedSelf: "Sun Sphere - Hall of Testimony",
-  Epilogue: "The Return",
+  JupiterPlateau: "Jupiter - Grand Tribunal of Perfect Justice",
+  JupiterTrial: "Jupiter - Jovian's Trial",
+  SaturnPlateau: "Saturn - Avenue of Accepted Fate",
+  SaturnTrial: "Saturn - Kronikos' Trial",
+  EndingsRouter: "Beyond the Spheres",
+  Epilogue: "Beyond the Spheres",
 };
 
 export type SaveSlot = {
@@ -167,7 +203,15 @@ export type SaveSlot = {
   /** Per-sphere garment release ledger. True after the sphere's trial is passed. */
   garmentsReleased: Partial<Record<SphereKey, boolean>>;
   /** Sphere verbs unlocked by completing each sphere trial. */
-  sphereVerbs: { name: boolean; attune: boolean; stand: boolean; weigh: boolean; release: boolean };
+  sphereVerbs: {
+    witness: boolean;
+    name: boolean;
+    attune: boolean;
+    expose: boolean;
+    stand: boolean;
+    weigh: boolean;
+    release: boolean;
+  };
   /** Identity-objects collected per sphere; releasable at the Metaxy altar. */
   relics: string[];
   /** Set true only on Saturn if the player accepts the Gnostic offer. */
@@ -179,6 +223,19 @@ export type SaveSlot = {
 
   /** Hermetic puzzle ledger — multi-state node values keyed by `puzzle:{roomId}:{nodeId}`. */
   puzzleState: Record<string, string | number | boolean>;
+
+  // ===== CANONICAL FIELDS (canon-alignment pass) =====
+  /** Canonical primary growth currency. Migrated from stats.clarity for old saves. */
+  clarityPoints: number;
+  /** Canonical garment burden per sphere (0..7). */
+  garmentWeights: Record<GarmentKey, number>;
+  /** Hidden but inspectable resonance profile (-7..7 per axis). */
+  resonanceProfile: ResonanceProfile;
+  /** Canonical memory lattice. */
+  memoryLattice: MemoryShardId[];
+  /** Canonical daimon naming reveal (Sophene). */
+  sopheneNamed: boolean;
+
 
   // ===== SUN SPHERE (Act 6) =====
   /** Current Sun plateau sub-zone (null until first entry). */
@@ -234,7 +291,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     flags.legacy_sun_bridge = true;
   }
 
-  return {
+  const migrated: SaveSlot = {
     scene: scene as SceneKey,
     act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
@@ -274,8 +331,10 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     daimonBond: typeof r.daimonBond === "number" ? r.daimonBond : 0,
     garmentsReleased,
     sphereVerbs: {
+      witness: true,
       name: (r.sphereVerbs as { name?: boolean } | undefined)?.name ?? false,
       attune: (r.sphereVerbs as { attune?: boolean } | undefined)?.attune ?? false,
+      expose: (r.sphereVerbs as { expose?: boolean } | undefined)?.expose ?? false,
       stand: (r.sphereVerbs as { stand?: boolean } | undefined)?.stand ?? false,
       weigh: (r.sphereVerbs as { weigh?: boolean } | undefined)?.weigh ?? false,
       release: (r.sphereVerbs as { release?: boolean } | undefined)?.release ?? false,
@@ -286,6 +345,43 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     plateauSettled: (r.plateauSettled as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
     puzzleState:
       (r.puzzleState as Record<string, string | number | boolean> | undefined) ?? {},
+
+    clarityPoints:
+      typeof (r as { clarityPoints?: unknown }).clarityPoints === "number"
+        ? (r as { clarityPoints: number }).clarityPoints
+        : ((r.stats as { clarity?: number } | undefined)?.clarity ?? 0),
+
+    garmentWeights:
+      (r as { garmentWeights?: Record<GarmentKey, number> }).garmentWeights ?? {
+        moon: 3,
+        mercury: 3,
+        venus: 3,
+        sun: 3,
+        mars: 3,
+        jupiter: 3,
+        saturn: 3,
+      },
+
+    resonanceProfile:
+      (r as { resonanceProfile?: ResonanceProfile }).resonanceProfile ?? {
+        witnessing: 0,
+        control: 0,
+        possession: 0,
+        performance: 0,
+        struggle: 0,
+        structure: 0,
+        surrender: 0,
+      },
+
+    memoryLattice:
+      Array.isArray((r as { memoryLattice?: unknown[] }).memoryLattice)
+        ? ((r as { memoryLattice: string[] }).memoryLattice)
+        : (Array.isArray(r.shards) ? r.shards : []),
+
+    sopheneNamed:
+      typeof (r as { sopheneNamed?: unknown }).sopheneNamed === "boolean"
+        ? ((r as { sopheneNamed: boolean }).sopheneNamed)
+        : false,
 
     sunZone:
       (r.sunZone as
@@ -303,4 +399,6 @@ export function migrateSave(raw: unknown): SaveSlot | null {
 
     updatedAt: r.updatedAt ?? Date.now(),
   };
+
+  return applyCanonMigration(migrated);
 }

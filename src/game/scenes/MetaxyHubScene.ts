@@ -23,6 +23,13 @@ import { onActionDown, onDirection } from "../controls";
 import { runDialog } from "./hud";
 import { getAudio } from "../audio";
 import { setSceneSnapshot } from "../gameUiBridge";
+import {
+  alchemySecretUnlocked,
+  grantAlchemyHint,
+  hasAlchemyHint,
+  markAlchemySecretSeen,
+  shouldRevealAlchemyEntrance,
+} from "../canon/alchemySecret";
 
 function sunPortalUnlocked(s: SaveSlot): boolean {
   return !!s.garmentsReleased.venus || !!s.garmentsReleased.sun || !!s.flags.legacy_sun_bridge;
@@ -96,13 +103,28 @@ const PORTALS: Portal[] = [
   {
     sphere: "moon",
     label: "MOON",
-    scene: "AthanorThreshold",
+    scene: "ImaginalRealm",
     unlocked: () => true,
     dimLine: "",
     color: 0xc8c8d8,
     y: 98,
   },
 ];
+
+/**
+ * Hidden secret-annex portal. Only appended to PORTALS when
+ * `shouldRevealAlchemyEntrance(save)` returns true. Routes to the secret
+ * Great Work annex (AthanorThreshold). Not on the mainline ladder.
+ */
+const ANNEX_PORTAL: Portal = {
+  sphere: "moon",
+  label: "GREAT WORK ANNEX",
+  scene: "AthanorThreshold",
+  unlocked: () => true,
+  dimLine: "A hidden chamber, not required, but true.",
+  color: 0xb8a070,
+  y: 110,
+};
 
 const PORTAL_X = 60;
 
@@ -113,6 +135,7 @@ export class MetaxyHubScene extends Phaser.Scene {
   private glows: Phaser.GameObjects.Arc[] = [];
   private hint!: GBCText;
   private mark!: GBCText;
+  private portals: Portal[] = PORTALS;
 
   constructor() {
     super("MetaxyHub");
@@ -126,20 +149,23 @@ export class MetaxyHubScene extends Phaser.Scene {
     this.cursor = 0;
     this.labels = [];
     this.glows = [];
+    this.portals = shouldRevealAlchemyEntrance(this.save)
+      ? [...PORTALS, ANNEX_PORTAL]
+      : PORTALS;
   }
 
   private defaultCursor(): number {
-    const actionable = PORTALS.findIndex(
+    const actionable = this.portals.findIndex(
       (p) => p.scene !== null && p.unlocked(this.save) && !this.save.garmentsReleased[p.sphere],
     );
     if (actionable >= 0) return actionable;
 
-    const lit = PORTALS.findIndex(
+    const lit = this.portals.findIndex(
       (p) => p.scene !== null && p.unlocked(this.save),
     );
     if (lit >= 0) return lit;
 
-    return PORTALS.length - 1;
+    return this.portals.length - 1;
   }
 
   create() {
@@ -166,7 +192,7 @@ export class MetaxyHubScene extends Phaser.Scene {
     this.publishShellState();
 
     // Build portals
-    PORTALS.forEach((p, i) => {
+    this.portals.forEach((p, i) => {
       const lit = p.unlocked(this.save) && p.scene !== null;
       const done = !!this.save.garmentsReleased[p.sphere];
       const glowColor = lit ? p.color : 0x202030;
@@ -198,7 +224,7 @@ export class MetaxyHubScene extends Phaser.Scene {
       );
     });
 
-    this.mark = new GBCText(this, PORTAL_X - 14, PORTALS[0].y - 3, ">", {
+    this.mark = new GBCText(this, PORTAL_X - 14, this.portals[0].y - 3, ">", {
       color: COLOR.textGold,
       depth: 13,
     });
@@ -218,27 +244,44 @@ export class MetaxyHubScene extends Phaser.Scene {
     });
     onActionDown(this, "action", () => this.choose());
 
-    // First-visit Soryn line
+    // First-visit Sophene line + (when prior hints exist) the metaxy whisper.
     if (!this.save.flags.metaxy_seen) {
       this.save.flags.metaxy_seen = true;
       writeSave(this.save);
       this.time.delayedCall(400, () => {
         runDialog(this, [
-          { who: "SORYN", text: "Welcome to the Metaxy. Seven gates. One ascent." },
-          { who: "SORYN", text: "Begin where you stand. The Moon waits below." },
+          { who: "Sophene", text: "Welcome to the Metaxy. Seven gates. One ascent." },
+          { who: "Sophene", text: "Begin where you stand." },
         ]);
+      });
+    } else if (
+      !alchemySecretUnlocked(this.save) &&
+      hasAlchemyHint(this.save, "reception_basin") &&
+      hasAlchemyHint(this.save, "moon_flaw") &&
+      !hasAlchemyHint(this.save, "metaxy_whisper")
+    ) {
+      // Player has the two prior hints — Sophene grants the third on revisit.
+      const unlocked = grantAlchemyHint(this.save, "metaxy_whisper");
+      writeSave(this.save);
+      this.time.delayedCall(400, () => {
+        if (unlocked) {
+          runDialog(this, [
+            { who: "Sophene", text: "There is another chamber here, not required, but true." },
+            { who: "Sophene", text: "It does not lie on the road. It opens only to those who followed what kept returning." },
+          ]);
+        }
       });
     }
   }
 
   private move(d: number) {
-    this.cursor = (this.cursor + d + PORTALS.length) % PORTALS.length;
+    this.cursor = (this.cursor + d + this.portals.length) % this.portals.length;
     getAudio().sfx("cursor");
     this.refreshCursor();
   }
 
   private refreshCursor() {
-    const p = PORTALS[this.cursor];
+    const p = this.portals[this.cursor];
     this.mark.setPosition(PORTAL_X - 14, p.y - 3);
     const lit = p.unlocked(this.save) && p.scene !== null;
     if (lit) {
@@ -275,8 +318,8 @@ export class MetaxyHubScene extends Phaser.Scene {
    * - visibility flags
    */
   private publishShellState() {
-    const cursorSphere = PORTALS[this.cursor]?.sphere;
-    const active = PORTALS[this.cursor];
+    const cursorSphere = this.portals[this.cursor]?.sphere;
+    const active = this.portals[this.cursor];
     const releasedCount = Object.values(this.save.garmentsReleased).filter(Boolean).length;
 
     const layout: { sphere: SphereKey; label: string; x: number; y: number }[] = [
@@ -325,15 +368,18 @@ export class MetaxyHubScene extends Phaser.Scene {
   }
 
   private choose() {
-    const p = PORTALS[this.cursor];
+    const p = this.portals[this.cursor];
     const lit = p.unlocked(this.save) && p.scene !== null;
     if (!lit) {
       getAudio().sfx("cursor");
-      runDialog(this, [{ who: "SORYN", text: p.dimLine || "Not yet." }]);
+      runDialog(this, [{ who: "Sophene", text: p.dimLine || "Not yet." }]);
       return;
     }
     getAudio().sfx("confirm");
     const target = p.scene as SceneKey;
+    if (target === "AthanorThreshold") {
+      markAlchemySecretSeen(this.save);
+    }
     this.save.scene = target;
     writeSave(this.save);
     gbcWipe(this, () => this.scene.start(target, { save: this.save }));
