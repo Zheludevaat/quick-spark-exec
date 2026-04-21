@@ -159,7 +159,7 @@ export const venusConfig: SphereConfig = {
   ],
 
   trialFail: [
-    { who: "KYPRIA", text: "You performed where attuning was asked. It happens. Vanity is quicker than reverence and much easier to accessorise." },
+    { who: "KYPRIA", text: "You performed where attuning was asked. It happens. Vanity is quicker than reverence. It usually is." },
     { who: "SORYN", text: "Sit with the operations again. Return when the audience has become less interesting than the thing itself." },
   ],
 

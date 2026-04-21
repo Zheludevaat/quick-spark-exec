@@ -148,7 +148,7 @@ export const mercuryConfig: SphereConfig = {
 
   trialPass: [
     { who: "HERMAIA", text: "You named what yielded to naming, and stopped where naming would have become theft." },
-    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Use it like medicine. Decoration has already had its century." },
+    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Use it like medicine, not decoration." },
     { who: "SORYN", text: "Mercury releases its garment. The Tower looks almost peaceful, which on it is a dangerously flattering angle." },
   ],
 
