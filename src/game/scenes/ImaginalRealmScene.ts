@@ -1201,6 +1201,23 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (this.region === "corridor" && this.rowan.y > GBC_H - 22) {
       const cleared = this.totalCleared();
       if (cleared >= 3) {
+        if (!this.save.flags.corridor_athanor_warned) {
+          this.save.flags.corridor_athanor_warned = true;
+          writeSave(this.save);
+          this.dialogActive = true;
+          runDialog(
+            this,
+            [
+              { who: "Soryn", text: "This is as far as I go." },
+              { who: "Soryn", text: "The next room is not imaginal in the same way." },
+            ],
+            () => {
+              this.dialogActive = false;
+            },
+          );
+          return;
+        }
+
         this.save.scene = "AthanorThreshold";
         writeSave(this.save);
         const a = getAudio();
