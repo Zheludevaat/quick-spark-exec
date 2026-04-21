@@ -192,6 +192,37 @@ export function buildSoulSprite(
     if (m === "resolved") c.setAlpha(0.6);
   };
 
+  // --- ART UPGRADE: NPC "Illusion of Life" ---
+  // 1. Dynamic Drop Shadow
+  const shadow = scene.add.ellipse(0, 6, 12, 3, 0x000000, 0.4).setDepth(-1);
+  c.add(shadow);
+  c.sendToBack(shadow);
+
+  // 2. Organic "Breathing" Micro-animation (randomized so crowds don't sync)
+  scene.tweens.add({
+    targets: c,
+    y: c.y - 1.5,
+    scaleY: 1.03,
+    scaleX: 0.98,
+    duration: Phaser.Math.Between(1200, 1800),
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.inOut",
+    delay: Phaser.Math.Between(0, 1000),
+  });
+
+  // 3. Dynamic Aura Pulse
+  scene.tweens.add({
+    targets: halo,
+    scale: { from: 0.9, to: 1.15 },
+    alpha: { from: 0.15, to: 0.35 },
+    duration: Phaser.Math.Between(2000, 3000),
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.inOut",
+  });
+  // --- END ART UPGRADE ---
+
   return { container: c, halo, setMood, archetype };
 }
 
