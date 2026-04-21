@@ -12,7 +12,7 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot, SceneKey } from "../types";
+import { ACT_BY_SCENE, type SaveSlot, type SceneKey } from "../types";
 import { attachHUD, InputState, makeRowan, animateRowan, runDialog } from "./hud";
 import { onActionDown } from "../controls";
 import { getAudio, SONG_MOON } from "../audio";
