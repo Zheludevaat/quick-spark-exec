@@ -317,10 +317,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // REGION LOAD / TRANSITION
   // ============================================================================
   private loadRegion(region: ImaginalRegion) {
-    if (this.regionRoot) this.regionRoot.destroy();
-    this.knots = [];
-    this.seedEchoes = [];
-    // Tear down any souls from the previous region.
+    // Tear down any souls first so their owned FX are cleaned up deterministically.
     this.souls.forEach((s) => {
       s.destroy();
       s.nameLabel?.destroy();
@@ -328,6 +325,26 @@ export class ImaginalRealmScene extends Phaser.Scene {
       s.bark?.destroy();
     });
     this.souls = [];
+
+    this.knotMemoryGlyphs.forEach((g) => g.destroy());
+    this.knotMemoryGlyphs = [];
+
+    this.soulMemoryMarks.forEach((g) => g.destroy());
+    this.soulMemoryMarks = [];
+
+    this.regionToneOverlay?.destroy();
+    this.regionToneOverlay = undefined;
+    this.regionSettledGlow?.destroy();
+    this.regionSettledGlow = undefined;
+    this.corridorGateGlow?.destroy();
+    this.corridorGateGlow = undefined;
+    this.corridorSouthSigil?.destroy();
+    this.corridorSouthSigil = undefined;
+
+    if (this.regionRoot) this.regionRoot.destroy();
+
+    this.knots = [];
+    this.seedEchoes = [];
     this.region = region;
     this.save.region = region;
     writeSave(this.save);
