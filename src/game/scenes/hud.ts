@@ -983,6 +983,7 @@ export function setRowanSkin(c: Phaser.GameObjects.Container, skin: RowanSkin) {
 
   c.setData("transitionAmount", skin === "soul" ? 1 : 0);
   c.setData("sprite", skin === "soul" ? soul : living);
+  c.setData("lastTrail", 0);
 
   const dir = (c.getData("dir") as string) ?? "down";
   playRowanPose(c, dir, false);
@@ -1020,6 +1021,7 @@ export function setRowanTransition(
 
   c.setData("transitionAmount", a);
   c.setData("sprite", a >= 0.5 ? soul : living);
+  c.setData("lastTrail", 0);
 
   const dir = (c.getData("dir") as string) ?? "down";
   playRowanPose(c, dir, false);
