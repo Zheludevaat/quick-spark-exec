@@ -1099,6 +1099,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS KNOT IS QUIET.");
       else this.hint.setText(`A: ${KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
+      // First-meet identity card for this knot. Once per save per knot kind.
+      if (!near.cleared) {
+        this.knotPresentations[near.kind]?.introOnce(
+          `encounter_seen_knot_${near.kind}`,
+          this.save,
+        );
+        if (this.save.flags[`encounter_seen_knot_${near.kind}`]) writeSave(this.save);
+      }
     } else {
       this.focusGlow.fillAlpha = 0;
       // Region status
