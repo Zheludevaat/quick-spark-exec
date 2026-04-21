@@ -22,6 +22,7 @@ import { attachHUD } from "./hud";
 import { onActionDown, onDirection } from "../controls";
 import { runDialog } from "./hud";
 import { getAudio } from "../audio";
+import { setSceneSnapshot } from "../gameUiBridge";
 
 function sunPortalUnlocked(s: SaveSlot): boolean {
   return !!s.garmentsReleased.venus || !!s.garmentsReleased.sun || !!s.flags.legacy_sun_bridge;
