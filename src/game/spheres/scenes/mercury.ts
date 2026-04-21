@@ -53,6 +53,7 @@ type StationKind =
   | "scrolls"
   | "crack_chamber"
   | "trial_door"
+  | "hall_of_glyphs"
   | "exit_stairs";
 
 type MStation = {
@@ -406,6 +407,16 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // -- Cracking chamber + trial door (top) --
     this.placeStation("crack_chamber", GBC_W / 2, 24, "CHAMBER", `sphere_mercury_cracked`);
     this.placeStation("trial_door", GBC_W / 2, 14, "TRIAL");
+
+    // -- Hall of Glyphs (lunar/mercurial naming side-chamber) --
+    this.placeStation(
+      "hall_of_glyphs",
+      14,
+      24,
+      "GLYPHS",
+      "puzzle_mercury_name_01_solved",
+      WARM,
+    );
 
     // -- Exit (bottom) --
     this.placeStation("exit_stairs", GBC_W / 2, GBC_H - 6, "STAIRS");
