@@ -79,10 +79,10 @@ export const VENUS_MINIMAP_NODES: VenusNode[] = [
  * Used by the plateau scene's transition hotspots and also by Soryn hints.
  */
 export const VENUS_ZONE_LINKS: Record<VenusZoneId, VenusZoneId[]> = {
-  atrium: ["gallery", "recognition_hall", "ladder"],
+  atrium: ["gallery", "recognition_hall", "ladder", "threshold"],
   gallery: ["atrium", "recognition_hall"],
   recognition_hall: ["atrium", "gallery", "reconstruction"],
   reconstruction: ["recognition_hall", "threshold"],
   ladder: ["atrium", "threshold"],
-  threshold: ["reconstruction", "ladder"],
+  threshold: ["atrium", "reconstruction", "ladder"],
 };
