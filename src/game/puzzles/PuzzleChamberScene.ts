@@ -56,6 +56,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
   private targets: { id: string; x: number; y: number; label: string }[] = [];
   private cursorMark!: GBCText;
   private hint!: GBCText;
+  private hintText = "";
   private title!: GBCText;
   private nodeViews: NodeView[] = [];
   private busy = false;
@@ -84,7 +85,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#0a0e18");
-    spawnMotes(this, { count: 14, speed: 0.06, color: 0xa0b0d0, alpha: 0.18 });
+    spawnMotes(this, { count: 14, color: 0xa0b0d0, alpha: 0.18 });
 
     this.title = new GBCText(this, 4, 4, this.room.title ?? "CHAMBER", {
       color: COLOR.textGold,
@@ -278,20 +279,19 @@ export class PuzzleChamberScene extends Phaser.Scene {
   }
 
   private refreshHint() {
+    let text: string;
     if (isPuzzleSolved(this.save, this.room)) {
-      this.hint.setText("SOLVED. B: LEAVE");
-      return;
+      text = "SOLVED. B: LEAVE";
+    } else if (this.room.theme === "solar_truth") {
+      text = "HOLD A: STAND. B: LEAVE";
+    } else if (this.targets.length === 0) {
+      text = "B: LEAVE";
+    } else {
+      const t = this.targets[this.cursor];
+      text = `A: ${t.label}  </>  B: LEAVE`;
     }
-    if (this.room.theme === "solar_truth") {
-      this.hint.setText("HOLD A: STAND. B: LEAVE");
-      return;
-    }
-    if (this.targets.length === 0) {
-      this.hint.setText("B: LEAVE");
-      return;
-    }
-    const t = this.targets[this.cursor];
-    this.hint.setText(`A: ${t.label}  ←/→  B: LEAVE`);
+    this.hintText = text;
+    this.hint.setText(text);
   }
 
   // ---- interaction dispatch ----
