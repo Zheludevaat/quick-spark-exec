@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes, fitSingleLineText } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes, fitSingleLineState, textHeightPx } from "../gbcArt";
 import { loadSave, newSave, clearSave } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
@@ -369,9 +369,22 @@ export class TitleScene extends Phaser.Scene {
 
     const lineH = 9;
     const startY = 24;
-    const visibleRows = Math.min(10, jumps.length);
     const ITEM_X = 18;
     const ITEM_FIT_W = GBC_W - ITEM_X - 8;
+    const READOUT_W = GBC_W - 24;
+
+    // Per-jump display state. If any label trims, reserve a wrapped readout
+    // band inside the same overlay so the selected destination is always
+    // fully readable.
+    const jumpStates = jumps.map((j) => fitSingleLineState(j.label, ITEM_FIT_W));
+    const needsReadout = jumpStates.some((s) => s.trimmed);
+    const readoutH = needsReadout
+      ? Math.max(...jumpStates.map((s) => textHeightPx(s.full, READOUT_W)))
+      : 0;
+    const readoutBandH = needsReadout ? lineH + readoutH : 0;
+
+    const maxRows = Math.floor((GBC_H - 16 - (startY - 8) - readoutBandH - 8) / lineH);
+    const visibleRows = Math.max(1, Math.min(10, Math.min(jumps.length, maxRows)));
     let pick = 0;
 
     // Render slots are reused; only their text/visibility/color change as we
@@ -389,6 +402,15 @@ export class TitleScene extends Phaser.Scene {
       color: COLOR.textGold,
       depth: 953,
     });
+
+    const readoutY = startY + visibleRows * lineH + lineH;
+    const selectedReadout = needsReadout
+      ? new GBCText(this, 12, readoutY, "", {
+          color: COLOR.textAccent,
+          depth: 952,
+          maxWidthPx: READOUT_W,
+        })
+      : null;
 
     const computeStart = (p: number): number => {
       const half = Math.floor(visibleRows / 2);
@@ -413,13 +435,14 @@ export class TitleScene extends Phaser.Scene {
           continue;
         }
         items[row].obj.setVisible(true);
-        items[row].setText(fitSingleLineText(j.label, ITEM_FIT_W));
+        items[row].setText(jumpStates[abs].fitted);
         items[row].setColor(abs === pick ? COLOR.textGold : COLOR.textLight);
         rowToJump.push(abs);
       }
       const visiblePick = pick - start;
       mark.setPosition(10, startY + visiblePick * lineH);
       counter.setText(`${pick + 1}/${jumps.length}`);
+      if (selectedReadout) selectedReadout.setText(jumpStates[pick].full);
     };
     refreshSkip();
 
@@ -432,6 +455,7 @@ export class TitleScene extends Phaser.Scene {
       title.destroy();
       counter.destroy();
       items.forEach((t) => t.destroy());
+      selectedReadout?.destroy();
       mark.destroy();
     };
 
