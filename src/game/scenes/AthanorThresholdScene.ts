@@ -233,6 +233,24 @@ export class AthanorThresholdScene extends Phaser.Scene {
       });
     });
 
+    // Encounter presentations for the four doors — give each its own
+    // ceremonial identity (intro sting on first approach, pulse on stage
+    // advance, soften when DONE).
+    for (const door of this.doors) {
+      this.doorPresentations[door.key] = createEncounterPresentation(
+        this,
+        door.x,
+        door.y,
+        ATHANOR_DOOR_PROFILES[door.key],
+      );
+      if (this.save.flags[`op_${door.key}_done`]) {
+        this.doorPresentations[door.key]?.soften();
+      }
+    }
+
+    // Vessel presentation — furnace aura + first-approach intro.
+    this.vesselPresentation = createEncounterPresentation(this, vx, vy, VESSEL_PROFILE);
+
     // Work-stage status indicator near the top edge.
     this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
       color: COLOR.textDim,
