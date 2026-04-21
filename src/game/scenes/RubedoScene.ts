@@ -296,6 +296,9 @@ export class RubedoScene extends Phaser.Scene {
     const closer = this.save.sorynReleased
       ? { who: "ROWAN", text: `The wedding was ${wedding}. Time to seal the vessel.` }
       : { who: "SORYN", text: `The wedding was ${wedding}. Seal the vessel.` };
-    runDialog(this, [closer], () => returnToThreshold(this, this.save, "rubedo"));
+    runDialog(this, [closer], () => {
+      this.isDone = true;
+      this.isBusy = false;
+    });
   }
 }
