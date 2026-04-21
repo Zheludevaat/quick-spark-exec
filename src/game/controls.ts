@@ -9,7 +9,7 @@
  * Changes broadcast via a small subscriber list so live scenes can rebuild
  * their input pipeline without a reload.
  */
-import * as Phaser from "phaser";
+import type { Scene } from "phaser";
 
 export type GameAction =
   | "up"
