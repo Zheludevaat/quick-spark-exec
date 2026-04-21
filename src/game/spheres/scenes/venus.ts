@@ -76,7 +76,19 @@ import {
   publishVenusMinimap,
   publishVenusTrialMinimap,
 } from "../venus/VenusMinimap";
-import { makeAttuneRing } from "../venus/VenusUi";
+import { makeVenusAttuneRing } from "../venus/VenusUi";
+import { bakeVenusTiles } from "../venus/VenusTiles";
+import { bakeAllVenusSprites, VENUS_SPRITE } from "../venus/VenusSprites";
+import {
+  buildVenusAtriumArt,
+  buildVenusGalleryArt,
+  buildVenusRecognitionHallArt,
+  buildVenusReconstructionArt,
+  buildVenusLadderArt,
+  buildVenusThresholdArt,
+  buildVenusTrialArt,
+  addVenusForegroundFrame,
+} from "../venus/VenusArt";
 import {
   createEncounterPresentation,
   type EncounterPresentationHandle,
@@ -133,7 +145,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private hotspotMarkers: Phaser.GameObjects.GameObject[] = [];
 
   private activeAttune: AttuneTarget | null = null;
-  private attuneRing: ReturnType<typeof makeAttuneRing> | null = null;
+  private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
   private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
   private prevPlayerPos = { x: 0, y: 0 };
   private kypriaPresentation?: EncounterPresentationHandle;
@@ -161,6 +173,11 @@ export class VenusPlateauScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(380);
+
+    // Bake bespoke Venus art assets once per scene lifetime.
+    bakeVenusTiles(this);
+    bakeAllVenusSprites(this);
+
     spawnMotes(this, { count: 18, color: venusConfig.accent, alpha: 0.42 });
 
     attachHUD(this, () => this.save.stats);
@@ -324,6 +341,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   // -----------------------------------------------------------------
 
   private buildAtrium() {
+    buildVenusAtriumArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "atrium");
     // Soft pillars
     for (const px of [50, 110]) {
       const pillar = this.add.rectangle(px, 70, 6, 60, 0x4a2838, 0.7).setDepth(10);
@@ -388,6 +407,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildGallery() {
+    buildVenusGalleryArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "gallery");
     // Frames along the back wall
     for (let i = 0; i < 4; i++) {
       const fx = 30 + i * 28;
@@ -429,6 +450,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildRecognitionHall() {
+    buildVenusRecognitionHallArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "recognition_hall");
     // A long bench
     const bench = this.add.rectangle(GBC_W / 2, 110, 100, 4, 0x3a1a28, 1).setDepth(10);
     bench.setStrokeStyle(1, 0x9a6a7c, 0.6);
@@ -450,6 +473,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildReconstructionStudio() {
+    buildVenusReconstructionArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "reconstruction");
     // A worktable with scattered notes
     const table = this.add.rectangle(GBC_W / 2, 95, 80, 10, 0x4a2838, 1).setDepth(10);
     table.setStrokeStyle(1, 0xc88a9a, 0.6);
@@ -489,6 +514,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildLadder() {
+    buildVenusLadderArt(this, this.root);
     // Vertical "rungs" — the cadence ladder
     for (let i = 0; i < 5; i++) {
       const ry = 50 + i * 14;
@@ -527,6 +553,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   }
 
   private buildTrialThreshold() {
+    buildVenusThresholdArt(this, this.root);
+    addVenusForegroundFrame(this, this.root, "threshold");
     // A single pale doorway
     const door = this.add.rectangle(GBC_W / 2, 70, 24, 50, 0x2a1428, 1).setDepth(10);
     door.setStrokeStyle(1, 0xe89bb8, 0.9);
@@ -921,7 +949,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     // Build a small in-place ATTUNE ring for the rung
     const cx = GBC_W / 2;
     const cy = 60 + idx * 14;
-    const ring = makeAttuneRing(this, cx, cy, 8, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, cx, cy, 8);
     let elapsed = 0;
     const requiredMs = 1100;
     const failWindow = 600; // pressing/moving in this window after start = greedy
@@ -985,7 +1013,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     startAttune(target);
     this.activeAttune = target;
     // Show ring at player position
-    const ring = makeAttuneRing(this, this.player.x, this.player.y - 8, 6, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
     this.attuneRing = ring;
     this.flashHint("attune. do not move.");
   }
@@ -1229,6 +1257,13 @@ export class VenusTrialScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(420);
+
+    // Bake bespoke Venus art assets and lay down the chamber.
+    bakeVenusTiles(this);
+    bakeAllVenusSprites(this);
+    const trialRoot = this.add.container(0, 0).setDepth(5);
+    buildVenusTrialArt(this, trialRoot, 0);
+
     spawnMotes(this, { count: 14, color: venusConfig.accent, alpha: 0.55 });
 
     attachHUD(this, () => this.save.stats);
@@ -1294,7 +1329,7 @@ export class VenusTrialScene extends Phaser.Scene {
       color: COLOR.textAccent,
       depth: 31,
     });
-    const ring = makeAttuneRing(this, cx, cy + 4, 6, 0xe89bb8);
+    const ring = makeVenusAttuneRing(this, cx, cy + 4, 6);
 
     let elapsed = 0;
     const requiredMs = 1400;
