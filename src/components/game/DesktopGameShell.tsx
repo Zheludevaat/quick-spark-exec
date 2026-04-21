@@ -1,8 +1,10 @@
 /**
- * Desktop presentation shell. Centers the Phaser host and shows a small
- * footer with control hints. This preserves the prior route layout.
+ * Desktop presentation shell. Centers the Phaser host, adds the
+ * shared shell dialogue tray below the canvas, and shows a small
+ * footer with control hints.
  */
 import type { ReactNode } from "react";
+import { TouchDialogueTray } from "./touch/TouchDialogueTray";
 
 type Props = {
   children: ReactNode;
@@ -52,6 +54,10 @@ export function DesktopGameShell({ children, booted, error }: Props) {
         }}
       >
         {children}
+      </div>
+
+      <div style={{ width: "min(96vw, 720px)" }}>
+        <TouchDialogueTray />
       </div>
 
       <footer

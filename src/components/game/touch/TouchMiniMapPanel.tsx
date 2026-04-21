@@ -5,12 +5,26 @@
  * - If the scene publishes nodes via setSceneSnapshot, renders them as
  *   a schematic in the panel area.
  * - Player marker dot if scene publishes one.
+ *
+ * Visual chrome comes from the shared ShellPanel primitive so the
+ * minimap belongs to the same shell-card family as the dialogue tray
+ * and inventory cards.
  */
 import { useEffect, useState } from "react";
-import { subscribeGameUi, getGameUiSnapshot, type SceneSnapshot } from "@/game/gameUiBridge";
+import {
+  subscribeGameUi,
+  getGameUiSnapshot,
+  type SceneSnapshot,
+} from "@/game/gameUiBridge";
+import {
+  ShellPanel,
+  ShellPanelMeta,
+} from "@/components/game/shell/ShellPanel";
 
 export function TouchMiniMapPanel() {
-  const [scene, setScene] = useState<SceneSnapshot>(() => getGameUiSnapshot().scene);
+  const [scene, setScene] = useState<SceneSnapshot>(
+    () => getGameUiSnapshot().scene,
+  );
 
   useEffect(() => subscribeGameUi((s) => setScene(s.scene)), []);
 
@@ -18,23 +32,10 @@ export function TouchMiniMapPanel() {
   const marker = scene.marker;
 
   return (
-    <div
-      className="rounded-md p-2 font-mono"
-      style={{
-        background:
-          "linear-gradient(180deg, rgba(20,28,48,0.92), rgba(8,12,24,0.92))",
-        border: "1px solid rgba(74,120,200,0.45)",
-        boxShadow: "inset 0 0 8px rgba(0,0,0,0.5), 0 0 12px rgba(74,120,200,0.18)",
-        color: "#eef3ff",
-        width: "100%",
-      }}
-    >
-      <div
-        className="text-[9px] uppercase tracking-wider mb-1 opacity-70"
-        style={{ color: "#a8c8e8" }}
-      >
+    <ShellPanel compact tone="subdued" style={{ width: "100%" }}>
+      <ShellPanelMeta style={{ marginBottom: 4 }}>
         ACT {scene.act || "—"}
-      </div>
+      </ShellPanelMeta>
       <div
         className="text-[10px] mb-1 leading-tight truncate"
         style={{ color: "#eef3ff" }}
@@ -123,6 +124,6 @@ export function TouchMiniMapPanel() {
           />
         )}
       </div>
-    </div>
+    </ShellPanel>
   );
 }
