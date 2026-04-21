@@ -40,6 +40,7 @@ import {
   clearDialogSnapshot,
   setModalSnapshot,
   clearModalSnapshot,
+  getGameUiSnapshot,
 } from "../gameUiBridge";
 import {
   subscribeVirtualInput,
@@ -1119,7 +1120,9 @@ export function runDialog(
       clearDialogSnapshot();
       // Release the modal stack only if it still belongs to dialog —
       // otherwise an inquiry/settings/lore handoff already replaced it.
-      if (getModalSurface() === "dialog") clearModalSnapshot();
+      if (getGameUiSnapshot().modal.surface === "dialog") {
+        clearModalSnapshot();
+      }
       onDone?.();
       return;
     }
