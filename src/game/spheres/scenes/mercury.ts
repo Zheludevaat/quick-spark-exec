@@ -400,13 +400,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
     const near = this.nearestStation();
     if (near) {
       const verb = this.verbForStation(near);
-      this.interactPrompt
-        .setText(`[A] ${verb}`)
-        .setPosition(this.rowan.x - 12, this.rowan.y - 18);
-      this.hint.setText(this.hintForStation(near)).setColor(COLOR.textGold);
+      this.interactPrompt.setText(`[A] ${verb}`);
+      this.interactPrompt.setPosition(this.rowan.x - 12, this.rowan.y - 18);
+      this.hint.setText(this.hintForStation(near));
+      this.hint.setColor(COLOR.textGold);
     } else {
       this.interactPrompt.setText("");
-      this.hint.setText("WALK   B: HUB").setColor(COLOR.textDim);
+      this.hint.setText("WALK   B: HUB");
+      this.hint.setColor(COLOR.textDim);
     }
   }
 
@@ -1064,16 +1065,15 @@ export class MercuryTrialScene extends Phaser.Scene {
 
     const near = this.nearestDoor();
     if (near && !near.done) {
-      this.interactPrompt
-        .setText("[A] NAME")
-        .setPosition(this.rowan.x - 12, this.rowan.y - 18);
-      this.hint.setText(`Door of ${this.doorLabel(near.idx)}`).setColor(COLOR.textGold);
+      this.interactPrompt.setText("[A] NAME");
+      this.interactPrompt.setPosition(this.rowan.x - 12, this.rowan.y - 18);
+      this.hint.setText(`Door of ${this.doorLabel(near.idx)}`);
+      this.hint.setColor(COLOR.textGold);
     } else {
       this.interactPrompt.setText("");
       const remaining = this.doors.filter((d) => !d.done).length;
-      this.hint
-        .setText(remaining === 0 ? "ALL DOORS NAMED" : `${remaining} DOORS REMAIN`)
-        .setColor(COLOR.textDim);
+      this.hint.setText(remaining === 0 ? "ALL DOORS NAMED" : `${remaining} DOORS REMAIN`);
+      this.hint.setColor(COLOR.textDim);
     }
   }
 
@@ -1112,7 +1112,8 @@ export class MercuryTrialScene extends Phaser.Scene {
       this.mScore += picked.weight;
       door.done = true;
       door.visual.setAlpha(0.25);
-      door.label.setColor(COLOR.textGold).setText("NAMED");
+      door.label.setColor(COLOR.textGold);
+      door.label.setText("NAMED");
       getAudio().sfx("resolve");
       writeSave(this.mSave);
 
