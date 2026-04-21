@@ -82,15 +82,15 @@ function presenceProfile(archetype: SoulArchetype, mood: SoulMood): PresenceProf
 
   if (mood === "resolved") {
     return {
-      baseAlpha: 0.58,
-      idleLift: 0.25,
+      baseAlpha: 0.56,
+      idleLift: 0.12,
       idleScaleX: 1.0,
-      idleScaleY: 1.01,
-      idleDuration: v.duration + 450,
+      idleScaleY: 1.005,
+      idleDuration: v.duration + 700,
       haloScaleFrom: 0.94 * v.halo,
-      haloScaleTo: 1.02 * v.halo,
+      haloScaleTo: 0.98 * v.halo,
       haloAlphaFrom: 0.0,
-      haloAlphaTo: 0.05,
+      haloAlphaTo: 0.03,
     };
   }
 

@@ -106,9 +106,16 @@ export function runReflectionKnot(
       const still = stillSinceMs >= 600;
       overlapping = close && still;
       mimic.setAlpha(overlapping ? 0.85 : 0.55);
-      if (overlapping) label.setText("NOW. PRESS A.");
-      else if (close && !still) label.setText("HOLD STILL. THE MIMIC IS CATCHING UP.");
-      else label.setText("STAND STILL. WHEN YOUR REFLECTION OVERLAPS, A.");
+      if (overlapping) {
+        label.setText("NOW. PRESS A.");
+        mimic.setScale(1.05);
+      } else if (close && !still) {
+        label.setText("HOLD STILL. THE MIMIC IS CATCHING UP.");
+        mimic.setScale(1);
+      } else {
+        label.setText("STAND STILL. WHEN YOUR REFLECTION OVERLAPS, A.");
+        mimic.setScale(1);
+      }
     },
   });
 
@@ -393,12 +400,14 @@ export function runLanternKnot(
           alpha: 0,
           scale: 0.4,
           duration: 800,
+          ease: "Sine.out",
           onComplete: () => {
             lantern.destroy();
             halo.destroy();
           },
         });
         getAudio().sfx("resolve");
+        scene.cameras.main.flash(120, 220, 230, 255, false);
         runDialog(
           scene,
           [
@@ -533,8 +542,11 @@ export function runCrownKnot(scene: Phaser.Scene, save: SaveSlot, onDone: (r: Kn
         scene.tweens.add({
           targets: [crown, halo],
           alpha: 0,
-          scaleY: 0.3,
+          scaleY: 0.25,
+          scaleX: 1.25,
+          angle: 8,
           duration: 1000,
+          ease: "Sine.in",
           onComplete: () => {
             crown.destroy();
             halo.destroy();
