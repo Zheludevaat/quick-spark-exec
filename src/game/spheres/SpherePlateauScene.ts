@@ -13,7 +13,7 @@ import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from ".
 import type { SaveSlot, SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
-import { runInquiry } from "../inquiry";
+import { runInquiry, type InquiryOption } from "../inquiry";
 import { onActionDown, onDirection } from "../controls";
 import { getAudio } from "../audio";
 import {
