@@ -284,38 +284,56 @@ export class TitleScene extends Phaser.Scene {
       }
     };
     const erase = () => {
-      // Two-step gate: show a confirmation overlay before wiping the save.
       audio.sfx("cursor");
+
       const dim = this.add
         .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.82)
         .setOrigin(0, 0)
         .setDepth(950)
         .setInteractive();
-      const box = drawGBCBox(this, 16, 50, GBC_W - 32, 44, 951);
-      const q1 = new GBCText(this, 24, 56, "ERASE THE SAVE?", {
+
+      const boxX = 16;
+      const boxY = 44;
+      const boxW = GBC_W - 32;
+      const boxH = 56;
+
+      const box = drawGBCBox(this, boxX, boxY, boxW, boxH, 951);
+
+      const q1 = new GBCText(this, boxX + 8, boxY + 6, "ERASE THE SAVE?", {
         color: COLOR.textGold,
         depth: 952,
       });
-      const q2 = new GBCText(this, 24, 66, "THIS CANNOT BE UNDONE.", {
+
+      const q2 = new GBCText(this, boxX + 8, boxY + 16, "THIS CANNOT BE UNDONE.", {
         color: COLOR.textDim,
         depth: 952,
       });
-      const yes = new GBCText(this, 24, 80, "▶ YES, ERASE", {
+
+      const optionX = boxX + 8;
+      const noY = boxY + 32;
+      const yesY = boxY + 42;
+
+      const no = new GBCText(this, optionX, noY, "", {
         color: COLOR.textLight,
         depth: 952,
       });
-      const no = new GBCText(this, 92, 80, "  NO", {
+
+      const yes = new GBCText(this, optionX, yesY, "", {
         color: COLOR.textLight,
         depth: 952,
       });
-      let pick = 0; // 0 = YES, 1 = NO (default cursor on YES; user must move)
+
+      let pick = 0; // 0 = NO, 1 = YES
+
       const refreshConfirm = () => {
-        yes.setText(pick === 0 ? "▶ YES, ERASE" : "  YES, ERASE");
-        no.setText(pick === 1 ? "▶ NO" : "  NO");
-        yes.setColor(pick === 0 ? COLOR.textGold : COLOR.textLight);
-        no.setColor(pick === 1 ? COLOR.textGold : COLOR.textLight);
+        no.setText(pick === 0 ? "▶ NO" : "  NO");
+        yes.setText(pick === 1 ? "▶ YES, ERASE" : "  YES, ERASE");
+        no.setColor(pick === 0 ? COLOR.textGold : COLOR.textLight);
+        yes.setColor(pick === 1 ? COLOR.textGold : COLOR.textLight);
       };
+
       refreshConfirm();
+
       const cleanupConfirm = () => {
         unbindAct();
         unbindCancel();
@@ -324,11 +342,12 @@ export class TitleScene extends Phaser.Scene {
         box.destroy();
         q1.destroy();
         q2.destroy();
-        yes.destroy();
         no.destroy();
+        yes.destroy();
       };
-      const unbindAct = onActionDown(this, "action", () => {
-        if (pick === 0) {
+
+      const confirmPick = () => {
+        if (pick === 1) {
           audio.sfx("cancel");
           cleanupConfirm();
           clearSave();
@@ -337,30 +356,37 @@ export class TitleScene extends Phaser.Scene {
           audio.sfx("cursor");
           cleanupConfirm();
         }
-      });
+      };
+
+      const unbindAct = onActionDown(this, "action", confirmPick);
+
       const unbindCancel = onActionDown(this, "cancel", () => {
         audio.sfx("cursor");
         cleanupConfirm();
       });
+
       const unbindDir = onDirection(this, (d) => {
-        if (d === "left" || d === "right") {
+        if (d === "up" || d === "down" || d === "left" || d === "right") {
           pick = pick === 0 ? 1 : 0;
           audio.sfx("cursor");
           refreshConfirm();
         }
       });
-      // Pointer support
-      yes.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+
+      no.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
         pick = 0;
+        refreshConfirm();
+        audio.sfx("cursor");
+        cleanupConfirm();
+      });
+
+      yes.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        pick = 1;
         refreshConfirm();
         audio.sfx("cancel");
         cleanupConfirm();
         clearSave();
         this.scene.restart();
-      });
-      no.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
-        audio.sfx("cursor");
-        cleanupConfirm();
       });
     };
     const confirm = () => {
