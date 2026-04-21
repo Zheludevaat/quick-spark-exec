@@ -1,22 +1,22 @@
 /**
  * MetaxyHub — the connective spine of Acts 3+.
  *
- * Seven planetary portals arranged in a vertical ascent (Moon at the bottom,
- * Saturn at the top). Lit portals are entered with A. Dim portals show a
- * Soryn foreshadow line. Soryn stands at the right, offering a boundary
- * dialog after each completed sphere.
- *
- * This is the placeholder Phase 1 build: Moon (AthanorThreshold) and Sun
- * (CuratedSelf) are wired; the other five spheres are dim with flavor lines.
+ * Seven planetary portals arranged in a vertical ascent. Currently Moon,
+ * Mercury, Venus, Sun, and Mars are wired. Jupiter and Saturn remain dim.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
 import type { SaveSlot, SceneKey, SphereKey } from "../types";
+import { ACT_BY_SCENE } from "../types";
 import { writeSave } from "../save";
 import { attachHUD } from "./hud";
 import { onActionDown, onDirection } from "../controls";
 import { runDialog } from "./hud";
 import { getAudio } from "../audio";
+
+function sunPortalUnlocked(s: SaveSlot): boolean {
+  return !!s.garmentsReleased.venus || !!s.garmentsReleased.sun || !!s.flags.legacy_sun_bridge;
+}
 
 type Portal = {
   sphere: SphereKey;
@@ -60,7 +60,7 @@ const PORTALS: Portal[] = [
     sphere: "sun",
     label: "SUN",
     scene: "CuratedSelf",
-    unlocked: (s) => !!s.garmentsReleased.venus || !!s.flags.act3_complete || !!s.flags.moon_done,
+    unlocked: sunPortalUnlocked,
     dimLine: "The Sun's hall opens once Venus is past.",
     color: 0xffd070,
     y: 62,
@@ -111,10 +111,25 @@ export class MetaxyHubScene extends Phaser.Scene {
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.save.scene = "MetaxyHub";
+    this.save.act = ACT_BY_SCENE.MetaxyHub;
     writeSave(this.save);
     this.cursor = 0;
     this.labels = [];
     this.glows = [];
+  }
+
+  private defaultCursor(): number {
+    const actionable = PORTALS.findIndex(
+      (p) => p.scene !== null && p.unlocked(this.save) && !this.save.garmentsReleased[p.sphere],
+    );
+    if (actionable >= 0) return actionable;
+
+    const lit = PORTALS.findIndex(
+      (p) => p.scene !== null && p.unlocked(this.save),
+    );
+    if (lit >= 0) return lit;
+
+    return PORTALS.length - 1;
   }
 
   create() {
@@ -176,6 +191,7 @@ export class MetaxyHubScene extends Phaser.Scene {
       maxWidthPx: GBC_W - 12,
     });
 
+    this.cursor = this.defaultCursor();
     this.refreshCursor();
 
     onDirection(this, (d) => {

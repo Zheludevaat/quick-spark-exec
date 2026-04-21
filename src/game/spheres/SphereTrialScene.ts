@@ -8,7 +8,7 @@
  */
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, gbcWipe, spawnMotes } from "../gbcArt";
-import type { SaveSlot, SphereKey } from "../types";
+import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
 import { askSphere } from "./SpherePlateauScene";
@@ -40,6 +40,7 @@ export class SphereTrialScene extends Phaser.Scene {
     this.sphere = data.sphere;
     this.cfg = getSphereConfig(this.sphere);
     this.save.scene = this.cfg.trialScene;
+    this.save.act = ACT_BY_SCENE[this.cfg.trialScene];
     writeSave(this.save);
     this.score = 0;
     this.round = 0;

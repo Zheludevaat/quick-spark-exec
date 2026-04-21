@@ -10,7 +10,7 @@
  */
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes } from "../gbcArt";
-import type { SaveSlot, SphereKey } from "../types";
+import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
 import { runInquiry, type InquiryOption } from "../inquiry";
@@ -52,11 +52,37 @@ export class SpherePlateauScene extends Phaser.Scene {
     this.sphere = data.sphere;
     this.cfg = getSphereConfig(this.sphere);
     this.save.scene = this.cfg.plateauScene;
+    this.save.act = ACT_BY_SCENE[this.cfg.plateauScene];
     writeSave(this.save);
     this.cursor = 0;
     this.busy = false;
     this.stations = [];
     this.stationTexts = [];
+  }
+
+  private crackFlag(): string {
+    return `sphere_${this.sphere}_cracked`;
+  }
+
+  private isCracked(): boolean {
+    return !!this.save.flags[this.crackFlag()];
+  }
+
+  private requiredOpsForCrack(): number {
+    return this.cfg.operations.length;
+  }
+
+  private defaultCursorIndex(): number {
+    const idx = this.stations.findIndex((s) => {
+      if (s.kind === "soul" || s.kind === "op" || s.kind === "crack") {
+        return !this.save.flags[s.doneFlag];
+      }
+      if (s.kind === "trial" || s.kind === "settle") {
+        return this.isCracked();
+      }
+      return false;
+    });
+    return idx >= 0 ? idx : 0;
   }
 
   create() {
@@ -113,6 +139,7 @@ export class SpherePlateauScene extends Phaser.Scene {
       depth: 12,
     });
 
+    this.cursor = this.defaultCursorIndex();
     this.refreshCursor();
 
     onDirection(this, (d) => {
@@ -144,41 +171,61 @@ export class SpherePlateauScene extends Phaser.Scene {
   private refreshCursor() {
     const s = this.stations[this.cursor];
     this.mark.setPosition(8, 30 + this.cursor * 8);
+
     this.stationTexts.forEach((t, i) => {
       const st = this.stations[i];
       let color = COLOR.textLight;
       let suffix = "";
+
       if ((st.kind === "soul" || st.kind === "op" || st.kind === "crack") && this.save.flags[st.doneFlag]) {
         color = COLOR.textDim;
         suffix = "  *";
       }
+
+      if (st.kind === "settle" && !this.isCracked()) {
+        color = COLOR.textDim;
+        suffix = "  -";
+      }
+
       if (i === this.cursor) color = COLOR.textGold;
-      const baseLabel = st.kind === "soul" || st.kind === "op" || st.kind === "crack"
-        ? st.label
-        : st.label;
-      t.setText(baseLabel + suffix);
+      t.setText(st.label + suffix);
       t.setColor(color);
     });
 
     if (s.kind === "trial") {
-      const ready = !!this.save.flags[`sphere_${this.sphere}_cracked`];
-      this.hint.setText(ready ? "A: enter the Trial" : "Answer the Cracking Question first.");
-    } else if (s.kind === "settle") {
-      this.hint.setText("A: settle here (soft ending)");
-    } else {
-      this.hint.setText("A: select   B: hub");
+      this.hint.setText(this.isCracked() ? "A: enter the Trial" : "Answer the Cracking Question first.");
+      return;
     }
+
+    if (s.kind === "crack") {
+      const done = opsCompleted(
+        this.save,
+        this.sphere,
+        this.cfg.operations.map((o) => o.id),
+      );
+      const need = this.requiredOpsForCrack();
+      this.hint.setText(done >= need ? "A: face the Question" : `More operations needed (${done}/${need})`);
+      return;
+    }
+
+    if (s.kind === "settle") {
+      this.hint.setText(this.isCracked() ? "A: settle here (soft ending)" : "Answer the Cracking Question first.");
+      return;
+    }
+
+    this.hint.setText("A: select   B: hub");
   }
 
   private choose() {
     if (this.busy) return;
     const s = this.stations[this.cursor];
     this.busy = true;
+
     if (s.kind === "soul") return this.runSoul(s.idx, s.doneFlag);
     if (s.kind === "op") return this.runOp(s.idx, s.doneFlag);
     if (s.kind === "crack") return this.runCrack(s.doneFlag);
     if (s.kind === "trial") return this.tryEnterTrial();
-    if (s.kind === "settle") return this.settleHere();
+    if (s.kind === "settle") return this.trySettle();
   }
 
   private runSoul(i: number, doneFlag: string) {
@@ -208,32 +255,53 @@ export class SpherePlateauScene extends Phaser.Scene {
   }
 
   private runCrack(doneFlag: string) {
-    const opsDone = opsCompleted(
+    const needed = this.requiredOpsForCrack();
+    const done = opsCompleted(
       this.save,
       this.sphere,
       this.cfg.operations.map((o) => o.id),
     );
-    if (opsDone < 2) {
-      runDialog(this, [{ who: "SORYN", text: "Sit with the operations first. The question waits." }], () => {
+
+    if (done < needed) {
+      getAudio().sfx("cancel");
+      runDialog(this, [{ who: "SORYN", text: `Sit with more of the work first. (${done}/${needed})` }], () => {
         this.busy = false;
       });
       return;
     }
+
     const cq = this.cfg.crackingQuestion;
     askSphere(this, cq.prompt, cq.options, (picked) => {
       this.applyOption(picked);
       this.save.flags[doneFlag] = true;
       writeSave(this.save);
+      const trialIdx = this.stations.findIndex((st) => st.kind === "trial");
+      this.cursor = trialIdx >= 0 ? trialIdx : this.cursor;
       this.busy = false;
       this.refreshCursor();
     });
   }
 
-  private tryEnterTrial() {
-    if (!this.save.flags[`sphere_${this.sphere}_cracked`]) {
-      this.busy = false;
+  private trySettle() {
+    if (!this.isCracked()) {
+      getAudio().sfx("cancel");
+      runDialog(this, [{ who: "SORYN", text: "Not yet. Answer the question first." }], () => {
+        this.busy = false;
+      });
       return;
     }
+    this.settleHere();
+  }
+
+  private tryEnterTrial() {
+    if (!this.isCracked()) {
+      getAudio().sfx("cancel");
+      runDialog(this, [{ who: "SORYN", text: "The question first. Then the trial." }], () => {
+        this.busy = false;
+      });
+      return;
+    }
+
     gbcWipe(this, () =>
       this.scene.start(this.cfg.trialScene, { save: this.save, sphere: this.sphere }),
     );
