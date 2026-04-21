@@ -207,12 +207,24 @@ export class MercuryPlateauScene extends Phaser.Scene {
     // Start ambient soul barks — gives the room continuous life.
     this.startAmbientBarks();
 
+    // Hermaia presentation — anchored at the upper chamber altar.
+    this.hermaiaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      24,
+      HERMAIA_PROFILE,
+    );
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
       writeSave(this.mSave);
       this.busy = true;
       this.time.delayedCall(500, () => {
+        this.hermaiaPresentation?.introOnce(
+          "encounter_seen_hermaia_plateau",
+          this.mSave,
+        );
         runDialog(this, mercuryConfig.opening, () => {
           this.busy = false;
         });
