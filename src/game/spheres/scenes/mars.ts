@@ -1,14 +1,15 @@
 /**
- * Mars scenes — Areon-augmented plateau and bespoke trial.
+ * Mars scenes — Areon's authored Arena.
  *
- * The plateau still uses the shared `SpherePlateauScene` station menu, but
- * is wrapped with an Areon encounter presentation so the governor's
- * iron-red hush pulse and intro sting land before the menu opens.
+ * MarsPlateauScene is now a bespoke exploration scene rather than a thin
+ * shared menu wrapper. The player walks through six zones (approach →
+ * stands → line yard → infirmary → endurance → threshold). The three core
+ * Areon lessons — THE BLOW, THE LINE, THE STANCE — are spatially embodied:
+ * the player must stand still on the marked spot for a held interval, no
+ * combat, no menu choices. STAND is the verb the sphere is teaching.
  *
- * The trial is fully bespoke (no longer a thin shell). It runs the three
- * config rounds, but introduces each round with an AREON phase strip —
- * THE BLOW / THE LINE / THE STANCE — and presides with the governor
- * presentation through the whole sequence.
+ * MarsTrialScene remains the existing authored three-phase trial that
+ * presides over the climactic decision rounds with Areon's presentation.
  */
 import * as Phaser from "phaser";
 import {
@@ -16,18 +17,23 @@ import {
   GBC_H,
   COLOR,
   GBCText,
-  drawGBCBox,
   gbcWipe,
   spawnMotes,
   fitSingleLineText,
   measureText,
+  drawGBCBox,
 } from "../../gbcArt";
 import { ACT_BY_SCENE, type SaveSlot } from "../../types";
 import { writeSave } from "../../save";
-import { attachHUD, runDialog } from "../../scenes/hud";
-import { SpherePlateauScene, askSphere } from "../SpherePlateauScene";
-import { marsConfig } from "../configs/mars";
-import { trialPassedKey, type SphereOption } from "../types";
+import {
+  attachHUD,
+  runDialog,
+  makeRowan,
+  animateRowan,
+  InputState,
+} from "../../scenes/hud";
+import { setSceneSnapshot } from "../../gameUiBridge";
+import { onActionDown } from "../../controls";
 import {
   createEncounterPresentation,
   type EncounterPresentationHandle,
@@ -36,57 +42,427 @@ import {
   AREON_PROFILE,
   AREON_PHASE_SUBTITLES,
 } from "../../encounters/profiles/governors";
+import { askSphere } from "../SpherePlateauScene";
+import { marsConfig } from "../configs/mars";
+import { trialPassedKey, type SphereOption } from "../types";
+import { paintMarsRoom } from "../mars/MarsRoomPainter";
+import type { MarsZoneKey } from "../mars/MarsPalette";
+import {
+  createHoldTarget,
+  updateHoldTarget,
+  type HoldTarget,
+} from "../mars/MarsStandMechanics";
+import {
+  spawnMemoryRing,
+  spawnToneOverlay,
+  flashResolve,
+  type AftermathHandle,
+} from "../../visual/ScenicAftermath";
 
-export class MarsPlateauScene extends SpherePlateauScene {
+type MarsZone =
+  | "approach"
+  | "stands"
+  | "line_yard"
+  | "infirmary"
+  | "endurance"
+  | "threshold";
+
+const ZONE_LABEL: Record<MarsZone, string> = {
+  approach: "Arena Approach",
+  stands: "Witness Stands",
+  line_yard: "Line Yard",
+  infirmary: "Infirmary of the Undefeated",
+  endurance: "Chamber of Endurance",
+  threshold: "Areon Threshold",
+};
+
+const ZONE_IDLE_BODY: Record<MarsZone, string> = {
+  approach: "Iron sand. Empty stands. The arena waits without applause.",
+  stands: "The crowd has gone home. The blow remains.",
+  line_yard: "A line drawn here will outlast every reason for it.",
+  infirmary: "Cots, bandages, and the people no triumph could feed.",
+  endurance: "Quiet. Heavier than spectacle.",
+  threshold: "Areon waits beyond. Nothing here will be impressive.",
+};
+
+const FLAG_BLOW = "mars_blow_complete";
+const FLAG_LINE = "mars_line_complete";
+const FLAG_BESIDE = "mars_beside_complete";
+
+export class MarsPlateauScene extends Phaser.Scene {
+  private save!: SaveSlot;
+  private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
+  private inputState!: InputState;
+  private hint!: GBCText;
+  private interactPrompt!: GBCText;
+  private busy = false;
+  private zone: MarsZone = "approach";
+  private roomArt?: { destroy(): void };
+  private aftermath: AftermathHandle[] = [];
+  private toneOverlay?: AftermathHandle;
   private areonPresentation?: EncounterPresentationHandle;
+
+  // Hold targets — spatial embodiment of THE BLOW / THE LINE / THE STANCE.
+  private blowTarget!: HoldTarget;
+  private lineTarget!: HoldTarget;
+  private besideTarget!: HoldTarget;
+  private holdRing?: Phaser.GameObjects.Arc;
+  private holdMark?: Phaser.GameObjects.Arc;
 
   constructor() {
     super("MarsPlateau");
   }
 
   init(data: { save: SaveSlot }) {
-    super.init({ save: data.save, sphere: "mars" });
+    this.save = data.save;
+    this.save.scene = "MarsPlateau";
+    this.save.act = ACT_BY_SCENE.MarsPlateau;
+    writeSave(this.save);
+    this.busy = false;
+    this.zone = "approach";
+    this.aftermath = [];
+    this.blowTarget = createHoldTarget("blow", 80, 116, 12, 1200);
+    this.lineTarget = createHoldTarget("line", 80, 96, 14, 1800);
+    this.besideTarget = createHoldTarget("beside", 64, 116, 12, 1400);
+    if (this.save.flags[FLAG_BLOW]) this.blowTarget.done = true;
+    if (this.save.flags[FLAG_LINE]) this.lineTarget.done = true;
+    if (this.save.flags[FLAG_BESIDE]) this.besideTarget.done = true;
   }
 
   create() {
-    super.create();
+    this.cameras.main.setBackgroundColor("#140708");
+    spawnMotes(this, { count: 12, color: 0xb84848, alpha: 0.3 });
 
-    // Areon presides over the plateau from the upper-right corner — far
-    // enough from the menu to read as architectural pressure rather than
-    // a hotspot. Iron-red hush pulse via the AREON_PROFILE introStyle.
+    this.loadZone("approach");
+
+    attachHUD(this, () => this.save.stats);
+    this.rowanShadow = this.add
+      .ellipse(GBC_W / 2, GBC_H - 18, 10, 3, 0x000000, 0.4)
+      .setDepth(19);
+    this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 20, "soul").setDepth(20);
+    this.inputState = new InputState(this);
+
+    this.hint = new GBCText(this, 4, GBC_H - 9, "WALK", {
+      color: COLOR.textDim,
+      depth: 200,
+    });
+    this.interactPrompt = new GBCText(this, 0, 0, "", {
+      color: COLOR.textGold,
+      depth: 60,
+    });
+
     this.areonPresentation = createEncounterPresentation(
       this,
-      GBC_W - 22,
-      18,
+      GBC_W / 2,
+      24,
       AREON_PROFILE,
     );
 
-    // First-visit intro is fired by the parent's opening dialog flow already;
-    // the encounter sting fires once on top of that and never again.
-    this.time.delayedCall(450, () => {
-      this.areonPresentation?.introOnce(
-        "encounter_seen_areon_plateau",
-        (this as unknown as { save: SaveSlot }).save ?? readPlateauSave(this),
-      );
+    onActionDown(this, "action", () => this.tryInteract());
+
+    if (!this.save.flags.sphere_mars_seen) {
+      this.save.flags.sphere_mars_seen = true;
+      writeSave(this.save);
+      this.busy = true;
+      this.time.delayedCall(450, () => {
+        this.areonPresentation?.introOnce(
+          "encounter_seen_areon_plateau",
+          this.save,
+        );
+        runDialog(
+          this,
+          [
+            { who: "SORYN", text: "Mars. The Arena of the Strong." },
+            {
+              who: "AREON",
+              text: "This sphere does not ask whether you can win.",
+            },
+            { who: "AREON", text: "It asks whether you can remain upright." },
+          ],
+          () => {
+            this.busy = false;
+          },
+        );
+      });
+    }
+  }
+
+  private clearAftermath() {
+    this.aftermath.forEach((h) => h.destroy());
+    this.aftermath = [];
+    this.toneOverlay?.destroy();
+    this.toneOverlay = undefined;
+  }
+
+  private applyAftermath() {
+    this.clearAftermath();
+    const lessons =
+      (this.save.flags[FLAG_BLOW] ? 1 : 0) +
+      (this.save.flags[FLAG_LINE] ? 1 : 0) +
+      (this.save.flags[FLAG_BESIDE] ? 1 : 0);
+
+    if (lessons === 3) {
+      this.toneOverlay = spawnToneOverlay(this, 0xe0a080, 0.08, 22, 122);
+    } else if (lessons > 0) {
+      this.toneOverlay = spawnToneOverlay(this, 0xb84848, 0.05, 22, 122);
+    }
+
+    if (this.zone === "stands" && this.save.flags[FLAG_BLOW]) {
+      this.aftermath.push(spawnMemoryRing(this, 80, 116, 0xd86060, 0.22));
+    }
+    if (this.zone === "line_yard" && this.save.flags[FLAG_LINE]) {
+      this.aftermath.push(spawnMemoryRing(this, 80, 96, 0xf0c0a0, 0.22));
+    }
+    if (this.zone === "infirmary" && this.save.flags[FLAG_BESIDE]) {
+      this.aftermath.push(spawnMemoryRing(this, 64, 116, 0xc89090, 0.22));
+    }
+  }
+
+  private clearHoldVisuals() {
+    this.holdRing?.destroy();
+    this.holdMark?.destroy();
+    this.holdRing = undefined;
+    this.holdMark = undefined;
+  }
+
+  private buildHoldVisuals() {
+    this.clearHoldVisuals();
+    let target: HoldTarget | null = null;
+    if (this.zone === "stands" && !this.blowTarget.done) target = this.blowTarget;
+    else if (this.zone === "line_yard" && !this.lineTarget.done)
+      target = this.lineTarget;
+    else if (this.zone === "infirmary" && !this.besideTarget.done)
+      target = this.besideTarget;
+    if (!target) return;
+
+    this.holdMark = this.add
+      .circle(target.x, target.y, target.radius, 0xd86060, 0.18)
+      .setStrokeStyle(1, 0xf0c0a0, 0.6)
+      .setDepth(7);
+    this.holdRing = this.add
+      .circle(target.x, target.y, 3, 0xf0c0a0, 0.85)
+      .setDepth(8);
+  }
+
+  private loadZone(zone: MarsZone) {
+    this.zone = zone;
+    this.roomArt?.destroy();
+    this.roomArt = paintMarsRoom(this, zone as MarsZoneKey);
+    this.applyAftermath();
+    this.buildHoldVisuals();
+
+    setSceneSnapshot({
+      key: "MarsPlateau",
+      label: "Mars - Arena of the Strong",
+      act: ACT_BY_SCENE.MarsPlateau ?? 7,
+      zone: ZONE_LABEL[zone],
+      nodes: null,
+      marker: null,
+      idleTitle: ZONE_LABEL[zone].toUpperCase(),
+      idleBody: ZONE_IDLE_BODY[zone],
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: false,
+      allowPlayerHub: true,
+      showFooter: true,
     });
+
+    const title = fitSingleLineText("ARENA OF THE STRONG", GBC_W - 12);
+    const titleX = Math.floor((GBC_W - measureText(title)) / 2);
+    new GBCText(this, titleX, 2, title, {
+      color: COLOR.textGold,
+      depth: 50,
+    });
+
+    const sub = fitSingleLineText(ZONE_LABEL[zone].toUpperCase(), GBC_W - 12);
+    const subX = Math.floor((GBC_W - measureText(sub)) / 2);
+    new GBCText(this, subX, 11, sub, {
+      color: COLOR.textDim,
+      depth: 50,
+    });
+
+    if (this.rowan) {
+      this.rowan.setPosition(GBC_W / 2, GBC_H - 24);
+    }
+  }
+
+  update(_t: number, dt: number) {
+    if (this.busy) {
+      this.interactPrompt.setText("");
+      return;
+    }
+    if (!this.rowan) return;
+
+    const speed = 0.04 * dt;
+    const i = this.inputState.poll();
+    let dx = 0;
+    let dy = 0;
+    if (i.left) dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up) dy -= speed;
+    if (i.down) dy += speed;
+
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x + dx, 8, GBC_W - 8);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y + dy, 28, GBC_H - 14);
+    animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+
+    const stable = Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01;
+
+    this.tickHold(this.zone === "stands" ? this.blowTarget : null, dt, stable, () =>
+      this.resolveLesson(
+        FLAG_BLOW,
+        [{ who: "AREON", text: "Taking a blow is not the same as collapsing." }],
+        "line_yard",
+      ),
+    );
+    this.tickHold(
+      this.zone === "line_yard" ? this.lineTarget : null,
+      dt,
+      stable,
+      () =>
+        this.resolveLesson(
+          FLAG_LINE,
+          [
+            {
+              who: "AREON",
+              text: "A line means nothing if you cross it to feel alive.",
+            },
+          ],
+          "infirmary",
+        ),
+    );
+    this.tickHold(
+      this.zone === "infirmary" ? this.besideTarget : null,
+      dt,
+      stable,
+      () =>
+        this.resolveLesson(
+          FLAG_BESIDE,
+          [
+            {
+              who: "AREON",
+              text: "To stand beside is harder than to stand against.",
+            },
+          ],
+          "endurance",
+        ),
+    );
+
+    this.interactPrompt.setText(this.currentPrompt());
+    if (this.interactPrompt.obj.text) {
+      this.interactPrompt.setPosition(this.rowan.x - 14, this.rowan.y - 22);
+    }
+    this.hint.setText(this.currentHint());
+  }
+
+  private tickHold(
+    target: HoldTarget | null,
+    dt: number,
+    stable: boolean,
+    onComplete: () => void,
+  ) {
+    if (!target || target.done) return;
+    const inRange =
+      Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, target.x, target.y) <
+      target.radius;
+    if (this.holdRing) {
+      const fill = Phaser.Math.Clamp(target.holdMs / target.needMs, 0, 1);
+      this.holdRing.setRadius(2 + fill * (target.radius - 3));
+      this.holdRing.setFillStyle(0xf0c0a0, 0.4 + fill * 0.5);
+    }
+    if (updateHoldTarget(target, dt, inRange, stable)) {
+      onComplete();
+    }
+  }
+
+  private resolveLesson(
+    flag: string,
+    lines: { who: string; text: string }[],
+    nextZone: MarsZone,
+  ) {
+    if (this.save.flags[flag]) return;
+    this.save.flags[flag] = true;
+    writeSave(this.save);
+    this.busy = true;
+    flashResolve(this, this.rowan.x, this.rowan.y, 0xf0c0a0);
+    this.areonPresentation?.pulse();
+    runDialog(this, lines, () => {
+      this.busy = false;
+      this.loadZone(nextZone);
+    });
+  }
+
+  private currentPrompt(): string {
+    if (this.zone === "approach") return "[A] ENTER";
+    if (this.zone === "stands" && !this.save.flags[FLAG_BLOW]) return "BE STILL";
+    if (this.zone === "line_yard" && !this.save.flags[FLAG_LINE]) return "HOLD";
+    if (this.zone === "infirmary" && !this.save.flags[FLAG_BESIDE])
+      return "STAND BESIDE";
+    if (this.zone === "endurance") return "[A] CONTINUE";
+    if (this.zone === "threshold") return "[A] FACE AREON";
+    return "";
+  }
+
+  private currentHint(): string {
+    if (this.zone === "approach") return "APPROACH THE ARENA";
+    if (this.zone === "stands") return "TAKE THE BLOW WITHOUT RETALIATION";
+    if (this.zone === "line_yard") return "HOLD THE LINE";
+    if (this.zone === "infirmary") return "STAND BESIDE, NOT AGAINST";
+    if (this.zone === "endurance") return "BREATHE. THIS IS THE LESSON.";
+    if (this.zone === "threshold") return "AREON WAITS";
+    return "WALK";
+  }
+
+  private tryInteract() {
+    if (this.busy) return;
+
+    if (this.zone === "approach") {
+      this.loadZone("stands");
+      return;
+    }
+
+    if (this.zone === "endurance") {
+      this.loadZone("threshold");
+      return;
+    }
+
+    if (this.zone === "threshold") {
+      this.busy = true;
+      this.areonPresentation?.introOnce(
+        "encounter_seen_areon_trial",
+        this.save,
+      );
+      runDialog(
+        this,
+        [
+          { who: "AREON", text: "THE BLOW." },
+          { who: "AREON", text: "THE LINE." },
+          { who: "AREON", text: "THE STANCE." },
+          {
+            who: "AREON",
+            text: "Three blows. Stand, fall, or step aside. I will not be confused.",
+          },
+        ],
+        () => {
+          this.save.scene = "MarsTrial";
+          writeSave(this.save);
+          gbcWipe(this, () =>
+            this.scene.start("MarsTrial", { save: this.save }),
+          );
+        },
+      );
+    }
   }
 }
 
 /**
- * Helper — the SpherePlateauScene base keeps `save` private. We read it via
- * the same scene-data channel the base used to receive it.
- */
-function readPlateauSave(scene: Phaser.Scene): SaveSlot {
-  // Phaser scenes keep init-data accessible via scene.scene.settings.data.
-  const data = (scene.scene.settings as { data?: { save?: SaveSlot } }).data;
-  return (data?.save ?? null) as SaveSlot;
-}
-
-/**
- * Bespoke Mars trial — Areon presence with per-round phase strips.
- * Mirrors the shared trial scoring contract so save semantics stay
- * identical: pass = trialPassedKey + verb stand + inscription, fail = -15
- * coherence + return to plateau.
+ * Bespoke Mars trial — three rounds presided by Areon, each introduced by
+ * a phase strip (THE BLOW / THE LINE / THE STANCE). Pass = STAND verb +
+ * inscription + return to hub. Fail = -15 coherence + return to plateau.
  */
 export class MarsTrialScene extends Phaser.Scene {
   private save!: SaveSlot;
@@ -124,7 +500,6 @@ export class MarsTrialScene extends Phaser.Scene {
       depth: 10,
     });
 
-    // Areon presence presides at center-back of the arena. Pulse aura.
     this.areonPresentation = createEncounterPresentation(
       this,
       GBC_W / 2,
@@ -145,11 +520,6 @@ export class MarsTrialScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * Each round opens with a short AREON phase strip — THE BLOW / THE LINE
-   * / THE STANCE — so the trial reads as three discrete stances rather
-   * than a chain of menu choices.
-   */
   private runRound() {
     if (this.round >= marsConfig.trialRounds.length) return this.resolve();
     const r = marsConfig.trialRounds[this.round];
@@ -170,10 +540,6 @@ export class MarsTrialScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * Phase strip — a compact GBC card showing the round index and the
-   * AREON phase subtitle. Holds ~900ms then dissolves.
-   */
   private runPhaseStrip(label: string, index: number, onDone: () => void) {
     const w = 110;
     const h = 22;
@@ -191,7 +557,6 @@ export class MarsTrialScene extends Phaser.Scene {
       maxWidthPx: w - 12,
     });
 
-    // Pulse the phase color subtly so the strip reads as ceremonial, not UI.
     box.img.setAlpha(0);
     round.obj.setAlpha(0);
     phase.obj.setAlpha(0);
@@ -232,7 +597,6 @@ export class MarsTrialScene extends Phaser.Scene {
     }
     writeSave(this.save);
 
-    // Iron memory mark — Areon's verdict left as a slow, low ring.
     this.areonPresentation?.pulse();
     const mark = this.add
       .circle(GBC_W / 2, GBC_H / 2 - 4, 5, AREON_PROFILE.palette.primary, 0.22)
