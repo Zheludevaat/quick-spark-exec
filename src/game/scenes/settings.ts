@@ -341,14 +341,19 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       const focusAction = ACTION_ORDER[cursor];
       if (rebindAction) {
         const slot = rebindSlot === "primary" ? "PRIMARY" : "SECONDARY";
-        detail.setText(`PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`);
+        detail.setText(
+          fitSingleLineText(
+            `PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`,
+            DETAIL_W,
+          ),
+        );
         detail.obj.setTint(0xffffff);
-        footer1.setText("PRESS A KEY");
-        footer2.setText("ESC CANCEL");
+        footer1.setText(fitSingleLineText("PRESS A KEY", FOOTER_W));
+        footer2.setText(fitSingleLineText("ESC CANCEL", FOOTER_W));
       } else {
-        detail.setText(keysDetailText(focusAction));
-        footer1.setText("UP/DN MOVE  A REBIND");
-        footer2.setText("TAB ALT SLOT  B BACK");
+        detail.setText(fitSingleLineText(keysDetailText(focusAction), DETAIL_W));
+        footer1.setText(fitSingleLineText("UP/DN MOVE  A REBIND", FOOTER_W));
+        footer2.setText(fitSingleLineText("TAB ALT SLOT  B BACK", FOOTER_W));
       }
     }
   };
