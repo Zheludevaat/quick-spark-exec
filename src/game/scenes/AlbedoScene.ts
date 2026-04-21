@@ -53,6 +53,12 @@ export class AlbedoScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- BATH MEMORY (Act 3 pass) ---
+  private waterGlow!: Phaser.GameObjects.Arc;
+  private waterHighlightBands: Phaser.GameObjects.Rectangle[] = [];
+  private bathResultShown = false;
+  private keeperSilhouette?: Phaser.GameObjects.Ellipse;
+  private keeperReflection?: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super("Albedo");
@@ -130,9 +136,49 @@ export class AlbedoScene extends Phaser.Scene {
     }
 
     new GBCText(this, cx - 12, cy + 20, "BATH", { color: COLOR.textAccent, depth: 7 });
+
+    // Bath memory layer — soft additive water glow + highlight bands
+    this.waterGlow = this.add
+      .circle(cx, cy + 2, 30, 0x88c0e8, 0.18)
+      .setDepth(5)
+      .setBlendMode("ADD");
+    this.tweens.add({
+      targets: this.waterGlow,
+      alpha: { from: 0.18, to: 0.08 },
+      scale: { from: 1, to: 1.08 },
+      duration: 2200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    for (let i = 0; i < 3; i++) {
+      const band = this.add
+        .rectangle(cx, cy - 4 + i * 5, 64, 1, 0xeaf2ff, 0.35)
+        .setDepth(6)
+        .setBlendMode("ADD");
+      this.waterHighlightBands.push(band);
+    }
+
+    // Bath-Keeper presence: low-contrast silhouette at the rim + faint reflection
+    this.keeperSilhouette = this.add
+      .ellipse(cx + 30, cy - 4, 6, 14, 0x8094b0, 0.35)
+      .setDepth(7);
+    this.tweens.add({
+      targets: this.keeperSilhouette,
+      alpha: { from: 0.35, to: 0.18 },
+      duration: 2600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+    this.keeperReflection = this.add
+      .rectangle(cx + 18, cy + 4, 4, 1, 0xc8d8ee, 0.4)
+      .setDepth(6)
+      .setBlendMode("ADD");
     // --- END ART UPGRADE ---
 
     this.murky = this.save.shardsConsumed.length === 0;
+    this.applyBathState(); // pre-bath neutral state
 
     // --- INTERACTIVE UPGRADE ---
     this.rowanShadow = this.add.ellipse(GBC_W / 2, GBC_H - 24, 10, 3, 0x000000, 0.4).setDepth(9);
@@ -241,11 +287,64 @@ export class AlbedoScene extends Phaser.Scene {
         else awardStoneFx(this, this.save, "white", 1);
         writeSave(this.save);
         this.vesselHud.refresh();
+        // Aftermath: bath visibly reacts before the Keeper speaks.
+        this.applyBathState(r.judgment, this.save.stainsCarried);
         unlockLore(this.save, "on_albedo");
         showLoreToast(this, "on_albedo");
         runDialog(this, BATH_KEEPER_LINES, () => this.maybeSalvage());
       },
     );
+  }
+
+  /** Update the bath visuals to reflect the run result + carried stains. */
+  private applyBathState(judgment?: "great" | "ok" | "poor", stains = 0) {
+    if (!this.waterGlow) return;
+    let color = 0x88c0e8;
+    let alpha = 0.18;
+    let bandAlpha = 0.35;
+    let bandColor = 0xeaf2ff;
+    if (judgment === "great") {
+      color = 0xb8e0ff;
+      alpha = 0.32;
+      bandAlpha = 0.55;
+      bandColor = 0xffffff;
+    } else if (judgment === "ok") {
+      color = 0x9cd0ee;
+      alpha = 0.24;
+      bandAlpha = 0.42;
+    } else if (judgment === "poor") {
+      color = 0x607890;
+      alpha = 0.14;
+      bandAlpha = 0.2;
+      bandColor = 0xa8b4c4;
+    }
+    // Stains slightly cloud the bath regardless of judgment.
+    if (stains > 0) {
+      const cloud = Math.min(0.18, stains * 0.06);
+      alpha = Math.max(0.06, alpha - cloud);
+      bandAlpha = Math.max(0.12, bandAlpha - cloud);
+    }
+    this.tweens.add({
+      targets: this.waterGlow,
+      fillColor: color,
+      alpha,
+      duration: 600,
+      ease: "Sine.inOut",
+    });
+    this.waterGlow.setFillStyle(color, alpha);
+    this.waterHighlightBands.forEach((b) => {
+      b.setFillStyle(bandColor, bandAlpha);
+    });
+    if (judgment && !this.bathResultShown) {
+      this.bathResultShown = true;
+      // Brief inward pulse so the room reads the result instantly.
+      this.tweens.add({
+        targets: this.waterGlow,
+        scale: { from: 1.25, to: 1 },
+        duration: 520,
+        ease: "Sine.out",
+      });
+    }
   }
 
   /** Bath-Keeper offers back a destroyed shard if the salvage quest is active. */

@@ -44,6 +44,13 @@ export class CitrinitasScene extends Phaser.Scene {
   private isBusy = false;
   private isDone = false;
   private hintText!: GBCText;
+  // --- ROOM MEMORY (Act 3 pass) ---
+  private floatingBooks: Phaser.GameObjects.Rectangle[] = [];
+  private floatingBookHalos: Phaser.GameObjects.Arc[] = [];
+  private librarianShadow?: Phaser.GameObjects.Ellipse;
+  private teacherGlow?: Phaser.GameObjects.Arc;
+  private fourthBookSprite?: Phaser.GameObjects.Rectangle;
+  private ambientWhisperEvent?: Phaser.Time.TimerEvent;
 
   constructor() {
     super("Citrinitas");
@@ -118,12 +125,19 @@ export class CitrinitasScene extends Phaser.Scene {
     this.add.rectangle(cx, cy + 14, 28, 20, 0x2a1a0c).setDepth(4);
     this.add.rectangle(cx, cy + 4, 32, 8, 0x4a3018).setDepth(5);
 
-    // 5. Floating Magic Books
+    // 5. Floating Magic Books — stored so the room can react after each read.
     for (let i = 0; i < 3; i++) {
       const bX = cx + (i === 0 ? -30 : i === 1 ? 30 : 0);
       const bY = cy - 10 + (i === 2 ? -20 : 0);
+      const halo = this.add
+        .circle(bX, bY, 10, 0xffe098, 0.18)
+        .setDepth(5)
+        .setBlendMode("ADD");
       const book = this.add.rectangle(bX, bY, 12, 16, 0x684828).setDepth(6);
       this.add.rectangle(bX, bY, 10, 14, 0xffe098).setDepth(6);
+      book.setData("baseY", bY);
+      this.floatingBooks.push(book);
+      this.floatingBookHalos.push(halo);
       this.tweens.add({
         targets: book,
         y: bY - Phaser.Math.Between(4, 8),
@@ -134,9 +148,37 @@ export class CitrinitasScene extends Phaser.Scene {
         ease: "Sine.inOut",
         delay: i * 400,
       });
+      this.tweens.add({
+        targets: halo,
+        alpha: { from: 0.18, to: 0.08 },
+        duration: 1800 + i * 200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
     }
 
+    // Librarian presence — low-contrast shadow at the desk edge.
+    this.librarianShadow = this.add
+      .ellipse(cx + 50, cy + 8, 8, 18, 0x2a1a0c, 0.55)
+      .setDepth(5);
+    this.tweens.add({
+      targets: this.librarianShadow,
+      alpha: { from: 0.55, to: 0.32 },
+      duration: 2400,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
     new GBCText(this, cx - 20, cy + 12, "LECTERN", { color: COLOR.textGold, depth: 7 });
+
+    // Ambient idle whispers from the shelves.
+    this.ambientWhisperEvent = this.time.addEvent({
+      delay: 5200,
+      loop: true,
+      callback: () => this.maybeWhisper(),
+    });
     // --- END ART UPGRADE ---
 
     // --- INTERACTIVE UPGRADE ---
