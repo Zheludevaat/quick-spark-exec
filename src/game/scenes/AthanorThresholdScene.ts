@@ -80,9 +80,19 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#1a0e0a");
     spawnMotes(this, { count: 18, color: 0x6a3a2a, alpha: 0.4 });
 
-    // Floor: warm amber radial
+    // Floor: warm amber radial with checker tile shading
     const floor = this.add.rectangle(GBC_W / 2, GBC_H / 2, GBC_W, GBC_H, 0x2a1810).setDepth(-10);
     void floor;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (((r + c) & 1) === 0) continue;
+        this.add
+          .rectangle(8 + c * 16, 80 + r * 14, 14, 12, 0x3a2218, 0.55)
+          .setDepth(-9);
+      }
+    }
+    // Soft warm pool under the vessel
+    this.add.ellipse(GBC_W / 2, GBC_H / 2 + 10, 56, 18, 0x6a3010, 0.35).setDepth(-8);
 
     // Central vessel (alembic glyph)
     this.vessel = this.add.circle(GBC_W / 2, GBC_H / 2 + 8, 9, 0x000000, 0).setStrokeStyle(1, 0xc8a060).setDepth(5);
@@ -92,6 +102,22 @@ export class AthanorThresholdScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
     this.refreshVesselFill();
     new GBCText(this, GBC_W / 2 - 14, GBC_H / 2 - 6, "VESSEL", { color: COLOR.textGold, depth: 5 });
+
+    // Drifting embers rising from the vessel
+    for (let i = 0; i < 6; i++) {
+      const ember = this.add
+        .circle(GBC_W / 2 + (i - 3) * 3, GBC_H / 2 + 6, 1, 0xe8a040, 0.85)
+        .setDepth(6);
+      this.tweens.add({
+        targets: ember,
+        y: GBC_H / 2 - 24,
+        alpha: { from: 0.9, to: 0 },
+        duration: 1800 + i * 200,
+        delay: i * 280,
+        repeat: -1,
+        ease: "Sine.out",
+      });
+    }
 
     // Four doors along the top, color-coded
     DOOR_DEFS.forEach((d, i) => {
