@@ -145,6 +145,16 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.busy = false;
   }
 
+  /**
+   * Choose the painter zone for the current plateau state. The plateau
+   * is one room; we shift palette/landmark when the act crosses major
+   * thresholds (cracked → cracking palette gains the lens motif).
+   */
+  private mercuryArtZone(): MercuryZoneKey {
+    if (this.mSave.flags.sphere_mercury_cracked) return "cracking";
+    return "plateau";
+  }
+
   create() {
     this.cameras.main.setBackgroundColor(mercuryConfig.bg);
     this.cameras.main.fadeIn(500);
