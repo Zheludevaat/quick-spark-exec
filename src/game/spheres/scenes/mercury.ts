@@ -35,6 +35,11 @@ import { askSphere } from "../SpherePlateauScene";
 import { mercuryConfig } from "../configs/mercury";
 import { markOpDone, opsCompleted, trialPassedKey } from "../types";
 import { runInquiry } from "../../inquiry";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../../encounters/EncounterPresentation";
+import { HERMAIA_PROFILE } from "../../encounters/profiles/governors";
 
 type StationKind =
   | "npc_defender"
