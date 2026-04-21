@@ -154,13 +154,42 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
       setOverlaySnapshot({ loreOpen: false });
     });
   };
+  const returnToTitleGuarded = () => {
+    if (scene.scene.key === "Title") return;
+
+    // Release shell-owned modal/overlay state first so the desktop shell
+    // does not remain visually "stuck" during the scene transition.
+    settingsOpen = false;
+    loreOpen = false;
+    scene.data.set("__settingsOpen", false);
+    scene.data.set("__loreOpen", false);
+    setOverlaySnapshot({
+      settingsOpen: false,
+      loreOpen: false,
+      inventoryOpen: false,
+      inquiryActive: false,
+      playerHubOpen: false,
+    });
+    clearDialogSnapshot();
+    clearModalSnapshot();
+    clearVirtualInput();
+
+    // Stop current music and leave the current run cleanly.
+    const audio = getAudio();
+    audio.music.stop();
+
+    scene.scene.start("Title");
+  };
+
   // Expose for gear / lore touch buttons.
   scene.data.set("__openSettingsGuarded", openSettingsGuarded);
   scene.data.set("__openLoreGuarded", openLoreGuarded);
   // Expose globally so the React shell can trigger them too.
   if (typeof window !== "undefined") {
-    (window as unknown as Record<string, unknown>).__hermeticOpenSettings = openSettingsGuarded;
-    (window as unknown as Record<string, unknown>).__hermeticOpenLore = openLoreGuarded;
+    const w = window as unknown as Record<string, unknown>;
+    w.__hermeticOpenSettings = openSettingsGuarded;
+    w.__hermeticOpenLore = openLoreGuarded;
+    w.__hermeticReturnToTitle = returnToTitleGuarded;
   }
   // Clear our globals on shutdown ONLY if they still point to this scene's
   // handlers — avoid clobbering a newer scene that has already replaced them.
@@ -169,6 +198,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     const w = window as unknown as Record<string, unknown>;
     if (w.__hermeticOpenSettings === openSettingsGuarded) delete w.__hermeticOpenSettings;
     if (w.__hermeticOpenLore === openLoreGuarded) delete w.__hermeticOpenLore;
+    if (w.__hermeticReturnToTitle === returnToTitleGuarded) delete w.__hermeticReturnToTitle;
   };
   scene.events.once("shutdown", cleanupShellOpeners);
   scene.events.once("destroy", cleanupShellOpeners);
