@@ -15,7 +15,7 @@ import type { SaveSlot, WeddingType } from "../types";
 import { attachHUD, runDialog } from "./hud";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
-import { mountVesselHud, type VesselHud } from "../athanor/vessel";
+
 import { unlockLore, showLoreToast } from "./lore";
 import { completeQuest, questStatus } from "../sideQuests";
 
@@ -27,7 +27,6 @@ const CANONICAL: Record<WeddingType, string> = {
 
 export class SealedVesselScene extends Phaser.Scene {
   private save!: SaveSlot;
-  private vesselHud!: VesselHud;
 
   constructor() {
     super("SealedVessel");
@@ -43,11 +42,10 @@ export class SealedVesselScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#180c08");
     spawnMotes(this, { count: 12, color: 0xc8a060, alpha: 0.5 });
     attachHUD(this, () => this.save.stats);
-    this.vesselHud = mountVesselHud(this, this.save);
 
     this.add.circle(GBC_W / 2, GBC_H / 2, 18, 0x000000).setStrokeStyle(1, 0xc8a060);
     this.add.rectangle(GBC_W / 2, GBC_H / 2, 16, 30, 0x4a2010);
-    new GBCText(this, GBC_W / 2 - 26, GBC_H / 2 + 24, "THE SEALED VESSEL", {
+    new GBCText(this, GBC_W / 2 - 26, GBC_H / 2 + 26, "THE SEALED VESSEL", {
       color: COLOR.textGold,
       depth: 5,
     });
