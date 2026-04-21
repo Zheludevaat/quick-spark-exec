@@ -40,6 +40,10 @@ type Knot = {
   cleared: boolean;
   sprite: Phaser.GameObjects.Image;
   glow?: Phaser.GameObjects.Arc;
+  /** Override flag (used by hidden veil knot). Defaults to `knot_${kind}`. */
+  clearFlag?: string;
+  /** Override hint tagline for hidden variants. */
+  taglineOverride?: string;
 };
 
 type SeedEchoMote = {
@@ -466,9 +470,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.spawnSyllableLanterns();
     }
 
-    // Place knots for this region
-    for (const def of defineLayout().filter((k) => k.region === region)) {
-      const cleared = !!this.save.flags[`knot_${def.kind}`];
+    // Place knots for this region (filter hidden veil until unlocked)
+    for (const def of defineLayout().filter((k) => {
+      if (k.region !== region) return false;
+      if (k.clearFlag === "knot_veil" && !veilKnotUnlocked(this.save.flags)) return false;
+      return true;
+    })) {
+      const flagKey = def.clearFlag ?? `knot_${def.kind}`;
+      const cleared = !!this.save.flags[flagKey];
       const sprite = this.add.image(
         def.x,
         def.y,
@@ -496,7 +505,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
           ease: "Sine.inOut",
         });
       }
-      this.knots.push({ ...def, cleared, sprite, glow });
+      this.knots.push({
+        ...def,
+        cleared,
+        sprite,
+        glow,
+        clearFlag: def.clearFlag,
+        taglineOverride: def.taglineOverride,
+      });
       this.regionRoot.add(sprite);
       if (glow) this.regionRoot.add(glow);
 
