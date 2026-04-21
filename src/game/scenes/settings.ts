@@ -276,17 +276,6 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     return `${r.label}: ${r.value}`;
   };
 
-  /** Format a main row for the detail strip. */
-  const mainDetailText = (r: Row): string => {
-    if (!r.value) {
-      if (r.label === "KEY BINDINGS") return "EDIT CONTROL BINDINGS";
-      if (r.label === "RETURN TO TITLE") return "LEAVE THE CURRENT RUN AND GO TO TITLE";
-      if (r.label === "RESET DEFAULTS") return "RESTORE DEFAULT CONTROL AND UI SETTINGS";
-      return r.label;
-    }
-    return `${r.label} : ${r.value}`;
-  };
-
   /** Format a keys row for the detail strip. */
   const keysDetailText = (a: GameAction): string => {
     const b = getControls().bindings[a];
