@@ -17,7 +17,7 @@ export const mercuryConfig: SphereConfig = {
 
   opening: [
     { who: "SORYN", text: "Mercury. The Tower of Reasons." },
-    { who: "SORYN", text: "Every thought here arrives with a knife and a thesis. Try not to hug either." },
+    { who: "SORYN", text: "Every thought here arrives sharpened, overdressed, and faintly disappointed in reality." },
     { who: "?", text: "Three voices in three corners, each winning magnificently against an audience that does not exist." },
   ],
 
@@ -93,7 +93,7 @@ export const mercuryConfig: SphereConfig = {
       title: "Sit in silence",
       prompt: { who: "?", text: "The argument stops speaking aloud. It continues, of course, in smaller rooms." },
       options: [
-        { id: "silence_yes", label: "Yes.", reply: "There. For one breath, your mind behaves like weather instead of parliament.", weight: 3, conviction: "silence_is_an_answer" },
+        { id: "silence_yes", label: "Yes.", reply: "There. For one breath, your mind behaves like weather instead of a blade looking for a lecture.", weight: 3, conviction: "silence_is_an_answer" },
         { id: "silence_keep_arguing", label: "I keep arguing in my head.", reply: "Naturally. The loudest courtroom is usually private.", weight: 1 },
         { id: "silence_name_unknown", label: "I name what I do not know.", reply: "That is not failure. That is a doorway with proper signage.", weight: 3, conviction: "i_can_unknow" },
       ],
@@ -147,20 +147,20 @@ export const mercuryConfig: SphereConfig = {
   ],
 
   trialPass: [
-    { who: "HERMAIA", text: "You named what yielded to naming, and you stopped where naming would have become theft." },
-    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Spend it like medicine, not decoration." },
-    { who: "SORYN", text: "Mercury releases its garment. For one held breath, the Tower mistakes honesty for peace." },
+    { who: "HERMAIA", text: "You named what yielded to naming, and stopped where naming would have become theft." },
+    { who: "HERMAIA", text: "Take the verb. NAME is yours now. Use it like medicine. Decoration has already had its century." },
+    { who: "SORYN", text: "Mercury releases its garment. The Tower looks almost peaceful, which on it is a dangerously flattering angle." },
   ],
 
   trialFail: [
-    { who: "HERMAIA", text: "You supplied many words and very little naming. It happens. Language is cheap and glittery." },
-    { who: "SORYN", text: "Sit with the operations again. Return when the cleverness has eaten less of the truth." },
+    { who: "HERMAIA", text: "You supplied many words and very little naming. It happens. Language is cheap and likes to dress well." },
+    { who: "SORYN", text: "Sit with the operations again. Return when the cleverness has stopped trying to pass as courage." },
   ],
 
   inscription: "I CAN NAME WHAT I DO NOT KNOW",
 
   settleText: [
-    "You stop here. The arguments keep you company and never once ask whether they are welcome.",
-    "Mercury keeps you. You remain brilliantly unconvinced by everyone except yourself.",
+    "You stop here. The arguments keep you company and remain deeply unconcerned with whether that was a good idea.",
+    "Mercury keeps you. You remain brilliantly unconvinced by everyone except the part of yourself most in need of cross-examination.",
   ],
 };

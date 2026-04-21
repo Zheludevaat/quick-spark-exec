@@ -24,7 +24,7 @@ export const venusConfig: SphereConfig = {
   opening: [
     { who: "SORYN", text: "Venus. The Eternal Biennale." },
     { who: "SORYN", text: "Every wall is a mirror with excellent taste and terrible judgment." },
-    { who: "?", text: "Three figures pose under copper light, each hoping to be mistaken for revelation." },
+    { who: "?", text: "Three figures pose under copper light, each hoping to be mistaken for revelation and at least two of them overcommitting." },
   ],
 
   souls: [
@@ -119,7 +119,7 @@ export const venusConfig: SphereConfig = {
 
   trialOpening: [
     { who: "KYPRIA", text: "I am the recognised, and also the one who recognises without swallowing what I see." },
-    { who: "KYPRIA", text: "Three offerings. Attune, or perform. The difference is small in posture and enormous in soul." },
+    { who: "KYPRIA", text: "Three offerings. Attune, or perform. The difference is small in posture and enormous in consequence." },
   ],
 
   trialRounds: [
@@ -154,12 +154,12 @@ export const venusConfig: SphereConfig = {
 
   trialPass: [
     { who: "KYPRIA", text: "You attuned without devouring. You received without turning reception into theatre." },
-    { who: "KYPRIA", text: "Take the verb. ATTUNE is yours. Use it before admiration has a chance to get loud." },
-    { who: "SORYN", text: "Venus releases its garment. The Biennale dims, and at last the room risks becoming a room." },
+    { who: "KYPRIA", text: "Take the verb. ATTUNE is yours. Use it before admiration has time to put on a costume." },
+    { who: "SORYN", text: "Venus releases its garment. The Biennale dims, and for one rare moment the room risks becoming a room." },
   ],
 
   trialFail: [
-    { who: "KYPRIA", text: "You performed where attuning was asked. It happens. Vanity is quicker than reverence." },
+    { who: "KYPRIA", text: "You performed where attuning was asked. It happens. Vanity is quicker than reverence and much easier to accessorise." },
     { who: "SORYN", text: "Sit with the operations again. Return when the audience has become less interesting than the thing itself." },
   ],
 

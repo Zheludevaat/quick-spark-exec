@@ -25,9 +25,9 @@ type ItemKind = "phone" | "window" | "kettle" | "coat" | "mirror" | "postcard" |
 const MAIN_SEEDS_REQUIRED = 4;
 
 const LASTDAY_DOOR_PREVIEW = [
-  { who: "?", text: "The door is open, but the room does not feel behind you yet." },
-  { who: "?", text: "Beyond it is not a hall. It is a thinning." },
-  { who: "?", text: "If you step through, you will not come back here in the same way." },
+  { who: "?", text: "The door is open, but the room has not finished pretending to be behind you." },
+  { who: "?", text: "Beyond it is not a hall. It is a thinning, which is less decorative than it sounds." },
+  { who: "?", text: "If you step through, you will not come back here in the same arrangement." },
 ];
 
 type Interactable = {
@@ -360,9 +360,9 @@ export class LastDayScene extends Phaser.Scene {
         runDialog(
           this,
           [
-            { who: "?", text: "Tuesday. The light is doing its small work." },
-            { who: "?", text: "You have things to do today. You always have things to do." },
-            { who: "?", text: "Touch what calls you. There is no rush. There will be no later." },
+            { who: "?", text: "Tuesday. The light is doing its small work with unreasonable confidence." },
+            { who: "?", text: "You have things to do today. The list has the emotional tone of a trapdoor." },
+            { who: "?", text: "Touch what calls you. There is no rush. This is merely what urgency looks like before it introduces itself." },
             { who: "?", text: "(Press L any time to open your Lore Log.)" },
           ],
           () => {
@@ -550,7 +550,7 @@ export class LastDayScene extends Phaser.Scene {
         this,
         [
           { who: "?", text: "There it is again." },
-          { who: "?", text: "As if the room has stepped one inch away from you." },
+          { who: "?", text: "As if the room has stepped one inch away from you and is trying not to make a scene about it." },
           { who: "?", text: "The door is open." },
         ],
         () => {
@@ -773,7 +773,7 @@ export class LastDayScene extends Phaser.Scene {
       const lines: { who: string; text: string }[] = [];
       if (ratio > 0.7) {
         lines.push({ who: "?", text: "You wave back. The child's face splits open with a grin." });
-        lines.push({ who: "?", text: "You feel ridiculous. Then warm. Then ridiculous again." });
+        lines.push({ who: "?", text: "You feel ridiculous. Then warm. Then ridiculous again, which is how warmth often enters." });
         this.save.flags.window_waved = true;
       } else if (ratio > 0.2) {
         lines.push({ who: "?", text: "You half-lift a hand. The child has already turned away." });
@@ -801,8 +801,8 @@ export class LastDayScene extends Phaser.Scene {
         runRhythmTap(this, { title: "POUR", beats: [400, 900, 1400, 2200, 2700, 3200] }, (r) => {
           const lines: { who: string; text: string }[] = [];
           if (r.hits === r.total) {
-            lines.push({ who: "?", text: "Two cups. Even pours. You always pour two." });
-            lines.push({ who: "?", text: "You don't remember when that started." });
+            lines.push({ who: "?", text: "Two cups. Even pours. You always pour two, which is how habits disguise themselves as furniture." });
+            lines.push({ who: "?", text: "You do not remember when that arrangement moved in." });
           } else if (r.judgment === "ok") {
             lines.push({ who: "?", text: "One cup overfills. You wipe the counter." });
             lines.push({ who: "?", text: "Two cups. Always two." });
@@ -900,8 +900,8 @@ export class LastDayScene extends Phaser.Scene {
       this,
       [
         { who: "?", text: "You look tired." },
-        { who: "?", text: "You look like someone who hasn't been seen in a while." },
-        { who: "?", text: "You hold your own gaze longer than usual. Then you turn away." },
+        { who: "?", text: "You also look like someone who has been carrying a thought incorrectly." },
+        { who: "?", text: "You hold your own gaze longer than usual. The mirror, to its credit, does not flatter you." },
       ],
       () => {
         this.miniActive = false;
@@ -920,7 +920,7 @@ export class LastDayScene extends Phaser.Scene {
         { who: "POSTCARD", text: "WISH YOU WERE HERE." },
         {
           who: "POSTCARD",
-          text: "ACTUALLY I DON'T. THE GULLS ARE LOUD AND I'VE STARTED TALKING TO THEM. — D.",
+          text: "ACTUALLY I DON'T. THE GULLS ARE LOUD, OPINIONATED, AND HAVE MISTAKEN ME FOR ONE OF THEIR WORSE IDEAS. — D.",
         },
       ],
       () => {
@@ -938,7 +938,7 @@ export class LastDayScene extends Phaser.Scene {
       this,
       [
         { who: "BOOK", text: '"WITHDRAW INTO YOURSELF AND LOOK."' },
-        { who: "MARGIN", text: 'Someone has circled it in pencil and written: "OK BUT WHEN."' },
+        { who: "MARGIN", text: 'Someone has circled it in pencil and written: "EXCELLENT. WHEN, PRECISELY, WOULD YOU SUGGEST."' },
       ],
       () => {
         this.miniActive = false;

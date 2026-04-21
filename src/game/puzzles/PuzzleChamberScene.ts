@@ -42,6 +42,10 @@ import {
   resetPuzzleRoom,
 } from "./runtime";
 import type { PuzzleRoomDef } from "./types";
+import {
+  defaultPuzzleSolveLines,
+  pickPuzzleSoftFail,
+} from "../writing/humorBanks";
 
 type NodeView = {
   id: string;
@@ -323,7 +327,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
     if (t.id === "basin") {
       const both = !!ns.mirror_a && !!ns.mirror_b;
       if (!both) {
-        this.softFail("THE BASIN IS DARK.");
+        this.softFail(pickPuzzleSoftFail(this.room.theme, 0));
         return;
       }
       setPuzzleNodeState(this.save, this.room.id, "basin", true);
@@ -348,7 +352,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
 
     if (!isTrue) {
       // dim all glyphs visually for a moment
-      this.softFail("THE NAME WAS WRONG. THE SEAL DIMS.");
+      this.softFail(pickPuzzleSoftFail(this.room.theme, 0));
       for (const n of this.room.nodes) {
         if (n.kind === "name_glyph") {
           setPuzzleNodeState(this.save, this.room.id, n.id, false);
@@ -425,7 +429,7 @@ export class PuzzleChamberScene extends Phaser.Scene {
     this.refreshAllNodes();
     this.cursorMark.setVisible(false);
 
-    const lines = (this.room.solveLines ?? ["The chamber settles."]).map((text) => ({
+    const lines = (this.room.solveLines ?? defaultPuzzleSolveLines(this.room.theme)).map((text) => ({
       who: "CHAMBER",
       text,
     }));
