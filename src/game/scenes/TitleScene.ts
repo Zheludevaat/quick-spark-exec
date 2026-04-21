@@ -5,6 +5,7 @@ import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 import { openSettings } from "./settings";
+import { setSceneSnapshot } from "../gameUiBridge";
 
 /**
  * Title screen — intentionally minimal.
@@ -19,6 +20,21 @@ export class TitleScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(COLOR.void);
+
+    setSceneSnapshot({
+      key: "Title",
+      label: "THE HERMETIC COMEDY",
+      act: 0,
+      zone: null,
+      nodes: null,
+      marker: null,
+      shellMode: "minimal",
+      idleTitle: null,
+      idleBody: null,
+      footerHint: null,
+      allowPlayerHub: false,
+      showMiniMap: false,
+    });
 
     // ---- Starfield ----
     const g = this.add.graphics();

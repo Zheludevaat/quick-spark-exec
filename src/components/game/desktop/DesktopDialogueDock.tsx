@@ -1,7 +1,8 @@
 /**
- * Desktop bottom-dock center column. Reserves stable space for dialogue:
- * when a dialog is open, renders the shared GameDialogueTray; otherwise
- * shows a calm zone/scene placeholder so the dock doesn't collapse.
+ * Desktop bottom-dock center column.
+ *
+ * When dialog is open, render the shared dialogue tray.
+ * Otherwise show a scene-authored idle state instead of dead filler copy.
  */
 import { useEffect, useState } from "react";
 import {
@@ -11,7 +12,6 @@ import {
 import { GameDialogueTray } from "@/components/game/shell/GameDialogueTray";
 import {
   ShellPanel,
-  ShellPanelMeta,
   ShellPanelTitle,
 } from "@/components/game/shell/ShellPanel";
 
@@ -30,16 +30,21 @@ export function DesktopDialogueDock() {
     return <GameDialogueTray />;
   }
 
+  const idleTitle = scene.idleTitle || scene.zone || "ATMOSPHERE";
+  const idleBody =
+    scene.idleBody ||
+    (scene.label
+      ? `${scene.label} waits in silence.`
+      : "The scene keeps its own counsel.");
+
   return (
     <ShellPanel style={{ minHeight: 96 }}>
-      <ShellPanelTitle>{scene.zone || "DIALOGUE"}</ShellPanelTitle>
-      <div className="text-xs font-mono leading-snug" style={{ color: "#a8c8e8" }}>
-        {scene.label || "No voice present."}
-      </div>
-      <div className="mt-2">
-        <ShellPanelMeta>
-          STATS OPENS THE PLAYER HUB · SETTINGS OPENS THE GAME MENU
-        </ShellPanelMeta>
+      <ShellPanelTitle>{idleTitle}</ShellPanelTitle>
+      <div
+        className="text-xs font-mono leading-snug"
+        style={{ color: "#a8c8e8" }}
+      >
+        {idleBody}
       </div>
     </ShellPanel>
   );
