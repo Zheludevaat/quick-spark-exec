@@ -270,14 +270,12 @@ export class AthanorThresholdScene extends Phaser.Scene {
       .circle(this.reflectionPortalX, this.reflectionPortalY - 6, 2, 0xc8d8f0, rpSolved ? 0.7 : 0.35)
       .setDepth(5);
     this.reflectionLabel = new GBCText(
-      this.reflectionPortalX - 14,
-      0,
-      "",
+      this,
+      this.reflectionPortalX - 12,
+      this.reflectionPortalY + 10,
+      "REFLECT",
       { color: COLOR.textDim, depth: 5 },
     );
-    // Reposition + label
-    this.reflectionLabel.setPosition(this.reflectionPortalX - 12, this.reflectionPortalY + 10);
-    this.reflectionLabel.setText("REFLECT");
 
     // Work-stage status indicator near the top edge.
     this.workStatus = new GBCText(this, GBC_W - 36, 4, "", {
