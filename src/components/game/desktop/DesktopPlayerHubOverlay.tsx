@@ -85,7 +85,20 @@ export function DesktopPlayerHubOverlay({
 
   useEffect(() => {
     if (!open) return;
-    return subscribeGameUi((s) => setScene(s.scene));
+    return subscribeGameUi((s) => {
+      setScene(s.scene);
+      // Scene transitions usually flush a save; refresh so any
+      // newly-persisted state is visible without re-opening.
+      setSave(loadSave());
+    });
+  }, [open]);
+
+  // Live-refresh on save writes (writeSave dispatches "hermetic-saved").
+  useEffect(() => {
+    if (!open) return;
+    const onSaved = () => setSave(loadSave());
+    window.addEventListener("hermetic-saved", onSaved);
+    return () => window.removeEventListener("hermetic-saved", onSaved);
   }, [open]);
 
   useEffect(() => {

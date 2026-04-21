@@ -26,15 +26,18 @@ function UtilityButton({
   label,
   onClick,
   active = false,
+  ariaLabel,
 }: {
   label: string;
   onClick: () => void;
   active?: boolean;
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={ariaLabel ?? label}
       className="w-full rounded-md px-3 py-2 text-left text-xs uppercase tracking-wider font-mono transition-colors"
       style={{
         background: active
@@ -109,7 +112,12 @@ export function DesktopUtilityRail({
       </div>
 
       <div className="mt-2 flex flex-col gap-2">
-        <UtilityButton label="STATS" onClick={onOpenHub} active={hubOpen} />
+        <UtilityButton
+          label="PLAYER HUB"
+          ariaLabel="Open player hub (overview, inventory, journal, quests, progress, controls)"
+          onClick={onOpenHub}
+          active={hubOpen}
+        />
         <UtilityButton label="INVENTORY" onClick={onOpenInventory} />
         <UtilityButton label="SETTINGS" onClick={onOpenSettings} />
       </div>

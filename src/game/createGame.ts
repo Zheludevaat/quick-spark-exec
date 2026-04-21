@@ -18,8 +18,8 @@ import { MetaxyHubScene } from "./scenes/MetaxyHubScene";
 import { MercuryPlateauScene, MercuryTrialScene } from "./spheres/scenes/mercury";
 import { VenusPlateauScene, VenusTrialScene } from "./spheres/scenes/venus";
 import { MarsPlateauScene, MarsTrialScene } from "./spheres/scenes/mars";
-import { JupiterPlateauScene, JupiterTrialScene } from "./spheres/scenes/jupiter";
-import { SaturnPlateauScene, SaturnTrialScene } from "./spheres/scenes/saturn";
+// Jupiter and Saturn scenes intentionally not imported: they remain
+// dim portals in MetaxyHubScene until their authored content lands.
 import { SunPlateauScene } from "./scenes/SunPlateauScene";
 import { SunTrialScene } from "./scenes/SunTrialScene";
 import { MoonTrialScene } from "./scenes/MoonTrialScene";
@@ -69,10 +69,9 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       VenusTrialScene,
       MarsPlateauScene,
       MarsTrialScene,
-      JupiterPlateauScene,
-      JupiterTrialScene,
-      SaturnPlateauScene,
-      SaturnTrialScene,
+      // Jupiter / Saturn plateau + trial scenes are not yet wired here.
+      // The hub already gates their portals; registering them prematurely
+      // creates "registered but unreachable" content.
       MoonTrialScene,
       SunPlateauScene,
       SunTrialScene,

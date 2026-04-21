@@ -170,24 +170,24 @@ export function DesktopShellSettings() {
       },
     ];
 
-    if (c.interfaceMode === "touch_landscape") {
-      list.push(
-        {
-          label: "BUTTON SIZE",
-          value: c.buttonSize.toUpperCase(),
-          detail: "Size of the on-screen A/B + d-pad buttons.",
-          onLeft: () => cycleSize(-1),
-          onRight: () => cycleSize(1),
-        },
-        {
-          label: "TOUCH LAYOUT",
-          value: c.touchLayout.toUpperCase(),
-          detail: "Choose between d-pad, swipe gestures, hybrid, or none.",
-          onLeft: () => cycleLayout(-1),
-          onRight: () => cycleLayout(1),
-        },
-      );
-    }
+    // Touch rows are always present (parity with canvas settings) so the
+    // player can preconfigure them before switching interface mode.
+    list.push(
+      {
+        label: "BUTTON SIZE",
+        value: c.buttonSize.toUpperCase(),
+        detail: "Size of the on-screen A/B + d-pad buttons (used in touch mode).",
+        onLeft: () => cycleSize(-1),
+        onRight: () => cycleSize(1),
+      },
+      {
+        label: "TOUCH LAYOUT",
+        value: c.touchLayout.toUpperCase(),
+        detail: "Choose between d-pad, swipe gestures, hybrid, or none (used in touch mode).",
+        onLeft: () => cycleLayout(-1),
+        onRight: () => cycleLayout(1),
+      },
+    );
 
     if (canReturnToTitle) {
       list.push({
@@ -210,7 +210,7 @@ export function DesktopShellSettings() {
     list.push({
       label: "RESET CONTROLS",
       value: "›",
-      detail: "Restore all bindings, audio, and layout settings to defaults.",
+      detail: "Restore key bindings and layout settings to defaults. Audio volume/mute are not affected.",
       onActivate: () => resetControls(),
     });
 
