@@ -5,9 +5,8 @@ import type { SoulArchetype } from "./souls";
  * Tiny GBC-style soul figures, built from primitives (rectangles + arcs).
  * One container per soul — keeps `ImaginalRealmScene` free of asset baking.
  *
- * Each archetype has a recognizable silhouette + a "tell" prop for the
- * famous shades (a feather, a lantern, a score, etc.) so the player can
- * identify them by hook + tell alone.
+ * All presence styling (shadow, idle motion, halo pulse, mood) is owned here.
+ * Callers only decide which mood a soul should be in via setMood().
  */
 
 export type SoulMood = "waiting" | "engaged" | "resolved";
@@ -15,7 +14,6 @@ export type SoulMood = "waiting" | "engaged" | "resolved";
 export type Built = {
   container: Phaser.GameObjects.Container;
   halo: Phaser.GameObjects.Arc;
-  /** Apply a mood — changes halo color/intensity and idle bob speed. */
   setMood: (m: SoulMood) => void;
   archetype: SoulArchetype;
 };
@@ -42,6 +40,82 @@ const PALETTE: Record<SoulArchetype, { robe: number; head: number; accent: numbe
   echo: { robe: 0x586878, head: 0xa8c8e8, accent: 0xdde6f5 },
 };
 
+// --- Presence staging ----------------------------------------------------
+
+type PresenceProfile = {
+  baseAlpha: number;
+  idleLift: number;
+  idleScaleX: number;
+  idleScaleY: number;
+  idleDuration: number;
+  haloScaleFrom: number;
+  haloScaleTo: number;
+  haloAlphaFrom: number;
+  haloAlphaTo: number;
+};
+
+const ARCHETYPE_VARIANCE: Partial<
+  Record<SoulArchetype, { lift: number; duration: number; halo: number }>
+> = {
+  robed: { lift: 0.8, duration: 1500, halo: 1.0 },
+  weeper: { lift: 1.1, duration: 1450, halo: 1.0 },
+  drowned: { lift: 1.3, duration: 1650, halo: 1.05 },
+  mirror: { lift: 0.7, duration: 1350, halo: 0.96 },
+  collector: { lift: 0.7, duration: 1500, halo: 0.95 },
+  sleeper: { lift: 0.3, duration: 1900, halo: 0.9 },
+  saint: { lift: 0.5, duration: 1750, halo: 1.08 },
+  composer: { lift: 0.8, duration: 1500, halo: 1.0 },
+  crowned: { lift: 0.6, duration: 1700, halo: 1.08 },
+  stonechild: { lift: 0.4, duration: 1250, halo: 0.88 },
+  mathematician: { lift: 0.6, duration: 1350, halo: 0.95 },
+  feather: { lift: 0.9, duration: 1550, halo: 1.02 },
+  echo: { lift: 0.9, duration: 1650, halo: 1.0 },
+};
+
+function presenceProfile(archetype: SoulArchetype, mood: SoulMood): PresenceProfile {
+  const v = ARCHETYPE_VARIANCE[archetype] ?? { lift: 0.8, duration: 1500, halo: 1.0 };
+
+  if (mood === "engaged") {
+    return {
+      baseAlpha: 1,
+      idleLift: v.lift + 0.35,
+      idleScaleX: 0.99,
+      idleScaleY: 1.03,
+      idleDuration: Math.max(950, v.duration - 180),
+      haloScaleFrom: 1.0 * v.halo,
+      haloScaleTo: 1.18 * v.halo,
+      haloAlphaFrom: 0.12,
+      haloAlphaTo: 0.26,
+    };
+  }
+
+  if (mood === "resolved") {
+    return {
+      baseAlpha: 0.58,
+      idleLift: 0.25,
+      idleScaleX: 1.0,
+      idleScaleY: 1.01,
+      idleDuration: v.duration + 450,
+      haloScaleFrom: 0.94 * v.halo,
+      haloScaleTo: 1.02 * v.halo,
+      haloAlphaFrom: 0.0,
+      haloAlphaTo: 0.05,
+    };
+  }
+
+  return {
+    baseAlpha: 0.95,
+    idleLift: v.lift,
+    idleScaleX: 0.995,
+    idleScaleY: 1.02,
+    idleDuration: v.duration,
+    haloScaleFrom: 0.95 * v.halo,
+    haloScaleTo: 1.08 * v.halo,
+    haloAlphaFrom: 0.02,
+    haloAlphaTo: 0.08,
+  };
+}
+
 export function buildSoulSprite(
   scene: Phaser.Scene,
   archetype: SoulArchetype,
@@ -51,18 +125,10 @@ export function buildSoulSprite(
   const c = scene.add.container(x, y).setDepth(8);
   const p = PALETTE[archetype];
 
-  // Halo (visible when player is near)
+  // Halo (visible based on mood)
   const halo = scene.add.circle(0, 0, 9, 0xdde6f5, 0).setDepth(7);
-  scene.tweens.add({
-    targets: halo,
-    scale: 1.3,
-    duration: 1100,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.inOut",
-  });
 
-  // Common body: small robed figure 6w x 10h, head on top.
+  // Common body
   const robe = scene.add.rectangle(0, 2, 6, 8, p.robe, 1).setOrigin(0.5);
   const head = scene.add.circle(0, -4, 2.5, p.head, 1);
   c.add([robe, head]);
@@ -70,33 +136,28 @@ export function buildSoulSprite(
   // Per-archetype tells
   switch (archetype) {
     case "robed": {
-      // Cartographer — a small "scroll" in front
       const scroll = scene.add.rectangle(0, 4, 5, 1.5, p.accent, 1);
       c.add(scroll);
       break;
     }
     case "weeper": {
-      // Hands to face — two tiny accent dots
       const lt = scene.add.circle(-1.5, -3, 0.6, p.accent, 1);
       const rt = scene.add.circle(1.5, -3, 0.6, p.accent, 1);
       c.add([lt, rt]);
       break;
     }
     case "drowned": {
-      // Hair fanned — wider head + a wisp below
       const wisp = scene.add.rectangle(0, 6, 5, 1, p.accent, 0.7);
       const hair = scene.add.rectangle(0, -5, 6, 1.5, p.accent, 1);
       c.add([wisp, hair]);
       break;
     }
     case "mirror": {
-      // Holds a tiny mirror in front
       const mirror = scene.add.rectangle(2, 2, 2, 3, p.accent, 1);
       c.add(mirror);
       break;
     }
     case "collector": {
-      // Jar in front (motes inside)
       const jar = scene.add.rectangle(0, 4, 3, 4, 0x303848, 1);
       const mote1 = scene.add.circle(-0.5, 4, 0.5, p.accent, 1);
       const mote2 = scene.add.circle(0.5, 5, 0.5, p.accent, 1);
@@ -104,11 +165,9 @@ export function buildSoulSprite(
       break;
     }
     case "sleeper": {
-      // Lying down — flatten and rotate
       robe.setSize(8, 4);
       robe.setPosition(0, 4);
       head.setPosition(-4, 4);
-      // Z's
       const z = scene.add.text(3, -4, "z", {
         fontFamily: "monospace",
         fontSize: "5px",
@@ -119,7 +178,6 @@ export function buildSoulSprite(
       break;
     }
     case "saint": {
-      // Bare feet — two small dots; halo over head
       const halo2 = scene.add.circle(0, -6, 2, p.accent, 0.6);
       const f1 = scene.add.rectangle(-1, 7, 1, 1, p.head, 1);
       const f2 = scene.add.rectangle(1, 7, 1, 1, p.head, 1);
@@ -127,20 +185,17 @@ export function buildSoulSprite(
       break;
     }
     case "composer": {
-      // Holds a stylized score — two short staff lines
       const staff1 = scene.add.rectangle(0, 2, 5, 0.5, p.accent, 1);
       const staff2 = scene.add.rectangle(0, 4, 5, 0.5, p.accent, 1);
       c.add([staff1, staff2]);
       break;
     }
     case "crowned": {
-      // Paper crown
       const crown = scene.add.rectangle(0, -7, 5, 1.5, p.accent, 1);
       c.add(crown);
       break;
     }
     case "stonechild": {
-      // Smaller, greyer
       robe.setSize(5, 6);
       robe.setPosition(0, 3);
       head.setPosition(0, -2);
@@ -148,7 +203,6 @@ export function buildSoulSprite(
       break;
     }
     case "mathematician": {
-      // Lantern in hand
       const lantern = scene.add.rectangle(3, 3, 2, 3, p.accent, 1);
       const flame = scene.add.circle(3, 2, 0.7, 0xffe098, 1);
       scene.tweens.add({ targets: flame, alpha: 0.5, duration: 700, yoyo: true, repeat: -1 });
@@ -156,73 +210,69 @@ export function buildSoulSprite(
       break;
     }
     case "feather": {
-      // Holds a feather — diagonal line + tip
       const stem = scene.add.rectangle(2, 1, 0.7, 6, p.accent, 1).setRotation(0.3);
       const tip = scene.add.circle(3, -2, 0.8, p.accent, 1);
       c.add([stem, tip]);
       break;
     }
     case "echo": {
-      // Faint, semi-transparent, drifts
-      c.setAlpha(0.6);
-      scene.tweens.add({
-        targets: c,
-        alpha: 0.35,
-        duration: 1600,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-      });
+      // Visual transparency baked into idle profile via baseAlpha of waiting
       break;
     }
   }
 
-  // Idle bob
-  scene.tweens.add({
-    targets: c,
-    y: y - 1,
-    duration: 1400 + Math.random() * 400,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.inOut",
-  });
-
-  const setMood = (m: SoulMood) => {
-    halo.fillColor = MOOD_COLOR[m];
-    if (m === "resolved") c.setAlpha(0.6);
-  };
-
-  // --- ART UPGRADE: NPC "Illusion of Life" ---
-  // 1. Dynamic Drop Shadow
-  const shadow = scene.add.ellipse(0, 6, 12, 3, 0x000000, 0.4).setDepth(-1);
+  // Drop shadow (sits behind body inside container so it follows movement)
+  const shadow = scene.add.ellipse(0, 6, 10, 3, 0x000000, 0.35);
   c.add(shadow);
   c.sendToBack(shadow);
 
-  // 2. Organic "Breathing" Micro-animation (randomized so crowds don't sync)
-  scene.tweens.add({
-    targets: c,
-    y: c.y - 1.5,
-    scaleY: 1.03,
-    scaleX: 0.98,
-    duration: Phaser.Math.Between(1200, 1800),
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.inOut",
-    delay: Phaser.Math.Between(0, 1000),
-  });
+  // Mood-driven presence tweens (owned here, recreated on mood change)
+  let idleTween: Phaser.Tweens.Tween | undefined;
+  let auraTween: Phaser.Tweens.Tween | undefined;
+  let currentMood: SoulMood = "waiting";
 
-  // 3. Dynamic Aura Pulse
-  scene.tweens.add({
-    targets: halo,
-    scale: { from: 0.9, to: 1.15 },
-    alpha: { from: 0.15, to: 0.35 },
-    duration: Phaser.Math.Between(2000, 3000),
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.inOut",
-  });
-  // --- END ART UPGRADE ---
+  const applyPresence = (m: SoulMood) => {
+    currentMood = m;
+    idleTween?.remove();
+    auraTween?.remove();
+
+    const prof = presenceProfile(archetype, m);
+
+    halo.fillColor = MOOD_COLOR[m];
+    c.setAlpha(prof.baseAlpha);
+    halo.setScale(prof.haloScaleFrom);
+    halo.setAlpha(prof.haloAlphaFrom);
+
+    idleTween = scene.tweens.add({
+      targets: c,
+      y: y - prof.idleLift,
+      scaleX: prof.idleScaleX,
+      scaleY: prof.idleScaleY,
+      duration: prof.idleDuration,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+      delay: Phaser.Math.Between(0, 700),
+    });
+
+    auraTween = scene.tweens.add({
+      targets: halo,
+      scale: { from: prof.haloScaleFrom, to: prof.haloScaleTo },
+      alpha: { from: prof.haloAlphaFrom, to: prof.haloAlphaTo },
+      duration: prof.idleDuration + 350,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+      delay: Phaser.Math.Between(0, 500),
+    });
+  };
+
+  const setMood = (m: SoulMood) => {
+    if (m === currentMood) return;
+    applyPresence(m);
+  };
+
+  applyPresence("waiting");
 
   return { container: c, halo, setMood, archetype };
 }
-

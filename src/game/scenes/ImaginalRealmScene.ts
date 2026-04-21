@@ -17,7 +17,7 @@ import { awardShardFragment } from "../shardFeedback";
 import { emitHudStatChanged } from "../ui/hudSignals";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 import { soulsForRegion, type SoulDef } from "./imaginal/souls";
-import { buildSoulSprite } from "./imaginal/soulSprites";
+import { buildSoulSprite, type SoulMood } from "./imaginal/soulSprites";
 import { runSoul, isSoulDone, recentSoulEvents } from "./imaginal/soulRunner";
 import { getArc } from "./imaginal/soulArcs";
 import { openQuestLog } from "../questLog";
@@ -161,7 +161,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
     def: SoulDef;
     container: Phaser.GameObjects.Container;
     halo: Phaser.GameObjects.Arc;
-    setMood: (m: "waiting" | "engaged" | "resolved") => void;
+    setMood: (m: SoulMood) => void;
+    mood: SoulMood;
     nameLabel?: GBCText;
     hookLabel?: GBCText;
     nearTime: number;
@@ -419,40 +420,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (glow) this.regionRoot.add(glow);
     }
 
-    // Spawn souls for this region with "Alive" Art Direction
+    // Spawn souls — presence styling lives in buildSoulSprite/setMood now.
     for (const def of soulsForRegion(this.save, region)) {
       const built = buildSoulSprite(this, def.archetype, def.x, def.y);
       const done = isSoulDone(this.save, def.id);
-
-      built.setMood(done ? "resolved" : "waiting");
-      if (done) built.container.setAlpha(0.45);
-
-      // Art Upgrade: Dedicated Soft Shadow
-      const shadow = this.add.ellipse(def.x, def.y + 6, 12, 4, 0x000000, 0.4).setDepth(1);
-      this.regionRoot.add(shadow);
-
-      // Art Upgrade: Organic "Breathing" Micro-animation
-      this.tweens.add({
-        targets: built.container,
-        y: built.container.y - (done ? 1 : 2),
-        scaleY: 1.05,
-        scaleX: 0.98,
-        duration: Phaser.Math.Between(1200, 1600),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut'
-      });
-
-      // Art Upgrade: Dynamic, irregular aura pulse
-      this.tweens.add({
-        targets: built.halo,
-        scale: { min: 1.1, max: 1.4 },
-        alpha: { min: 0.1, max: 0.3 },
-        duration: Phaser.Math.Between(2000, 3000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut'
-      });
+      const initialMood: SoulMood = done ? "resolved" : "waiting";
+      built.setMood(initialMood);
 
       this.regionRoot.add(built.halo);
       this.regionRoot.add(built.container);
@@ -462,6 +435,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         container: built.container,
         halo: built.halo,
         setMood: built.setMood,
+        mood: initialMood,
         nearTime: 0,
         barkShown: false,
       });
@@ -819,14 +793,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
-    // Soul proximity: pulse halo, show name/hook, accumulate ambient bark timer.
+    // Soul proximity: drive mood, show name/hook, accumulate ambient bark timer.
     const nearSoul = this.nearestSoul();
     for (const s of this.souls) {
       const isNear = s === nearSoul;
       const done = isSoulDone(this.save, s.def.id);
-      s.halo.fillAlpha = isNear ? (done ? 0.15 : 0.3) : 0;
+
       if (isNear) {
-        s.setMood(done ? "resolved" : "engaged");
+        this.setSoulMood(s, done ? "resolved" : "engaged");
+
         if (!s.nameLabel) {
           s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
             color: COLOR.textGold,
@@ -839,8 +814,9 @@ export class ImaginalRealmScene extends Phaser.Scene {
             maxWidthPx: GBC_W - 8,
           });
         }
+
         s.nearTime += dt;
-        // After 2.4s near without interacting, drift a one-shot ambient thought.
+
         if (!s.barkShown && !done && s.nearTime > 2400) {
           s.barkShown = true;
           s.bark = new GBCText(this, s.def.x - 18, s.def.y - 26, "...", {
@@ -857,9 +833,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
           });
         }
       } else {
-        s.setMood(done ? "resolved" : "waiting");
+        this.setSoulMood(s, done ? "resolved" : "waiting");
         s.nearTime = 0;
         s.barkShown = false;
+
         if (s.nameLabel) {
           s.nameLabel.destroy();
           s.nameLabel = undefined;
@@ -895,6 +872,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
         );
       }
     }
+  }
+
+  private setSoulMood(soul: (typeof this.souls)[number], mood: SoulMood) {
+    if (soul.mood === mood) return;
+    soul.mood = mood;
+    soul.setMood(mood);
   }
 
   private nearestSoul() {

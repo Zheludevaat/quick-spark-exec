@@ -90,9 +90,8 @@ export class EncounterScene extends Phaser.Scene {
   private enemyAura!: Phaser.GameObjects.Arc;
   private cursorMark!: GBCText;
   private misses = 0;
-  private intentText?: GBCText;
-  private verbHintText?: GBCText;
-  private goalText?: GBCText;
+  private verbHintText!: GBCText;
+  private goalText!: GBCText;
 
   constructor() {
     super("Encounter");
@@ -108,7 +107,6 @@ export class EncounterScene extends Phaser.Scene {
     this.misses = 0;
     this.cursor = 0;
     this.busy = false;
-    this.intentText = undefined;
   }
 
   create() {
@@ -138,9 +136,9 @@ export class EncounterScene extends Phaser.Scene {
 
     const px = GBC_W / 2;
     const auraColor: Record<EnemyKind, number> = { reflection: 0xa8c8e8, echo: 0xc8a8e8, glitter: 0xe8d8a8 };
-    this.enemyAura = this.add.circle(px, 46, 14, auraColor[this.def.kind], 0.22);
+    this.enemyAura = this.add.circle(px, 46, 14, auraColor[this.def.kind], 0.18);
     this.tweens.add({
-      targets: this.enemyAura, scale: 1.25, alpha: 0.08, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut"
+      targets: this.enemyAura, scale: 1.16, alpha: 0.1, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut"
     });
     spawnMotes(this, { count: 8, color: auraColor[this.def.kind], alpha: 0.45, driftY: -0.008, driftX: 0.003, depth: 30 });
 
@@ -148,10 +146,10 @@ export class EncounterScene extends Phaser.Scene {
     this.enemy.play(`enemy_${this.def.kind}`);
     this.enemyBob = this.tweens.add({
       targets: this.enemy,
-      y: 41,
-      scaleX: 1.05,
-      scaleY: 0.95,
-      duration: 1200,
+      y: 42,
+      scaleX: 1.02,
+      scaleY: 0.98,
+      duration: 1400,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
@@ -163,12 +161,26 @@ export class EncounterScene extends Phaser.Scene {
     this.hpBar = this.add.graphics().setDepth(102);
     this.drawHp();
 
-    // Log box — y 76..112 (36px, 3 lines comfortable)
+    // Persistent goal banner (top-left, constrained so it doesn't fight the HP plate)
+    this.goalText = new GBCText(this, 4, 14, KIND_GOAL[this.def.kind], {
+      color: COLOR.textAccent,
+      depth: 110,
+      maxWidthPx: GBC_W - 92,
+    });
+
+    // Log box — y 76..112 (transient action feedback only)
     drawGBCBox(this, 0, 76, GBC_W, 36);
     this.logText = new GBCText(this, 4, 81, this.def.taunt, {
       color: COLOR.textAccent,
       depth: 102,
       maxWidthPx: GBC_W - 10,
+    });
+
+    // Persistent verb hint line near the bottom of the log box
+    this.verbHintText = new GBCText(this, 4, 102, `> ${VERB_HINT.observe}`, {
+      color: COLOR.textDim,
+      depth: 103,
+      maxWidthPx: GBC_W - 8,
     });
 
     // Command panel — y 112..144
@@ -185,6 +197,8 @@ export class EncounterScene extends Phaser.Scene {
     this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
 
 
+    this.updateGoalBanner();
+    this.updateVerbHint();
     this.refreshCursor();
 
     // Input
@@ -217,11 +231,26 @@ export class EncounterScene extends Phaser.Scene {
     const x = 8 + (this.cursor % 2) * 70;
     const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
+    this.updateVerbHint();
+  }
 
-    const cmd = CMDS[this.cursor].cmd;
-    if (this.misses === 0 && !this.busy) {
-      this.logText.setText(`${this.def.taunt}\n> ${VERB_HINT[cmd]}`);
+  private updateGoalBanner() {
+    if (!this.goalText) return;
+    if (this.misses === 0) {
+      this.goalText.setText(KIND_GOAL[this.def.kind]);
+      this.goalText.setColor(COLOR.textAccent);
+      this.goalText.obj.setAlpha(1);
+      return;
     }
+    this.goalText.setText(`IT FEARS: ${this.def.weakness.toUpperCase()}`);
+    this.goalText.setColor(COLOR.textGold);
+    this.goalText.obj.setAlpha(1);
+  }
+
+  private updateVerbHint() {
+    if (!this.verbHintText) return;
+    const cmd = CMDS[this.cursor].cmd;
+    this.verbHintText.setText(`> ${VERB_HINT[cmd]}`);
   }
 
   private choose(i: number) {
@@ -290,12 +319,12 @@ export class EncounterScene extends Phaser.Scene {
       this.enemy.setTintFill(0xd84a4a);
       this.time.delayedCall(110, () => this.enemy.clearTint());
 
-      // Visceral Knockback Displacement
+      // Restrained knockback displacement
       this.tweens.add({
         targets: this.enemy,
-        x: this.enemy.x + (Math.random() > 0.5 ? 6 : -6),
-        y: this.enemy.y - 4,
-        duration: 70,
+        x: this.enemy.x + (Math.random() > 0.5 ? 4 : -4),
+        y: this.enemy.y - 2,
+        duration: 60,
         yoyo: true,
         ease: 'Power2'
       });
@@ -304,19 +333,15 @@ export class EncounterScene extends Phaser.Scene {
         this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
       }
       audio.sfx("miss");
-      // Telegraph the weakness after the first miss — replaces the goal banner
-      if (this.misses === 1 && !this.intentText) {
-        this.goalText?.setText("");
-        this.intentText = new GBCText(this, 4, 14, `IT FEARS: ${this.def.weakness.toUpperCase()}`, {
-          color: COLOR.textGold,
-          depth: 110,
-        });
+      // Telegraph the weakness via the persistent goal banner
+      if (this.misses === 1) {
+        this.updateGoalBanner();
         this.tweens.add({
-          targets: this.intentText.obj,
-          alpha: 0.4,
-          duration: 600,
+          targets: this.goalText.obj,
+          alpha: 0.45,
+          duration: 180,
           yoyo: true,
-          repeat: -1,
+          repeat: 3,
         });
       }
       this.busy = false;
