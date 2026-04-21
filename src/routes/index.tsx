@@ -1,98 +1,125 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { DesktopGameShell } from "@/components/game/DesktopGameShell";
+import { TouchLandscapeShell } from "@/components/game/TouchLandscapeShell";
+import {
+  getEffectiveInterfaceMode,
+  subscribeControls,
+  type InterfaceMode,
+} from "@/game/controls";
+import { installVirtualInputGlobals, clearVirtualInput } from "@/game/virtualInput";
+import { resetGameUiSnapshot } from "@/game/gameUiBridge";
 
 export const Route = createFileRoute("/")({
   component: GamePage,
   head: () => ({
     meta: [
       { title: "Hermetic Comedy — a pixel-art RPG of small verbs" },
-      { name: "description", content: "A multi-act pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness." },
+      {
+        name: "description",
+        content:
+          "A multi-act pixel-art RPG about dying gracefully and learning small verbs: Observe, Address, Remember, Release, Witness.",
+      },
       { property: "og:title", content: "Hermetic Comedy" },
-      { property: "og:description", content: "A GBC-style RPG across the Last Day, the Silver Threshold, and the Imaginal Realm." },
+      {
+        property: "og:description",
+        content:
+          "A GBC-style RPG across the Last Day, the Silver Threshold, and the Imaginal Realm.",
+      },
     ],
   }),
 });
 
+/**
+ * Single-instance Phaser host kept across shell mode switches.
+ *
+ * We allocate one detached <div> via document.createElement on first mount
+ * and then re-parent it into whichever shell currently owns it. This way
+ * Phaser never sees its canvas unmounted when switching desktop/touch.
+ */
 function GamePage() {
-  const hostRef = useRef<HTMLDivElement | null>(null);
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  const phaserHostRef = useRef<HTMLDivElement | null>(null);
   const [booted, setBooted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<InterfaceMode>(() => {
+    if (typeof window === "undefined") return "desktop";
+    return getEffectiveInterfaceMode();
+  });
 
+  // Create the persistent host node once.
+  if (typeof document !== "undefined" && !phaserHostRef.current) {
+    const node = document.createElement("div");
+    node.id = "phaser-host";
+    node.style.width = "100%";
+    node.style.height = "100%";
+    phaserHostRef.current = node;
+  }
+
+  // Boot Phaser once.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!hostRef.current) return;
+    const host = phaserHostRef.current;
+    if (!host) return;
     let game: import("phaser").Game | null = null;
     let cancelled = false;
+
+    installVirtualInputGlobals();
+    resetGameUiSnapshot();
+
     (async () => {
       try {
-        console.log("[game] importing createGame…");
         const mod = await import("@/game/createGame");
-        console.log("[game] import resolved", Object.keys(mod));
-        if (cancelled || !hostRef.current) return;
-        console.log("[game] calling createGame()");
-        game = mod.createGame(hostRef.current);
-        console.log("[game] createGame returned", game);
+        if (cancelled) return;
+        game = mod.createGame(host);
         setBooted(true);
       } catch (e) {
         console.error("[game] boot failed", e);
-        setError(e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e));
+        setError(
+          e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e),
+        );
       }
     })();
     return () => {
       cancelled = true;
+      clearVirtualInput();
       game?.destroy(true);
     };
   }, []);
 
+  // Re-parent the persistent Phaser host into the current shell's slot.
+  useLayoutEffect(() => {
+    const slot = slotRef.current;
+    const host = phaserHostRef.current;
+    if (!slot || !host) return;
+    if (host.parentNode !== slot) {
+      slot.appendChild(host);
+    }
+  }, [mode]);
+
+  // Live-react to interface mode changes from Settings.
+  useEffect(() => {
+    return subscribeControls(() => {
+      const next = getEffectiveInterfaceMode();
+      setMode((prev) => (prev === next ? prev : next));
+      clearVirtualInput();
+    });
+  }, []);
+
+  const hostSlot = (
+    <div ref={slotRef} style={{ width: "100%", height: "100%" }} />
+  );
+
+  if (mode === "touch_landscape") {
+    return (
+      <TouchLandscapeShell booted={booted} error={error}>
+        {hostSlot}
+      </TouchLandscapeShell>
+    );
+  }
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#05070d",
-        color: "#eef3ff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        fontFamily: "monospace",
-      }}
-    >
-      {/* Visually-hidden H1 for SEO — the in-game scene shows the visible title. */}
-      <h1
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          padding: 0,
-          margin: -1,
-          overflow: "hidden",
-          clip: "rect(0,0,0,0)",
-          whiteSpace: "nowrap",
-          border: 0,
-        }}
-      >
-        Hermetic Comedy — a pixel-art RPG of small verbs
-      </h1>
-
-      <div
-        ref={hostRef}
-        id="phaser-host"
-        style={{
-          width: "min(96vw, 720px)",
-          aspectRatio: "160 / 144",
-          imageRendering: "pixelated",
-          border: "1px solid #2a3550",
-          background: "#05070d",
-          boxShadow: "0 0 60px rgba(74,120,200,0.15)",
-        }}
-      />
-
-      <footer style={{ fontSize: 10, opacity: 0.6, textAlign: "center", padding: "0 16px", maxWidth: 720 }}>
-        Arrow keys / WASD · Space or Enter = A · B or Q = witness · L = lore · P or Esc = settings · Tap ≡ on touch
-        {!booted && !error && <div style={{ marginTop: 4 }}>Loading the silver…</div>}
-        {error && <div style={{ marginTop: 4, color: "#d86a6a" }}>Failed to load: {error}</div>}
-      </footer>
-    </div>
+    <DesktopGameShell booted={booted} error={error}>
+      {hostSlot}
+    </DesktopGameShell>
   );
 }

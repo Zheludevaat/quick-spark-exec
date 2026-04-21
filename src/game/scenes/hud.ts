@@ -63,6 +63,15 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
 
   reapplyLcd(scene);
 
+  // Resolve presentation mode for this HUD instance.
+  const isTouchShell = getControls().interfaceMode === "touch_landscape";
+
+  // Publish scene metadata to React shell.
+  const sceneKey = scene.scene.key;
+  const sceneLabel = (SCENE_LABEL as Record<string, string>)[sceneKey] ?? sceneKey;
+  const act = (ACT_BY_SCENE as Record<string, number>)[sceneKey] ?? 1;
+  setSceneSnapshot({ key: sceneKey, label: sceneLabel, act, zone: null, nodes: null, marker: null });
+
   let loreOpen = false;
   let settingsOpen = false;
 
@@ -70,9 +79,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (settingsOpen) return;
     settingsOpen = true;
     scene.data.set("__settingsOpen", true);
+    setOverlaySnapshot({ settingsOpen: true, modalLock: true });
+    clearVirtualInput();
     openSettings(scene, () => {
       settingsOpen = false;
       scene.data.set("__settingsOpen", false);
+      setOverlaySnapshot({ settingsOpen: false, modalLock: loreOpen });
       rebuildPad();
     });
   };
@@ -82,14 +94,22 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     if (!s) return;
     loreOpen = true;
     scene.data.set("__loreOpen", true);
+    setOverlaySnapshot({ loreOpen: true, modalLock: true });
+    clearVirtualInput();
     openLoreLog(scene, s, () => {
       loreOpen = false;
       scene.data.set("__loreOpen", false);
+      setOverlaySnapshot({ loreOpen: false, modalLock: settingsOpen });
     });
   };
   // Expose for gear / lore touch buttons.
   scene.data.set("__openSettingsGuarded", openSettingsGuarded);
   scene.data.set("__openLoreGuarded", openLoreGuarded);
+  // Expose globally so the React shell can trigger them too.
+  if (typeof window !== "undefined") {
+    (window as unknown as Record<string, unknown>).__hermeticOpenSettings = openSettingsGuarded;
+    (window as unknown as Record<string, unknown>).__hermeticOpenLore = openLoreGuarded;
+  }
 
   // --- Global keyboard shortcuts via DOM (so rebinds apply live) ---
   const onDomKey = (e: KeyboardEvent) => {
@@ -114,33 +134,40 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.events.once("destroy", () => window.removeEventListener("keydown", onDomKey));
 
   // --- Top stats bar (framed plate, icons + numbers) ---
-  const BAR_H = 13;
-  const plate = drawGBCPlate(scene, 0, 0, GBC_W, BAR_H, 200, "dark");
-  void plate;
-
+  // In touch_landscape mode the React shell renders the stats strip; we
+  // suppress the in-canvas bar to avoid duplication, but still wire the
+  // bridge for stat snapshots.
   const STAT_KEYS: StatKey[] = ["clarity", "compassion", "courage"];
   const groups: Record<StatKey, { icon: Phaser.GameObjects.Image; num: GBCText; cx: number }> =
     {} as never;
-  STAT_KEYS.forEach((k, i) => {
-    const cx = 4 + i * 22;
-    const icon = scene.add
-      .image(cx, 3, "stat_icons", STAT_ICON_FRAME[k])
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(201);
-    const num = new GBCText(scene, cx + 8, 3, "0", {
-      color: COLOR.textLight,
-      depth: 201,
-      scrollFactor: 0,
+  if (!isTouchShell) {
+    const BAR_H = 13;
+    const plate = drawGBCPlate(scene, 0, 0, GBC_W, BAR_H, 200, "dark");
+    void plate;
+    STAT_KEYS.forEach((k, i) => {
+      const cx = 4 + i * 22;
+      const icon = scene.add
+        .image(cx, 3, "stat_icons", STAT_ICON_FRAME[k])
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(201);
+      const num = new GBCText(scene, cx + 8, 3, "0", {
+        color: COLOR.textLight,
+        depth: 201,
+        scrollFactor: 0,
+      });
+      groups[k] = { icon, num, cx };
     });
-    groups[k] = { icon, num, cx };
-  });
+  }
 
   const refresh = () => {
     const s = getStats();
-    groups.clarity.num.setText(String(s.clarity));
-    groups.compassion.num.setText(String(s.compassion));
-    groups.courage.num.setText(String(s.courage));
+    if (!isTouchShell) {
+      groups.clarity.num.setText(String(s.clarity));
+      groups.compassion.num.setText(String(s.compassion));
+      groups.courage.num.setText(String(s.courage));
+    }
+    setHudSnapshot({ stats: { clarity: s.clarity, compassion: s.compassion, courage: s.courage } });
   };
   refresh();
   scene.events.on("stats-changed", refresh);
@@ -148,13 +175,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   // Animate ONLY on explicit hud-stat-changed event (not on first paint).
   const onStatChanged = (p: StatChangedPayload) => {
     refresh();
+    if (isTouchShell) return;
     const g = groups[p.stat];
     if (!g) return;
-    // icon flash to gold
     const origTint = 0xffffff;
     g.icon.setTint(0xffe098);
     scene.time.delayedCall(280, () => g.icon.setTint(origTint));
-    // number bump
     g.num.obj.setScale(1);
     scene.tweens.add({
       targets: g.num.obj,
@@ -167,27 +193,32 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.events.on(HUD_EVENTS.statChanged, onStatChanged);
 
   // --- "SAVED" indicator (top-right) ---
-  const savedText = new GBCText(scene, GBC_W - 24, 3, "", {
-    color: COLOR.textGold,
-    depth: 202,
-    scrollFactor: 0,
-  });
+  const savedText = isTouchShell
+    ? null
+    : new GBCText(scene, GBC_W - 24, 3, "", {
+        color: COLOR.textGold,
+        depth: 202,
+        scrollFactor: 0,
+      });
   let savedTween: Phaser.Tweens.Tween | null = null;
   let lastSavedAt = 0;
   const onSaved = () => {
     const now = Date.now();
     if (now - lastSavedAt < 800) return;
     lastSavedAt = now;
-    savedText.setText("SAVED");
-    savedText.obj.setAlpha(1);
-    savedTween?.stop();
-    savedTween = scene.tweens.add({
-      targets: savedText.obj,
-      alpha: 0,
-      duration: 1400,
-      delay: 600,
-      onComplete: () => savedText.setText(""),
-    });
+    setHudSnapshot({ savedAt: now });
+    if (savedText) {
+      savedText.setText("SAVED");
+      savedText.obj.setAlpha(1);
+      savedTween?.stop();
+      savedTween = scene.tweens.add({
+        targets: savedText.obj,
+        alpha: 0,
+        duration: 1400,
+        delay: 600,
+        onComplete: () => savedText.setText(""),
+      });
+    }
   };
   window.addEventListener("hermetic-saved", onSaved);
   scene.events.once("shutdown", () => {
@@ -199,11 +230,43 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     scene.events.off(HUD_EVENTS.statChanged, onStatChanged);
   });
 
-  // --- Touch pad (always available; user can hide via settings) ---
+  // --- Virtual input bridge: forward DOM shell input → scene events ---
+  const vinputUnsub = subscribeVirtualInput((e) => {
+    if (e.type === "down") {
+      if (e.action === "action") scene.events.emit("vinput-action");
+      else if (e.action === "cancel") scene.events.emit("vinput-cancel");
+      else scene.events.emit("vinput-down", e.action);
+    } else if (e.type === "up") {
+      if (e.action !== "action" && e.action !== "cancel") {
+        scene.events.emit("vinput-up", e.action);
+      }
+    } else if (e.type === "pulse") {
+      if (e.action === "action") scene.events.emit("vinput-action");
+      else if (e.action === "cancel") scene.events.emit("vinput-cancel");
+    } else if (e.type === "clear") {
+      (["up", "down", "left", "right"] as const).forEach((d) =>
+        scene.events.emit("vinput-up", d),
+      );
+    }
+  });
+  scene.events.once("shutdown", () => {
+    vinputUnsub();
+    clearVirtualInput();
+  });
+  scene.events.once("destroy", () => {
+    vinputUnsub();
+    clearVirtualInput();
+  });
+  void getVirtualState;
+
+  // --- Touch pad (legacy in-canvas controls) ---
+  // Suppressed entirely in touch_landscape mode — the React shell owns input.
   let pad: TouchPadHandle | null = null;
   const rebuildPad = () => {
     pad?.destroy();
+    pad = null;
     const c = getControls();
+    if (c.interfaceMode === "touch_landscape") return;
     if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
     pad = buildTouchPad(scene);
   };
@@ -851,14 +914,13 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
+  const isTouchShell = getControls().interfaceMode === "touch_landscape";
   const boxX = 4;
   const boxW = GBC_W - 8;
   const innerW = boxW - 16;
   const MIN_H = 44;
   const MAX_H = 64;
 
-  // Box + text are recreated whenever a new line advances so the box can
-  // resize to fit the wrapped body.
   let box: ReturnType<typeof drawGBCBox> | null = null;
   let who: GBCText | null = null;
   let text: GBCText | null = null;
@@ -880,6 +942,7 @@ export function runDialog(
 
   const buildChromeFor = (whoLine: string, bodyLine: string) => {
     destroyChrome();
+    if (isTouchShell) return; // shell tray owns dialog rendering
     const bodyH = textHeightPx(bodyLine.toUpperCase(), innerW);
     const boxH = Math.max(MIN_H, Math.min(MAX_H, bodyH + 22));
     const boxY = GBC_H - boxH - 2;
@@ -913,8 +976,20 @@ export function runDialog(
   let active = true;
   let typing = false;
   let fullText = "";
+  let currentWho = "";
   let typeTimer: Phaser.Time.TimerEvent | null = null;
   let autoTimer: Phaser.Time.TimerEvent | null = null;
+
+  const publishDialog = (visibleText: string) => {
+    setDialogSnapshot({
+      open: true,
+      speaker: currentWho,
+      text: visibleText,
+      fullText,
+      typing,
+      waitingForConfirm: !typing,
+    });
+  };
 
   const finishTyping = () => {
     if (typeTimer) {
@@ -924,6 +999,7 @@ export function runDialog(
     text?.setText(fullText);
     typing = false;
     hint?.setVisible(true);
+    publishDialog(fullText);
     scheduleAuto();
   };
 
@@ -942,19 +1018,23 @@ export function runDialog(
     hint?.setVisible(false);
     let n = 0;
     text?.setText("");
+    publishDialog("");
     if (typeTimer) typeTimer.remove(false);
     typeTimer = scene.time.addEvent({
       delay: 28,
       repeat: s.length - 1,
       callback: () => {
         n++;
-        text?.setText(s.slice(0, n));
+        const slice = s.slice(0, n);
+        text?.setText(slice);
+        publishDialog(slice);
         const ch = s[n - 1];
         if (n % 4 === 0 && ch && ch !== " ") getAudio().sfx("dialog");
         if (n >= s.length) {
           typing = false;
           hint?.setVisible(true);
           typeTimer = null;
+          publishDialog(fullText);
           scheduleAuto();
         }
       },
@@ -980,16 +1060,17 @@ export function runDialog(
       cleanupKb();
       scene.events.off("vinput-action", next);
       scene.input.off("pointerdown", next);
+      clearDialogSnapshot();
       onDone?.();
       return;
     }
     const line = lines[i];
+    currentWho = line.who;
     buildChromeFor(line.who, line.text);
     startTyping(line.text.toUpperCase());
     i++;
   };
 
-  // Skip = jump straight to end of all lines.
   const skipAll = () => {
     if (!active) return;
     i = lines.length;
@@ -1009,9 +1090,15 @@ export function runDialog(
   next();
   window.addEventListener("keydown", onKey);
   scene.events.on("vinput-action", next);
-  scene.time.delayedCall(120, () => {
-    if (active) scene.input.on("pointerdown", next);
-  });
+  // In touch_landscape mode the canvas has no in-canvas dialog box, so a
+  // tap on the gameplay viewport should NOT advance dialog (only the A
+  // button or the dialogue tray should). In desktop mode we keep the
+  // pointer-to-advance affordance.
+  if (!isTouchShell) {
+    scene.time.delayedCall(120, () => {
+      if (active) scene.input.on("pointerdown", next);
+    });
+  }
 
   return { dismiss: () => next() };
 }
