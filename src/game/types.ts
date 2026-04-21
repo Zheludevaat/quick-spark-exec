@@ -77,14 +77,15 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   Crossing: "The Crossing",
   SilverThreshold: "Silver Threshold",
   ImaginalRealm: "Imaginal Realm",
-  AthanorThreshold: "Threshold of the Athanor",
-  Nigredo: "Nigredo",
-  Albedo: "Albedo",
-  Citrinitas: "Citrinitas",
-  Rubedo: "Rubedo",
-  SealedVessel: "The Sealed Vessel",
-  CuratedSelf: "Curated Self",
-  Epilogue: "Epilogue",
+  AthanorThreshold: "Moon Sphere - Threshold",
+  Nigredo: "Moon Sphere - Nigredo",
+  Albedo: "Moon Sphere - Albedo",
+  Citrinitas: "Moon Sphere - Citrinitas",
+  Rubedo: "Moon Sphere - Rubedo",
+  SealedVessel: "Moon Sphere - Sealed",
+  MetaxyHub: "Metaxy Hub",
+  CuratedSelf: "Sun Sphere - Hall of Testimony",
+  Epilogue: "The Return",
 };
 
 export type SaveSlot = {
