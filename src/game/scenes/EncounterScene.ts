@@ -97,8 +97,10 @@ export class EncounterScene extends Phaser.Scene {
   constructor() {
     super("Encounter");
   }
-  init(data: { save: SaveSlot; kind: EnemyKind; onDone: (won: boolean) => void }) {
+  private region: ImaginalRegion = "pools";
+  init(data: { save: SaveSlot; kind: EnemyKind; region?: ImaginalRegion; onDone: (won: boolean) => void }) {
     this.save = data.save;
+    this.region = data.region ?? "pools";
     this.def = ENEMIES[data.kind];
     this.hp = this.def.hp;
     this.onDone = data.onDone;
@@ -110,58 +112,45 @@ export class EncounterScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#0a0e1a");
     getAudio().music.play("battle", SONG_BATTLE);
 
-    // Backdrop confined to arena (12..76)
+    // Contextual Backdrop based on current region
     const g = this.add.graphics();
-    g.fillStyle(0x0a0f20, 1);
-    g.fillRect(0, 12, GBC_W, 52);
-    g.fillStyle(0x1a2030, 1);
-    g.fillRect(0, 64, GBC_W, 2);
-    g.fillStyle(0x243058, 1);
-    g.fillRect(0, 66, GBC_W, 10);
-    for (let i = 0; i < 22; i++) {
-      g.fillStyle(0xdde6f5, Phaser.Math.FloatBetween(0.3, 1));
-      g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 56), 1, 1);
+    if (this.region === "pools") {
+      this.cameras.main.setBackgroundColor("#0a1428");
+      g.fillStyle(0x0a1020, 1).fillRect(0, 12, GBC_W, 52);
+      g.fillStyle(0x1a2438, 1).fillRect(0, 64, GBC_W, 12);
+      g.fillStyle(0x2a3458, 0.4).fillEllipse(GBC_W / 2, 70, 70, 8);
+    } else if (this.region === "field") {
+      this.cameras.main.setBackgroundColor("#1a1830");
+      g.fillStyle(0x1a1a24, 1).fillRect(0, 12, GBC_W, 52);
+      g.fillStyle(0x242438, 1).fillRect(0, 64, GBC_W, 12);
+      for (let i = 0; i < 15; i++) {
+        g.fillStyle(0xffe098, Phaser.Math.FloatBetween(0.2, 0.6));
+        g.fillRect(Phaser.Math.Between(0, GBC_W), Phaser.Math.Between(14, 76), 1, 1);
+      }
+    } else {
+      this.cameras.main.setBackgroundColor("#080a14");
+      g.fillStyle(0x080c14, 1).fillRect(0, 12, GBC_W, 52);
+      g.fillStyle(0x141824, 1).fillRect(0, 64, GBC_W, 12);
+      g.fillStyle(0x1a2238, 0.4).fillRect(8, 12, 6, 64).fillRect(GBC_W - 14, 12, 6, 64);
     }
-    const px = GBC_W / 2;
-    g.fillStyle(0x1a2238, 0.7);
-    g.fillEllipse(px, 70, 56, 7);
 
-    // Per-kind aura (color hint at the weakness)
-    const auraColor: Record<EnemyKind, number> = {
-      reflection: 0xa8c8e8,
-      echo: 0xc8a8e8,
-      glitter: 0xe8d8a8,
-    };
+    const px = GBC_W / 2;
+    const auraColor: Record<EnemyKind, number> = { reflection: 0xa8c8e8, echo: 0xc8a8e8, glitter: 0xe8d8a8 };
     this.enemyAura = this.add.circle(px, 46, 14, auraColor[this.def.kind], 0.22);
     this.tweens.add({
-      targets: this.enemyAura,
-      scale: 1.25,
-      alpha: 0.08,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.inOut",
+      targets: this.enemyAura, scale: 1.25, alpha: 0.08, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.inOut"
     });
+    spawnMotes(this, { count: 8, color: auraColor[this.def.kind], alpha: 0.45, driftY: -0.008, driftX: 0.003, depth: 30 });
 
-    // Drifting motes
-    spawnMotes(this, {
-      count: 8,
-      color: auraColor[this.def.kind],
-      alpha: 0.45,
-      driftY: -0.008,
-      driftX: 0.003,
-      depth: 30,
-    });
-
-    // Enemy sprite
     this.enemy = this.add.sprite(px, 44, "enemies", ENEMY_FRAME_BASE[this.def.kind]);
     this.enemy.play(`enemy_${this.def.kind}`);
     this.enemyBob = this.tweens.add({
       targets: this.enemy,
-      y: 42,
+      y: 41,
+      scaleX: 1.05,
+      scaleY: 0.95,
       duration: 1200,
       yoyo: true,
       repeat: -1,
@@ -195,18 +184,6 @@ export class EncounterScene extends Phaser.Scene {
     });
     this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
 
-    // Goal banner under HUD: tells the player what this encounter IS
-    this.goalText = new GBCText(this, 4, 14, KIND_GOAL[this.def.kind], {
-      color: COLOR.textAccent,
-      depth: 110,
-      maxWidthPx: GBC_W - 90,
-    });
-    // Verb hint inside log box, lower line: explains the highlighted command
-    this.verbHintText = new GBCText(this, 4, 102, `> ${VERB_HINT.observe}`, {
-      color: COLOR.textDim,
-      depth: 103,
-      maxWidthPx: GBC_W - 8,
-    });
 
     this.refreshCursor();
 
@@ -240,8 +217,11 @@ export class EncounterScene extends Phaser.Scene {
     const x = 8 + (this.cursor % 2) * 70;
     const y = 118 + Math.floor(this.cursor / 2) * 11;
     this.cursorMark.setPosition(x, y);
+
     const cmd = CMDS[this.cursor].cmd;
-    if (this.verbHintText) this.verbHintText.setText(`> ${VERB_HINT[cmd]}`);
+    if (this.misses === 0 && !this.busy) {
+      this.logText.setText(`${this.def.taunt}\n> ${VERB_HINT[cmd]}`);
+    }
   }
 
   private choose(i: number) {
@@ -309,6 +289,16 @@ export class EncounterScene extends Phaser.Scene {
       this.cameras.main.shake(120, 0.004);
       this.enemy.setTintFill(0xd84a4a);
       this.time.delayedCall(110, () => this.enemy.clearTint());
+
+      // Visceral Knockback Displacement
+      this.tweens.add({
+        targets: this.enemy,
+        x: this.enemy.x + (Math.random() > 0.5 ? 6 : -6),
+        y: this.enemy.y - 4,
+        duration: 70,
+        yoyo: true,
+        ease: 'Power2'
+      });
       // bob faster as wounded
       if (this.enemyBob) {
         this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
