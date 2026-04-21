@@ -991,9 +991,14 @@ export class MercuryTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: mercuryConfig.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.mSave.stats);
-
-    // Title
-    const rawTitle = "HERMAIA'S TRIAL";
+    setSceneSnapshot({
+      key: "MercuryTrial",
+      label: "Mercury — Hermaia's Trial",
+      act: ACT_BY_SCENE.MercuryTrial ?? 4,
+      zone: "Hermaia's Trial",
+      nodes: null,
+      marker: null,
+    });
     const titleText = fitSingleLineText(rawTitle, GBC_W - 12);
     const titleX = Math.floor((GBC_W - measureText(titleText)) / 2);
     new GBCText(this, titleX, 4, titleText, {
