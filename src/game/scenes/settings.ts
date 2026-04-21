@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox } from "../gbcArt";
+import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, fitSingleLineText } from "../gbcArt";
 import {
   getControls,
   setBinding,
@@ -67,13 +67,20 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     .setDepth(950)
     .setInteractive();
   const box = drawGBCBox(scene, 4, 12, GBC_W - 8, GBC_H - 24, 951);
+  // Row 1: static title + tab hint
   const title = new GBCText(scene, 8, 16, "SETTINGS", {
     color: COLOR.textAccent,
     depth: 952,
     scrollFactor: 0,
   });
-  const tabHint = new GBCText(scene, GBC_W - 70, 16, "← → TABS", {
+  const tabHint = new GBCText(scene, GBC_W - 56, 16, "← → TABS", {
     color: COLOR.textDim,
+    depth: 952,
+    scrollFactor: 0,
+  });
+  // Row 2: page subtitle (re-targeted in render())
+  const subtitle = new GBCText(scene, 8, 26, "", {
+    color: COLOR.textGold,
     depth: 952,
     scrollFactor: 0,
   });
@@ -82,6 +89,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     depth: 952,
     scrollFactor: 0,
   });
+
+  // Reserved column geometry for left labels and right values.
+  const LEFT_X = 16;
+  const LEFT_W = 78;
+  const RIGHT_X = GBC_W - 56;
+  const RIGHT_W = 48;
+  const HINT_W = GBC_W - 12;
 
   // Page body: re-built on each render
   const bodyObjs: Phaser.GameObjects.GameObject[] = [];
@@ -100,7 +114,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     clearBody();
     const c = getControls();
     if (page === "main") {
-      title.setText("SETTINGS · DISPLAY & TOUCH");
+      subtitle.setText("DISPLAY & TOUCH");
       const audio = getAudio();
       const volPct = Math.round(audio.volume * 100);
       const rows: { label: string; value: string }[] = [
@@ -119,50 +133,19 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       ];
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
       rows.forEach((r, idx) => {
-        const y = 26 + idx * 10;
+        const y = 38 + idx * 10;
         const isCur = idx === cursor;
         const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
           color: COLOR.textAccent,
           depth: 952,
           scrollFactor: 0,
         });
-        const lbl = new GBCText(scene, 16, y, r.label, {
+        const lbl = new GBCText(scene, LEFT_X, y, fitSingleLineText(r.label, LEFT_W), {
           color: isCur ? COLOR.textAccent : COLOR.textLight,
           depth: 952,
           scrollFactor: 0,
         });
-        const val = new GBCText(scene, GBC_W - 50, y, r.value, {
-          color: COLOR.textGold,
-          depth: 952,
-          scrollFactor: 0,
-        });
-        bodyObjs.push(arrow.obj, lbl.obj, val.obj);
-      });
-      const hint = new GBCText(scene, 8, GBC_H - 28, "↑↓ NAV  ←→ CHANGE  A SELECT", {
-        color: COLOR.textDim,
-        depth: 952,
-        scrollFactor: 0,
-      });
-      bodyObjs.push(hint.obj);
-    } else if (page === "keys") {
-      title.setText("SETTINGS · KEYS");
-      cursor = Math.max(0, Math.min(cursor, ACTION_ORDER.length - 1));
-      ACTION_ORDER.forEach((a, idx) => {
-        const y = 26 + idx * 8;
-        const isCur = idx === cursor;
-        const b = c.bindings[a];
-        const arrow = new GBCText(scene, 6, y, isCur ? "▶" : " ", {
-          color: COLOR.textAccent,
-          depth: 952,
-          scrollFactor: 0,
-        });
-        const lbl = new GBCText(scene, 13, y, ACTION_LABEL[a], {
-          color: isCur ? COLOR.textAccent : COLOR.textLight,
-          depth: 952,
-          scrollFactor: 0,
-        });
-        const right = `${keyLabel(b.primary)}${b.secondary ? ` / ${keyLabel(b.secondary)}` : ""}`;
-        const val = new GBCText(scene, GBC_W - 64, y, right, {
+        const val = new GBCText(scene, RIGHT_X, y, fitSingleLineText(r.value, RIGHT_W), {
           color: COLOR.textGold,
           depth: 952,
           scrollFactor: 0,
@@ -171,18 +154,49 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       });
       const hint = new GBCText(
         scene,
-        6,
+        8,
         GBC_H - 28,
-        rebindAction
-          ? `PRESS A KEY FOR ${ACTION_LABEL[rebindAction]} (${rebindSlot.toUpperCase()})`
-          : "A: REBIND PRIMARY  TAB: SECONDARY",
+        fitSingleLineText("↑↓ NAV  ←→ CHANGE  A SELECT", HINT_W),
         {
-          color: rebindAction ? COLOR.textAccent : COLOR.textDim,
+          color: COLOR.textDim,
           depth: 952,
           scrollFactor: 0,
-          maxWidthPx: GBC_W - 12,
         },
       );
+      bodyObjs.push(hint.obj);
+    } else if (page === "keys") {
+      subtitle.setText("KEY BINDINGS");
+      cursor = Math.max(0, Math.min(cursor, ACTION_ORDER.length - 1));
+      ACTION_ORDER.forEach((a, idx) => {
+        const y = 38 + idx * 9;
+        const isCur = idx === cursor;
+        const b = c.bindings[a];
+        const arrow = new GBCText(scene, 6, y, isCur ? "▶" : " ", {
+          color: COLOR.textAccent,
+          depth: 952,
+          scrollFactor: 0,
+        });
+        const lbl = new GBCText(scene, LEFT_X - 3, y, fitSingleLineText(ACTION_LABEL[a], LEFT_W), {
+          color: isCur ? COLOR.textAccent : COLOR.textLight,
+          depth: 952,
+          scrollFactor: 0,
+        });
+        const right = `${keyLabel(b.primary)}${b.secondary ? `/${keyLabel(b.secondary)}` : ""}`;
+        const val = new GBCText(scene, RIGHT_X, y, fitSingleLineText(right, RIGHT_W), {
+          color: COLOR.textGold,
+          depth: 952,
+          scrollFactor: 0,
+        });
+        bodyObjs.push(arrow.obj, lbl.obj, val.obj);
+      });
+      const hintText = rebindAction
+        ? `PRESS KEY: ${ACTION_LABEL[rebindAction]} (${rebindSlot.toUpperCase()})`
+        : "A: REBIND PRIMARY  TAB: SECONDARY";
+      const hint = new GBCText(scene, 6, GBC_H - 28, fitSingleLineText(hintText, HINT_W), {
+        color: rebindAction ? COLOR.textAccent : COLOR.textDim,
+        depth: 952,
+        scrollFactor: 0,
+      });
       bodyObjs.push(hint.obj);
     }
   };
@@ -271,6 +285,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     box.destroy();
     title.destroy();
     tabHint.destroy();
+    subtitle.destroy();
     closeHint.destroy();
     clearBody();
     onClose?.();

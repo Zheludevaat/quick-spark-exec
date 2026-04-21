@@ -1,5 +1,14 @@
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, wrapText } from "./gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  GBC_LINE_H,
+  textHeightPx,
+  fitSingleLineText,
+} from "./gbcArt";
 import { getAudio } from "./audio";
 import { onActionDown, onDirection } from "./controls";
 
@@ -12,12 +21,16 @@ export type InquiryOption = {
   reply: string;
 };
 
-const LINE_H = 9; // px per text line (7 glyph + 2 leading)
 const PAD = 6;
 
 /**
  * A small inquiry list. Renders inside a dynamically-sized dialog box so the
  * prompt and option labels never overlap, regardless of length.
+ *
+ * Layout discipline:
+ *  - speaker name: single-line, "..." trim
+ *  - prompt body: wraps; box height computed from wrapped line count
+ *  - option labels: single-line ONLY (rows are fixed at GBC_LINE_H)
  */
 export function runInquiry(
   scene: Phaser.Scene,
@@ -28,38 +41,38 @@ export function runInquiry(
   const boxW = GBC_W - 8;
   const innerW = boxW - PAD * 2;
   const promptText = prompt.text.toUpperCase();
-  const promptLines = wrapText(promptText, innerW);
+  const promptH = textHeightPx(promptText, innerW);
 
-  // Layout: who(1) + prompt(N) + 1 spacer + options(M) + 1 hint pad
-  const totalLines = 1 + promptLines.length + 1 + options.length + 1;
-  const boxH = Math.min(GBC_H - 14, totalLines * LINE_H + PAD * 2);
+  // Layout: who(1 line) + prompt(promptH px) + 1 line spacer + options(M lines) + 1 line hint pad
+  const totalPx = GBC_LINE_H + promptH + GBC_LINE_H + options.length * GBC_LINE_H + GBC_LINE_H;
+  const boxH = Math.min(GBC_H - 14, totalPx + PAD * 2);
   const boxX = 4;
   const boxY = GBC_H - boxH - 2;
 
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
-  const who = new GBCText(scene, boxX + PAD, boxY + 4, prompt.who.toUpperCase(), {
+  const who = new GBCText(scene, boxX + PAD, boxY + 4, fitSingleLineText(prompt.who, innerW), {
     color: COLOR.textAccent,
     depth: 251,
     scrollFactor: 0,
   });
-  const text = new GBCText(scene, boxX + PAD, boxY + 4 + LINE_H, promptText, {
+  const text = new GBCText(scene, boxX + PAD, boxY + 4 + GBC_LINE_H, promptText, {
     color: COLOR.textLight,
     depth: 251,
     scrollFactor: 0,
     maxWidthPx: innerW,
   });
 
-  // Options: one per line, marker on the left.
-  const optionsTop = boxY + 4 + LINE_H + promptLines.length * LINE_H + LINE_H;
+  // Options: one per line, marker on the left. Labels are forced to single-line.
+  const optionsTop = boxY + 4 + GBC_LINE_H + promptH + GBC_LINE_H;
   let cursor = 0;
   const opts: GBCText[] = [];
   options.forEach((o, i) => {
-    const y = optionsTop + i * LINE_H;
-    const t = new GBCText(scene, boxX + PAD + 8, y, o.label.toUpperCase(), {
+    const y = optionsTop + i * GBC_LINE_H;
+    const label = fitSingleLineText(o.label, innerW - 8);
+    const t = new GBCText(scene, boxX + PAD + 8, y, label, {
       color: COLOR.textLight,
       depth: 251,
       scrollFactor: 0,
-      maxWidthPx: innerW - 8,
     });
     t.obj.setInteractive({ useHandCursor: true });
     t.obj.on("pointerdown", () => {
@@ -77,7 +90,7 @@ export function runInquiry(
 
   const refresh = () => {
     opts.forEach((t, i) => t.setColor(i === cursor ? COLOR.textGold : COLOR.textLight));
-    mark.setPosition(boxX + PAD, optionsTop + cursor * LINE_H);
+    mark.setPosition(boxX + PAD, optionsTop + cursor * GBC_LINE_H);
   };
   refresh();
 
@@ -97,17 +110,23 @@ export function runInquiry(
 
     // Reply: dynamically sized like the prompt.
     const replyText = picked.reply.toUpperCase();
-    const replyLines = wrapText(replyText, innerW);
-    const rTotal = 1 + replyLines.length + 1;
-    const rBoxH = Math.min(GBC_H - 14, rTotal * LINE_H + PAD * 2);
+    const replyH = textHeightPx(replyText, innerW);
+    const rTotalPx = GBC_LINE_H + replyH + GBC_LINE_H;
+    const rBoxH = Math.min(GBC_H - 14, rTotalPx + PAD * 2);
     const rBoxY = GBC_H - rBoxH - 2;
     const replyBox = drawGBCBox(scene, boxX, rBoxY, boxW, rBoxH, 250);
-    const replyWho = new GBCText(scene, boxX + PAD, rBoxY + 4, prompt.who.toUpperCase(), {
-      color: COLOR.textAccent,
-      depth: 251,
-      scrollFactor: 0,
-    });
-    const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + LINE_H, replyText, {
+    const replyWho = new GBCText(
+      scene,
+      boxX + PAD,
+      rBoxY + 4,
+      fitSingleLineText(prompt.who, innerW),
+      {
+        color: COLOR.textAccent,
+        depth: 251,
+        scrollFactor: 0,
+      },
+    );
+    const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + GBC_LINE_H, replyText, {
       color: COLOR.textLight,
       depth: 251,
       scrollFactor: 0,

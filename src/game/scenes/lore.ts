@@ -756,7 +756,8 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
     .setScrollFactor(0)
     .setDepth(900);
   const box = drawGBCBox(scene, 6, 14, GBC_W - 12, GBC_H - 28, 901);
-  const title = new GBCText(scene, 12, 18, "LORE LOG", {
+  // Row 1: static section title + counter (separate columns, never collide)
+  const sectionTitle = new GBCText(scene, 12, 18, "LORE LOG", {
     color: COLOR.textAccent,
     depth: 902,
     scrollFactor: 0,
@@ -766,12 +767,19 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
     depth: 902,
     scrollFactor: 0,
   });
-  const srcText = new GBCText(scene, 12, 30, "", {
+  // Row 2: entry title (single-line fit)
+  const entryTitle = new GBCText(scene, 12, 30, "", {
+    color: COLOR.textGold,
+    depth: 902,
+    scrollFactor: 0,
+  });
+  // Row 3: source (single-line fit)
+  const srcText = new GBCText(scene, 12, 40, "", {
     color: COLOR.textDim,
     depth: 902,
     scrollFactor: 0,
   });
-  const body = new GBCText(scene, 12, 42, "", {
+  const body = new GBCText(scene, 12, 52, "", {
     color: COLOR.textLight,
     depth: 902,
     scrollFactor: 0,
@@ -783,20 +791,21 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
     scrollFactor: 0,
   });
 
+  const FIT_W = GBC_W - 24;
   let idx = 0;
   const render = () => {
     if (ids.length === 0) {
-      title.setText("LORE LOG");
       counter.setText("");
-      srcText.setText("(EMPTY)");
+      entryTitle.setText(fitSingleLineText("(EMPTY)", FIT_W));
+      srcText.setText("");
       body.setText("WALK. TOUCH. LISTEN. THE WORLD WHISPERS.");
       return;
     }
     const e = LORE_ENTRIES[ids[idx]];
     if (!e) return;
-    title.setText(e.title);
     counter.setText(`${idx + 1}/${ids.length}`);
-    srcText.setText(e.source);
+    entryTitle.setText(fitSingleLineText(e.title, FIT_W));
+    srcText.setText(fitSingleLineText(e.source, FIT_W));
     body.setText(e.body.join(" "));
   };
   render();
@@ -814,8 +823,9 @@ export function openLoreLog(scene: Phaser.Scene, save: SaveSlot, onClose?: () =>
     scene.events.off("vinput-cancel", close);
     dim.destroy();
     box.destroy();
-    title.destroy();
+    sectionTitle.destroy();
     counter.destroy();
+    entryTitle.destroy();
     srcText.destroy();
     body.destroy();
     hint.destroy();

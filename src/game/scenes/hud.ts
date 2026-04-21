@@ -9,6 +9,8 @@ import {
   STAT_ICON_FRAME,
   toggleLcd,
   reapplyLcd,
+  textHeightPx,
+  fitSingleLineText,
 } from "../gbcArt";
 import type { SaveSlot, Stats } from "../types";
 import { getAudio } from "../audio";
@@ -885,7 +887,7 @@ export function mountImaginalProgressBadge(
   scene: Phaser.Scene,
   initial: { fragments: number; shards: number },
 ): ImaginalBadgeHandle {
-  const W = 42;
+  const W = 50;
   const H = 11;
   const X = GBC_W - W - 2;
   const Y = 15;
