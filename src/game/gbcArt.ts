@@ -65,7 +65,7 @@ export type UIStyle = keyof typeof PALETTES;
 export function getUIStyle(scene: Phaser.Scene): UIStyle {
   const key = scene.scene.key;
   if (["AthanorThreshold", "Nigredo", "Albedo", "Citrinitas", "Rubedo", "SealedVessel"].includes(key)) return "brass";
-  if (["CuratedSelf", "Epilogue", "MetaxyHub", "MercuryPlateau", "VenusPlateau", "MarsPlateau", "MercuryTrial", "VenusTrial", "MarsTrial"].includes(key)) return "void";
+  if (["CuratedSelf", "Epilogue", "MetaxyHub", "MercuryPlateau", "VenusPlateau", "MarsPlateau", "SunPlateau", "MercuryTrial", "VenusTrial", "MarsTrial", "SunTrial"].includes(key)) return "void";
   return "silver";
 }
 

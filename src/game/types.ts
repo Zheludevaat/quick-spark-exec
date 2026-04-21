@@ -16,6 +16,8 @@ export type SceneKey =
   | "MercuryTrial"
   | "VenusPlateau"
   | "VenusTrial"
+  | "SunPlateau"
+  | "SunTrial"
   | "MarsPlateau"
   | "MarsTrial"
   | "CuratedSelf"
@@ -45,6 +47,8 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   MercuryTrial: 4,
   VenusPlateau: 5,
   VenusTrial: 5,
+  SunPlateau: 6,
+  SunTrial: 6,
   MarsPlateau: 7,
   MarsTrial: 7,
   CuratedSelf: 6,
@@ -100,6 +104,8 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   MercuryTrial: "Mercury - Hermaia's Trial",
   VenusPlateau: "Venus - Eternal Biennale",
   VenusTrial: "Venus - Kypria's Trial",
+  SunPlateau: "Sun - Hall of Testimony",
+  SunTrial: "Sun - Helion's Trial",
   MarsPlateau: "Mars - Arena of the Strong",
   MarsTrial: "Mars - Areon's Trial",
   CuratedSelf: "Sun Sphere - Hall of Testimony",
@@ -173,6 +179,16 @@ export type SaveSlot = {
 
   /** Hermetic puzzle ledger — multi-state node values keyed by `puzzle:{roomId}:{nodeId}`. */
   puzzleState: Record<string, string | number | boolean>;
+
+  // ===== SUN SPHERE (Act 6) =====
+  /** Current Sun plateau sub-zone (null until first entry). */
+  sunZone: "vestibule" | "testimony" | "archive" | "mirrors" | "warmth" | "threshold" | null;
+  /** Witness arcs heard at the Hall of Testimony. */
+  sunWitnessHeard: Record<string, boolean>;
+  /** Sun-themed operations completed. */
+  sunOpsDone: Record<string, boolean>;
+  /** Set true when all Sun gating is satisfied — Helion may be faced. */
+  sunTrialReady: boolean;
 
   updatedAt: number;
 };
@@ -270,6 +286,20 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     plateauSettled: (r.plateauSettled as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
     puzzleState:
       (r.puzzleState as Record<string, string | number | boolean> | undefined) ?? {},
+
+    sunZone:
+      (r.sunZone as
+        | "vestibule"
+        | "testimony"
+        | "archive"
+        | "mirrors"
+        | "warmth"
+        | "threshold"
+        | null
+        | undefined) ?? null,
+    sunWitnessHeard: (r.sunWitnessHeard as Record<string, boolean> | undefined) ?? {},
+    sunOpsDone: (r.sunOpsDone as Record<string, boolean> | undefined) ?? {},
+    sunTrialReady: r.sunTrialReady === true,
 
     updatedAt: r.updatedAt ?? Date.now(),
   };
