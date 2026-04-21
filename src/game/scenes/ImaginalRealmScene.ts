@@ -620,8 +620,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
     const soulCount = this.doneSoulsInRegion(this.region);
     const echoCount = this.region === "field" ? this.touchedEchoesCount() : 0;
 
+    const memLevel = regionAftermathLevel(this.save, this.region);
+    const memBoost = memLevel === 2 ? 0.08 : memLevel === 1 ? 0.04 : 0;
+
     if (this.region === "pools") {
-      const alpha = Math.min(0.18, knotCount * 0.04 + soulCount * 0.03);
+      const alpha = Math.min(0.22, knotCount * 0.04 + soulCount * 0.03 + memBoost);
       this.regionToneOverlay = this.add
         .rectangle(0, 22, GBC_W, GBC_H - 22, 0x88c0e8, alpha)
         .setOrigin(0, 0)
@@ -1125,7 +1128,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.focusGlow.fillColor = near.cleared ? 0xa8e8c8 : 0xa8c8e8;
       this.focusGlow.fillAlpha = 0.25;
       if (near.cleared) this.hint.setText("THIS KNOT IS QUIET.");
-      else this.hint.setText(`A: ${KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
+      else this.hint.setText(`A: ${near.taglineOverride ?? KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
       // First-meet identity card for this knot. Once per save per knot kind.
       if (!near.cleared) {
         this.knotPresentations[near.kind]?.introOnce(
@@ -1359,7 +1362,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (this.companion) this.companion.setVisible(true);
       if (!r.cleared) return;
       k.cleared = true;
-      this.save.flags[`knot_${k.kind}`] = true;
+      this.save.flags[k.clearFlag ?? `knot_${k.kind}`] = true;
       if (r.stats?.clarity) {
         this.save.stats.clarity += r.stats.clarity;
         emitHudStatChanged(this, "clarity", this.save.stats.clarity);
