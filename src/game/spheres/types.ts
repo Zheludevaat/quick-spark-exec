@@ -23,6 +23,8 @@ export type SphereOption = {
   flag?: string;
   /** Optional conviction key to mark true. */
   conviction?: string;
+  /** Inquiry choice tag. Defaults to "ask". */
+  choice?: "observe" | "ask" | "confess" | "silent";
 };
 
 /** One plateau "operation" — a small inquiry that awards a sphere shard. */

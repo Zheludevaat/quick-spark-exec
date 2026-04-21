@@ -37,6 +37,8 @@ export const ACT_BY_SCENE: Record<SceneKey, number> = {
   Rubedo: 3,
   SealedVessel: 3,
   MetaxyHub: 3,
+  MercuryPlateau: 4,
+  MercuryTrial: 4,
   CuratedSelf: 6,
   Epilogue: 10,
 };
@@ -86,6 +88,8 @@ export const SCENE_LABEL: Record<SceneKey, string> = {
   Rubedo: "Moon Sphere - Rubedo",
   SealedVessel: "Moon Sphere - Sealed",
   MetaxyHub: "Metaxy Hub",
+  MercuryPlateau: "Mercury - Tower of Reasons",
+  MercuryTrial: "Mercury - Hermaia's Trial",
   CuratedSelf: "Sun Sphere - Hall of Testimony",
   Epilogue: "The Return",
 };
