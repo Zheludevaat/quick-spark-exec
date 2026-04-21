@@ -1212,6 +1212,24 @@ export class VenusTrialScene extends Phaser.Scene {
     if (venusTrialPassed(this.state)) {
       awardVenusTrialPass(this.save, venusConfig.inscription);
       writeSave(this.save);
+
+      // Delicate mirror-rose memory mark — Venus remembers Kypria's verdict
+      // through a slow, low-bloom ring rather than only through dialog.
+      this.kypriaPresentation?.pulse();
+      const mark = this.add
+        .circle(GBC_W / 2, GBC_H / 2, 4, KYPRIA_PROFILE.palette.primary, 0.18)
+        .setStrokeStyle(1, KYPRIA_PROFILE.palette.glow, 0.55)
+        .setDepth(40);
+      this.tweens.add({
+        targets: mark,
+        scale: { from: 1, to: 1.9 },
+        alpha: { from: 0.18, to: 0.05 },
+        duration: 1500,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
       runDialog(this, venusConfig.trialPass, () => {
         gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
       });
