@@ -14,11 +14,12 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, spawnMotes } from "../gbcArt";
 import { writeSave } from "../save";
-import type { Command, SaveSlot } from "../types";
+import type { Command, SaveSlot, SceneKey } from "../types";
 import { ACT_BY_SCENE } from "../types";
 import { attachHUD } from "./hud";
 import { getAudio, SONG_BOSS } from "../audio";
 import { onActionDown, onDirection } from "../controls";
+import { setSceneSnapshot } from "../gameUiBridge";
 import {
   openingWhisper,
   phaseTaunt,
@@ -40,6 +41,7 @@ const CMDS: { label: string; cmd: Command }[] = [
 ];
 
 export class SunTrialScene extends Phaser.Scene {
+  private readonly sceneKey: SceneKey;
   private save!: SaveSlot;
   private phase: Phase = "composed";
   private busy = false;
@@ -56,14 +58,15 @@ export class SunTrialScene extends Phaser.Scene {
   private addressHits = 0;
   private releaseHits = 0;
 
-  constructor() {
-    super("SunTrial");
+  constructor(sceneKey: SceneKey = "SunTrial") {
+    super(sceneKey);
+    this.sceneKey = sceneKey;
   }
 
   init(data: { save: SaveSlot }) {
     this.save = data.save;
-    this.save.scene = "SunTrial";
-    this.save.act = ACT_BY_SCENE.SunTrial;
+    this.save.scene = this.sceneKey;
+    this.save.act = ACT_BY_SCENE[this.sceneKey];
     writeSave(this.save);
     this.phase = "composed";
     this.busy = false;
@@ -132,6 +135,7 @@ export class SunTrialScene extends Phaser.Scene {
     this.setupPhase1();
     this.refreshCursor();
     this.refreshNeeds();
+    this.publishSnapshot();
 
     onDirection(this, (d) => {
       if (this.busy) return;
@@ -144,6 +148,31 @@ export class SunTrialScene extends Phaser.Scene {
     });
 
     onActionDown(this, "action", () => this.choose());
+  }
+
+  private publishSnapshot() {
+    setSceneSnapshot({
+      key: this.sceneKey,
+      label: "Sun - Helion's Trial",
+      act: ACT_BY_SCENE[this.sceneKey],
+      zone: `Phase: ${this.phase.toUpperCase()}`,
+      nodes: null,
+      marker: null,
+      idleTitle: "HELION TRIAL",
+      idleBody:
+        this.phase === "composed"
+          ? "Address the polished fronts until they lose control of the light."
+          : this.phase === "fractured"
+            ? "Witness trustworthy fragments, not merely brilliant ones."
+            : "Read the current need state and answer with the right verb.",
+      footerHint: "UP / DOWN SELECT VERB · A COMMIT",
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
   }
 
   private setupPhase1() {
@@ -197,6 +226,7 @@ export class SunTrialScene extends Phaser.Scene {
       );
       this.stateText.setText("PHASE 3/3 - EXPOSED");
     }
+    this.publishSnapshot();
   }
 
   private showWhisper(text: string) {

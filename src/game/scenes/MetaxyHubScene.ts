@@ -76,7 +76,7 @@ const PORTALS: Portal[] = [
   {
     sphere: "sun",
     label: "SUN",
-    scene: "CuratedSelf",
+    scene: "SunPlateau",
     unlocked: sunPortalUnlocked,
     dimLine: "The Sun's hall opens once Venus is past.",
     color: 0xffd070,
