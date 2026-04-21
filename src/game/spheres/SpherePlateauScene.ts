@@ -9,7 +9,18 @@
  * Reuses runDialog + runInquiry; no new framework. Keeps Phaser overhead low.
  */
 import * as Phaser from "phaser";
-import { GBC_W, GBC_H, COLOR, GBCText, drawGBCBox, gbcWipe, spawnMotes, fitSingleLineText } from "../gbcArt";
+import {
+  GBC_W,
+  GBC_H,
+  COLOR,
+  GBCText,
+  drawGBCBox,
+  gbcWipe,
+  spawnMotes,
+  fitSingleLineState,
+  textHeightPx,
+  GBC_LINE_H,
+} from "../gbcArt";
 import { ACT_BY_SCENE, type SaveSlot, type SphereKey } from "../types";
 import { writeSave } from "../save";
 import { attachHUD, runDialog } from "../scenes/hud";
