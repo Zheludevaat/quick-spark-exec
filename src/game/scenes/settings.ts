@@ -85,7 +85,7 @@ const BOX_BOTTOM = BOX_Y + BOX_H;
 const ROW_H = 9;
 const LIST_TOP = 36;
 
-const DETAIL_LINES = 2;
+const DETAIL_LINES = 3;
 const DETAIL_H = DETAIL_LINES * 9 - 2;
 
 const FOOTER_PAD = 4;
@@ -94,9 +94,9 @@ const FOOTER_Y1 = FOOTER_Y2 - 9;
 const DETAIL_Y = FOOTER_Y1 - DETAIL_H - 3;
 
 const LEFT_X = 16;
-const LEFT_W = 82;
-const RIGHT_X = GBC_W - 54;
-const RIGHT_W = 46;
+const LEFT_W = 90;
+const RIGHT_X = GBC_W - 48;
+const RIGHT_W = 40;
 const FOOTER_W = GBC_W - 12;
 const DETAIL_W = GBC_W - 16;
 
@@ -217,7 +217,7 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     bodyObjs.length = 0;
   };
 
-  type Row = { label: string; value: string };
+  type Row = { label: string; menuLabel?: string; value: string };
 
   const buildMainRows = (): Row[] => {
     const c = getControls();
@@ -225,23 +225,35 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     const volPct = Math.round(audio.volume * 100);
     const isTouchMode = c.interfaceMode === "touch_landscape";
     return [
-      { label: "INTERFACE MODE", value: isTouchMode ? "TOUCH" : "DESKTOP" },
-      { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
-      { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
-      { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
+      {
+        label: "INTERFACE MODE",
+        menuLabel: "INTERFACE",
+        value: isTouchMode ? "TOUCH" : "DESKTOP",
+      },
+      { label: "BUTTON SIZE", menuLabel: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
+      { label: "LEFT-HANDED", menuLabel: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
+      { label: "HAPTICS", menuLabel: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
       {
         label: "DIALOG AUTO-ADV",
+        menuLabel: "DIALOG ADV",
         value: c.dialogAutoAdvanceMs === 0 ? "OFF" : `${c.dialogAutoAdvanceMs}MS`,
       },
-      { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
-      { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
-      // Legacy in-canvas touch overlay — only relevant outside touch_landscape.
+      { label: "VOLUME", menuLabel: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
+      { label: "AUDIO", menuLabel: "AUDIO", value: audio.muted ? "OFF" : "ON" },
       ...(isTouchMode
         ? []
-        : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
-      { label: "KEY BINDINGS", value: "" },
-      ...(canReturnToTitle ? [{ label: "RETURN TO TITLE", value: "" }] : []),
-      { label: "RESET DEFAULTS", value: "" },
+        : [
+            {
+              label: "TOUCH OVERLAY (LEGACY)",
+              menuLabel: "TOUCH OVERLAY",
+              value: c.touchLayout.toUpperCase(),
+            },
+          ]),
+      { label: "KEY BINDINGS", menuLabel: "KEY BINDINGS", value: "" },
+      ...(canReturnToTitle
+        ? [{ label: "RETURN TO TITLE", menuLabel: "RETURN TITLE", value: "" }]
+        : []),
+      { label: "RESET DEFAULTS", menuLabel: "RESET DEFAULTS", value: "" },
     ];
   };
 
@@ -253,7 +265,15 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       if (r.label === "RESET DEFAULTS") return "RESTORE DEFAULT CONTROL AND UI SETTINGS";
       return r.label;
     }
-    return `${r.label} : ${r.value}`;
+    if (r.label === "INTERFACE MODE") {
+      return r.value === "TOUCH"
+        ? "INTERFACE MODE: TOUCH LANDSCAPE"
+        : "INTERFACE MODE: DESKTOP";
+    }
+    if (r.label === "TOUCH OVERLAY (LEGACY)") {
+      return `TOUCH OVERLAY (LEGACY): ${r.value}`;
+    }
+    return `${r.label}: ${r.value}`;
   };
 
   /** Format a keys row for the detail strip. */
@@ -284,7 +304,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         const visIdx = abs - start;
         const y = LIST_TOP + visIdx * ROW_H;
         const isCur = abs === cursor;
-        const lblState = fitSingleLineState(r.label, LEFT_W);
+        const visibleLabel = r.menuLabel ?? r.label;
+        const lblState = fitSingleLineState(visibleLabel, LEFT_W);
         const valState = fitSingleLineState(r.value, RIGHT_W);
         const arrow = new GBCText(scene, 8, y, isCur ? ">" : " ", {
           color: COLOR.textAccent,
@@ -304,9 +325,13 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       }
 
-      detail.setText(fitSingleLineText(mainDetailText(rows[cursor]), DETAIL_W));
-      footer1.setText(fitSingleLineText("UP/DN MOVE  A SELECT", FOOTER_W));
-      footer2.setText(fitSingleLineText("LT/RT CHANGE  B OR ESC CLOSE", FOOTER_W));
+      detail.setText(mainDetailText(rows[cursor]));
+      detail.setColor(COLOR.textLight);
+      if ("clearTint" in detail.obj) {
+        (detail.obj as unknown as { clearTint?: () => void }).clearTint?.();
+      }
+      footer1.setText("UP/DN MOVE  A OK");
+      footer2.setText("LT/RT CHANGE  B CLOSE");
     } else {
       // KEYS page
       subtitle.setText("KEY BINDINGS");
@@ -349,19 +374,18 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       const focusAction = ACTION_ORDER[cursor];
       if (rebindAction) {
         const slot = rebindSlot === "primary" ? "PRIMARY" : "SECONDARY";
-        detail.setText(
-          fitSingleLineText(
-            `PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`,
-            DETAIL_W,
-          ),
-        );
-        detail.obj.setTint(0xffffff);
-        footer1.setText(fitSingleLineText("PRESS A KEY", FOOTER_W));
-        footer2.setText(fitSingleLineText("ESC CANCEL", FOOTER_W));
+        detail.setText(`PRESS KEY FOR ${ACTION_LABEL[rebindAction]} (${slot})`);
+        detail.setColor(COLOR.textAccent);
+        footer1.setText("PRESS KEY");
+        footer2.setText("ESC CANCEL");
       } else {
-        detail.setText(fitSingleLineText(keysDetailText(focusAction), DETAIL_W));
-        footer1.setText(fitSingleLineText("UP/DN MOVE  A REBIND", FOOTER_W));
-        footer2.setText(fitSingleLineText("TAB ALT SLOT  B BACK", FOOTER_W));
+        detail.setText(keysDetailText(focusAction));
+        detail.setColor(COLOR.textLight);
+        if ("clearTint" in detail.obj) {
+          (detail.obj as unknown as { clearTint?: () => void }).clearTint?.();
+        }
+        footer1.setText("UP/DN MOVE  A REBIND");
+        footer2.setText("TAB ALT SLOT  B BACK");
       }
     }
   };
