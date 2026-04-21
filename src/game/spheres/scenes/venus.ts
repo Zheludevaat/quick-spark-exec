@@ -247,6 +247,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     writeSave(this.save);
 
     // Tear down previous zone visuals
+    this.destroyKypriaPresentation();
     this.root.removeAll(true);
     this.hotspots = [];
     this.doors = [];
