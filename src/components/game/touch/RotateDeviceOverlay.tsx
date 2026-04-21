@@ -1,30 +1,41 @@
 /**
- * Full-screen interstitial shown when the player is in touch_landscape
- * mode but holding the device in portrait. The game keeps running
- * underneath; this only blocks input and prompts a rotation.
+ * Non-blocking rotation advisory.
+ *
+ * Renders a small floating card at the top of the touch shell suggesting
+ * landscape orientation. The wrapper is `pointer-events-none` so gameplay,
+ * controls, and overlays underneath continue to receive every input — this
+ * is intentionally NOT a modal. The card itself is purely informational.
  */
 export function RotateDeviceOverlay() {
   return (
     <div
-      className="fixed inset-0 z-[60] grid place-items-center font-mono text-center px-6"
+      className="absolute inset-0 z-20 pointer-events-none flex items-start justify-center px-4 pt-6 font-mono text-center"
       style={{
-        background: "rgba(5,7,13,0.97)",
-        color: "#eef3ff",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left))",
+        paddingRight: "max(1rem, env(safe-area-inset-right))",
       }}
+      aria-hidden="true"
     >
-      <div>
+      <div
+        className="rounded-lg px-4 py-3"
+        style={{
+          width: "min(92vw, 300px)",
+          background: "rgba(5,7,13,0.88)",
+          color: "#eef3ff",
+          border: "1px solid rgba(168,200,232,0.45)",
+          boxShadow: "0 0 20px rgba(74,120,200,0.2)",
+        }}
+      >
         <div
-          className="mx-auto mb-4"
+          className="mx-auto mb-3"
           style={{
-            width: 64,
-            height: 96,
+            width: 42,
+            height: 64,
             border: "2px solid #a8c8e8",
             borderRadius: 8,
             position: "relative",
             transform: "rotate(-25deg)",
-            animation: "rotateNudge 1.6s ease-in-out infinite",
           }}
         >
           <div
@@ -32,7 +43,7 @@ export function RotateDeviceOverlay() {
               position: "absolute",
               left: "50%",
               top: 4,
-              width: 14,
+              width: 12,
               height: 2,
               transform: "translateX(-50%)",
               background: "#a8c8e8",
@@ -40,26 +51,23 @@ export function RotateDeviceOverlay() {
             }}
           />
         </div>
-        <h2
-          className="text-lg mb-2 uppercase tracking-wider"
+
+        <div
+          className="text-sm uppercase tracking-wider mb-1"
           style={{ color: "#e8c890" }}
         >
-          Rotate to Landscape
-        </h2>
-        <p className="text-sm opacity-80 max-w-xs mx-auto">
-          Hermetic Comedy in touch mode is designed for landscape. Turn your
-          device sideways to continue.
-        </p>
-        <p className="text-xs opacity-50 mt-4">
-          Or change interface in Settings → Display.
-        </p>
+          Rotate for Best Fit
+        </div>
+
+        <div className="text-xs opacity-85">
+          Touch mode is designed for landscape. You can keep playing, but
+          rotating sideways will fit the shell better.
+        </div>
+
+        <div className="text-[10px] opacity-55 mt-2">
+          Or switch to Desktop mode in Settings.
+        </div>
       </div>
-      <style>{`
-        @keyframes rotateNudge {
-          0%, 100% { transform: rotate(-25deg); }
-          50% { transform: rotate(-90deg); }
-        }
-      `}</style>
     </div>
   );
 }
