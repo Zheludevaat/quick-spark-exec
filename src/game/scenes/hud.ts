@@ -927,7 +927,7 @@ export function runDialog(
   lines: { who: string; text: string }[],
   onDone?: () => void,
 ) {
-  const isTouchShell = getControls().interfaceMode === "touch_landscape";
+  const isTouchShell = isTouchLandscapeMode();
   const boxX = 4;
   const boxW = GBC_W - 8;
   const innerW = boxW - 16;
