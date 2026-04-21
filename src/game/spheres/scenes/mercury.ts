@@ -931,6 +931,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
       writeSave(this.mSave);
       this.refreshStatus();
+      this.markStationResolved(st);
       this.refreshChamberGlow();
       this.busy = false;
     });
