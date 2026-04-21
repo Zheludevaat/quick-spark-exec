@@ -1372,6 +1372,30 @@ export function measureText(text: string) {
   return upper.length * (CHAR_W + CHAR_GAP) - CHAR_GAP;
 }
 
+/** Standard line height in px for GBC bitmap text (CHAR_H 7 + 2 leading). */
+export const GBC_LINE_H = 9;
+
+/** Pixel height of `text` after wrapping into `maxPx`. */
+export function textHeightPx(text: string, maxPx: number): number {
+  const lines = wrapText(text, maxPx);
+  return Math.max(1, lines.length) * GBC_LINE_H - 2;
+}
+
+/**
+ * Force `text` onto a single line that fits `maxPx`, appending literal "..."
+ * when truncated. Always returns the uppercased form (GBC fonts are caps-only).
+ */
+export function fitSingleLineText(text: string, maxPx: number): string {
+  const upper = text.toUpperCase();
+  if (measureText(upper) <= maxPx) return upper;
+  const suffix = "...";
+  let out = upper;
+  while (out.length > 0 && measureText(out + suffix) > maxPx) {
+    out = out.slice(0, -1);
+  }
+  return out.length > 0 ? out + suffix : suffix;
+}
+
 /** Word-wrap text into lines that fit a max pixel width. */
 export function wrapText(text: string, maxPx: number): string[] {
   const words = text.split(" ");
