@@ -148,14 +148,35 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
               </Section>
               <Section title="Work Materials">
                 <ul className="space-y-0.5">
-                  <li>Shards: {sections.shardInv.length}</li>
+                  <li>Fragments: {save?.fragments ?? 0}</li>
+                  <li>Carried shards: {sections.shardInv.length}</li>
                   <li>Black stones: {save?.blackStones ?? 0}</li>
                   <li>White stones: {save?.whiteStones ?? 0}</li>
                   <li>Yellow stones: {save?.yellowStones ?? 0}</li>
                   <li>Red stones: {save?.redStones ?? 0}</li>
                   <li>Gold stone: {save?.goldStone ? "yes" : "no"}</li>
-                  <li>Fragments: {save?.fragments ?? 0}</li>
                 </ul>
+                {sections.shardInv.length > 0 ? (
+                  <div className="mt-2 pt-2" style={{ borderTop: "1px solid rgba(74,120,200,0.25)" }}>
+                    <h4
+                      className="text-[9px] uppercase tracking-wider mb-1"
+                      style={{ color: "#a8c8e8", opacity: 0.85 }}
+                    >
+                      Carried shard IDs
+                    </h4>
+                    <ul className="space-y-0.5 max-h-24 overflow-y-auto">
+                      {sections.shardInv.map((id, idx) => (
+                        <li key={`${id}-${idx}`} style={{ color: "#e8c890" }}>
+                          · {id}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="mt-2 pt-2 opacity-50 italic" style={{ borderTop: "1px solid rgba(74,120,200,0.25)", color: "#a8c8e8" }}>
+                    No carried shards.
+                  </div>
+                )}
               </Section>
               <Section title="Garments Released">
                 {Object.keys(sections.garments).length === 0 ? (
