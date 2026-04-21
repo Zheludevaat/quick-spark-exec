@@ -26,6 +26,12 @@ import { runInquiry, type InquiryOption } from "../inquiry";
 import { getAudio, SONG_SILVER } from "../audio";
 import { onActionDown, onDirection, getControls } from "../controls";
 import { awardShardFragment } from "../shardFeedback";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../encounters/EncounterPresentation";
+import { SORYN_THRESHOLD_PROFILE, SORYN_DAIMON_PROFILE } from "../encounters/profiles/soryn";
+import { GUARDIAN_PROFILES } from "../encounters/profiles/guardians";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -319,6 +325,10 @@ export class SilverThresholdScene extends Phaser.Scene {
   private stone!: Phaser.GameObjects.Rectangle;
   private basin?: Phaser.GameObjects.Arc;
   private stillMs = 0;
+  /** Encounter presentation for Soryn — swapped from threshold to daimon profile after binding. */
+  private sorynPresentation?: EncounterPresentationHandle;
+  /** Per-guardian aura + nameplate; softened once that guardian's rite is complete. */
+  private guardianPresentations: Partial<Record<ElemKind, EncounterPresentationHandle>> = {};
 
   constructor() {
     super("SilverThreshold");
