@@ -318,10 +318,70 @@ export class CitrinitasScene extends Phaser.Scene {
         { who: "LIBRARIAN", text: "I was wrong to hide it. Not wrong to want to." },
       ],
       () => {
-        // Insert the fourth book at the front, then continue normal reading.
-        this.runBook(0, true);
+        // Physically reveal the hidden fourth book with a golden bloom.
+        const cx = GBC_W / 2;
+        const cy = GBC_H / 2;
+        this.fourthBookSprite = this.add
+          .rectangle(cx, cy + 4, 10, 14, 0xc89048)
+          .setDepth(6)
+          .setAlpha(0);
+        const bloom = this.add
+          .circle(cx, cy + 4, 4, 0xffe098, 0.9)
+          .setDepth(5)
+          .setBlendMode("ADD");
+        this.tweens.add({
+          targets: this.fourthBookSprite,
+          alpha: 1,
+          y: cy - 14,
+          duration: 700,
+          ease: "Sine.out",
+        });
+        this.tweens.add({
+          targets: bloom,
+          scale: { from: 1, to: 5 },
+          alpha: { from: 0.9, to: 0 },
+          duration: 900,
+          onComplete: () => bloom.destroy(),
+        });
+        this.time.delayedCall(700, () => this.runBook(0, true));
       },
     );
+  }
+
+  /** Mark a visible (non-fourth) book settled or refused so the room reads it. */
+  private markBookResolved(bookIndex: number, accepted: boolean) {
+    const book = this.floatingBooks[bookIndex];
+    const halo = this.floatingBookHalos[bookIndex];
+    if (!book || !halo) return;
+    this.tweens.killTweensOf(book);
+    this.tweens.killTweensOf(halo);
+    if (accepted) {
+      const baseY = (book.getData("baseY") as number) ?? book.y;
+      this.tweens.add({
+        targets: book,
+        y: baseY - 2,
+        angle: 0,
+        scale: 1.05,
+        duration: 500,
+        ease: "Sine.out",
+      });
+      this.tweens.add({
+        targets: halo,
+        alpha: 0.45,
+        scale: 1.4,
+        duration: 600,
+      });
+    } else {
+      this.tweens.add({
+        targets: book,
+        scaleX: 0.4,
+        alpha: 0.55,
+        angle: 30,
+        duration: 500,
+        ease: "Sine.in",
+      });
+      this.tweens.add({ targets: halo, alpha: 0.04, duration: 500 });
+    }
   }
 
   private visibleBooks(includeFourth: boolean): Book[] {
@@ -329,6 +389,13 @@ export class CitrinitasScene extends Phaser.Scene {
       if (b.gate) return includeFourth || b.gate(this.save);
       return true;
     });
+  }
+
+  /** Map a book to its floating-book slot (skip the fourth). */
+  private floatingSlotFor(b: Book, list: Book[]): number {
+    if (b.id === "fourth") return -1;
+    const nonGated = list.filter((x) => x.id !== "fourth");
+    return nonGated.indexOf(b);
   }
 
   private runBook(i: number, fourthUnlocked = false) {
@@ -347,7 +414,8 @@ export class CitrinitasScene extends Phaser.Scene {
         })),
         (picked) => {
           const chosen = opts.find((o) => o.label === picked.label) ?? opts[0];
-          if (chosen.kind === "accept") {
+          const accepted = chosen.kind === "accept";
+          if (accepted) {
             this.save.convictions[b.conviction] = true;
             this.read++;
             awardNamedStone(this, this.save, "yellow", b.title.toLowerCase());
@@ -357,12 +425,56 @@ export class CitrinitasScene extends Phaser.Scene {
               unlockLore(this.save, "on_the_fourth_book");
               showLoreToast(this, "on_the_fourth_book");
               this.save.stats.clarity += 1;
+              if (this.fourthBookSprite) {
+                this.tweens.add({
+                  targets: this.fourthBookSprite,
+                  scale: 1.2,
+                  alpha: 1,
+                  duration: 400,
+                });
+              }
             }
+          } else if (b.id === "fourth" && this.fourthBookSprite) {
+            this.tweens.add({
+              targets: this.fourthBookSprite,
+              alpha: 0.4,
+              angle: 25,
+              duration: 400,
+            });
           }
+          const slot = this.floatingSlotFor(b, list);
+          if (slot >= 0) this.markBookResolved(slot, accepted);
           writeSave(this.save);
           this.runBook(i + 1, fourthUnlocked);
         },
       );
+    });
+  }
+
+  /** Faint shelf whisper while idle. Cosmetic only. */
+  private maybeWhisper() {
+    if (this.isBusy || this.isDone) return;
+    if (Math.random() > 0.55) return;
+    const lines = [
+      "...the page knew its reader...",
+      "...what stays is what is true...",
+      "...a margin remembers...",
+      "...do not refuse the yellow...",
+    ];
+    const line = lines[Math.floor(Math.random() * lines.length)];
+    const x = Math.random() < 0.5 ? 6 : GBC_W - 70;
+    const t = new GBCText(this, x, 30 + Math.random() * 60, line, {
+      color: COLOR.textDim,
+      depth: 50,
+    });
+    t.obj.setAlpha(0);
+    this.tweens.add({ targets: t.obj, alpha: { from: 0, to: 0.7 }, duration: 600 });
+    this.tweens.add({
+      targets: t.obj,
+      alpha: 0,
+      delay: 1600,
+      duration: 900,
+      onComplete: () => t.destroy(),
     });
   }
 
@@ -371,12 +483,26 @@ export class CitrinitasScene extends Phaser.Scene {
       unlockLore(this.save, "on_citrinitas");
       showLoreToast(this, "on_citrinitas");
     }
-    // Hidden teacher: all 3 visible books accepted.
     const visibleAccepted =
       (this.save.convictions.accepted_her_anger ? 1 : 0) +
       (this.save.convictions.accepted_her_dependence ? 1 : 0) +
       (this.save.convictions.accepted_her_ambition ? 1 : 0);
     if (visibleAccepted >= 3) {
+      // Hush the room, focus a glow at the lectern for the Teacher reveal.
+      const cx = GBC_W / 2;
+      const cy = GBC_H / 2;
+      this.teacherGlow = this.add
+        .circle(cx, cy + 4, 8, 0xffe098, 0)
+        .setDepth(8)
+        .setBlendMode("ADD");
+      this.tweens.add({
+        targets: this.teacherGlow,
+        alpha: { from: 0, to: 0.7 },
+        scale: { from: 1, to: 4 },
+        duration: 900,
+        ease: "Sine.out",
+      });
+      this.ambientWhisperEvent?.remove();
       runDialog(
         this,
         [
@@ -388,6 +514,9 @@ export class CitrinitasScene extends Phaser.Scene {
           unlockLore(this.save, "on_the_torn_teacher");
           showLoreToast(this, "on_the_torn_teacher");
           writeSave(this.save);
+          if (this.teacherGlow) {
+            this.tweens.add({ targets: this.teacherGlow, alpha: 0.25, duration: 1200 });
+          }
           this.isDone = true;
           this.isBusy = false;
         },
