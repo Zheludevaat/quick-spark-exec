@@ -1014,7 +1014,7 @@ export class EpilogueScene extends Phaser.Scene {
     this.optionTexts.forEach((t, i) =>
       t.setColor(i === this.cursor ? COLOR.textGold : COLOR.textDim),
     );
-    this.cursorMark.setPosition(8, GBC_H - 36 + this.cursor * 11);
+    this.cursorMark.setPosition(8, GBC_H - 34 + this.cursor * 10);
   }
 
   private choose() {
