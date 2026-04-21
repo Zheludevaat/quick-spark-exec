@@ -1376,6 +1376,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private mSave!: SaveSlot;
   private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
   private hermaiaPresentation?: EncounterPresentationHandle;
+  private roomArt?: MercuryRoomArtHandle;
 
   constructor() {
     super("MercuryTrial");
@@ -1394,6 +1395,11 @@ export class MercuryTrialScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(mercuryConfig.bg);
     this.cameras.main.fadeIn(500);
+
+    // Trial sanctum painter — monumental tri-door composition behind
+    // the authored doors.
+    this.roomArt = paintMercuryRoom(this, "trial");
+
     spawnMotes(this, { count: 18, color: mercuryConfig.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.mSave.stats);
