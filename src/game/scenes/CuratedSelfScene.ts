@@ -285,14 +285,14 @@ export class CuratedSelfScene extends Phaser.Scene {
       depth: 101,
     });
 
-    drawGBCBox(this, 0, 76, GBC_W, 36);
-    this.logText = new GBCText(this, 4, 81, phaseTaunt(this.phase, this.save), {
+    drawGBCBox(this, 0, 72, GBC_W, 34);
+    this.logText = new GBCText(this, 4, 77, phaseTaunt(this.phase, this.save), {
       color: COLOR.textAccent,
       depth: 102,
       maxWidthPx: GBC_W - 10,
     });
 
-    drawGBCBox(this, 0, 112, GBC_W, 32);
+    drawGBCBox(this, 0, 108, GBC_W, 28);
     this.cmds = [...CMDS_BASE];
     if (this.save.verbs.witness) this.cmds.push(CMD_WITNESS);
     if (this.save.goldStone) this.cmds.push(CMD_ASCEND);
@@ -307,7 +307,7 @@ export class CuratedSelfScene extends Phaser.Scene {
       t.obj.setData("cmd", c.cmd);
       this.cmdTexts.push(t);
     });
-    this.cursorMark = new GBCText(this, 8, 118, "▶", { color: COLOR.textGold, depth: 101 });
+    this.cursorMark = new GBCText(this, 8, 112, "▶", { color: COLOR.textGold, depth: 101 });
     this.refreshCursor();
     this.refreshAvailable();
 
