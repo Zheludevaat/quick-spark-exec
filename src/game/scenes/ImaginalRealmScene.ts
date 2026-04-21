@@ -793,14 +793,15 @@ export class ImaginalRealmScene extends Phaser.Scene {
     else if (this.region === "field" && this.rowan.y < 24) this.transitionTo("pools");
     else if (this.region === "corridor" && this.rowan.y < 24) this.transitionTo("field");
 
-    // Soul proximity: pulse halo, show name/hook, accumulate ambient bark timer.
+    // Soul proximity: drive mood, show name/hook, accumulate ambient bark timer.
     const nearSoul = this.nearestSoul();
     for (const s of this.souls) {
       const isNear = s === nearSoul;
       const done = isSoulDone(this.save, s.def.id);
-      s.halo.fillAlpha = isNear ? (done ? 0.15 : 0.3) : 0;
+
       if (isNear) {
-        s.setMood(done ? "resolved" : "engaged");
+        this.setSoulMood(s, done ? "resolved" : "engaged");
+
         if (!s.nameLabel) {
           s.nameLabel = new GBCText(this, s.def.x - 24, s.def.y - 18, s.def.name, {
             color: COLOR.textGold,
@@ -813,8 +814,9 @@ export class ImaginalRealmScene extends Phaser.Scene {
             maxWidthPx: GBC_W - 8,
           });
         }
+
         s.nearTime += dt;
-        // After 2.4s near without interacting, drift a one-shot ambient thought.
+
         if (!s.barkShown && !done && s.nearTime > 2400) {
           s.barkShown = true;
           s.bark = new GBCText(this, s.def.x - 18, s.def.y - 26, "...", {
@@ -831,9 +833,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
           });
         }
       } else {
-        s.setMood(done ? "resolved" : "waiting");
+        this.setSoulMood(s, done ? "resolved" : "waiting");
         s.nearTime = 0;
         s.barkShown = false;
+
         if (s.nameLabel) {
           s.nameLabel.destroy();
           s.nameLabel = undefined;
@@ -869,6 +872,12 @@ export class ImaginalRealmScene extends Phaser.Scene {
         );
       }
     }
+  }
+
+  private setSoulMood(soul: (typeof this.souls)[number], mood: SoulMood) {
+    if (soul.mood === mood) return;
+    soul.mood = mood;
+    soul.setMood(mood);
   }
 
   private nearestSoul() {
