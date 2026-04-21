@@ -40,6 +40,11 @@ import {
   type EncounterPresentationHandle,
 } from "../../encounters/EncounterPresentation";
 import { HERMAIA_PROFILE } from "../../encounters/profiles/governors";
+import {
+  paintMercuryRoom,
+  type MercuryRoomArtHandle,
+} from "../mercury/MercuryRoomPainter";
+import type { MercuryZoneKey } from "../mercury/MercuryPalette";
 
 type StationKind =
   | "npc_defender"
@@ -124,6 +129,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private activeBark?: GBCText;
   private trueNameLabels: GBCText[] = [];
   private hermaiaPresentation?: EncounterPresentationHandle;
+  private roomArt?: MercuryRoomArtHandle;
 
   constructor() {
     super("MercuryPlateau");
@@ -142,6 +148,10 @@ export class MercuryPlateauScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(mercuryConfig.bg);
     this.cameras.main.fadeIn(500);
+
+    // Paint Mercury room art first — backdrop, silhouette, decor at
+    // depth 0..4. The authored architecture below stacks on top.
+    this.roomArt = paintMercuryRoom(this, this.mercuryArtZone());
 
     this.buildTower();
     spawnMotes(this, { count: 14, color: mercuryConfig.accent, alpha: 0.4 });
@@ -237,8 +247,8 @@ export class MercuryPlateauScene extends Phaser.Scene {
    *  ENVIRONMENT — Tower architecture
    *  ============================================================ */
   private buildTower() {
-    // Stone floor
-    this.add.rectangle(0, 0, GBC_W, GBC_H, 0x0a1220).setOrigin(0).setDepth(0);
+    // Stone floor — kept thin so the painter's backdrop reads through.
+    this.add.rectangle(0, 96, GBC_W, GBC_H - 96, 0x0a1220, 0.55).setOrigin(0).setDepth(0.5);
 
     // --- Distant tower silhouettes — suggest infinite reasoning-halls ---
     // Two faint, low-contrast spires behind the playable architecture.
