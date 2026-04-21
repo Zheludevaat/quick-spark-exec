@@ -289,7 +289,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     flags.legacy_sun_bridge = true;
   }
 
-  return {
+  const migrated: SaveSlot = {
     scene: scene as SceneKey,
     act,
     stats: { ...DEFAULT_STATS, ...(r.stats ?? {}) },
@@ -329,8 +329,10 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     daimonBond: typeof r.daimonBond === "number" ? r.daimonBond : 0,
     garmentsReleased,
     sphereVerbs: {
+      witness: true,
       name: (r.sphereVerbs as { name?: boolean } | undefined)?.name ?? false,
       attune: (r.sphereVerbs as { attune?: boolean } | undefined)?.attune ?? false,
+      expose: (r.sphereVerbs as { expose?: boolean } | undefined)?.expose ?? false,
       stand: (r.sphereVerbs as { stand?: boolean } | undefined)?.stand ?? false,
       weigh: (r.sphereVerbs as { weigh?: boolean } | undefined)?.weigh ?? false,
       release: (r.sphereVerbs as { release?: boolean } | undefined)?.release ?? false,
@@ -341,6 +343,43 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     plateauSettled: (r.plateauSettled as Partial<Record<SphereKey, boolean>> | undefined) ?? {},
     puzzleState:
       (r.puzzleState as Record<string, string | number | boolean> | undefined) ?? {},
+
+    clarityPoints:
+      typeof (r as { clarityPoints?: unknown }).clarityPoints === "number"
+        ? (r as { clarityPoints: number }).clarityPoints
+        : ((r.stats as { clarity?: number } | undefined)?.clarity ?? 0),
+
+    garmentWeights:
+      (r as { garmentWeights?: Record<GarmentKey, number> }).garmentWeights ?? {
+        moon: 3,
+        mercury: 3,
+        venus: 3,
+        sun: 3,
+        mars: 3,
+        jupiter: 3,
+        saturn: 3,
+      },
+
+    resonanceProfile:
+      (r as { resonanceProfile?: ResonanceProfile }).resonanceProfile ?? {
+        witnessing: 0,
+        control: 0,
+        possession: 0,
+        performance: 0,
+        struggle: 0,
+        structure: 0,
+        surrender: 0,
+      },
+
+    memoryLattice:
+      Array.isArray((r as { memoryLattice?: unknown[] }).memoryLattice)
+        ? ((r as { memoryLattice: string[] }).memoryLattice)
+        : (Array.isArray(r.shards) ? r.shards : []),
+
+    sopheneNamed:
+      typeof (r as { sopheneNamed?: unknown }).sopheneNamed === "boolean"
+        ? ((r as { sopheneNamed: boolean }).sopheneNamed)
+        : false,
 
     sunZone:
       (r.sunZone as
@@ -358,4 +397,6 @@ export function migrateSave(raw: unknown): SaveSlot | null {
 
     updatedAt: r.updatedAt ?? Date.now(),
   };
+
+  return applyCanonMigration(migrated);
 }
