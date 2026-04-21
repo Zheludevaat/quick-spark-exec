@@ -65,13 +65,25 @@ export class TitleScene extends Phaser.Scene {
     const actReached = saveForSpheres?.act ?? 0;
     spheres.forEach((sp, i) => {
       const sx = startX + i * spacing;
-      // Spheres at or below the player's current Act glow at full strength;
-      // unreached spheres are dimmer to hint at the road ahead.
       const reached = i <= actReached;
       const haloAlpha = reached ? 0.28 : 0.12;
       const bodyAlpha = reached ? 1 : 0.35;
-      // Soft halo
-      const halo = this.add.circle(sx, sphereCY, sp.r + 3, sp.halo, haloAlpha);
+
+      const wrap = this.add.container(sx, sphereCY);
+
+      const halo = this.add.circle(0, 0, sp.r + 3, sp.halo, haloAlpha);
+      wrap.add(halo);
+
+      const outer = this.add.circle(0, 0, sp.r, sp.halo, bodyAlpha);
+      const mid = this.add.circle(0, 0, Math.max(1, sp.r - 1), sp.mid, bodyAlpha);
+      const core = this.add.circle(0, 0, Math.max(1, sp.r - 2), sp.core, bodyAlpha);
+      wrap.add([outer, mid, core]);
+
+      if (reached) {
+        const shine = this.add.circle(-1, -1, 1, 0xffffff, 0.55);
+        wrap.add(shine);
+      }
+
       this.tweens.add({
         targets: halo,
         scale: 1.3,
@@ -81,18 +93,27 @@ export class TitleScene extends Phaser.Scene {
         repeat: -1,
         ease: "Sine.inOut",
       });
-      // Sphere body — concentric discs for a pixel-shaded ball
-      g.fillStyle(sp.halo, bodyAlpha);
-      g.fillCircle(sx, sphereCY, sp.r);
-      g.fillStyle(sp.mid, bodyAlpha);
-      g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 1));
-      g.fillStyle(sp.core, bodyAlpha);
-      g.fillCircle(sx, sphereCY, Math.max(1, sp.r - 2));
-      // Specular highlight (only on reached spheres)
-      if (reached) {
-        g.fillStyle(0xffffff, 0.55);
-        g.fillCircle(sx - 1, sphereCY - 1, 1);
-      }
+
+      this.tweens.add({
+        targets: wrap,
+        y: sphereCY - (reached ? 1.5 : 1),
+        duration: 1800 + i * 160,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+        delay: i * 120,
+      });
+
+      this.tweens.add({
+        targets: wrap,
+        scaleX: reached ? 1.04 : 1.02,
+        scaleY: reached ? 1.04 : 1.02,
+        duration: 2200 + i * 130,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+        delay: 200 + i * 90,
+      });
     });
 
     spawnMotes(this, {
@@ -105,23 +126,23 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // ---- Title block — "THE HERMETIC COMEDY", with THE as a quieter lead-in. ----
-    const titleY = 58;
+    const titleY = 56;
 
     const t0 = "THE";
     const t1 = "HERMETIC";
     const t2 = "COMEDY";
 
     new GBCText(this, GBC_W / 2 - measure(t0) / 2, titleY, t0, {
-      color: COLOR.textDim,
+      color: COLOR.textGold,
       shadow: "#1a2030",
     });
 
-    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY + 8, t1, {
+    new GBCText(this, GBC_W / 2 - measure(t1) / 2, titleY + 7, t1, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
 
-    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 18, t2, {
+    new GBCText(this, GBC_W / 2 - measure(t2) / 2, titleY + 17, t2, {
       color: COLOR.textLight,
       shadow: "#1a2030",
     });
