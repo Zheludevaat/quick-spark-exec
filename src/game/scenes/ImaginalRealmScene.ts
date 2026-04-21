@@ -336,6 +336,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     });
     this.souls = [];
 
+    // Tear down per-region encounter presentations before rebuilding for the
+    // new region. They live in this.regionRoot's coordinate space conceptually
+    // but own their own root containers, so destroy them explicitly.
+    Object.values(this.knotPresentations).forEach((p) => p?.destroy());
+    this.knotPresentations = {};
+    Object.values(this.soulPresentations).forEach((p) => p?.destroy());
+    this.soulPresentations = {};
+
     this.knotMemoryGlyphs.forEach((g) => g.destroy());
     this.knotMemoryGlyphs = [];
 
