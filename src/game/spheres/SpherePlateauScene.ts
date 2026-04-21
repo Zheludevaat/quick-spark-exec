@@ -43,8 +43,8 @@ export class SpherePlateauScene extends Phaser.Scene {
   private hint!: GBCText;
   private title!: GBCText;
 
-  constructor() {
-    super("SpherePlateau");
+  constructor(sceneKey: string = "SpherePlateau") {
+    super(sceneKey);
   }
 
   init(data: { save: SaveSlot; sphere: SphereKey }) {

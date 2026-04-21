@@ -31,8 +31,8 @@ export class SphereTrialScene extends Phaser.Scene {
   private score = 0;
   private round = 0;
 
-  constructor() {
-    super("SphereTrial");
+  constructor(sceneKey: string = "SphereTrial") {
+    super(sceneKey);
   }
 
   init(data: { save: SaveSlot; sphere: SphereKey }) {
