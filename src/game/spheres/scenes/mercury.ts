@@ -1584,6 +1584,24 @@ export class MercuryTrialScene extends Phaser.Scene {
       this.mSave.relics.push(mercuryConfig.inscription);
     }
     writeSave(this.mSave);
+
+    // Mercury seal mark — a quiet expanding ring left at the chamber center
+    // so the trial space remembers Hermaia's verdict, not just the dialog.
+    this.hermaiaPresentation?.pulse();
+    const seal = this.add
+      .circle(GBC_W / 2, 22, 5, HERMAIA_PROFILE.palette.primary, 0.22)
+      .setStrokeStyle(1, HERMAIA_PROFILE.palette.glow, 0.6)
+      .setDepth(40);
+    this.tweens.add({
+      targets: seal,
+      scale: { from: 1, to: 2.4 },
+      alpha: { from: 0.22, to: 0.05 },
+      duration: 1300,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+
     runDialog(this, mercuryConfig.trialPass, () => {
       gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.mSave }));
     });
