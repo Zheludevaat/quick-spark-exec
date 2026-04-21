@@ -290,7 +290,7 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
       </div>
 
       <TouchInventoryOverlay open={inventoryOpen} onClose={closeInventory} />
-      {portrait && <RotateDeviceOverlay />}
+      {showRotateHint && <RotateDeviceOverlay />}
     </div>
   );
 }
