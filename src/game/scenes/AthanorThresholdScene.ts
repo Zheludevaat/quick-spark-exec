@@ -94,6 +94,8 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private busy = false;
   private depositedThisVisit = 0;
   private thresholdStage = 0;
+  private vesselPresentation?: EncounterPresentationHandle;
+  private doorPresentations: Partial<Record<Door["key"], EncounterPresentationHandle>> = {};
 
   constructor() {
     super("AthanorThreshold");
