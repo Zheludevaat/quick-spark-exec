@@ -298,6 +298,7 @@ export class AlbedoScene extends Phaser.Scene {
   }
 
   private exit() {
-    returnToThreshold(this, this.save, "albedo");
+    this.isDone = true;
+    this.isBusy = false;
   }
 }
