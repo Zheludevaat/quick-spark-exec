@@ -348,28 +348,22 @@ export class EncounterScene extends Phaser.Scene {
       });
     } else {
       this.misses++;
-      this.hp = Math.max(0, this.hp - 1);
-      this.drawHp();
       this.logText.setText("Not quite. The shape ripples but does not soften.");
       this.cameras.main.shake(120, 0.004);
       this.enemy.setTintFill(0xd84a4a);
       this.time.delayedCall(110, () => this.enemy.clearTint());
 
-      // Restrained knockback displacement
       this.tweens.add({
         targets: this.enemy,
         x: this.enemy.x + (Math.random() > 0.5 ? 4 : -4),
         y: this.enemy.y - 2,
         duration: 60,
         yoyo: true,
-        ease: 'Power2'
+        ease: "Power2",
       });
-      // bob faster as wounded
-      if (this.enemyBob) {
-        this.enemyBob.timeScale = 1 + (this.def.hp - this.hp) * 0.5;
-      }
+
       audio.sfx("miss");
-      // Telegraph the weakness via the persistent goal banner
+
       if (this.misses === 1) {
         this.updateGoalBanner();
         this.tweens.add({
@@ -380,17 +374,8 @@ export class EncounterScene extends Phaser.Scene {
           repeat: 3,
         });
       }
+
       this.busy = false;
-      if (this.hp <= 0) {
-        this.logText.setText("It dissolves anyway - you wore it out by trying.");
-        this.busy = true;
-        audio.sfx("hit");
-        this.tweens.add({ targets: this.enemy, alpha: 0, duration: 700 });
-        this.time.delayedCall(1300, () => {
-          this.onDone(true);
-          this.scene.stop();
-        });
-      }
     }
   }
 

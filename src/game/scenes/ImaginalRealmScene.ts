@@ -173,6 +173,14 @@ export class ImaginalRealmScene extends Phaser.Scene {
     bark?: GBCText;
   }[] = [];
 
+  // Act II memory / aftermath fields
+  private regionToneOverlay?: Phaser.GameObjects.Rectangle;
+  private regionSettledGlow?: Phaser.GameObjects.Arc;
+  private knotMemoryGlyphs: Phaser.GameObjects.GameObject[] = [];
+  private soulMemoryMarks: Phaser.GameObjects.GameObject[] = [];
+  private corridorGateGlow?: Phaser.GameObjects.Arc;
+  private corridorSouthSigil?: Phaser.GameObjects.Arc;
+
   constructor() {
     super("ImaginalRealm");
   }
@@ -184,12 +192,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.syllableLanterns = [];
     this.dialogActive = false;
     this.knotActive = false;
-    this.save.act = 1;
+
+    this.save.scene = "ImaginalRealm";
+    this.save.act = ACT_BY_SCENE.ImaginalRealm;
+
     this.region = (this.save.region as ImaginalRegion) ?? "pools";
     if (!this.save.region) {
       this.save.region = "pools";
-      writeSave(this.save);
     }
+
+    writeSave(this.save);
   }
 
   create() {
@@ -305,10 +317,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // REGION LOAD / TRANSITION
   // ============================================================================
   private loadRegion(region: ImaginalRegion) {
-    if (this.regionRoot) this.regionRoot.destroy();
-    this.knots = [];
-    this.seedEchoes = [];
-    // Tear down any souls from the previous region.
+    // Tear down any souls first so their owned FX are cleaned up deterministically.
     this.souls.forEach((s) => {
       s.destroy();
       s.nameLabel?.destroy();
@@ -316,6 +325,26 @@ export class ImaginalRealmScene extends Phaser.Scene {
       s.bark?.destroy();
     });
     this.souls = [];
+
+    this.knotMemoryGlyphs.forEach((g) => g.destroy());
+    this.knotMemoryGlyphs = [];
+
+    this.soulMemoryMarks.forEach((g) => g.destroy());
+    this.soulMemoryMarks = [];
+
+    this.regionToneOverlay?.destroy();
+    this.regionToneOverlay = undefined;
+    this.regionSettledGlow?.destroy();
+    this.regionSettledGlow = undefined;
+    this.corridorGateGlow?.destroy();
+    this.corridorGateGlow = undefined;
+    this.corridorSouthSigil?.destroy();
+    this.corridorSouthSigil = undefined;
+
+    if (this.regionRoot) this.regionRoot.destroy();
+
+    this.knots = [];
+    this.seedEchoes = [];
     this.region = region;
     this.save.region = region;
     writeSave(this.save);
@@ -401,6 +430,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       g.fillRect(8, 24, 4, GBC_H - 36);
       g.fillRect(GBC_W - 12, 24, 4, GBC_H - 36);
       this.regionRoot.add(g);
+      this.corridorGateGlow = this.add.circle(80, GBC_H - 18, 7, 0xc8a060, 0).setDepth(24);
+      this.corridorSouthSigil = this.add.circle(80, GBC_H - 10, 3, 0xc8a060, 0).setDepth(24);
+      this.regionRoot.add(this.corridorGateGlow);
+      this.regionRoot.add(this.corridorSouthSigil);
       this.spawnSyllableLanterns();
     }
 
@@ -475,6 +508,8 @@ export class ImaginalRealmScene extends Phaser.Scene {
     }
     this.lastRegion = region;
 
+    this.applyRegionMemory(true);
+
     // Region-specific intros (one-shot)
     const introFlag = `intro_${region}`;
     if (!this.save.flags[introFlag]) {
@@ -493,6 +528,151 @@ export class ImaginalRealmScene extends Phaser.Scene {
     // Spawn / refresh Echo follower if she's been unlocked.
     this.destroyEchoFollower();
     this.spawnEchoFollower();
+  }
+
+  // ============================================================================
+  // ACT II MEMORY HELPERS
+  // ============================================================================
+  private clearedKnotsInRegion(region: ImaginalRegion): number {
+    return defineLayout().filter(
+      (k) => k.region === region && !!this.save.flags[`knot_${k.kind}`],
+    ).length;
+  }
+
+  private doneSoulsInRegion(region: ImaginalRegion): number {
+    return soulsForRegion(this.save, region).filter((s) => isSoulDone(this.save, s.id)).length;
+  }
+
+  private touchedEchoesCount(): number {
+    return Object.keys(this.save.seedEchoes ?? {}).length;
+  }
+
+  private applyRegionMemory(initial = false): void {
+    this.regionToneOverlay?.destroy();
+    this.regionSettledGlow?.destroy();
+    this.regionToneOverlay = undefined;
+    this.regionSettledGlow = undefined;
+
+    const knotCount = this.clearedKnotsInRegion(this.region);
+    const soulCount = this.doneSoulsInRegion(this.region);
+    const echoCount = this.region === "field" ? this.touchedEchoesCount() : 0;
+
+    if (this.region === "pools") {
+      const alpha = Math.min(0.18, knotCount * 0.04 + soulCount * 0.03);
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0x88c0e8, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (knotCount + soulCount > 0) {
+        this.regionSettledGlow = this.add
+          .circle(80, 82, 26, 0xa8c8e8, Math.min(0.18, 0.05 + knotCount * 0.03))
+          .setDepth(2);
+        this.regionRoot.add(this.regionSettledGlow);
+      }
+    } else if (this.region === "field") {
+      const alpha = Math.min(0.16, echoCount * 0.025 + knotCount * 0.03);
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0xffe098, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (echoCount > 0) {
+        this.regionSettledGlow = this.add
+          .circle(80, 72, 28, 0xffe098, Math.min(0.16, 0.04 + echoCount * 0.02))
+          .setDepth(2);
+        this.regionRoot.add(this.regionSettledGlow);
+      }
+    } else {
+      const ready = this.totalCleared() >= 3;
+      const alpha = ready ? 0.14 : 0.05;
+      this.regionToneOverlay = this.add
+        .rectangle(0, 22, GBC_W, GBC_H - 22, 0x10131c, alpha)
+        .setOrigin(0, 0)
+        .setDepth(2);
+      this.regionRoot.add(this.regionToneOverlay);
+
+      if (ready) {
+        this.regionSettledGlow = this.add
+          .circle(80, GBC_H - 18, 10, 0xc8a060, 0.16)
+          .setDepth(24);
+        this.regionRoot.add(this.regionSettledGlow);
+        this.tweens.add({
+          targets: this.regionSettledGlow,
+          scale: 1.35,
+          alpha: 0.05,
+          duration: 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.inOut",
+        });
+      }
+    }
+
+    if (!initial && this.regionToneOverlay) {
+      const target = this.regionToneOverlay.fillAlpha;
+      this.regionToneOverlay.setAlpha(0);
+      this.tweens.add({
+        targets: this.regionToneOverlay,
+        alpha: target,
+        duration: 220,
+        ease: "Sine.out",
+      });
+    }
+  }
+
+  private markKnotCleared(k: Knot) {
+    let mark: Phaser.GameObjects.GameObject;
+
+    if (k.kind === "reflection") {
+      mark = this.add.circle(k.x, k.y, 6, 0xa8c8e8, 0.18).setDepth(21);
+    } else if (k.kind === "echo") {
+      mark = this.add.rectangle(k.x, k.y, 10, 1, 0xc8a8e8, 0.35).setDepth(21);
+    } else if (k.kind === "glitter") {
+      mark = this.add.circle(k.x, k.y, 4, 0xffe098, 0.22).setDepth(21);
+    } else if (k.kind === "lantern") {
+      mark = this.add.rectangle(k.x, k.y + 2, 4, 1, 0x786858, 0.5).setDepth(21);
+    } else {
+      mark = this.add.circle(k.x, k.y, 5, 0xd8a868, 0.16).setDepth(21);
+    }
+
+    this.regionRoot.add(mark);
+    this.knotMemoryGlyphs.push(mark);
+
+    const flash = this.add.circle(k.x, k.y, 4, 0xffffff, 0.5).setDepth(25);
+    this.regionRoot.add(flash);
+    this.tweens.add({
+      targets: flash,
+      scale: 3,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+
+    this.applyRegionMemory();
+  }
+
+  private markSoulResolved(id: string, x: number, y: number) {
+    void id;
+    const ring = this.add.circle(x, y - 2, 5, 0xa8e8c8, 0.18).setDepth(21);
+    this.regionRoot.add(ring);
+    this.soulMemoryMarks.push(ring);
+
+    const hush = new GBCText(this, x - 10, y - 18, "QUIET.", {
+      color: COLOR.textDim,
+      depth: 23,
+    });
+    this.tweens.add({
+      targets: hush.obj,
+      alpha: 0,
+      y: y - 28,
+      duration: 1400,
+      onComplete: () => hush.destroy(),
+    });
+
+    this.applyRegionMemory();
   }
 
   private spawnSeedEchoes() {
@@ -883,9 +1063,16 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (this.region === "corridor") {
         const cleared = this.totalCleared();
         const needed = 3;
-        if (cleared >= needed && this.rowan.y > GBC_H - 24)
-          this.hint.setText("A: ENTER THE CURATED SELF");
-        else this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
+        const ready = cleared >= needed;
+
+        if (this.corridorGateGlow) this.corridorGateGlow.setAlpha(ready ? 0.18 : 0.04);
+        if (this.corridorSouthSigil) this.corridorSouthSigil.setAlpha(ready ? 0.4 : 0.08);
+
+        if (ready && this.rowan.y > GBC_H - 24) {
+          this.hint.setText("A: DESCEND TO THE ATHANOR");
+        } else {
+          this.hint.setText(`KNOTS QUIETED ${cleared}/5  (${needed} TO PROCEED)`);
+        }
       } else {
         this.hint.setText(
           this.region === "pools" ? "WALK SOUTH TO THE FIELD" : "WALK SOUTH TO THE CORRIDOR",
@@ -955,6 +1142,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       duration: 600,
       onComplete: () => m.halo.destroy(),
     });
+    const residue = this.add.circle(m.x, m.y, 3, 0xffe098, 0.14).setDepth(18);
+    this.regionRoot.add(residue);
+    this.knotMemoryGlyphs.push(residue);
+    this.applyRegionMemory();
     // Side quest: touch every echo in the field
     if (this.region === "field" && questStatus(this.save, "all_echoes_field") !== "done") {
       activateQuest(this, this.save, "all_echoes_field");
@@ -1010,6 +1201,23 @@ export class ImaginalRealmScene extends Phaser.Scene {
     if (this.region === "corridor" && this.rowan.y > GBC_H - 22) {
       const cleared = this.totalCleared();
       if (cleared >= 3) {
+        if (!this.save.flags.corridor_athanor_warned) {
+          this.save.flags.corridor_athanor_warned = true;
+          writeSave(this.save);
+          this.dialogActive = true;
+          runDialog(
+            this,
+            [
+              { who: "Soryn", text: "This is as far as I go." },
+              { who: "Soryn", text: "The next room is not imaginal in the same way." },
+            ],
+            () => {
+              this.dialogActive = false;
+            },
+          );
+          return;
+        }
+
         this.save.scene = "AthanorThreshold";
         writeSave(this.save);
         const a = getAudio();
@@ -1026,10 +1234,10 @@ export class ImaginalRealmScene extends Phaser.Scene {
       this.dialogActive = true;
       runSoul(this, this.save, getArc(soul.def.id), () => {
         this.dialogActive = false;
-        // Soul may have completed — refresh visual state on next frame.
         if (isSoulDone(this.save, soul.def.id)) {
           soul.container.setAlpha(0.45);
           soul.setMood("resolved");
+          this.markSoulResolved(soul.def.id, soul.def.x, soul.def.y);
         }
         this.refreshSoulTracker();
       });
@@ -1104,6 +1312,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
         k.glow.destroy();
         k.glow = undefined;
       }
+      this.markKnotCleared(k);
       this.refreshKnotTracker();
     });
   }
@@ -1112,7 +1321,6 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // COMPANION CONTEXT
   // ============================================================================
   private companionLines(): { who: string; text: string }[] {
-    // Highest priority: a recent soul event Soryn can react to.
     const recent = recentSoulEvents(this.save, 1)[0];
     if (recent) {
       const reaction = this.daimonReactionFor(recent);
@@ -1121,28 +1329,44 @@ export class ImaginalRealmScene extends Phaser.Scene {
 
     const cleared = this.totalCleared();
     const region = this.region;
+
     if (region === "pools") {
-      if (cleared === 0)
+      const localKnots = this.clearedKnotsInRegion("pools");
+      const localSouls = this.doneSoulsInRegion("pools");
+      if (localKnots === 0 && localSouls === 0) {
         return [
-          {
-            who: "Soryn",
-            text: "Two knots here. Stand still for the mimic. Speak true to the echo.",
-          },
+          { who: "Soryn", text: "Two knots here. Stand still for the mimic. Speak true to the echo." },
         ];
+      }
       return [
-        { who: "Soryn", text: `${cleared} cleared. The pools settle where you have witnessed.` },
+        { who: "Soryn", text: `${localKnots} knots quieted. ${localSouls} souls settled. The pools remember.` },
       ];
     }
+
     if (region === "field") {
-      const echoes = Object.keys(this.save.seedEchoes).length;
+      const echoes = this.touchedEchoesCount();
+      if (echoes >= 3) {
+        return [
+          { who: "Soryn", text: `${echoes} echoes touched. The field knows you better now.` },
+          { who: "Soryn", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
+        ];
+      }
       return [
-        { who: "Soryn", text: `${echoes} echoes touched. The motes carry your last day.` },
-        { who: "Soryn", text: "The lantern lies kindly. RELEASE is the only honest verb here." },
+        { who: "Soryn", text: `${echoes} echoes touched. The motes still carry your last day.` },
+        { who: "Soryn", text: "Walk through what glitters. Do not keep what only comforts." },
       ];
     }
+
+    if (cleared >= 3) {
+      return [
+        { who: "Soryn", text: "South, then. I stop at the threshold." },
+        { who: "Soryn", text: "Take what the plateau taught. Leave the rest here." },
+      ];
+    }
+
     return [
-      { who: "Soryn", text: "The crown is optional. WITNESS — or do not — and walk south." },
-      { who: "Soryn", text: "I cannot enter the boss room. WITNESS is yours alone now." },
+      { who: "Soryn", text: "The crown is optional. WITNESS, or do not, and walk south." },
+      { who: "Soryn", text: "I cannot enter the next room with you." },
     ];
   }
 
