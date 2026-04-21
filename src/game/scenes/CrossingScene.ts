@@ -449,6 +449,7 @@ export class CrossingScene extends Phaser.Scene {
       return;
     }
     best.witnessed = true;
+    best.alive = false;
     this.witnessedCount++;
     this.save.stats.clarity = Math.min(99, this.save.stats.clarity + 1);
     writeSave(this.save);
@@ -461,7 +462,6 @@ export class CrossingScene extends Phaser.Scene {
       y: best.y - 12,
       duration: 700,
       onComplete: () => {
-        best!.alive = false;
         best!.obj.destroy();
       },
     });
