@@ -40,12 +40,20 @@ const METAXY_FALLBACK_NODES: SceneNode[] = [
 
 export function DesktopMiniMapCard() {
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
+  const [modal, setModal] = useState(() => getGameUiSnapshot().modal);
 
   useEffect(() => {
-    return subscribeGameUi((s) => setScene(s.scene));
+    return subscribeGameUi((s) => {
+      setScene(s.scene);
+      setModal(s.modal);
+    });
   }, []);
 
+  // Per modal doctrine: while a blocking shell modal owns attention,
+  // the minimap must vanish (not merely dim) so it can never compete
+  // with the active surface.
   if (!scene.showMiniMap) return null;
+  if (modal.blocking && modal.surface !== "none") return null;
 
   const isHub = scene.key === "MetaxyHub";
 
