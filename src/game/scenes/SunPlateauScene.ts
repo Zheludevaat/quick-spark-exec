@@ -201,6 +201,9 @@ export class SunPlateauScene extends Phaser.Scene {
     });
 
     this.buildStations();
+    this.buildNameplates();
+    this.buildGatePulse();
+    this.startAmbientBarks();
     this.publishSnapshot();
 
     if (!this.save.flags[SUN_FLAGS.introSeen]) {
