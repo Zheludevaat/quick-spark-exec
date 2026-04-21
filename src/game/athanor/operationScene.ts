@@ -160,6 +160,7 @@ export function selectShards(
     box.destroy();
     promptText.destroy();
     labels.forEach((l) => l.destroy());
+    selectedReadout?.destroy();
     footer.destroy();
     unbindAct?.();
     unbindDir?.();
