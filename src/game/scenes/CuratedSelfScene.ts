@@ -745,9 +745,12 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   private endAscend() {
+    // METAXY: Ascend at the Sun is now a "settle here" choice — soft ending
+    // route via Epilogue. The canonical ascent only opens after Saturn.
     this.save.flags.act3_ascended = true;
     this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
+    this.save.plateauSettled = { ...this.save.plateauSettled, sun: true };
     delete this.save.flags.curated_progress_exposed;
     this.save.scene = "Epilogue";
     if (!this.save.shards.includes("golden_self")) this.save.shards.push("golden_self");
@@ -756,7 +759,6 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.speak("ascend");
     const a = getAudio();
     a.music.stop();
-    // White-screen closer
     const flash = this.add
       .rectangle(0, 0, GBC_W, GBC_H, 0xffffff, 0)
       .setOrigin(0, 0)
@@ -797,15 +799,18 @@ export class CuratedSelfScene extends Phaser.Scene {
   }
 
   private endGame() {
-    this.save.scene = "Epilogue";
+    // METAXY: Sun is no longer terminal. Return to the hub with the Sun
+    // garment released; Mars portal will light next.
     this.save.flags.act3_complete = true;
     this.save.flags.plateau_remain = false;
+    this.save.garmentsReleased = { ...this.save.garmentsReleased, sun: true };
+    this.save.scene = "MetaxyHub";
     writeSave(this.save);
     const a = getAudio();
     a.music.stop();
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () =>
-      this.scene.start("Epilogue", { save: this.save }),
+      this.scene.start("MetaxyHub", { save: this.save }),
     );
   }
 }
