@@ -11,7 +11,7 @@ import {
   drawGBCBox,
 } from "../gbcArt";
 import { writeSave } from "../save";
-import type { SaveSlot } from "../types";
+import { ACT_BY_SCENE, type SaveSlot } from "../types";
 import {
   attachHUD,
   InputState,
@@ -254,8 +254,30 @@ const SORYN_AFTER_RITES = [
 ];
 
 const STONE_LINES = [
-  { who: "Stone", text: "An old marker. Carved with one word: BEGIN." },
+  { who: "Stone", text: "Not every threshold opens by passing through." },
+  { who: "Stone", text: "Some open when you look long enough to stop asking what they are for." },
   { who: "Stone", text: "You feel a small warmth in the chest. +1 COURAGE." },
+];
+
+const STILLNESS_LINES = [
+  { who: "Soryn", text: "Good. The threshold can only receive what stops trying to arrive." },
+  { who: "Soryn", text: "Stillness is not emptiness. It is consent without collapse." },
+];
+
+const CIRCLE_TEACH_LINES = [
+  { who: "Soryn", text: "Three times the guardian circles what it receives." },
+  { who: "Soryn", text: "Reception comes before naming." },
+];
+
+const BASIN_LINES = [
+  { who: "Basin", text: "The basin does not reflect your face." },
+  { who: "Basin", text: "It reflects the space your face used to occupy in the world." },
+];
+
+const GATE_PREVIEW_LINES = [
+  { who: "Soryn", text: "Look." },
+  { who: "Soryn", text: "Beyond the gate, the world loosens without dissolving." },
+  { who: "Soryn", text: "This is only the first edge of what comes next." },
 ];
 
 const MAP_W = 10,
@@ -295,14 +317,20 @@ export class SilverThresholdScene extends Phaser.Scene {
   private daimonV2?: Phaser.GameObjects.Sprite;
   private hint!: GBCText;
   private stone!: Phaser.GameObjects.Rectangle;
+  private basin?: Phaser.GameObjects.Arc;
+  private stillMs = 0;
 
   constructor() {
     super("SilverThreshold");
   }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
+    this.save.scene = "SilverThreshold";
+    this.save.act = ACT_BY_SCENE.SilverThreshold;
+    writeSave(this.save);
     this.circles = [];
     this.dialogActive = false;
+    this.stillMs = 0;
   }
 
   create() {
