@@ -185,6 +185,10 @@ export class VenusPlateauScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: venusConfig.accent, alpha: 0.42 });
 
     attachHUD(this, () => this.save.stats);
+    this.moveInput = new InputState(this);
+
+    this.events.once("shutdown", () => this.destroyKypriaPresentation());
+    this.events.once("destroy", () => this.destroyKypriaPresentation());
 
     this.zoneLabel = new GBCText(
       this,
@@ -209,14 +213,6 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.player.setStrokeStyle(1, 0x000000, 0.6);
 
     this.loadZone(this.zone, true);
-
-    onDirection(this, (d) => {
-      if (this.modal || this.busy) return;
-      if (d === "left") this.lastInputDir = { x: -1, y: 0 };
-      else if (d === "right") this.lastInputDir = { x: 1, y: 0 };
-      else if (d === "up") this.lastInputDir = { x: 0, y: -1 };
-      else if (d === "down") this.lastInputDir = { x: 0, y: 1 };
-    });
 
     onActionDown(this, "action", () => {
       if (this.modal || this.busy) return;
