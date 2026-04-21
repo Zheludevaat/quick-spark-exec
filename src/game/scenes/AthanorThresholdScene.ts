@@ -21,6 +21,14 @@ import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { runInquiry } from "../inquiry";
 import { hasChoice } from "./imaginal/soulRunner";
+import {
+  createEncounterPresentation,
+  type EncounterPresentationHandle,
+} from "../encounters/EncounterPresentation";
+import {
+  VESSEL_PROFILE,
+  ATHANOR_DOOR_PROFILES,
+} from "../encounters/profiles/athanor";
 
 type Door = {
   key: "nigredo" | "albedo" | "citrinitas" | "rubedo";
