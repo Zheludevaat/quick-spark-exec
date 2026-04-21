@@ -134,33 +134,40 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.events.once("destroy", () => window.removeEventListener("keydown", onDomKey));
 
   // --- Top stats bar (framed plate, icons + numbers) ---
-  const BAR_H = 13;
-  const plate = drawGBCPlate(scene, 0, 0, GBC_W, BAR_H, 200, "dark");
-  void plate;
-
+  // In touch_landscape mode the React shell renders the stats strip; we
+  // suppress the in-canvas bar to avoid duplication, but still wire the
+  // bridge for stat snapshots.
   const STAT_KEYS: StatKey[] = ["clarity", "compassion", "courage"];
   const groups: Record<StatKey, { icon: Phaser.GameObjects.Image; num: GBCText; cx: number }> =
     {} as never;
-  STAT_KEYS.forEach((k, i) => {
-    const cx = 4 + i * 22;
-    const icon = scene.add
-      .image(cx, 3, "stat_icons", STAT_ICON_FRAME[k])
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(201);
-    const num = new GBCText(scene, cx + 8, 3, "0", {
-      color: COLOR.textLight,
-      depth: 201,
-      scrollFactor: 0,
+  if (!isTouchShell) {
+    const BAR_H = 13;
+    const plate = drawGBCPlate(scene, 0, 0, GBC_W, BAR_H, 200, "dark");
+    void plate;
+    STAT_KEYS.forEach((k, i) => {
+      const cx = 4 + i * 22;
+      const icon = scene.add
+        .image(cx, 3, "stat_icons", STAT_ICON_FRAME[k])
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(201);
+      const num = new GBCText(scene, cx + 8, 3, "0", {
+        color: COLOR.textLight,
+        depth: 201,
+        scrollFactor: 0,
+      });
+      groups[k] = { icon, num, cx };
     });
-    groups[k] = { icon, num, cx };
-  });
+  }
 
   const refresh = () => {
     const s = getStats();
-    groups.clarity.num.setText(String(s.clarity));
-    groups.compassion.num.setText(String(s.compassion));
-    groups.courage.num.setText(String(s.courage));
+    if (!isTouchShell) {
+      groups.clarity.num.setText(String(s.clarity));
+      groups.compassion.num.setText(String(s.compassion));
+      groups.courage.num.setText(String(s.courage));
+    }
+    setHudSnapshot({ stats: { clarity: s.clarity, compassion: s.compassion, courage: s.courage } });
   };
   refresh();
   scene.events.on("stats-changed", refresh);
@@ -168,13 +175,12 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   // Animate ONLY on explicit hud-stat-changed event (not on first paint).
   const onStatChanged = (p: StatChangedPayload) => {
     refresh();
+    if (isTouchShell) return;
     const g = groups[p.stat];
     if (!g) return;
-    // icon flash to gold
     const origTint = 0xffffff;
     g.icon.setTint(0xffe098);
     scene.time.delayedCall(280, () => g.icon.setTint(origTint));
-    // number bump
     g.num.obj.setScale(1);
     scene.tweens.add({
       targets: g.num.obj,
@@ -187,27 +193,32 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   scene.events.on(HUD_EVENTS.statChanged, onStatChanged);
 
   // --- "SAVED" indicator (top-right) ---
-  const savedText = new GBCText(scene, GBC_W - 24, 3, "", {
-    color: COLOR.textGold,
-    depth: 202,
-    scrollFactor: 0,
-  });
+  const savedText = isTouchShell
+    ? null
+    : new GBCText(scene, GBC_W - 24, 3, "", {
+        color: COLOR.textGold,
+        depth: 202,
+        scrollFactor: 0,
+      });
   let savedTween: Phaser.Tweens.Tween | null = null;
   let lastSavedAt = 0;
   const onSaved = () => {
     const now = Date.now();
     if (now - lastSavedAt < 800) return;
     lastSavedAt = now;
-    savedText.setText("SAVED");
-    savedText.obj.setAlpha(1);
-    savedTween?.stop();
-    savedTween = scene.tweens.add({
-      targets: savedText.obj,
-      alpha: 0,
-      duration: 1400,
-      delay: 600,
-      onComplete: () => savedText.setText(""),
-    });
+    setHudSnapshot({ savedAt: now });
+    if (savedText) {
+      savedText.setText("SAVED");
+      savedText.obj.setAlpha(1);
+      savedTween?.stop();
+      savedTween = scene.tweens.add({
+        targets: savedText.obj,
+        alpha: 0,
+        duration: 1400,
+        delay: 600,
+        onComplete: () => savedText.setText(""),
+      });
+    }
   };
   window.addEventListener("hermetic-saved", onSaved);
   scene.events.once("shutdown", () => {
@@ -219,11 +230,43 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     scene.events.off(HUD_EVENTS.statChanged, onStatChanged);
   });
 
-  // --- Touch pad (always available; user can hide via settings) ---
+  // --- Virtual input bridge: forward DOM shell input → scene events ---
+  const vinputUnsub = subscribeVirtualInput((e) => {
+    if (e.type === "down") {
+      if (e.action === "action") scene.events.emit("vinput-action");
+      else if (e.action === "cancel") scene.events.emit("vinput-cancel");
+      else scene.events.emit("vinput-down", e.action);
+    } else if (e.type === "up") {
+      if (e.action !== "action" && e.action !== "cancel") {
+        scene.events.emit("vinput-up", e.action);
+      }
+    } else if (e.type === "pulse") {
+      if (e.action === "action") scene.events.emit("vinput-action");
+      else if (e.action === "cancel") scene.events.emit("vinput-cancel");
+    } else if (e.type === "clear") {
+      (["up", "down", "left", "right"] as const).forEach((d) =>
+        scene.events.emit("vinput-up", d),
+      );
+    }
+  });
+  scene.events.once("shutdown", () => {
+    vinputUnsub();
+    clearVirtualInput();
+  });
+  scene.events.once("destroy", () => {
+    vinputUnsub();
+    clearVirtualInput();
+  });
+  void getVirtualState;
+
+  // --- Touch pad (legacy in-canvas controls) ---
+  // Suppressed entirely in touch_landscape mode — the React shell owns input.
   let pad: TouchPadHandle | null = null;
   const rebuildPad = () => {
     pad?.destroy();
+    pad = null;
     const c = getControls();
+    if (c.interfaceMode === "touch_landscape") return;
     if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
     pad = buildTouchPad(scene);
   };
