@@ -34,6 +34,8 @@ export type SunWitness = {
   softening: { who: string; text: string };
   crossReference: Record<string, string>;
   doneFlag: string;
+  /** Short ambient lines murmured while the player walks the Hall. */
+  barks: string[];
 };
 
 export const SUN_WITNESSES: SunWitness[] = [
