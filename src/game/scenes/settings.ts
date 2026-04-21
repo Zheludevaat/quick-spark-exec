@@ -119,8 +119,12 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
       subtitle.setText("DISPLAY & TOUCH");
       const audio = getAudio();
       const volPct = Math.round(audio.volume * 100);
+      const isTouchMode = c.interfaceMode === "touch_landscape";
       const rows: { label: string; value: string }[] = [
-        { label: "TOUCH LAYOUT", value: c.touchLayout.toUpperCase() },
+        {
+          label: "INTERFACE MODE",
+          value: isTouchMode ? "TOUCH" : "DESKTOP",
+        },
         { label: "BUTTON SIZE", value: c.buttonSize.toUpperCase() },
         { label: "LEFT-HANDED", value: c.leftHanded ? "ON" : "OFF" },
         { label: "HAPTICS", value: c.haptics ? "ON" : "OFF" },
@@ -130,12 +134,17 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         },
         { label: "VOLUME", value: audio.muted ? "MUTED" : `${volPct}%` },
         { label: "AUDIO", value: audio.muted ? "OFF" : "ON" },
+        // Legacy in-canvas touch overlay — only relevant when not in the
+        // shell-driven touch_landscape mode.
+        ...(isTouchMode
+          ? []
+          : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
         { label: "REBIND KEYS →", value: "" },
         { label: "RESET DEFAULTS", value: "" },
       ];
       cursor = Math.max(0, Math.min(cursor, rows.length - 1));
       rows.forEach((r, idx) => {
-        const y = 38 + idx * 10;
+        const y = 38 + idx * 9;
         const isCur = idx === cursor;
         const arrow = new GBCText(scene, 8, y, isCur ? "▶" : " ", {
           color: COLOR.textAccent,
@@ -154,6 +163,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         });
         bodyObjs.push(arrow.obj, lbl.obj, val.obj);
       });
+      // Remember current rows for activate/adjust dispatch.
+      mainRowLabels = rows.map((r) => r.label);
       const hint = new GBCText(
         scene,
         8,
