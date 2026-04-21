@@ -131,7 +131,9 @@ export class SealedVesselScene extends Phaser.Scene {
   private toAct3() {
     const lines: { who: string; text: string }[] = [];
     if (this.save.sorynReleased) {
-...
+      lines.push({ who: "SORYN", text: "I will not follow further. Walk on." });
+    } else {
+      lines.push({ who: "SORYN", text: "The vessel is sealed. The Moon releases you." });
     }
     runDialog(this, lines, () => {
       // METAXY: Moon sphere complete. Release the Moon garment and route
