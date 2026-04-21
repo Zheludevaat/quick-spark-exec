@@ -12,6 +12,7 @@ import {
 } from "./gbcArt";
 import { getAudio } from "./audio";
 import { onActionDown, onDirection } from "./controls";
+import { runDialog } from "./scenes/hud";
 
 export type InquiryChoice = "observe" | "ask" | "confess" | "silent";
 
@@ -27,16 +28,15 @@ export type InquiryOption = {
 const PAD = 6;
 
 /**
- * A small inquiry list. Renders inside a dynamically-sized dialog box so the
- * prompt and option labels never overlap, regardless of length.
+ * Centralized inquiry presenter.
  *
- * Layout discipline:
- *  - speaker name: single-line, "..." trim
- *  - prompt body: wraps; box height computed from wrapped line count
- *  - option labels: single-line ONLY (rows are fixed at GBC_LINE_H)
- *  - if ANY option label is trimmed, a wrapped readout band is reserved at
- *    the bottom of the box and shows the FULL text of the currently-selected
- *    option. Compact rows + readable selection — no hidden meaning.
+ * Information architecture:
+ *  - Long framing prompts are shown FIRST as a normal dialog (runDialog).
+ *  - The actual choice UI is then a compact, lower-third menu.
+ *  - The picked option's reply is shown in a compact reply box.
+ *
+ * Threshold: if the wrapped prompt exceeds ~2 lines, we pre-dialog it.
+ * This keeps short prompts inline and keeps long ones from bloating the menu.
  */
 export function runInquiry(
   scene: Phaser.Scene,
@@ -44,48 +44,71 @@ export function runInquiry(
   options: InquiryOption[],
   onDone: (picked: InquiryOption) => void,
 ) {
+  const innerW = GBC_W - 8 - PAD * 2;
+  const promptH = textHeightPx(prompt.text.toUpperCase(), innerW);
+  const usePreambleDialog = promptH > GBC_LINE_H * 2 - 2;
+
+  if (usePreambleDialog) {
+    runDialog(scene, [{ who: prompt.who, text: prompt.text }], () => {
+      openCompactInquiry(scene, prompt, options, onDone, true);
+    });
+    return;
+  }
+
+  openCompactInquiry(scene, prompt, options, onDone, false);
+}
+
+function openCompactInquiry(
+  scene: Phaser.Scene,
+  prompt: { who: string; text: string },
+  options: InquiryOption[],
+  onDone: (picked: InquiryOption) => void,
+  cameFromPreamble: boolean,
+) {
   const boxW = GBC_W - 8;
   const innerW = boxW - PAD * 2;
-  const promptText = prompt.text.toUpperCase();
-  const promptH = textHeightPx(promptText, innerW);
+  const boxX = 4;
 
-  // Per-option compact + full state. Use the same width we render the row at.
   const optionRowW = innerW - 8;
   const optionStates = options.map((o) => fitSingleLineState(o.label, optionRowW));
   const needsOptionReadout = optionStates.some((o) => o.trimmed);
-
-  // Readout uses the full inner width so it can wrap further than the row.
   const optionReadoutW = innerW;
   const optionReadoutH = needsOptionReadout
     ? Math.max(...optionStates.map((o) => textHeightPx(o.full, optionReadoutW)))
     : 0;
 
+  // Compact header: short topic only. Don't repeat the full prompt.
+  const compactHeader = cameFromPreamble
+    ? "CHOOSE ONE"
+    : fitSingleLineText(prompt.text, innerW);
+
+  const headerH = GBC_LINE_H;
   const rowsH = options.length * GBC_LINE_H;
   const readoutBandH = needsOptionReadout ? GBC_LINE_H + optionReadoutH : 0;
 
-  // who(1 line) + prompt(promptH) + spacer(1 line) + rows + [spacer + readout] + bottom pad(1 line)
-  const totalPx = GBC_LINE_H + promptH + GBC_LINE_H + rowsH + readoutBandH + GBC_LINE_H;
-  const boxH = Math.min(GBC_H - 14, totalPx + PAD * 2);
-  const boxX = 4;
+  const totalPx = GBC_LINE_H + headerH + rowsH + readoutBandH + GBC_LINE_H;
+  const boxH = Math.min(58, Math.max(34, totalPx + PAD));
   const boxY = GBC_H - boxH - 2;
 
   const box = drawGBCBox(scene, boxX, boxY, boxW, boxH, 250);
+
   const who = new GBCText(scene, boxX + PAD, boxY + 4, fitSingleLineText(prompt.who, innerW), {
     color: COLOR.textAccent,
     depth: 251,
     scrollFactor: 0,
   });
-  const text = new GBCText(scene, boxX + PAD, boxY + 4 + GBC_LINE_H, promptText, {
-    color: COLOR.textLight,
+
+  const header = new GBCText(scene, boxX + PAD, boxY + 4 + GBC_LINE_H, compactHeader, {
+    color: COLOR.textDim,
     depth: 251,
     scrollFactor: 0,
     maxWidthPx: innerW,
   });
 
-  // Options: one per line, marker on the left. Labels are forced to single-line.
-  const optionsTop = boxY + 4 + GBC_LINE_H + promptH + GBC_LINE_H;
+  const optionsTop = boxY + 4 + GBC_LINE_H + GBC_LINE_H;
   let cursor = 0;
   const opts: GBCText[] = [];
+
   options.forEach((o, i) => {
     const y = optionsTop + i * GBC_LINE_H;
     const t = new GBCText(scene, boxX + PAD + 8, y, optionStates[i].fitted, {
@@ -102,13 +125,13 @@ export function runInquiry(
     opts.push(t);
     void o;
   });
+
   const mark = new GBCText(scene, boxX + PAD, optionsTop, "▶", {
     color: COLOR.textGold,
     depth: 251,
     scrollFactor: 0,
   });
 
-  // Selected-option full-text readout — only if any option was trimmed.
   const optionReadoutY = optionsTop + rowsH + GBC_LINE_H;
   const optionReadout = needsOptionReadout
     ? new GBCText(scene, boxX + PAD, optionReadoutY, optionStates[0].full, {
@@ -135,64 +158,10 @@ export function runInquiry(
   let unbindAct: (() => void) | null = null;
   let unbindDir: (() => void) | null = null;
 
-  const pick = () => {
-    cleanup();
-    const picked = options[cursor];
-    getAudio().sfx("confirm");
-
-    // Reply: dynamically sized like the prompt.
-    const replyText = picked.reply.toUpperCase();
-    const replyH = textHeightPx(replyText, innerW);
-    const rTotalPx = GBC_LINE_H + replyH + GBC_LINE_H;
-    const rBoxH = Math.min(GBC_H - 14, rTotalPx + PAD * 2);
-    const rBoxY = GBC_H - rBoxH - 2;
-    const replyBox = drawGBCBox(scene, boxX, rBoxY, boxW, rBoxH, 250);
-    const replyWho = new GBCText(
-      scene,
-      boxX + PAD,
-      rBoxY + 4,
-      fitSingleLineText(prompt.who, innerW),
-      {
-        color: COLOR.textAccent,
-        depth: 251,
-        scrollFactor: 0,
-      },
-    );
-    const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + GBC_LINE_H, replyText, {
-      color: COLOR.textLight,
-      depth: 251,
-      scrollFactor: 0,
-      maxWidthPx: innerW,
-    });
-    const hint = new GBCText(scene, boxX + boxW - 10, rBoxY + rBoxH - 8, "▼", {
-      color: COLOR.textAccent,
-      depth: 251,
-      scrollFactor: 0,
-    });
-    scene.tweens.add({ targets: hint.obj, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
-    let dismissed = false;
-    let unbindReplyAct: (() => void) | null = null;
-    const dismiss = () => {
-      if (dismissed) return;
-      dismissed = true;
-      replyBox.destroy();
-      replyWho.destroy();
-      replyBody.destroy();
-      hint.destroy();
-      unbindReplyAct?.();
-      scene.events.off("vinput-action", dismiss);
-      scene.input.off("pointerdown", dismiss);
-      onDone(picked);
-    };
-    unbindReplyAct = onActionDown(scene, "action", dismiss);
-    scene.events.on("vinput-action", dismiss);
-    scene.time.delayedCall(150, () => scene.input.on("pointerdown", dismiss));
-  };
-
   const cleanup = () => {
     box.destroy();
     who.destroy();
-    text.destroy();
+    header.destroy();
     mark.destroy();
     opts.forEach((t) => t.destroy());
     optionReadout?.destroy();
@@ -202,12 +171,89 @@ export function runInquiry(
     scene.events.off("vinput-down", vmove);
   };
 
+  const pick = () => {
+    cleanup();
+    const picked = options[cursor];
+    getAudio().sfx("confirm");
+    runInquiryReply(scene, prompt.who, picked, onDone);
+  };
+
   const vmove = (dir: string) => {
     if (dir === "up" || dir === "left") move(-1);
     if (dir === "down" || dir === "right") move(1);
   };
+
   unbindAct = onActionDown(scene, "action", pick);
   unbindDir = onDirection(scene, (d) => vmove(d));
   scene.events.on("vinput-action", pick);
   scene.events.on("vinput-down", vmove);
+}
+
+function runInquiryReply(
+  scene: Phaser.Scene,
+  whoText: string,
+  picked: InquiryOption,
+  onDone: (picked: InquiryOption) => void,
+) {
+  const boxW = GBC_W - 8;
+  const innerW = boxW - PAD * 2;
+  const boxX = 4;
+
+  const replyText = picked.reply.toUpperCase();
+  const replyH = textHeightPx(replyText, innerW);
+  const rTotalPx = GBC_LINE_H + replyH + GBC_LINE_H;
+  const rBoxH = Math.min(52, Math.max(28, rTotalPx + PAD * 2));
+  const rBoxY = GBC_H - rBoxH - 2;
+
+  const replyBox = drawGBCBox(scene, boxX, rBoxY, boxW, rBoxH, 250);
+  const replyWho = new GBCText(
+    scene,
+    boxX + PAD,
+    rBoxY + 4,
+    fitSingleLineText(whoText, innerW),
+    {
+      color: COLOR.textAccent,
+      depth: 251,
+      scrollFactor: 0,
+    },
+  );
+  const replyBody = new GBCText(scene, boxX + PAD, rBoxY + 4 + GBC_LINE_H, replyText, {
+    color: COLOR.textLight,
+    depth: 251,
+    scrollFactor: 0,
+    maxWidthPx: innerW,
+  });
+  const hint = new GBCText(scene, boxX + boxW - 10, rBoxY + rBoxH - 8, "▼", {
+    color: COLOR.textAccent,
+    depth: 251,
+    scrollFactor: 0,
+  });
+
+  scene.tweens.add({
+    targets: hint.obj,
+    alpha: 0.25,
+    duration: 500,
+    yoyo: true,
+    repeat: -1,
+  });
+
+  let dismissed = false;
+  let unbindReplyAct: (() => void) | null = null;
+
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    replyBox.destroy();
+    replyWho.destroy();
+    replyBody.destroy();
+    hint.destroy();
+    unbindReplyAct?.();
+    scene.events.off("vinput-action", dismiss);
+    scene.input.off("pointerdown", dismiss);
+    onDone(picked);
+  };
+
+  unbindReplyAct = onActionDown(scene, "action", dismiss);
+  scene.events.on("vinput-action", dismiss);
+  scene.time.delayedCall(150, () => scene.input.on("pointerdown", dismiss));
 }
