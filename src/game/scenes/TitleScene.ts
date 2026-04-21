@@ -4,6 +4,7 @@ import { loadSave, newSave, clearSave } from "../save";
 import type { SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
+import { openSettings } from "./settings";
 
 /**
  * Title screen — intentionally minimal.
@@ -125,13 +126,24 @@ export class TitleScene extends Phaser.Scene {
     const options: { label: string; action: "launch" | "erase" | "settings" }[] = save
       ? [
           { label: primaryLabel, action: "launch" },
+          { label: "SETTINGS", action: "settings" },
           { label: "ERASE SAVE", action: "erase" },
-          { label: "SETTINGS (DEV)", action: "settings" },
         ]
       : [
           { label: primaryLabel, action: "launch" },
-          { label: "SETTINGS (DEV)", action: "settings" },
+          { label: "SETTINGS", action: "settings" },
         ];
+
+    // Gate to suppress title-menu input while the settings overlay is open.
+    let settingsOpen = false;
+    const openTitleSettings = () => {
+      if (settingsOpen) return;
+      settingsOpen = true;
+      getAudio().sfx("confirm");
+      openSettings(this, () => {
+        settingsOpen = false;
+      });
+    };
 
     // Larger menu box that fits 2-3 options comfortably.
     const lineH = 11;
@@ -168,7 +180,10 @@ export class TitleScene extends Phaser.Scene {
     });
     devBtn.obj
       .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.openSkipMenu());
+      .on("pointerdown", () => {
+        if (settingsOpen) return;
+        this.openSkipMenu();
+      });
 
     // ---- Boot audio on first user gesture ----
     const audio = getAudio();
@@ -283,12 +298,14 @@ export class TitleScene extends Phaser.Scene {
       });
     };
     const confirm = () => {
+      if (settingsOpen) return;
       const opt = options[cursor];
       if (opt.action === "launch") launch();
       else if (opt.action === "erase") erase();
-      else this.openSkipMenu();
+      else if (opt.action === "settings") openTitleSettings();
     };
     const move = (d: number) => {
+      if (settingsOpen) return;
       if (options.length < 2) return;
       cursor = (cursor + d + options.length) % options.length;
       audio.sfx("cursor");
@@ -298,10 +315,12 @@ export class TitleScene extends Phaser.Scene {
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
+        if (settingsOpen) return;
         cursor = i;
         refresh();
       });
       t.obj.on("pointerdown", () => {
+        if (settingsOpen) return;
         cursor = i;
         refresh();
         confirm();
@@ -309,13 +328,16 @@ export class TitleScene extends Phaser.Scene {
     });
 
     onDirection(this, (d) => {
+      if (settingsOpen) return;
       if (d === "up") move(-1);
       else if (d === "down") move(1);
     });
     onActionDown(this, "action", confirm);
     this.input.keyboard?.on("keydown-BACKSPACE", () => {
+      if (settingsOpen) return;
       if (save) {
-        cursor = 1;
+        cursor = options.findIndex((o) => o.action === "erase");
+        if (cursor < 0) cursor = 0;
         refresh();
         erase();
       }
