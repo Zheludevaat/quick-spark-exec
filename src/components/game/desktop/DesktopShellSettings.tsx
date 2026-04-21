@@ -3,14 +3,10 @@
  *
  * Owns the rendering of the settings modal on the desktop shell. Reads
  * and mutates the same controls/audio singletons the canvas settings
- * scene used, so user prefs persist identically. Closes by dispatching
- * `hermetic-settings-close` so attachHUD's listener can release the
- * scene-side overlay flag.
+ * scene uses, so prefs persist identically.
  *
- * Out of scope (kept on the canvas settings scene for now): keybinding
- * rebind UI, "return to title" action. The shell exposes the high-value
- * toggles; a player who needs to rebind can still open the canvas
- * settings via a future "advanced" affordance.
+ * Also supports RETURN TO TITLE through the active scene's guarded
+ * shell action, keeping desktop parity with the canvas settings menu.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -29,6 +25,7 @@ import {
   type InterfaceMode,
 } from "@/game/controls";
 import { getAudio } from "@/game/audio";
+import { subscribeGameUi, getGameUiSnapshot } from "@/game/gameUiBridge";
 import {
   ShellPanel,
   ShellPanelTitle,
@@ -39,6 +36,7 @@ type Row = {
   label: string;
   value: string;
   detail: string;
+  danger?: boolean;
   onLeft?: () => void;
   onRight?: () => void;
   onActivate?: () => void;
@@ -57,14 +55,25 @@ function close() {
   window.dispatchEvent(new Event("hermetic-settings-close"));
 }
 
+function returnToTitle() {
+  const fn = (window as unknown as Record<string, unknown>)
+    .__hermeticReturnToTitle as (() => void) | undefined;
+  fn?.();
+}
+
 export function DesktopShellSettings() {
   const [, force] = useState(0);
   const [audioTick, setAudioTick] = useState(0);
   const [cursor, setCursor] = useState(0);
+  const [confirmQuit, setConfirmQuit] = useState(false);
+  const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
 
   // Re-render on controls and audio mutations.
   useEffect(() => {
     return subscribeControls(() => force((n) => n + 1));
+  }, []);
+  useEffect(() => {
+    return subscribeGameUi((s) => setScene(s.scene));
   }, []);
   useEffect(() => {
     const id = window.setInterval(() => setAudioTick((n) => n + 1), 250);
@@ -74,6 +83,7 @@ export function DesktopShellSettings() {
 
   const c = getControls();
   const audio = getAudio();
+  const canReturnToTitle = scene.key !== "Title" && scene.key !== "";
 
   const rows: Row[] = useMemo(() => {
     const cycleInterface = (dir: 1 | -1) => {
@@ -179,6 +189,24 @@ export function DesktopShellSettings() {
       );
     }
 
+    if (canReturnToTitle) {
+      list.push({
+        label: confirmQuit ? "CONFIRM RETURN TO TITLE" : "RETURN TO TITLE",
+        value: "›",
+        danger: true,
+        detail: confirmQuit
+          ? "Activate again to leave the current run and return to the title screen."
+          : "Leave the current run and return to the title screen.",
+        onActivate: () => {
+          if (!confirmQuit) {
+            setConfirmQuit(true);
+            return;
+          }
+          returnToTitle();
+        },
+      });
+    }
+
     list.push({
       label: "RESET CONTROLS",
       value: "›",
@@ -187,12 +215,20 @@ export function DesktopShellSettings() {
     });
 
     return list;
-  }, [c, audio]);
+  }, [c, audio, canReturnToTitle, confirmQuit]);
 
   // Clamp cursor when row count shrinks.
   useEffect(() => {
     setCursor((cur) => Math.min(cur, Math.max(0, rows.length - 1)));
   }, [rows.length]);
+
+  // Reset confirm-quit state if cursor moves away from the row.
+  useEffect(() => {
+    const active = rows[cursor];
+    if (!active || !active.label.includes("RETURN TO TITLE")) {
+      if (confirmQuit) setConfirmQuit(false);
+    }
+  }, [cursor, rows, confirmQuit]);
 
   const move = useCallback(
     (dir: 1 | -1) => {
@@ -293,6 +329,26 @@ export function DesktopShellSettings() {
           <ul className="space-y-1">
             {rows.map((r, i) => {
               const selected = i === cursor;
+              const bg = selected
+                ? r.danger
+                  ? "rgba(216,74,74,0.14)"
+                  : "rgba(232,200,144,0.12)"
+                : "rgba(255,255,255,0.02)";
+              const border = selected
+                ? r.danger
+                  ? "1px solid rgba(216,74,74,0.55)"
+                  : "1px solid rgba(232,200,144,0.45)"
+                : "1px solid rgba(168,200,232,0.18)";
+              const color = selected
+                ? r.danger
+                  ? "#f0a8a8"
+                  : "#e8c890"
+                : "#eef3ff";
+              const valueColor = selected
+                ? r.danger
+                  ? "#f0a8a8"
+                  : "#e8c890"
+                : "#a8c8e8";
               return (
                 <li key={r.label}>
                   <button
@@ -305,19 +361,15 @@ export function DesktopShellSettings() {
                     }}
                     className="w-full flex items-center justify-between px-3 py-2 rounded text-left"
                     style={{
-                      background: selected
-                        ? "rgba(232,200,144,0.12)"
-                        : "rgba(255,255,255,0.02)",
-                      border: selected
-                        ? "1px solid rgba(232,200,144,0.45)"
-                        : "1px solid rgba(168,200,232,0.18)",
-                      color: selected ? "#e8c890" : "#eef3ff",
+                      background: bg,
+                      border,
+                      color,
                     }}
                   >
                     <span>{r.label}</span>
                     <span
                       style={{
-                        color: selected ? "#e8c890" : "#a8c8e8",
+                        color: valueColor,
                         opacity: 0.9,
                       }}
                     >
