@@ -501,6 +501,85 @@ export class CuratedSelfScene extends Phaser.Scene {
   // ============================================================================
   // PHASE 2 — FRACTURED: OBSERVE the brightest; boss face cycles through sat-with shades
   // ============================================================================
+  private applyBossPhaseVisual(p: Phase, immediate = false) {
+    const [halo, core, armorL, armorR] = this.bossParts;
+    core.setTint(PHASE_HUE[p]);
+
+    const resetBase = () => {
+      halo.setPosition(0, -10);
+      halo.setScale(1);
+      halo.setAlpha(0.5);
+      core.setPosition(0, 0);
+      core.setScale(1);
+      core.setAlpha(1);
+      core.setAngle(0);
+      armorL.setPosition(-8, 2);
+      armorL.setScale(1);
+      armorL.setAlpha(1);
+      armorL.setAngle(0);
+      armorR.setPosition(8, 2);
+      armorR.setScale(1);
+      armorR.setAlpha(1);
+      armorR.setAngle(0);
+    };
+
+    if (immediate) {
+      resetBase();
+      if (p === "fractured") {
+        armorL.setPosition(-18, 2);
+        armorL.setAngle(-15);
+        armorR.setPosition(18, 2);
+        armorR.setAngle(15);
+        halo.setScale(1.5);
+        halo.setAlpha(0.8);
+      } else if (p === "exposed" || p === "released") {
+        armorL.setPosition(-18, 150);
+        armorL.setAngle(-15);
+        armorL.setAlpha(0);
+        armorR.setPosition(18, 150);
+        armorR.setAngle(15);
+        armorR.setAlpha(0);
+        core.setScale(0.8);
+        halo.setScale(1.5);
+        halo.setAlpha(0.8);
+      }
+      return;
+    }
+
+    if (p === "fractured") {
+      this.tweens.add({ targets: armorL, x: -18, angle: -15, duration: 800, ease: "Back.out" });
+      this.tweens.add({ targets: armorR, x: 18, angle: 15, duration: 800, ease: "Back.out" });
+      this.tweens.add({
+        targets: halo,
+        scale: 1.5,
+        alpha: 0.8,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+      });
+    } else if (p === "exposed" || p === "released") {
+      this.tweens.add({
+        targets: [armorL, armorR],
+        y: 150,
+        rotation: 2,
+        alpha: 0,
+        duration: 1200,
+        ease: "Cubic.in",
+      });
+      this.tweens.add({ targets: core, scale: 0.8, duration: 800 });
+      this.tweens.add({
+        targets: halo,
+        scale: 1.5,
+        alpha: 0.8,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+      });
+    } else {
+      resetBase();
+    }
+  }
+
   private enterPhase(p: Phase) {
     this.phase = p;
     this.stateText.setText(PHASE_LABEL[p]);
