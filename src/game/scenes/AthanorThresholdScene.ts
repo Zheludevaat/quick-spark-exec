@@ -29,6 +29,18 @@ import {
   VESSEL_PROFILE,
   ATHANOR_DOOR_PROFILES,
 } from "../encounters/profiles/athanor";
+import {
+  ATHANOR_NODE_INSPECTABLES,
+  ATHANOR_VESSEL_LINES,
+  ATHANOR_VESSEL_INSPECT_FLAG,
+  type AthanorHostScene,
+} from "./athanor/AthanorExpandedContent";
+import {
+  nearestInteraction,
+  interactionPrompt,
+  interactionEnabled,
+  type ActInteraction,
+} from "../exploration";
 
 type Door = {
   key: "nigredo" | "albedo" | "citrinitas" | "rubedo";

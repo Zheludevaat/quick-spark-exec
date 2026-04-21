@@ -32,6 +32,16 @@ import {
 } from "../encounters/EncounterPresentation";
 import { SORYN_THRESHOLD_PROFILE, SORYN_DAIMON_PROFILE } from "../encounters/profiles/soryn";
 import { GUARDIAN_PROFILES } from "../encounters/profiles/guardians";
+import {
+  RECEPTION_OPTIONAL_INTERACTIONS,
+  type ReceptionHostScene,
+} from "./reception/ReceptionExpandedContent";
+import {
+  nearestInteraction,
+  interactionPrompt,
+  interactionEnabled,
+  type ActInteraction,
+} from "../exploration";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
