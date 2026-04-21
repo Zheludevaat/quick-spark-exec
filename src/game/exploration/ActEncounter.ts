@@ -30,16 +30,16 @@ export type ActEncounter<TScene = unknown> = {
   onRevisit?: (scene: TScene, save: SaveSlot) => void;
 };
 
-export function encounterStarted(
+export function encounterStarted<TScene>(
   flags: Record<string, boolean>,
-  encounter: ActEncounter,
+  encounter: ActEncounter<TScene>,
 ): boolean {
   return !!encounter.progressionFlags?.some((f) => !!flags[f]);
 }
 
-export function encounterComplete(
+export function encounterComplete<TScene>(
   flags: Record<string, boolean>,
-  encounter: ActEncounter,
+  encounter: ActEncounter<TScene>,
 ): boolean {
   if (!encounter.completionFlags || encounter.completionFlags.length === 0) {
     return false;

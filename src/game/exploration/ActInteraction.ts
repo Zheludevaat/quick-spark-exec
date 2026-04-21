@@ -51,9 +51,9 @@ export type ActInteraction<TScene = unknown> = {
   onInteract: (ctx: ActInteractionContext<TScene>) => void;
 };
 
-export function interactionVisible(
+export function interactionVisible<TScene>(
   flags: Record<string, boolean>,
-  it: ActInteraction,
+  it: ActInteraction<TScene>,
 ): boolean {
   if (it.hiddenUntilFlags && !it.hiddenUntilFlags.every((f) => !!flags[f])) {
     return false;
@@ -61,9 +61,9 @@ export function interactionVisible(
   return true;
 }
 
-export function interactionEnabled(
+export function interactionEnabled<TScene>(
   flags: Record<string, boolean>,
-  it: ActInteraction,
+  it: ActInteraction<TScene>,
 ): boolean {
   if (!interactionVisible(flags, it)) return false;
   if (it.requiredFlags && !it.requiredFlags.every((f) => !!flags[f])) {
@@ -72,9 +72,9 @@ export function interactionEnabled(
   return true;
 }
 
-export function interactionPrompt(
+export function interactionPrompt<TScene>(
   flags: Record<string, boolean>,
-  it: ActInteraction,
+  it: ActInteraction<TScene>,
 ): string {
   if (it.onceFlag && flags[it.onceFlag] && it.repeatPrompt) return it.repeatPrompt;
   return it.prompt;
