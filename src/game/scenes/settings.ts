@@ -144,6 +144,8 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
   let rebindAction: GameAction | null = null;
   let rebindSlot: "primary" | "secondary" = "primary";
 
+  const canReturnToTitle = scene.scene.key !== "Title";
+
   const dim = scene.add
     .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.86)
     .setOrigin(0, 0)
@@ -238,13 +240,19 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
         ? []
         : [{ label: "TOUCH OVERLAY (LEGACY)", value: c.touchLayout.toUpperCase() }]),
       { label: "KEY BINDINGS", value: "" },
+      ...(canReturnToTitle ? [{ label: "RETURN TO TITLE", value: "" }] : []),
       { label: "RESET DEFAULTS", value: "" },
     ];
   };
 
   /** Format a main row for the detail strip. */
   const mainDetailText = (r: Row): string => {
-    if (!r.value) return r.label;
+    if (!r.value) {
+      if (r.label === "KEY BINDINGS") return "EDIT CONTROL BINDINGS";
+      if (r.label === "RETURN TO TITLE") return "LEAVE THE CURRENT RUN AND GO TO TITLE";
+      if (r.label === "RESET DEFAULTS") return "RESTORE DEFAULT CONTROL AND UI SETTINGS";
+      return r.label;
+    }
     return `${r.label} : ${r.value}`;
   };
 
@@ -422,12 +430,22 @@ export function openSettings(scene: Phaser.Scene, onClose?: () => void) {
     render();
   };
 
+  const returnToTitle = () => {
+    getAudio().sfx("confirm");
+    cleanup();
+    getAudio().music.stop();
+    scene.scene.start("Title");
+  };
+
   /** Activate (A) on the focused main-page row by label. */
   const activateMain = () => {
     const label = mainRowLabels[cursor];
     if (label === "KEY BINDINGS") {
       page = "keys";
       cursor = 0;
+    } else if (label === "RETURN TO TITLE") {
+      returnToTitle();
+      return;
     } else if (label === "RESET DEFAULTS") {
       resetControls();
     } else {
