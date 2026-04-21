@@ -59,9 +59,16 @@ export type WeddingType = "strong" | "gentle" | "fractured";
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
   0: "PRELUDE - THE LAST DAY",
-  1: "ACT I - THE IMAGINAL",
-  2: "ACT II - THE GREAT WORK",
-  3: "ACT III - THE RETURN",
+  1: "ACT I - RECEPTION",
+  2: "ACT II - THE PLATEAU",
+  3: "ACT III - MOON SPHERE",
+  4: "ACT IV - MERCURY SPHERE",
+  5: "ACT V - VENUS SPHERE",
+  6: "ACT VI - SUN SPHERE",
+  7: "ACT VII - MARS SPHERE",
+  8: "ACT VIII - JUPITER SPHERE",
+  9: "ACT IX - SATURN SPHERE",
+  10: "ACT X - THE RETURN",
 };
 
 /** Per-scene short label for the Continue row. */
