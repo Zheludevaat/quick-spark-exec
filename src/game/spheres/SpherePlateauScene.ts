@@ -139,6 +139,7 @@ export class SpherePlateauScene extends Phaser.Scene {
       depth: 12,
     });
 
+    this.cursor = this.defaultCursorIndex();
     this.refreshCursor();
 
     onDirection(this, (d) => {
