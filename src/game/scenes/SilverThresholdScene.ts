@@ -12,6 +12,7 @@ import {
 } from "../gbcArt";
 import { writeSave } from "../save";
 import { ACT_BY_SCENE, type SaveSlot } from "../types";
+import { grantAlchemyHint } from "../canon/alchemySecret";
 import {
   attachHUD,
   InputState,
@@ -1336,9 +1337,19 @@ export class SilverThresholdScene extends Phaser.Scene {
     ) {
       this.dialogActive = true;
       this.save.flags.threshold_basin_seen = true;
+      const annexUnlocked = grantAlchemyHint(this.save, "reception_basin");
       writeSave(this.save);
       getAudio().sfx("confirm");
-      runDialog(this, BASIN_LINES, () => {
+      const lines = annexUnlocked
+        ? [
+            ...BASIN_LINES,
+            { who: "Basin", text: "THE SILVER WATER OPENS TOWARD A HIDDEN WORK." },
+          ]
+        : [
+            ...BASIN_LINES,
+            { who: "Basin", text: "FOR A MOMENT THE WATER SHOWS A CHAMBER BENEATH THE PATH." },
+          ];
+      runDialog(this, lines, () => {
         this.dialogActive = false;
       });
       return;
