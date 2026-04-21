@@ -129,6 +129,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private attuneRing: ReturnType<typeof makeAttuneRing> | null = null;
   private lastInputDir: { x: number; y: number } = { x: 0, y: 0 };
   private prevPlayerPos = { x: 0, y: 0 };
+  private kypriaPresentation?: EncounterPresentationHandle;
 
   constructor() {
     super("VenusPlateau");
