@@ -15,7 +15,8 @@
 import * as Phaser from "phaser";
 import { GBC_W, GBC_H, COLOR, GBCText, spawnMotes } from "../gbcArt";
 import type { SaveSlot } from "../types";
-import { attachHUD, runDialog } from "./hud";
+import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "./hud";
+import { onActionDown } from "../controls";
 import { writeSave } from "../save";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { returnToThreshold } from "../athanor/operationScene";
@@ -45,6 +46,13 @@ export class AlbedoScene extends Phaser.Scene {
   private save!: SaveSlot;
   private vesselHud!: VesselHud;
   private murky = false;
+  // --- INTERACTIVE PROPERTIES ---
+  private rowan!: Phaser.GameObjects.Container;
+  private rowanShadow!: Phaser.GameObjects.Ellipse;
+  private inputState!: InputState;
+  private isBusy = false;
+  private isDone = false;
+  private hintText!: GBCText;
 
   constructor() {
     super("Albedo");
@@ -125,8 +133,75 @@ export class AlbedoScene extends Phaser.Scene {
     // --- END ART UPGRADE ---
 
     this.murky = this.save.shardsConsumed.length === 0;
-    const intro = this.murky ? OPENING_MURKY : OPENING;
-    runDialog(this, intro, () => this.runBath());
+
+    // --- INTERACTIVE UPGRADE ---
+    this.rowanShadow = this.add.ellipse(GBC_W / 2, GBC_H - 24, 10, 3, 0x000000, 0.4).setDepth(9);
+    this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 26, "soul").setDepth(10);
+    this.inputState = new InputState(this);
+
+    this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
+    this.hintText = new GBCText(this, 4, GBC_H - 9, "WALK", { color: COLOR.textDim, depth: 200 });
+
+    this.isBusy = true;
+    this.time.delayedCall(800, () => {
+      const intro = this.murky ? OPENING_MURKY : OPENING;
+      runDialog(this, intro, () => {
+        this.isBusy = false;
+      });
+    });
+
+    onActionDown(this, "action", () => this.tryInteract());
+    this.events.on("vinput-action", () => this.tryInteract());
+  }
+
+  update(_time: number, delta: number) {
+    if (this.isBusy) return;
+    const speed = 0.03 * delta;
+    const i = this.inputState.poll();
+    let dx = 0,
+      dy = 0;
+    if (i.left) dx -= speed;
+    if (i.right) dx += speed;
+    if (i.up) dy -= speed;
+    if (i.down) dy += speed;
+
+    this.rowan.x += dx;
+    this.rowan.y += dy;
+    this.rowan.x = Phaser.Math.Clamp(this.rowan.x, 20, GBC_W - 20);
+    this.rowan.y = Phaser.Math.Clamp(this.rowan.y, GBC_H / 2 + 10, GBC_H - 10);
+
+    animateRowan(this.rowan, dx, dy);
+    this.rowanShadow.setPosition(this.rowan.x, this.rowan.y + 6);
+
+    if (this.isDone) {
+      this.hintText.setText("THE BATH IS DONE. WALK SOUTH.");
+      this.hintText.setColor(COLOR.textDim);
+      if (this.rowan.y >= GBC_H - 12) {
+        this.isBusy = true;
+        returnToThreshold(this, this.save, "albedo");
+      }
+    } else {
+      if (
+        Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, GBC_W / 2, GBC_H / 2 + 10) < 26
+      ) {
+        this.hintText.setText("[A] STEP INTO THE WATER");
+        this.hintText.setColor(COLOR.textGold);
+      } else {
+        this.hintText.setText("WALK");
+        this.hintText.setColor(COLOR.textDim);
+      }
+    }
+  }
+
+  private tryInteract() {
+    if (this.isBusy || this.isDone) return;
+    if (Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, GBC_W / 2, GBC_H / 2 + 10) < 26) {
+      this.isBusy = true;
+      this.hintText.setText("");
+      const sprite = this.rowan.getData("sprite") as Phaser.GameObjects.Sprite | undefined;
+      sprite?.play("walk_up");
+      this.runBath();
+    }
   }
 
   /** Build beat schedule from soulChoices: one beat per resolved soul, max 8. */
