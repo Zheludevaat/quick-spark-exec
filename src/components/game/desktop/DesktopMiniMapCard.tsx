@@ -1,8 +1,8 @@
 /**
  * Desktop minimap card.
  *
- * Only renders when the scene explicitly allows a minimap.
- * No more dead black placeholder panel on title/front-end scenes.
+ * Hub scenes get a stronger "ascent map" treatment. Regular scenes still use
+ * the generic minimap card.
  */
 import { useEffect, useState } from "react";
 import {
@@ -26,6 +26,16 @@ const TITLE_FALLBACK_NODES: SceneNode[] = [
   { id: "saturn", label: "Saturn", x: 0.9, y: 0.52 },
 ];
 
+const METAXY_FALLBACK_NODES: SceneNode[] = [
+  { id: "moon", label: "Moon", x: 0.5, y: 0.92 },
+  { id: "mercury", label: "Mercury", x: 0.4, y: 0.78 },
+  { id: "venus", label: "Venus", x: 0.6, y: 0.64 },
+  { id: "sun", label: "Sun", x: 0.5, y: 0.5, active: true },
+  { id: "mars", label: "Mars", x: 0.38, y: 0.36 },
+  { id: "jupiter", label: "Jupiter", x: 0.62, y: 0.22 },
+  { id: "saturn", label: "Saturn", x: 0.5, y: 0.08 },
+];
+
 export function DesktopMiniMapCard() {
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
 
@@ -35,30 +45,37 @@ export function DesktopMiniMapCard() {
 
   if (!scene.showMiniMap) return null;
 
+  const isHub = scene.key === "MetaxyHub";
+
   const resolvedNodes =
     scene.nodes && scene.nodes.length > 0
       ? scene.nodes
-      : scene.key === "Title"
-        ? TITLE_FALLBACK_NODES
-        : null;
+      : isHub
+        ? METAXY_FALLBACK_NODES
+        : scene.key === "Title"
+          ? TITLE_FALLBACK_NODES
+          : null;
+
   const hasNodes = !!resolvedNodes;
+  const activeNode = resolvedNodes?.find((n) => n.active) ?? null;
   const marker = scene.marker;
 
   return (
     <ShellPanel compact>
       <div className="flex items-center justify-between">
-        <ShellPanelTitle>MAP</ShellPanelTitle>
-        <ShellPanelMeta>{scene.act > 0 ? `ACT ${scene.act}` : "—"}</ShellPanelMeta>
+        <ShellPanelTitle>{isHub ? "ASCENT" : "MAP"}</ShellPanelTitle>
+        <ShellPanelMeta>
+          {isHub ? "7 GATES" : scene.act > 0 ? `ACT ${scene.act}` : "—"}
+        </ShellPanelMeta>
       </div>
 
       <div className="text-[10px] font-mono mt-0.5" style={{ color: "#eef3ff" }}>
-        {scene.label || "—"}
+        {isHub ? "Metaxy Hub" : scene.label || "—"}
       </div>
-      {scene.zone && (
-        <div className="text-[9px] font-mono" style={{ color: "#a8c8e8" }}>
-          {scene.zone}
-        </div>
-      )}
+
+      <div className="text-[9px] font-mono" style={{ color: "#a8c8e8" }}>
+        {isHub ? scene.zone || "Portal Ascent" : scene.zone || "—"}
+      </div>
 
       <div
         className="relative mt-2 rounded"
@@ -118,7 +135,7 @@ export function DesktopMiniMapCard() {
             className="absolute inset-0 flex items-center justify-center text-[9px] font-mono uppercase tracking-wider"
             style={{ color: "rgba(168,200,232,0.5)" }}
           >
-            NO ROUTE CHARTED
+            {isHub ? "ASCENT DATA UNAVAILABLE" : "NO ROUTE CHARTED"}
           </div>
         )}
 
@@ -137,6 +154,15 @@ export function DesktopMiniMapCard() {
           />
         )}
       </div>
+
+      {activeNode && (
+        <div
+          className="text-[9px] font-mono mt-1 uppercase tracking-wider"
+          style={{ color: "#e8c890" }}
+        >
+          Selected · {activeNode.label}
+        </div>
+      )}
     </ShellPanel>
   );
 }

@@ -31,7 +31,7 @@ type Props = {
 };
 
 const DEFAULT_FOOTER_HINT =
-  "ARROWS / WASD MOVE · SPACE OR ENTER = A · B OR Q = WITNESS · L = LORE · P OR ESC = SETTINGS · STATS = PLAYER HUB";
+  "ARROWS / WASD MOVE · SPACE / ENTER = A · Q = WITNESS · L = LORE · P / ESC = SETTINGS · PLAYER HUB IN LEFT RAIL";
 
 export function DesktopGameShell({ children, booted, error }: Props) {
   const [playerHubOpen, setPlayerHubOpen] = useState(false);
