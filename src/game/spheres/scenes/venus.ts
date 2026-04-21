@@ -1086,9 +1086,21 @@ export class VenusTrialScene extends Phaser.Scene {
       depth: 30,
     });
 
-    this.time.delayedCall(280, () =>
-      runDialog(this, venusConfig.trialOpening, () => this.runPhase()),
+    // Kypria presides — sovereign mirror aura at the chamber center.
+    this.kypriaPresentation = createEncounterPresentation(
+      this,
+      GBC_W / 2,
+      GBC_H / 2,
+      KYPRIA_PROFILE,
     );
+
+    this.time.delayedCall(280, () => {
+      this.kypriaPresentation?.introOnce(
+        "encounter_seen_kypria_trial",
+        this.save,
+      );
+      runDialog(this, venusConfig.trialOpening, () => this.runPhase());
+    });
   }
 
   private runPhase() {
@@ -1099,6 +1111,14 @@ export class VenusTrialScene extends Phaser.Scene {
 
     const phase = VENUS_TRIAL_PHASES[this.state.phaseIndex];
     publishVenusTrialMinimap(phase.title);
+
+    // Per-phase Kypria intro sting — fires once per phase per save so each
+    // act of the trial feels like a separate sovereign movement.
+    this.kypriaPresentation?.introOnce(
+      `encounter_seen_kypria_phase_${phase.id}`,
+      this.save,
+    );
+    this.kypriaPresentation?.pulse();
 
     // Phase 1: ATTUNE-then-respond
     runDialog(
