@@ -301,6 +301,7 @@ export class CuratedSelfScene extends Phaser.Scene {
 
     this.bossParts = [halo, core, armorL, armorR];
     this.boss.add(this.bossParts);
+    this.applyBossPhaseVisual(this.phase, true);
 
     this.tweens.add({
       targets: this.boss,
@@ -504,35 +505,7 @@ export class CuratedSelfScene extends Phaser.Scene {
     this.phase = p;
     this.stateText.setText(PHASE_LABEL[p]);
     this.logText.setText(phaseTaunt(p, this.save));
-    // --- ART UPGRADE: Segmented Rig Controller ---
-    const [halo, core, armorL, armorR] = this.bossParts;
-    core.setTint(PHASE_HUE[p]);
-
-    if (p === "fractured") {
-      // Physically push the armor plates away from the core
-      this.tweens.add({ targets: armorL, x: -18, angle: -15, duration: 800, ease: "Back.out" });
-      this.tweens.add({ targets: armorR, x: 18, angle: 15, duration: 800, ease: "Back.out" });
-      this.tweens.add({
-        targets: halo,
-        scale: 1.5,
-        alpha: 0.8,
-        duration: 1000,
-        yoyo: true,
-        repeat: -1,
-      });
-    } else if (p === "exposed") {
-      // Armor falls off the screen entirely
-      this.tweens.add({
-        targets: [armorL, armorR],
-        y: 150,
-        rotation: 2,
-        alpha: 0,
-        duration: 1200,
-        ease: "Cubic.in",
-      });
-      this.tweens.add({ targets: core, scale: 0.8, duration: 800 });
-    }
-    // --- END ART UPGRADE ---
+    this.applyBossPhaseVisual(p, false);
 
     // --- ART UPGRADE: Cinematic Phase Shift ---
     // 1. Visceral hit-stop
