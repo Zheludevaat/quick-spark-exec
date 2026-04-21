@@ -492,6 +492,10 @@ export class CuratedSelfScene extends Phaser.Scene {
     if (p === "exposed") {
       this.tweens.add({ targets: this.boss, scaleY: 0.85, duration: 600 });
       this.cleanupFragments();
+      // Kill the FACE: cycler from phase 2 before writing PLAN: so they don't ghost.
+      this.faceTimer?.remove(false);
+      this.faceTimer = null;
+      this.shadeLabel.setText("");
       const plan = phase3Plan(this.save);
       this.shadeLabel.setText(`PLAN: ${plan.label}`);
     }
