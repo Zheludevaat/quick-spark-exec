@@ -108,8 +108,14 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
     }
   };
 
+  const desktopShellLocked = () => {
+    if (isTouchShell) return false;
+    return getGameUiSnapshot().overlay.modalLock;
+  };
+
   const openSettingsGuarded = () => {
     if (settingsOpen) return;
+    if (desktopShellLocked()) return;
     settingsOpen = true;
     scene.data.set("__settingsOpen", true);
     // Patch only our own flag — let the shell derive modalLock from
@@ -152,6 +158,7 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   };
   const openLoreGuarded = () => {
     if (loreOpen || settingsOpen) return;
+    if (desktopShellLocked()) return;
     const s: SaveSlot | null = loadSave();
     if (!s) return;
     loreOpen = true;
@@ -1174,16 +1181,6 @@ export function runDialog(
       typing,
       waitingForConfirm: !typing,
     });
-    // Promote dialogue to the shell modal stack on desktop. Touch shell
-    // already routes dialogue through the same tray, so this is a safe
-    // single-source-of-truth signal for both presentation modes.
-    setModalSnapshot({
-      surface: "dialog",
-      mode: "shell",
-      title: currentWho || null,
-      subtitle: null,
-      blocking: true,
-    });
   };
 
   const scheduleAuto = () => {
@@ -1248,11 +1245,6 @@ export function runDialog(
       cleanupKb();
       scene.events.off("vinput-action", next);
       clearDialogSnapshot();
-      // Release the modal stack only if it still belongs to dialog —
-      // otherwise an inquiry/settings/lore handoff already replaced it.
-      if (getGameUiSnapshot().modal.surface === "dialog") {
-        clearModalSnapshot();
-      }
       onDone?.();
       return;
     }

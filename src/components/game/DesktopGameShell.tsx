@@ -14,6 +14,7 @@ import {
   subscribeGameUi,
   getGameUiSnapshot,
   patchOverlaySnapshot,
+  clearModalSnapshot,
 } from "@/game/gameUiBridge";
 import { clearVirtualInput } from "@/game/virtualInput";
 import type { CodexTabKey } from "./desktop/desktopUiModel";
@@ -46,26 +47,38 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     fn?.();
   }, []);
 
-  const openCodex = useCallback(
-    (tab: CodexTabKey = "overview") => {
-      if (scene.key === "Title") return;
-      if (modal.mode === "shell" && modal.surface === "settings") return;
+  const openCodex = useCallback((tab: CodexTabKey = "overview") => {
+    const snap = getGameUiSnapshot();
 
-      setCodexTab(tab);
-      patchOverlaySnapshot({
-        playerHubOpen: true,
-        inventoryOpen: tab === "inventory",
-      });
-    },
-    [scene.key, modal.mode, modal.surface],
-  );
+    if (snap.scene.key === "Title") return;
+    if (codexTab) return;
+
+    // Do not open Codex on top of any shell-owned surface.
+    if (snap.modal.mode === "shell" && snap.modal.surface !== "none") return;
+
+    // Do not open Codex during active narrative interaction.
+    if (snap.dialog.open || snap.inquiry.open) return;
+
+    setCodexTab(tab);
+    patchOverlaySnapshot({
+      playerHubOpen: true,
+      inventoryOpen: tab === "inventory",
+    });
+  }, [codexTab]);
 
   const closeCodex = useCallback(() => {
     setCodexTab(null);
+
     patchOverlaySnapshot({
       playerHubOpen: false,
       inventoryOpen: false,
     });
+
+    // If any shell modal somehow got queued behind Codex, clear it now.
+    const modal = getGameUiSnapshot().modal;
+    if (modal.mode === "shell" && modal.surface !== "none") {
+      clearModalSnapshot();
+    }
   }, []);
 
   useEffect(() => {
