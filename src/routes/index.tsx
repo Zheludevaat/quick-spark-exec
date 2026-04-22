@@ -100,15 +100,17 @@ function GamePage() {
     };
   }, []);
 
-  // Re-parent the persistent Phaser host into the current shell's slot.
+  // Keep the persistent Phaser host attached to the live slot.
+  // This must survive title <-> gameplay shell subtree swaps, not just mode changes.
   useLayoutEffect(() => {
     const slot = slotRef.current;
     const host = phaserHostRef.current;
     if (!slot || !host) return;
+
     if (host.parentNode !== slot) {
       slot.appendChild(host);
     }
-  }, [mode]);
+  });
 
   // Live-react to interface mode changes from Settings.
   useEffect(() => {
