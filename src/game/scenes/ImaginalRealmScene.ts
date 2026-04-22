@@ -34,6 +34,7 @@ import { regionAftermathLevel } from "./imaginal/regionAftermath";
 import { veilKnotUnlocked } from "./imaginal/ImaginalExpandedContent";
 
 type Knot = {
+  id: string;
   kind: KnotKind;
   region: ImaginalRegion;
   x: number;
@@ -72,20 +73,37 @@ const REGION_BG: Record<ImaginalRegion, string> = {
 const MAP_W = 10,
   MAP_H = 9;
 
+function hashNoise(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+function stableChance(
+  region: ImaginalRegion,
+  x: number,
+  y: number,
+  salt: string,
+  threshold: number,
+): boolean {
+  return hashNoise(`${region}:${salt}:${x}:${y}`) > threshold;
+}
+
 function buildMap(region: ImaginalRegion): number[][] {
   const T = TILE_INDEX;
   const m: number[][] = [];
 
-  // Pass 1: Base Scatter Floor (Organic Noise)
   for (let y = 0; y < MAP_H; y++) {
     const row: number[] = [];
     for (let x = 0; x < MAP_W; x++) {
-      row.push(Math.random() > 0.65 ? T.MOON_FLOOR_REFLECT : T.MOON_FLOOR);
+      row.push(stableChance(region, x, y, "floor", 0.65) ? T.MOON_FLOOR_REFLECT : T.MOON_FLOOR);
     }
     m.push(row);
   }
 
-  // Pass 2: Organic Boundaries & Jagged Edges
   for (let y = 0; y < MAP_H; y++) {
     for (let x = 0; x < MAP_W; x++) {
       const isTopEdge = y === 0;
@@ -95,7 +113,7 @@ function buildMap(region: ImaginalRegion): number[][] {
       if (isTopEdge || isSideEdge || isBottomEdge) {
         m[y][x] = T.MOON_WALL;
 
-        if (Math.random() > 0.8) {
+        if (stableChance(region, x, y, "edge-pillars", 0.8)) {
           if (isTopEdge && y + 1 < MAP_H) m[y + 1][x] = T.MOON_PILLAR;
           if (x === 0 && x + 1 < MAP_W) m[y][x + 1] = T.MOON_PILLAR;
           if (x === MAP_W - 1 && x - 1 >= 0) m[y][x - 1] = T.MOON_PILLAR;
@@ -104,19 +122,23 @@ function buildMap(region: ImaginalRegion): number[][] {
     }
   }
 
-  // Pass 3: Region-Specific Landmarks
   if (region === "pools") {
     if (m[2][2] !== T.MOON_WALL) m[2][2] = T.MOON_PILLAR;
     if (m[4][8] !== T.MOON_WALL) m[4][8] = T.MOON_PILLAR;
     if (m[6][3] !== T.MOON_WALL) m[6][3] = T.MOON_PILLAR;
   } else if (region === "field") {
-    [ [2, 8], [3, 2], [6, 7], [7, 2] ].forEach(([py, px]) => {
+    [
+      [2, 8],
+      [3, 2],
+      [6, 7],
+      [7, 2],
+    ].forEach(([py, px]) => {
       if (m[py][px] !== T.MOON_WALL) m[py][px] = T.MOON_PILLAR;
     });
   } else if (region === "corridor") {
     for (let y = 2; y < MAP_H - 2; y++) {
-      if (Math.random() > 0.4) m[y][2] = T.MOON_PILLAR;
-      if (Math.random() > 0.4) m[y][7] = T.MOON_PILLAR;
+      if (stableChance(region, 2, y, "corridor-left", 0.4)) m[y][2] = T.MOON_PILLAR;
+      if (stableChance(region, 7, y, "corridor-right", 0.4)) m[y][7] = T.MOON_PILLAR;
     }
   }
 
@@ -124,18 +146,23 @@ function buildMap(region: ImaginalRegion): number[][] {
 }
 
 const KNOT_LAYOUT: Knot[] = [];
-function defineLayout(): { kind: KnotKind; region: ImaginalRegion; x: number; y: number; clearFlag?: string; taglineOverride?: string }[] {
+function defineLayout(): {
+  id: string;
+  kind: KnotKind;
+  region: ImaginalRegion;
+  x: number;
+  y: number;
+  clearFlag?: string;
+  taglineOverride?: string;
+}[] {
   return [
-    // Pools — soft tutorial, 2 knots
-    { kind: "reflection", region: "pools", x: 48, y: 56 },
-    { kind: "echo", region: "pools", x: 112, y: 56 },
-    // Field — strange, 2 knots
-    { kind: "glitter", region: "field", x: 40, y: 60 },
-    { kind: "lantern", region: "field", x: 120, y: 60 },
-    // Corridor — narrow, 1 optional knot
-    { kind: "crown", region: "corridor", x: 80, y: 56 },
-    // Hidden late knot — appears in corridor only after 3 of 5 quieted.
+    { id: "reflection", kind: "reflection", region: "pools", x: 48, y: 56 },
+    { id: "echo", kind: "echo", region: "pools", x: 112, y: 56 },
+    { id: "glitter", kind: "glitter", region: "field", x: 40, y: 60 },
+    { id: "lantern", kind: "lantern", region: "field", x: 120, y: 60 },
+    { id: "crown", kind: "crown", region: "corridor", x: 80, y: 56 },
     {
+      id: "veil",
       kind: "crown",
       region: "corridor",
       x: 40,
@@ -203,7 +230,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private corridorGateGlow?: Phaser.GameObjects.Arc;
   private corridorSouthSigil?: Phaser.GameObjects.Arc;
   /** Per-knot encounter presentation. Rebuilt on region change. */
-  private knotPresentations: Partial<Record<KnotKind, EncounterPresentationHandle>> = {};
+  private knotPresentations: Record<string, EncounterPresentationHandle> = {};
   /** Per-soul encounter presentation, keyed by SoulId. Rebuilt on region change. */
   private soulPresentations: Record<string, EncounterPresentationHandle> = {};
 
@@ -477,7 +504,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (k.clearFlag === "knot_veil" && !veilKnotUnlocked(this.save.flags)) return false;
       return true;
     })) {
-      const flagKey = def.clearFlag ?? `knot_${def.kind}`;
+      const flagKey = this.knotClearFlag(def);
       const cleared = !!this.save.flags[flagKey];
       const sprite = this.add.image(
         def.x,
@@ -507,7 +534,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
         });
       }
       this.knots.push({
-        ...def,
+        id: def.id,
+        kind: def.kind,
+        region: def.region,
+        x: def.x,
+        y: def.y,
         cleared,
         sprite,
         glow,
@@ -523,7 +554,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       if (profile) {
         const presentation = createEncounterPresentation(this, def.x, def.y, profile);
         if (cleared) presentation.soften();
-        this.knotPresentations[def.kind] = presentation;
+        this.knotPresentations[def.id] = presentation;
       }
     }
 
@@ -601,9 +632,21 @@ export class ImaginalRealmScene extends Phaser.Scene {
   // ============================================================================
   // ACT II MEMORY HELPERS
   // ============================================================================
+  private knotClearFlag(k: Pick<Knot, "kind" | "clearFlag">): string {
+    return k.clearFlag ?? `knot_${k.kind}`;
+  }
+
+  /**
+   * Mainline knot counts exclude the optional veil knot.
+   * The veil still exists and clears, but it is not part of the core 5-knot total.
+   */
+  private countableKnotDefs() {
+    return defineLayout().filter((k) => !k.clearFlag);
+  }
+
   private clearedKnotsInRegion(region: ImaginalRegion): number {
-    return defineLayout().filter(
-      (k) => k.region === region && !!this.save.flags[`knot_${k.kind}`],
+    return this.countableKnotDefs().filter(
+      (k) => k.region === region && !!this.save.flags[this.knotClearFlag(k)],
     ).length;
   }
 
@@ -1143,11 +1186,11 @@ export class ImaginalRealmScene extends Phaser.Scene {
       else this.hint.setText(`A: ${near.taglineOverride ?? KNOT_TAGLINE[near.kind]} (${KNOT_VERB[near.kind]})`);
       // First-meet identity card for this knot. Once per save per knot kind.
       if (!near.cleared) {
-        this.knotPresentations[near.kind]?.introOnce(
-          `encounter_seen_knot_${near.kind}`,
+        this.knotPresentations[near.id]?.introOnce(
+          `encounter_seen_knot_${near.id}`,
           this.save,
         );
-        if (this.save.flags[`encounter_seen_knot_${near.kind}`]) writeSave(this.save);
+        if (this.save.flags[`encounter_seen_knot_${near.id}`]) writeSave(this.save);
       }
     } else {
       this.focusGlow.fillAlpha = 0;
@@ -1283,7 +1326,9 @@ export class ImaginalRealmScene extends Phaser.Scene {
   }
   private totalCleared(): number {
     let n = 0;
-    for (const k of defineLayout()) if (this.save.flags[`knot_${k.kind}`]) n++;
+    for (const k of this.countableKnotDefs()) {
+      if (this.save.flags[this.knotClearFlag(k)]) n++;
+    }
     return n;
   }
 
@@ -1413,7 +1458,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
       }
       this.markKnotCleared(k);
       // Quieted memory state for this knot's encounter aura.
-      this.knotPresentations[k.kind]?.soften();
+      this.knotPresentations[k.id]?.soften();
       this.refreshKnotTracker();
     });
   }
