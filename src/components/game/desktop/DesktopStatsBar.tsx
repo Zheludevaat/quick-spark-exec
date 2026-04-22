@@ -59,9 +59,9 @@ export function DesktopStatsBar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ShellPanelMeta>ACT {scene.act || "—"}</ShellPanelMeta>
+          <ShellPanelMeta>{getPublicChapterTitle(scene.key)}</ShellPanelMeta>
           <div className="text-xs font-mono" style={{ color: "#eef3ff" }}>
-            {scene.label || "—"}
+            {getPublicSceneLabel(scene.key)}
             {scene.zone ? (
               <span style={{ color: "#a8c8e8" }}> · {scene.zone}</span>
             ) : null}

@@ -74,10 +74,10 @@ export function DesktopCommandRail({
           Current Scene
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: "#eef3ff" }}>
-          {scene.label || "—"}
+          {getPublicSceneLabel(scene.key)}
         </div>
         <div className="text-[9px]" style={{ color: "#a8c8e8" }}>
-          {scene.zone || `Act ${scene.act || "—"}`}
+          {scene.zone || getPublicChapterTitle(scene.key)}
         </div>
       </div>
 

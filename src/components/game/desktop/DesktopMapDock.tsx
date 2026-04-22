@@ -55,12 +55,12 @@ export function DesktopMapDock() {
       <div className="flex items-center justify-between">
         <ShellPanelTitle>{isHub ? "Ascent" : "Map"}</ShellPanelTitle>
         <ShellPanelMeta>
-          {scene.act > 0 ? `Act ${scene.act}` : "—"}
+          {getPublicChapterTitle(scene.key)}
         </ShellPanelMeta>
       </div>
 
       <div className="text-[10px]" style={{ color: "#eef3ff" }}>
-        {scene.label || "—"}
+        {getPublicSceneLabel(scene.key)}
       </div>
       <div className="text-[9px]" style={{ color: "#a8c8e8" }}>
         {scene.zone || "No route charted"}

@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { subscribeGameUi, getGameUiSnapshot, type HudSnapshot, type SceneSnapshot } from "@/game/gameUiBridge";
+import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
 
 const STAT_GLYPH: Record<"clarity" | "compassion" | "courage", string> = {
   clarity: "◇",
@@ -58,9 +59,9 @@ export function TouchStatsStrip() {
       </div>
       <div className="flex items-center gap-2 text-[10px]" style={{ color: "rgba(200,210,230,0.85)" }}>
         <span style={{ color: "rgba(200,210,230,0.55)" }}>
-          ACT {scene.act || "—"}
+          {getPublicChapterTitle(scene.key)}
         </span>
-        <span className="truncate max-w-[40vw]">{scene.label || ""}</span>
+        <span className="truncate max-w-[40vw]">{getPublicSceneLabel(scene.key)}</span>
         {savedFlash && (
           <span
             className="px-1.5 py-0.5 rounded"
