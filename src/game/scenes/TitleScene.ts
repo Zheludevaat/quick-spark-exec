@@ -1014,13 +1014,21 @@ export class TitleScene extends Phaser.Scene {
    * DEV-only scene jump menu — auto-filters to currently registered scenes
    * and seeds a coherent canonical save before launching.
    */
+  /**
+   * DEV-only scene jump menu — auto-filters to currently registered scenes
+   * and seeds a coherent canonical save before launching.
+   */
   private openSkipMenu() {
+    if (this.devMenuOpen) return;
+    this.devMenuOpen = true;
+
     const audio = getAudio();
     audio.sfx("cursor");
 
     const jumps = this.buildDevJumpEntries();
 
     if (!jumps.length) {
+      this.devMenuOpen = false;
       const note = new GBCText(this, 18, 110, "NO REGISTERED DEV DESTINATIONS.", {
         color: COLOR.textGold,
         depth: 960,
@@ -1033,7 +1041,7 @@ export class TitleScene extends Phaser.Scene {
       .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.88)
       .setOrigin(0, 0)
       .setDepth(950)
-      .setInteractive();
+      .setInteractive({ useHandCursor: true });
 
     const box = drawGBCBox(this, 6, 8, GBC_W - 12, GBC_H - 16, 951);
     const title = new GBCText(this, 12, 12, "DEV · SCENE JUMP", {
@@ -1046,7 +1054,7 @@ export class TitleScene extends Phaser.Scene {
       depth: 952,
     });
 
-    const help = new GBCText(this, 12, GBC_H - 12, "A START  B CANCEL  ←→ PAGE", {
+    const help = new GBCText(this, 12, GBC_H - 12, "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE", {
       color: COLOR.textDim,
       depth: 952,
       maxWidthPx: GBC_W - 24,
@@ -1106,6 +1114,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     let rowToJump: number[] = [];
+    let closed = false;
 
     const refreshSkip = () => {
       const start = computeStart(pick);
@@ -1136,17 +1145,23 @@ export class TitleScene extends Phaser.Scene {
       }
 
       const chosen = jumps[pick];
-      selectedSceneLine.setText(
-        `${chosen.scene} · ACT ${ACT_BY_SCENE[chosen.scene] ?? 0}`,
-      );
+      selectedSceneLine.setText(chosen.readout ?? this.devSceneReadout(chosen.scene));
     };
 
     refreshSkip();
 
     const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      this.devMenuOpen = false;
+
       unbindAct();
       unbindCancel();
       unbindDir();
+
+      dim.removeAllListeners();
+      items.forEach((t) => t.obj.removeAllListeners());
+
       dim.destroy();
       box.destroy();
       title.destroy();
@@ -1157,6 +1172,13 @@ export class TitleScene extends Phaser.Scene {
       selectedSceneLine.destroy();
       mark.destroy();
     };
+
+    const closeMenu = () => {
+      audio.sfx("cursor");
+      cleanup();
+    };
+
+    dim.on("pointerdown", closeMenu);
 
     const jumpTo = (idx: number) => {
       const j = jumps[idx];
@@ -1196,8 +1218,7 @@ export class TitleScene extends Phaser.Scene {
     const unbindAct = onActionDown(this, "action", () => jumpTo(pick));
 
     const unbindCancel = onActionDown(this, "cancel", () => {
-      audio.sfx("cursor");
-      cleanup();
+      closeMenu();
     });
 
     const unbindDir = onDirection(this, (d) => {
@@ -1231,5 +1252,8 @@ export class TitleScene extends Phaser.Scene {
         if (abs >= 0) jumpTo(abs);
       });
     });
+
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
   }
 }
