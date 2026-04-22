@@ -1403,30 +1403,54 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private refreshHint() {
     const { done, total } = venusProgressCount(this.save);
+    const backLabel =
+      this.zone === "atrium"
+        ? "HUB"
+        : this.previousZone
+          ? VENUS_ZONE_LABEL[this.previousZone].toUpperCase()
+          : "ATRIUM";
+
     if (this.zone === "atrium") {
       this.hint.setText(`A: act   B: hub   (${done}/${total} seen)`);
       return;
     }
+
     if (this.zone === "threshold") {
       this.hint.setText(
         venusCrackingReady(this.save)
-          ? `A: face Kypria   (${done}/${total})`
-          : `A: act   more seeing needed (${done}/${total})`,
+          ? `A: act   B: ${backLabel}   (${done}/${total})`
+          : `A: act   B: ${backLabel}   more seeing needed (${done}/${total})`,
       );
       return;
     }
-    this.hint.setText(`A: act   B: atrium   (${done}/${total})`);
+
+    this.hint.setText(`A: act   B: ${backLabel}   (${done}/${total})`);
   }
 
   private refreshHintForProximity() {
     const h = this.findHotspotInRange();
-    if (!h) {
-      this.refreshHint();
+    if (h) {
+      const enabled = h.enabled ? h.enabled() : true;
+      const prefix = enabled ? "A: " : "(locked) ";
+      this.hint.setText(`${prefix}${h.label}`);
       return;
     }
-    const enabled = h.enabled ? h.enabled() : true;
-    const prefix = enabled ? "A: " : "(locked) ";
-    this.hint.setText(`${prefix}${h.label}`);
+
+    const d = this.findDoorInRange();
+    if (d) {
+      if (!this.canUseDoor(d)) {
+        this.hint.setText(
+          d.to === "threshold"
+            ? "the threshold is not yet for you."
+            : "that way is not open.",
+        );
+      } else {
+        this.hint.setText(`A: ${d.label}`);
+      }
+      return;
+    }
+
+    this.refreshHint();
   }
 
   private flashHint(text: string) {
