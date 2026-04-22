@@ -50,10 +50,12 @@ const REFUSALS_COMPLETE_LINES = [
  * The Crossing — corridor of detachment.
  *
  * Adds:
- *   - Whisper Gauntlet: intrusive thoughts drift across; B to WITNESS each (passes
- *     them through without harm; ignored = +clarity drip; collided = brief slow).
+ *   - Whisper Gauntlet: intrusive thoughts drift across; B to WITNESS each.
+ *     Witnessing grants a direct clarity gain. Whispers that pass harmlessly
+ *     off-screen grant a very small capped clarity drip. Collisions cause a
+ *     brief slow.
  *   - Three Refusal Doors: optional side-doors that show vignettes of returning
- *     to life. Reading all three sets flag refusals_witnessed.
+ *     to life. Reading all three sets `refusals_witnessed`.
  *   - Second Wanderer: silhouette walking the other way; one-line cameo.
  */
 export class CrossingScene extends Phaser.Scene {
@@ -86,6 +88,9 @@ export class CrossingScene extends Phaser.Scene {
   private rowanAura?: Phaser.GameObjects.Arc;
   private rowanShadow?: Phaser.GameObjects.Ellipse;
 
+  private ignoredWhisperCount = 0;
+  private ignoredWhisperRewards = 0;
+
   constructor() {
     super("Crossing");
   }
@@ -103,6 +108,8 @@ export class CrossingScene extends Phaser.Scene {
     this.slowUntil = 0;
     this.doors = [];
     this.wandererSpoken = false;
+    this.ignoredWhisperCount = 0;
+    this.ignoredWhisperRewards = 0;
   }
 
   create() {
@@ -366,8 +373,7 @@ export class CrossingScene extends Phaser.Scene {
         getAudio().sfx("hit");
         this.slowUntil = t + 600;
       } else if (w.x > GBC_W + 40 || w.x < -60) {
-        w.alive = false;
-        w.obj.destroy();
+        this.handleIgnoredWhisperExit(w);
       }
     }
 
@@ -433,10 +439,6 @@ export class CrossingScene extends Phaser.Scene {
 
     if (progress >= 0.99 && !this.done) {
       this.done = true;
-      // If all 3 doors read, set the carry-through flag.
-      if (this.doorsRead() === 3) {
-        this.save.flags.refusals_witnessed = true;
-      }
       this.save.scene = "SilverThreshold";
       this.save.act = ACT_BY_SCENE.SilverThreshold;
       writeSave(this.save);
@@ -485,6 +487,22 @@ export class CrossingScene extends Phaser.Scene {
         best!.obj.destroy();
       },
     });
+  }
+
+  private handleIgnoredWhisperExit(w: Whisper) {
+    w.alive = false;
+    w.obj.destroy();
+
+    this.ignoredWhisperCount += 1;
+
+    // Small capped passive clarity drip.
+    // Reward every second harmlessly passed whisper, up to 3 times total.
+    if (this.ignoredWhisperRewards < 3 && this.ignoredWhisperCount % 2 === 0) {
+      this.ignoredWhisperRewards += 1;
+      this.save.stats.clarity = Math.min(99, this.save.stats.clarity + 1);
+      writeSave(this.save);
+      this.events.emit("stats-changed");
+    }
   }
 
   private nearestDoor(): RefusalDoor | null {

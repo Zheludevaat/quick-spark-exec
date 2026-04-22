@@ -2,18 +2,9 @@
  * Act 0 — LastDay expansion content.
  *
  * Six optional domestic encounters that thicken the apartment without
- * adding to the main seed gate. None of them count toward
- * MAIN_SEEDS_REQUIRED — they reward tone, conviction, fragments, or
- * second-pass lines.
- *
- * Several entries become available only after the death-beat veil has
- * lifted (`lastday_door_preview_seen`) — those are the "ordinary objects
- * that have become uncanny" the player only notices on the way out.
- *
- * The handler signature is intentionally generic: scenes adopt these by
- * passing in a `LastDayHostScene` shim that exposes `runDialog` /
- * `writeSave` / busy-gating, so the content pack stays free of Phaser
- * imports.
+ * adding to the main seed gate. Persistence is explicit: every handler
+ * mutates `save` and then calls `scene.persist()` so state lands on disk
+ * immediately rather than after dialogue completes.
  */
 import type { ActInteraction } from "../../exploration/ActInteraction";
 import type { SaveSlot } from "../../types";
@@ -21,6 +12,7 @@ import type { SaveSlot } from "../../types";
 export type LastDayHostScene = {
   save: SaveSlot;
   speak: (lines: { who: string; text: string }[], onDone?: () => void) => void;
+  persist: () => void;
   bumpStat?: (k: "clarity" | "compassion" | "courage", n: number) => void;
 };
 
@@ -38,6 +30,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
     aftermathStyle: "mark",
     onInteract: ({ scene, save }) => {
       save.flags.lastday_sink_seen = true;
+      scene.persist();
       scene.speak([
         { who: "?", text: "A cup, rinsed but not washed." },
         { who: "?", text: "Care halted one step before completion. The way most days end." },
@@ -57,6 +50,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
     onInteract: ({ scene, save }) => {
       const second = !!save.flags.lastday_plant_seen;
       save.flags.lastday_plant_seen = true;
+      scene.persist();
       const lines = second
         ? [{ who: "?", text: "Still alive. It will outlast this morning, possibly by years." }]
         : [
@@ -78,6 +72,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
     hiddenUntilFlags: ["seed_call"],
     onInteract: ({ scene, save }) => {
       save.flags.lastday_draft_seen = true;
+      scene.persist();
       scene.speak([
         { who: "DRAFT", text: "I have been meaning to say —" },
         { who: "?", text: "Unsent. The sentence knew what it would cost to be finished." },
@@ -95,6 +90,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
     onceFlag: "lastday_medicine_seen",
     onInteract: ({ scene, save }) => {
       save.flags.lastday_medicine_seen = true;
+      scene.persist();
       scene.speak([
         { who: "?", text: "A bottle. A dose missed yesterday. A dose missed the day before." },
         { who: "?", text: "The body had been trying to say it was a body." },
@@ -119,6 +115,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
       if (!second) {
         save.fragments += 1;
       }
+      scene.persist();
       const lines = second
         ? [{ who: "?", text: "The shape of you is still there. Smaller than you remember." }]
         : [
@@ -140,6 +137,7 @@ export const LASTDAY_EXPANDED_INTERACTIONS: ActInteraction<LastDayHostScene>[] =
     hiddenUntilFlags: ["lastday_door_preview_seen"],
     onInteract: ({ scene, save }) => {
       save.flags.lastday_doorframe_seen = true;
+      scene.persist();
       const compassion = save.calling === "caregiver";
       const lines = compassion
         ? [

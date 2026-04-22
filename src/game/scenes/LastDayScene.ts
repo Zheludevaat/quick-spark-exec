@@ -38,7 +38,6 @@ type Interactable = {
   label: string;
   used: boolean;
   marker?: Phaser.GameObjects.Arc;
-  visual?: Phaser.GameObjects.GameObject[];
 };
 
 export class LastDayScene extends Phaser.Scene {
@@ -56,6 +55,12 @@ export class LastDayScene extends Phaser.Scene {
   // Hidden breath seed: track time spent stationary
   private stillMs = 0;
   private breathPulse?: Phaser.GameObjects.Arc;
+
+  private expandedMarkers = new Map<string, Phaser.GameObjects.Arc>();
+
+  private isBusy(): boolean {
+    return this.dialogActive || this.miniActive || this.deathBeatActive;
+  }
 
   constructor() {
     super("LastDay");
@@ -230,7 +235,6 @@ export class LastDayScene extends Phaser.Scene {
         label: "PHONE",
         used: false,
         marker: mark(phX + 1, phY, 0x88c0f0),
-        visual: [phoneRing],
       },
       {
         kind: "window",
@@ -240,7 +244,6 @@ export class LastDayScene extends Phaser.Scene {
         label: "WINDOW",
         used: false,
         marker: mark(winX + 11, winY + 8, 0xc8d8e8),
-        visual: steam,
       },
       {
         kind: "kettle",
@@ -308,22 +311,7 @@ export class LastDayScene extends Phaser.Scene {
     this.rowanShadow = this.add.ellipse(80, 88, 10, 3, 0x000000, 0.4).setDepth(2);
 
     // Render small markers for any visible expanded interactions.
-    for (const it of LASTDAY_EXPANDED_INTERACTIONS) {
-      if (!interactionEnabled(this.save.flags, it)) continue;
-      const dim = it.onceFlag && this.save.flags[it.onceFlag];
-      const m = this.add
-        .circle(it.x, it.y, 2, 0xc8d8e8, dim ? 0.18 : 0.45)
-        .setStrokeStyle(0.5, 0xa8c8e8, dim ? 0.3 : 0.7)
-        .setDepth(8);
-      this.tweens.add({
-        targets: m,
-        alpha: dim ? 0.1 : 0.25,
-        duration: 1500 + Math.floor(Math.random() * 600),
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-      });
-    }
+    this.refreshExpandedMarkers();
 
     this.rowan = makeRowan(this, 80, 82, "living");
 
@@ -412,7 +400,8 @@ export class LastDayScene extends Phaser.Scene {
   }
 
   update(_t: number, dt: number) {
-    if (this.dialogActive || this.miniActive) return;
+    if (this.isBusy()) return;
+    let breathHintOverride: string | null = null;
     const speed = 0.04 * dt;
     const i = this.input2.poll();
     let dx = 0,
@@ -458,7 +447,7 @@ export class LastDayScene extends Phaser.Scene {
           this.breathPulse.y = this.rowan.y - 4;
         }
         if (this.stillMs > 1200 && this.stillMs < 4000) {
-          this.hint.setText("BE STILL. LISTEN.");
+          breathHintOverride = "BE STILL. LISTEN.";
         }
         if (this.stillMs > 4000) {
           this.save.seeds.seed_breath = true;
@@ -491,31 +480,9 @@ export class LastDayScene extends Phaser.Scene {
       }
     }
 
-    const near = this.nearest();
-    const expandedNear = this.nearestExpanded();
-    const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
-    if (this.exitOpen) {
-      const dxg = this.rowan.x - 80,
-        dyg = this.rowan.y - (GBC_H - 8);
-      if (dxg * dxg + dyg * dyg < 14 * 14) {
-        this.hint.setText(
-          this.save.flags.lastday_door_preview_seen ? "A: STEP THROUGH THE DOOR" : "A: OPEN THE DOOR",
-        );
-      } else if (expandedNear) {
-        this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
-      } else {
-        this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
-      }
-    } else if (near && !near.used) {
-      this.hint.setText(`A: ${near.label}`);
-    } else if (expandedNear) {
-      this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
-    } else {
-      this.hint.setText(
-        `TOUCH WHAT CALLS YOU  ${Math.min(usedMain, MAIN_SEEDS_REQUIRED)}/${MAIN_SEEDS_REQUIRED} NEEDED`,
-      );
-    }
+    this.setContextHint(breathHintOverride);
 
+    const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (!this.exitOpen && usedMain >= MAIN_SEEDS_REQUIRED) {
       this.exitOpen = true;
       this.beginDeathBeat();
@@ -610,13 +577,88 @@ export class LastDayScene extends Phaser.Scene {
     );
   }
 
+  private clearExpandedMarkers() {
+    for (const marker of this.expandedMarkers.values()) {
+      marker.destroy();
+    }
+    this.expandedMarkers.clear();
+  }
+
+  private refreshExpandedMarkers() {
+    this.clearExpandedMarkers();
+
+    for (const it of LASTDAY_EXPANDED_INTERACTIONS) {
+      if (!interactionEnabled(this.save.flags, it)) continue;
+
+      const dim = !!(it.onceFlag && this.save.flags[it.onceFlag]);
+      const marker = this.add
+        .circle(it.x, it.y, 2, 0xc8d8e8, dim ? 0.18 : 0.45)
+        .setStrokeStyle(0.5, 0xa8c8e8, dim ? 0.3 : 0.7)
+        .setDepth(8);
+
+      this.tweens.add({
+        targets: marker,
+        alpha: dim ? 0.1 : 0.25,
+        duration: 1500 + Math.floor(Math.random() * 600),
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+
+      this.expandedMarkers.set(it.id, marker);
+    }
+  }
+
+  private setContextHint(breathHintOverride: string | null) {
+    if (breathHintOverride) {
+      this.hint.setText(breathHintOverride);
+      return;
+    }
+
+    const near = this.nearest();
+    const expandedNear = this.nearestExpanded();
+    const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
+
+    if (this.exitOpen) {
+      const dxg = this.rowan.x - 80;
+      const dyg = this.rowan.y - (GBC_H - 8);
+      if (dxg * dxg + dyg * dyg < 14 * 14) {
+        this.hint.setText(
+          this.save.flags.lastday_door_preview_seen ? "A: STEP THROUGH THE DOOR" : "A: OPEN THE DOOR",
+        );
+      } else if (expandedNear) {
+        this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
+      } else {
+        this.hint.setText("THE DOOR IS OPEN. (SOUTH)");
+      }
+      return;
+    }
+
+    if (near && !near.used) {
+      this.hint.setText(`A: ${near.label}`);
+      return;
+    }
+
+    if (expandedNear) {
+      this.hint.setText(interactionPrompt(this.save.flags, expandedNear));
+      return;
+    }
+
+    this.hint.setText(
+      `TOUCH WHAT CALLS YOU  ${Math.min(usedMain, MAIN_SEEDS_REQUIRED)}/${MAIN_SEEDS_REQUIRED} NEEDED`,
+    );
+  }
+
   private hostShim(): LastDayHostScene {
     return {
       save: this.save,
+      persist: () => {
+        writeSave(this.save);
+        this.refreshExpandedMarkers();
+      },
       speak: (lines, onDone) => {
         this.dialogActive = true;
         runDialog(this, lines, () => {
-          writeSave(this.save);
           this.dialogActive = false;
           onDone?.();
         });
@@ -625,7 +667,7 @@ export class LastDayScene extends Phaser.Scene {
   }
 
   private tryInteract() {
-    if (this.dialogActive || this.miniActive) return;
+    if (this.isBusy()) return;
     if (this.exitOpen) {
       const dxg = this.rowan.x - 80,
         dyg = this.rowan.y - (GBC_H - 8);
@@ -634,6 +676,7 @@ export class LastDayScene extends Phaser.Scene {
           this.dialogActive = true;
           this.save.flags.lastday_door_preview_seen = true;
           writeSave(this.save);
+          this.refreshExpandedMarkers();
           runDialog(this, LASTDAY_DOOR_PREVIEW, () => {
             this.dialogActive = false;
           });
@@ -671,6 +714,8 @@ export class LastDayScene extends Phaser.Scene {
     it.used = true;
     if (it.seed) this.save.seeds[it.seed] = true;
     writeSave(this.save);
+    this.refreshExpandedMarkers();
+
     if (it.marker) it.marker.setVisible(false);
     // Side quest: find every visible seed in the flat
     if (questStatus(this.save, "all_seeds_lastday") !== "done") {
