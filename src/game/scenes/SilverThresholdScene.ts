@@ -12,6 +12,8 @@ import {
 } from "../gbcArt";
 import { writeSave } from "../save";
 import { ACT_BY_SCENE, type SaveSlot } from "../types";
+import { setSceneSnapshot } from "../gameUiBridge";
+import { nextMainlineScene } from "../canon/mainlineFlow";
 import { grantAlchemyHint } from "../canon/alchemySecret";
 import {
   attachHUD,
@@ -31,7 +33,10 @@ import {
   createEncounterPresentation,
   type EncounterPresentationHandle,
 } from "../encounters/EncounterPresentation";
-import { SORYN_THRESHOLD_PROFILE, SORYN_DAIMON_PROFILE } from "../encounters/profiles/soryn";
+import {
+  SORYN_THRESHOLD_PROFILE as SOPHENE_THRESHOLD_PROFILE,
+  SORYN_DAIMON_PROFILE as SOPHENE_DAIMON_PROFILE,
+} from "../encounters/profiles/soryn";
 import { GUARDIAN_PROFILES } from "../encounters/profiles/guardians";
 import {
   RECEPTION_OPTIONAL_INTERACTIONS,
@@ -40,9 +45,14 @@ import {
 import {
   nearestInteraction,
   interactionPrompt,
-  interactionEnabled,
   type ActInteraction,
 } from "../exploration";
+import {
+  ensureReceptionCanon,
+  awardReceptionStone,
+  awardGuardianNamingGift,
+  finalizeReceptionBinding,
+} from "./reception/receptionCanonicalProgress";
 
 type ElemKind = "air" | "fire" | "water" | "earth";
 
@@ -341,17 +351,98 @@ export class SilverThresholdScene extends Phaser.Scene {
   /** Per-guardian aura + nameplate; softened once that guardian's rite is complete. */
   private guardianPresentations: Partial<Record<ElemKind, EncounterPresentationHandle>> = {};
 
+  private pendingTransformationResume = false;
+  private snapshotElapsed = 0;
+
   constructor() {
     super("SilverThreshold");
   }
   init(data: { save: SaveSlot }) {
     this.save = data.save;
+    ensureReceptionCanon(this.save);
+    this.normalizeLegacyCanonFlags();
+
     this.save.scene = "SilverThreshold";
     this.save.act = ACT_BY_SCENE.SilverThreshold;
     writeSave(this.save);
+
     this.circles = [];
     this.dialogActive = false;
     this.stillMs = 0;
+    this.pendingTransformationResume = false;
+    this.snapshotElapsed = 0;
+  }
+
+  private normalizeLegacyCanonFlags() {
+    if (this.save.flags.encounter_seen_soryn_threshold && !this.save.flags.encounter_seen_sophene_threshold) {
+      this.save.flags.encounter_seen_sophene_threshold = true;
+    }
+    if (this.save.flags.encounter_seen_soryn_daimon && !this.save.flags.encounter_seen_sophene_daimon) {
+      this.save.flags.encounter_seen_sophene_daimon = true;
+    }
+    if (this.save.flags.soryn_threshold_intro_seen && !this.save.flags.sophene_threshold_intro_seen) {
+      this.save.flags.sophene_threshold_intro_seen = true;
+    }
+    if (this.save.flags.soryn_daimon_intro_seen && !this.save.flags.sophene_daimon_intro_seen) {
+      this.save.flags.sophene_daimon_intro_seen = true;
+    }
+  }
+
+  private shouldResumePendingTransformation(): boolean {
+    return !!this.save.flags.elements_done && !this.save.flags.daimon_bound;
+  }
+
+  private publishSceneSnapshot() {
+    const nodes = [
+      { id: "sophene", label: "Sophene", x: 146 / GBC_W, y: 70 / GBC_H, active: true },
+      ...this.circles.map((c) => ({
+        id: `circle_${c.kind}`,
+        label:
+          c.kind === "air"
+            ? "Zephyros"
+            : c.kind === "fire"
+            ? "Pyralis"
+            : c.kind === "water"
+            ? "Undine"
+            : "Chthonia",
+        x: c.x / GBC_W,
+        y: c.y / GBC_H,
+        active: !c.visited,
+      })),
+      {
+        id: "gate",
+        label: "Gate",
+        x: this.gate.x / GBC_W,
+        y: this.gate.y / GBC_H,
+        active: !!this.save.flags.daimon_bound,
+      },
+    ];
+
+    setSceneSnapshot({
+      key: "SilverThreshold",
+      label: "Reception - Silver Threshold",
+      act: ACT_BY_SCENE.SilverThreshold,
+      zone: this.save.flags.daimon_bound
+        ? "Gate of Reception"
+        : this.pendingTransformationResume
+        ? "Threshold of Binding"
+        : "Threshold Court",
+      nodes,
+      marker: { x: this.rowan.x / GBC_W, y: this.rowan.y / GBC_H },
+      idleTitle: "RECEPTION",
+      idleBody: this.save.flags.daimon_bound
+        ? "The south gate now listens for your step."
+        : this.pendingTransformationResume
+        ? "The threshold gathers itself to finish what was begun."
+        : "Four guardians wait to receive what Rowan carried into death.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
   }
 
   create() {
@@ -417,8 +508,8 @@ export class SilverThresholdScene extends Phaser.Scene {
     // the binding scene (see runDaimonBinding). On returning saves where Soryn
     // is already bound, jump straight to daimon presentation.
     const sorynStartProfile = this.save.flags.daimon_bound
-      ? SORYN_DAIMON_PROFILE
-      : SORYN_THRESHOLD_PROFILE;
+      ? SOPHENE_DAIMON_PROFILE
+      : SOPHENE_THRESHOLD_PROFILE;
     this.sorynPresentation = createEncounterPresentation(
       this,
       this.soryn.x,
@@ -429,7 +520,7 @@ export class SilverThresholdScene extends Phaser.Scene {
     // Gate at south
     this.gate = this.add.container(GBC_W / 2, GBC_H - 18);
     const gateImg = this.add.image(0, 0, "gbc_tiles", TILE_INDEX.GATE).setOrigin(0.5);
-    gateImg.setAlpha(this.save.flags.elements_done ? 1 : 0.4);
+    gateImg.setAlpha(this.save.flags.daimon_bound ? 1 : 0.4);
     this.gate.add([gateImg]);
     this.gate.setData("img", gateImg);
 
@@ -467,11 +558,13 @@ export class SilverThresholdScene extends Phaser.Scene {
 
     // Player + soft shadow. Skin: living unless all elements done already (resume case).
     this.rowanShadow = this.add.ellipse(16, 76, 10, 3, 0x000000, 0.35).setDepth(2);
+    this.pendingTransformationResume = this.shouldResumePendingTransformation();
+
     const initialSkin = this.save.flags.daimon_bound ? "soul" : "living";
     this.rowan = makeRowan(this, 16, 70, initialSkin);
-    // Continuity with Crossing: still partly dissolved until the rite finishes.
+
     if (initialSkin === "living") {
-      setRowanTransition(this.rowan, 0.62);
+      setRowanTransition(this.rowan, this.pendingTransformationResume ? 0.9 : 0.62);
     }
     // If resuming, also remove already-shed accessories
     if (initialSkin === "living") {
@@ -505,22 +598,31 @@ export class SilverThresholdScene extends Phaser.Scene {
       scrollFactor: 0,
     });
 
-    if (!this.save.flags.intro_done) {
+    this.publishSceneSnapshot();
+
+    if (this.pendingTransformationResume) {
+      this.dialogActive = true;
+      this.time.delayedCall(350, () => {
+        runDialog(
+          this,
+          [{ who: "Threshold", text: "The threshold remembers where you stopped." }],
+          () => this.runTransformation(),
+        );
+      });
+    } else if (!this.save.flags.intro_done) {
       this.dialogActive = true;
       this.time.delayedCall(500, () => {
         runDialog(this, SORYN_OPENING, () => {
           this.save.flags.intro_done = true;
           writeSave(this.save);
           this.dialogActive = false;
-          // First-meet identity card for Soryn — only fires once across saves.
-          this.sorynPresentation?.introOnce("encounter_seen_soryn_threshold", this.save);
+          this.sorynPresentation?.introOnce("encounter_seen_sophene_threshold", this.save);
           writeSave(this.save);
+          this.publishSceneSnapshot();
         });
       });
     } else if (!this.save.flags.daimon_bound) {
-      // Returning visitor before binding still gets the threshold-form intro
-      // (idempotent — guarded by the same flag).
-      this.sorynPresentation?.introOnce("encounter_seen_soryn_threshold", this.save);
+      this.sorynPresentation?.introOnce("encounter_seen_sophene_threshold", this.save);
       writeSave(this.save);
     }
   }
@@ -561,8 +663,13 @@ export class SilverThresholdScene extends Phaser.Scene {
       gdy = this.rowan.y - this.gate.y;
     const stx = this.rowan.x - this.stone.x,
       sty = this.rowan.y - this.stone.y;
-    if (sdx * sdx + sdy * sdy < 14 * 14) this.hint.setText("A: TALK TO SOPHENE");
-    else if (gdx * gdx + gdy * gdy < 16 * 16)
+
+    let hintLocked = false;
+
+    if (sdx * sdx + sdy * sdy < 14 * 14) {
+      this.hint.setText("A: TALK TO SOPHENE");
+      hintLocked = true;
+    } else if (gdx * gdx + gdy * gdy < 16 * 16) {
       this.hint.setText(
         this.save.flags.daimon_bound
           ? this.save.flags.threshold_gate_preview_seen
@@ -570,24 +677,24 @@ export class SilverThresholdScene extends Phaser.Scene {
             : "A: APPROACH THE GATE"
           : `GATE SEALED  ${visited}/4 CIRCLES`,
       );
-    else if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found)
+      hintLocked = true;
+    } else if (stx * stx + sty * sty < 12 * 12 && !this.save.flags.stone_found) {
       this.hint.setText("A: INSPECT STONE");
-    else if (
+      hintLocked = true;
+    } else if (
       this.nearBasin() &&
       this.save.flags.elements_done &&
       !this.save.flags.threshold_basin_seen
-    )
+    ) {
       this.hint.setText("A: INSPECT BASIN");
-    else
+      hintLocked = true;
+    } else {
       this.hint.setText(
         this.save.flags.daimon_bound
           ? "WALK TO THE GATE (SOUTH)"
           : `TOUCH THE CIRCLES  ${visited}/4`,
       );
-
-    // Auto-trigger guardian encounter on touch
-    // Render small markers for any visible expanded interactions in Reception.
-    // (No-op visually here; hint + tryInteract surface them via proximity.)
+    }
 
     // Auto-trigger guardian encounter on touch
     for (const c of this.circles) {
@@ -601,11 +708,17 @@ export class SilverThresholdScene extends Phaser.Scene {
       }
     }
 
-    // After main hint logic, surface optional Reception interactions when
-    // nothing more important is in proximity. Always overrides idle hints.
-    const expanded = this.nearestExpandedReception();
-    if (expanded) {
-      this.hint.setText(interactionPrompt(this.save.flags, expanded));
+    if (!hintLocked) {
+      const expanded = this.nearestExpandedReception();
+      if (expanded) {
+        this.hint.setText(interactionPrompt(this.save.flags, expanded));
+      }
+    }
+
+    this.snapshotElapsed += dt;
+    if (this.snapshotElapsed >= 150) {
+      this.snapshotElapsed = 0;
+      this.publishSceneSnapshot();
     }
   }
 
