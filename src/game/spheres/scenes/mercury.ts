@@ -415,6 +415,16 @@ export class MercuryPlateauScene extends Phaser.Scene {
       .setStrokeStyle(1, COLD, 0.55)
       .setDepth(1.2);
 
+    // Chamber sigil — three glyph segments above the chamber plate.
+    // Lit during ignition ceremony in refreshChamberGlow().
+    this.chamberSigil = [];
+    for (let i = 0; i < 3; i++) {
+      const seg = this.add
+        .rectangle(GBC_W / 2 - 10 + i * 10, 30, 6, 1, COLD, 0.22)
+        .setDepth(2);
+      this.chamberSigil.push(seg);
+    }
+
     // Trial door.
     this.add
       .rectangle(GBC_W / 2, 12, 14, 12, 0x000000, 0.84)
