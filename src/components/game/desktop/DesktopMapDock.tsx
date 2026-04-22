@@ -1,9 +1,3 @@
-/**
- * Desktop minimap card.
- *
- * Hub scenes get a stronger "ascent map" treatment. Regular scenes still use
- * the generic minimap card.
- */
 import { useEffect, useState } from "react";
 import {
   subscribeGameUi,
@@ -16,8 +10,6 @@ import {
   ShellPanelTitle,
 } from "@/components/game/shell/ShellPanel";
 
-// Fallback geometries are intentionally selection-free so a missing
-// scene snapshot can never lie about which portal is selected.
 const TITLE_FALLBACK_NODES: SceneNode[] = [
   { id: "moon", label: "Moon", x: 0.12, y: 0.52 },
   { id: "mercury", label: "Mercury", x: 0.24, y: 0.52 },
@@ -38,26 +30,16 @@ const METAXY_FALLBACK_NODES: SceneNode[] = [
   { id: "saturn", label: "Saturn", x: 0.5, y: 0.08 },
 ];
 
-export function DesktopMiniMapCard() {
+export function DesktopMapDock() {
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
-  const [modal, setModal] = useState(() => getGameUiSnapshot().modal);
 
   useEffect(() => {
-    return subscribeGameUi((s) => {
-      setScene(s.scene);
-      setModal(s.modal);
-    });
+    return subscribeGameUi((s) => setScene(s.scene));
   }, []);
-
-  // Per modal doctrine: while a blocking shell modal owns attention,
-  // the minimap must vanish (not merely dim) so it can never compete
-  // with the active surface.
-  if (!scene.showMiniMap) return null;
-  if (modal.blocking && modal.surface !== "none") return null;
 
   const isHub = scene.key === "MetaxyHub";
 
-  const resolvedNodes =
+  const nodes =
     scene.nodes && scene.nodes.length > 0
       ? scene.nodes
       : isHub
@@ -66,45 +48,42 @@ export function DesktopMiniMapCard() {
           ? TITLE_FALLBACK_NODES
           : null;
 
-  const hasNodes = !!resolvedNodes;
-  const activeNode = resolvedNodes?.find((n) => n.active) ?? null;
-  const marker = scene.marker;
+  const activeNode = nodes?.find((n) => n.active) ?? null;
 
   return (
     <ShellPanel compact>
       <div className="flex items-center justify-between">
-        <ShellPanelTitle>{isHub ? "ASCENT" : "MAP"}</ShellPanelTitle>
+        <ShellPanelTitle>{isHub ? "Ascent" : "Map"}</ShellPanelTitle>
         <ShellPanelMeta>
-          {isHub ? "7 GATES" : scene.act > 0 ? `ACT ${scene.act}` : "—"}
+          {scene.act > 0 ? `Act ${scene.act}` : "—"}
         </ShellPanelMeta>
       </div>
 
-      <div className="text-[10px] font-mono mt-0.5" style={{ color: "#eef3ff" }}>
-        {isHub ? "Metaxy Hub" : scene.label || "—"}
+      <div className="text-[10px]" style={{ color: "#eef3ff" }}>
+        {scene.label || "—"}
       </div>
-
-      <div className="text-[9px] font-mono" style={{ color: "#a8c8e8" }}>
-        {isHub ? scene.zone || "Portal Ascent" : scene.zone || "—"}
+      <div className="text-[9px]" style={{ color: "#a8c8e8" }}>
+        {scene.zone || "No route charted"}
       </div>
 
       <div
         className="relative mt-2 rounded"
         style={{
           aspectRatio: "5 / 3",
-          background: "rgba(0,0,0,0.45)",
+          background: "rgba(0,0,0,0.42)",
           border: "1px solid rgba(168,200,232,0.25)",
           overflow: "hidden",
         }}
       >
-        {hasNodes ? (
+        {nodes ? (
           <>
             <svg
               className="absolute inset-0 w-full h-full"
               preserveAspectRatio="none"
               viewBox="0 0 100 100"
             >
-              {resolvedNodes!.map((n, i) => {
-                const next = resolvedNodes![i + 1];
+              {nodes.map((n, i) => {
+                const next = nodes[i + 1];
                 if (!next) return null;
                 return (
                   <line
@@ -120,7 +99,8 @@ export function DesktopMiniMapCard() {
                 );
               })}
             </svg>
-            {resolvedNodes!.map((n) => (
+
+            {nodes.map((n) => (
               <div
                 key={n.id}
                 className="absolute rounded-full"
@@ -139,40 +119,40 @@ export function DesktopMiniMapCard() {
                 title={n.label}
               />
             ))}
+
+            {scene.marker ? (
+              <div
+                className="absolute rounded-full"
+                style={{
+                  left: `${scene.marker.x * 100}%`,
+                  top: `${scene.marker.y * 100}%`,
+                  width: 6,
+                  height: 6,
+                  transform: "translate(-50%, -50%)",
+                  background: "#eef3ff",
+                  boxShadow: "0 0 6px rgba(238,243,255,0.9)",
+                }}
+              />
+            ) : null}
           </>
         ) : (
           <div
-            className="absolute inset-0 flex items-center justify-center text-[9px] font-mono uppercase tracking-wider"
+            className="absolute inset-0 flex items-center justify-center text-[9px] uppercase tracking-wider"
             style={{ color: "rgba(168,200,232,0.5)" }}
           >
-            {isHub ? "ASCENT DATA UNAVAILABLE" : "NO ROUTE CHARTED"}
+            No route charted
           </div>
-        )}
-
-        {marker && (
-          <div
-            className="absolute rounded-full"
-            style={{
-              left: `${marker.x * 100}%`,
-              top: `${marker.y * 100}%`,
-              width: 6,
-              height: 6,
-              transform: "translate(-50%, -50%)",
-              background: "#eef3ff",
-              boxShadow: "0 0 6px rgba(238,243,255,0.9)",
-            }}
-          />
         )}
       </div>
 
-      {activeNode && (
+      {activeNode ? (
         <div
-          className="text-[9px] font-mono mt-1 uppercase tracking-wider"
+          className="text-[9px] uppercase tracking-wider mt-1"
           style={{ color: "#e8c890" }}
         >
           Selected · {activeNode.label}
         </div>
-      )}
+      ) : null}
     </ShellPanel>
   );
 }

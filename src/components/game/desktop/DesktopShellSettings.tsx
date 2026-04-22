@@ -1,18 +1,3 @@
-/**
- * Desktop shell settings panel.
- *
- * Owns the rendering of the settings modal on the desktop shell. Reads
- * and mutates the same controls/audio singletons the canvas settings
- * scene uses, so prefs persist identically.
- *
- * Two pages:
- *   - "main": display/audio/touch toggles, return-to-title, reset.
- *   - "keys": full rebinding parity with the canvas settings keys page.
- *     Each action exposes PRIMARY and SECONDARY slots; clicking a slot
- *     enters capture mode, and the next normalized keypress writes it.
- *     Secondary can be cleared. ESC backs out of capture, then out of
- *     the keys page.
- */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getControls,
@@ -34,10 +19,11 @@ import {
 } from "@/game/controls";
 import { getAudio } from "@/game/audio";
 import { subscribeGameUi, getGameUiSnapshot } from "@/game/gameUiBridge";
+import { DesktopSurfaceFrame } from "./DesktopSurfaceFrame";
 import {
   ShellPanel,
-  ShellPanelTitle,
   ShellPanelMeta,
+  ShellPanelTitle,
 } from "@/components/game/shell/ShellPanel";
 
 type Page = "main" | "keys";
@@ -72,17 +58,17 @@ const ACTION_ORDER: GameAction[] = [
 ];
 
 const ACTION_LABEL: Record<GameAction, string> = {
-  up: "MOVE UP",
-  down: "MOVE DOWN",
-  left: "MOVE LEFT",
-  right: "MOVE RIGHT",
-  action: "A / CONFIRM",
-  cancel: "B / WITNESS",
-  lore: "LORE LOG",
-  settings: "SETTINGS",
-  skip: "SKIP DIALOG",
-  mute: "MUTE AUDIO",
-  lcd: "CRT OVERLAY",
+  up: "Move Up",
+  down: "Move Down",
+  left: "Move Left",
+  right: "Move Right",
+  action: "A / Confirm",
+  cancel: "B / Witness",
+  lore: "Lore Log",
+  settings: "Settings",
+  skip: "Skip Dialog",
+  mute: "Mute Audio",
+  lcd: "CRT Overlay",
 };
 
 function fmtAuto(ms: number): string {
@@ -107,43 +93,44 @@ export function DesktopShellSettings() {
   const [cursor, setCursor] = useState(0);
   const [confirmQuit, setConfirmQuit] = useState(false);
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
+  const [capture, setCapture] = useState<{
+    action: GameAction;
+    slot: Slot;
+  } | null>(null);
 
-  // Active rebind capture: { action, slot } when waiting for a keypress.
-  const [capture, setCapture] = useState<{ action: GameAction; slot: Slot } | null>(null);
-
-  useEffect(() => {
-    return subscribeControls(() => force((n) => n + 1));
-  }, []);
-  useEffect(() => {
-    return subscribeGameUi((s) => setScene(s.scene));
-  }, []);
+  useEffect(() => subscribeControls(() => force((n) => n + 1)), []);
+  useEffect(() => subscribeGameUi((s) => setScene(s.scene)), []);
   useEffect(() => {
     const id = window.setInterval(() => setAudioTick((n) => n + 1), 250);
     return () => window.clearInterval(id);
   }, []);
   void audioTick;
 
-  const c = getControls();
+  const controls = getControls();
   const audio = getAudio();
   const canReturnToTitle = scene.key !== "Title" && scene.key !== "";
 
   const rows: Row[] = useMemo(() => {
     const cycleInterface = (dir: 1 | -1) => {
-      const i = INTERFACE_ORDER.indexOf(c.interfaceMode);
+      const i = INTERFACE_ORDER.indexOf(controls.interfaceMode);
       setInterfaceMode(
-        INTERFACE_ORDER[(i + dir + INTERFACE_ORDER.length) % INTERFACE_ORDER.length],
+        INTERFACE_ORDER[
+          (i + dir + INTERFACE_ORDER.length) % INTERFACE_ORDER.length
+        ],
       );
     };
     const cycleSize = (dir: 1 | -1) => {
-      const i = BUTTON_SIZES.indexOf(c.buttonSize);
+      const i = BUTTON_SIZES.indexOf(controls.buttonSize);
       setButtonSize(
         BUTTON_SIZES[(i + dir + BUTTON_SIZES.length) % BUTTON_SIZES.length],
       );
     };
     const cycleLayout = (dir: 1 | -1) => {
-      const i = TOUCH_LAYOUTS.indexOf(c.touchLayout);
+      const i = TOUCH_LAYOUTS.indexOf(controls.touchLayout);
       setTouchLayout(
-        TOUCH_LAYOUTS[(i + dir + TOUCH_LAYOUTS.length) % TOUCH_LAYOUTS.length],
+        TOUCH_LAYOUTS[
+          (i + dir + TOUCH_LAYOUTS.length) % TOUCH_LAYOUTS.length
+        ],
       );
     };
     const adjustVol = (dir: 1 | -1) => {
@@ -152,8 +139,7 @@ export function DesktopShellSettings() {
       setAudioTick((n) => n + 1);
     };
     const adjustAuto = (dir: 1 | -1) => {
-      const next = c.dialogAutoAdvanceMs + dir * 500;
-      setDialogAutoAdvance(next);
+      setDialogAutoAdvance(controls.dialogAutoAdvanceMs + dir * 500);
     };
     const toggleMute = () => {
       audio.setMuted(!audio.muted);
@@ -162,93 +148,85 @@ export function DesktopShellSettings() {
 
     const list: Row[] = [
       {
-        label: "INTERFACE MODE",
-        value: c.interfaceMode === "desktop" ? "DESKTOP" : "TOUCH",
+        label: "Interface Mode",
+        value: controls.interfaceMode === "desktop" ? "DESKTOP" : "TOUCH",
         detail:
-          "Switch between desktop chrome and touch landscape layout. Touch shows the on-screen pad.",
+          "Choose the desktop command frame or touch landscape interface.",
         onLeft: () => cycleInterface(-1),
         onRight: () => cycleInterface(1),
         onActivate: () => cycleInterface(1),
       },
       {
-        label: "VOLUME",
+        label: "Volume",
         value: audio.muted ? "MUTED" : `${Math.round(audio.volume * 100)}%`,
-        detail: "Master audio level. Affects music, dialog blips, and SFX.",
+        detail: "Master audio level.",
         onLeft: () => adjustVol(-1),
         onRight: () => adjustVol(1),
         onActivate: toggleMute,
       },
       {
-        label: "MUTE",
+        label: "Mute",
         value: audio.muted ? "ON" : "OFF",
-        detail: "Silence all audio without losing your volume preference.",
-        onActivate: toggleMute,
+        detail:
+          "Silence all audio without changing your saved volume value.",
         onLeft: toggleMute,
         onRight: toggleMute,
+        onActivate: toggleMute,
       },
       {
-        label: "AUTO-ADVANCE",
-        value: fmtAuto(c.dialogAutoAdvanceMs),
+        label: "Auto Advance",
+        value: fmtAuto(controls.dialogAutoAdvanceMs),
         detail:
-          "When set, dialogue advances automatically after the configured delay. 0 = manual.",
+          "0 means manual. Otherwise dialogue advances after the chosen delay.",
         onLeft: () => adjustAuto(-1),
         onRight: () => adjustAuto(1),
       },
       {
-        label: "LEFT-HANDED",
-        value: c.leftHanded ? "ON" : "OFF",
-        detail: "Mirror touch joystick + action buttons across the screen.",
-        onLeft: () => setLeftHanded(!c.leftHanded),
-        onRight: () => setLeftHanded(!c.leftHanded),
-        onActivate: () => setLeftHanded(!c.leftHanded),
+        label: "Left Handed",
+        value: controls.leftHanded ? "ON" : "OFF",
+        detail: "Mirror the touch-side control arrangement.",
+        onLeft: () => setLeftHanded(!controls.leftHanded),
+        onRight: () => setLeftHanded(!controls.leftHanded),
+        onActivate: () => setLeftHanded(!controls.leftHanded),
       },
       {
-        label: "HAPTICS",
-        value: c.haptics ? "ON" : "OFF",
-        detail: "Short vibration on touch buttons (devices that support it).",
-        onLeft: () => setHaptics(!c.haptics),
-        onRight: () => setHaptics(!c.haptics),
-        onActivate: () => setHaptics(!c.haptics),
+        label: "Haptics",
+        value: controls.haptics ? "ON" : "OFF",
+        detail: "Short vibration on supported touch devices.",
+        onLeft: () => setHaptics(!controls.haptics),
+        onRight: () => setHaptics(!controls.haptics),
+        onActivate: () => setHaptics(!controls.haptics),
       },
-    ];
-
-    // Touch rows are always present (parity with canvas settings) so the
-    // player can preconfigure them before switching interface mode.
-    list.push(
       {
-        label: "BUTTON SIZE",
-        value: c.buttonSize.toUpperCase(),
-        detail: "Size of the on-screen A/B + d-pad buttons (used in touch mode).",
+        label: "Button Size",
+        value: controls.buttonSize.toUpperCase(),
+        detail: "On-screen control size for touch mode.",
         onLeft: () => cycleSize(-1),
         onRight: () => cycleSize(1),
       },
       {
-        label: "TOUCH LAYOUT",
-        value: c.touchLayout.toUpperCase(),
-        detail: "Choose between d-pad, swipe gestures, hybrid, or none (used in touch mode).",
+        label: "Touch Layout",
+        value: controls.touchLayout.toUpperCase(),
+        detail: "Choose d-pad, swipe, hybrid, or off for touch mode.",
         onLeft: () => cycleLayout(-1),
         onRight: () => cycleLayout(1),
       },
-    );
-
-    list.push({
-      label: "KEY BINDINGS",
-      value: "›",
-      detail: "Edit primary and secondary keys for every game action.",
-      onActivate: () => {
-        setPage("keys");
-        setCursor(0);
+      {
+        label: "Reset Controls",
+        value: "›",
+        detail: "Restore bindings and layout defaults.",
+        onActivate: () => resetControls(),
       },
-    });
+    ];
 
     if (canReturnToTitle) {
       list.push({
-        label: confirmQuit ? "CONFIRM RETURN TO TITLE" : "RETURN TO TITLE",
+        label: confirmQuit ? "Confirm Return to Title" : "Return to Title",
         value: "›",
         danger: true,
         detail: confirmQuit
-          ? "Activate again to leave the current run and return to the title screen."
-          : "Leave the current run and return to the title screen.",
+          ? "Activate again to leave the run and return to title."
+          : "Leave the current run and return to title.",
         onActivate: () => {
           if (!confirmQuit) {
             setConfirmQuit(true);
@@ -259,72 +237,69 @@ export function DesktopShellSettings() {
       });
     }
 
-    list.push({
-      label: "RESET CONTROLS",
-      value: "›",
-      detail: "Restore key bindings and layout settings to defaults. Audio volume/mute are not affected.",
-      onActivate: () => resetControls(),
-    });
-
     return list;
-  }, [c, audio, canReturnToTitle, confirmQuit]);
+  }, [controls, audio, canReturnToTitle, confirmQuit]);
 
-  // Clamp cursor when row count or page changes.
   useEffect(() => {
     const max = page === "main" ? rows.length : ACTION_ORDER.length;
-    setCursor((cur) => Math.min(cur, Math.max(0, max - 1)));
+    setCursor((c) => Math.min(c, Math.max(0, max - 1)));
   }, [rows.length, page]);
 
-  // Reset confirm-quit state if cursor moves away from the row.
   useEffect(() => {
     if (page !== "main") {
       if (confirmQuit) setConfirmQuit(false);
       return;
     }
     const active = rows[cursor];
-    if (!active || !active.label.includes("RETURN TO TITLE")) {
+    if (!active || !active.label.toLowerCase().includes("return to title")) {
       if (confirmQuit) setConfirmQuit(false);
     }
-  }, [cursor, rows, confirmQuit, page]);
+  }, [page, cursor, rows, confirmQuit]);
 
   const move = useCallback(
     (dir: 1 | -1) => {
       const max = page === "main" ? rows.length : ACTION_ORDER.length;
       if (max <= 0) return;
-      setCursor((cur) => (cur + dir + max) % max);
+      setCursor((c) => (c + dir + max) % max);
     },
-    [rows.length, page],
+    [page, rows.length],
   );
 
-  // Keyboard handling (capture phase). When in rebind capture mode, the
-  // very next keypress (other than ESC) is written to the active slot.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // --- Rebind capture mode swallows everything ---
       if (capture) {
         e.preventDefault();
         e.stopPropagation();
+
         if (e.key === "Escape") {
           setCapture(null);
           return;
         }
-        const name = normalizeKeyEvent(e);
-        if (!name) return;
+
+        if (
+          (e.key === "Backspace" || e.key === "Delete") &&
+          capture.slot === "secondary"
+        ) {
+          const cur = getControls().bindings[capture.action];
+          setBinding(capture.action, cur.primary, undefined);
+          setCapture(null);
+          return;
+        }
+
+        const normalized = normalizeKeyEvent(e);
+        if (!normalized) return;
+
         const cur = getControls().bindings[capture.action];
         if (capture.slot === "primary") {
-          setBinding(capture.action, name, cur.secondary);
+          setBinding(capture.action, normalized, cur.secondary);
         } else {
-          setBinding(capture.action, cur.primary, name);
+          setBinding(capture.action, cur.primary, normalized);
         }
-        getAudio().sfx("confirm");
         setCapture(null);
         return;
       }
 
-      const k = e.key;
-
-      // ESC: back out of keys page first, then close.
-      if (k === "Escape") {
+      if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
         if (page === "keys") {
@@ -336,199 +311,198 @@ export function DesktopShellSettings() {
         return;
       }
 
-      if (page === "main" && (k === "p" || k === "P")) {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-        return;
-      }
-
-      if (k === "ArrowUp" || k === "w" || k === "W") {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
         e.preventDefault();
         e.stopPropagation();
         move(-1);
         return;
       }
-      if (k === "ArrowDown" || k === "s" || k === "S") {
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         e.preventDefault();
         e.stopPropagation();
         move(1);
         return;
       }
-      if (k === "ArrowLeft" || k === "a" || k === "A") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
         e.preventDefault();
         e.stopPropagation();
         if (page === "main") rows[cursor]?.onLeft?.();
         return;
       }
-      if (k === "ArrowRight" || k === "d" || k === "D") {
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
         e.preventDefault();
         e.stopPropagation();
         if (page === "main") rows[cursor]?.onRight?.();
         return;
       }
-      if (k === " " || k === "Enter") {
+      if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
         if (page === "main") {
           rows[cursor]?.onActivate?.();
         } else {
-          // On keys page, Enter starts capturing the PRIMARY slot for the
-          // selected action. (Use mouse for secondary / clear.)
           const action = ACTION_ORDER[cursor];
           if (action) setCapture({ action, slot: "primary" });
         }
-        return;
       }
     };
+
     window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true } as EventListenerOptions);
-  }, [cursor, rows, move, page, capture]);
+    return () =>
+      window.removeEventListener("keydown", onKey, {
+        capture: true,
+      } as EventListenerOptions);
+  }, [capture, page, rows, cursor, move]);
 
   const active = page === "main" ? rows[cursor] : null;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center font-mono"
-      style={{ background: "rgba(0,0,0,0.78)" }}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <ShellPanel
-        tone="accent"
+  const rail = (
+    <div className="flex h-full flex-col gap-2">
+      <div>
+        <div
+          className="text-[10px] uppercase tracking-wider"
+          style={{ color: "#e8c890" }}
+        >
+          Settings
+        </div>
+        <div className="text-[10px] mt-0.5" style={{ color: "#a8c8e8" }}>
+          {scene.label || "—"}
+          {scene.zone ? ` · ${scene.zone}` : ""}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setPage("main");
+          setCursor(0);
+        }}
+        className="w-full rounded-md px-3 py-2 text-left text-xs uppercase tracking-wider"
         style={{
-          width: "min(92vw, 640px)",
-          maxHeight: "88vh",
-          padding: 0,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
+          background:
+            page === "main"
+              ? "linear-gradient(180deg, rgba(74,120,200,0.95), rgba(42,53,80,0.95))"
+              : "linear-gradient(180deg, rgba(20,28,48,0.95), rgba(8,12,24,0.95))",
+          color: "#eef3ff",
+          border:
+            page === "main"
+              ? "1px solid rgba(232,200,144,0.55)"
+              : "1px solid rgba(168,200,232,0.35)",
         }}
       >
-        <header
-          className="flex items-center justify-between px-4 py-2"
-          style={{ borderBottom: "1px solid rgba(168,200,232,0.3)" }}
-        >
-          <ShellPanelTitle style={{ marginBottom: 0 }}>
-            {page === "main" ? "SETTINGS" : "KEY BINDINGS"}
-          </ShellPanelTitle>
-          <div className="flex items-center gap-2">
-            {page === "keys" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPage("main");
-                  setCursor(0);
-                }}
-                className="rounded px-2 py-1 text-xs"
-                style={{
-                  background: "rgba(74,120,200,0.85)",
-                  color: "#fff",
-                  border: "1px solid rgba(168,200,232,0.6)",
-                }}
-                aria-label="Back to settings"
-              >
-                ‹ BACK
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={close}
-              className="rounded px-2 py-1 text-xs"
-              style={{
-                background: "rgba(216,74,74,0.85)",
-                color: "#fff",
-                border: "1px solid rgba(255,200,200,0.5)",
-              }}
-              aria-label="Close settings"
-            >
-              CLOSE (ESC)
-            </button>
-          </div>
-        </header>
+        System
+      </button>
 
-        <div
-          className="overflow-y-auto px-4 py-3 grid gap-3 text-xs"
-          style={{ flex: 1, gridTemplateColumns: "1fr" }}
-        >
-          {page === "main" ? (
-            <>
-              <ul className="space-y-1">
-                {rows.map((r, i) => {
-                  const selected = i === cursor;
-                  const bg = selected
-                    ? r.danger
-                      ? "rgba(216,74,74,0.14)"
-                      : "rgba(232,200,144,0.12)"
-                    : "rgba(255,255,255,0.02)";
-                  const border = selected
-                    ? r.danger
-                      ? "1px solid rgba(216,74,74,0.55)"
-                      : "1px solid rgba(232,200,144,0.45)"
-                    : "1px solid rgba(168,200,232,0.18)";
-                  const color = selected
-                    ? r.danger
-                      ? "#f0a8a8"
-                      : "#e8c890"
-                    : "#eef3ff";
-                  const valueColor = selected
-                    ? r.danger
-                      ? "#f0a8a8"
-                      : "#e8c890"
-                    : "#a8c8e8";
-                  return (
-                    <li key={r.label}>
-                      <button
-                        type="button"
-                        onPointerEnter={() => setCursor(i)}
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          setCursor(i);
-                          r.onActivate?.();
-                        }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded text-left"
-                        style={{ background: bg, border, color }}
-                      >
-                        <span>{r.label}</span>
-                        <span style={{ color: valueColor, opacity: 0.9 }}>
-                          {r.value}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <ShellPanel compact tone="subdued">
-                <ShellPanelMeta>DETAIL</ShellPanelMeta>
-                <div className="text-xs leading-snug mt-1" style={{ color: "#eef3ff" }}>
-                  {active?.detail ?? "—"}
-                </div>
-              </ShellPanel>
-            </>
-          ) : (
-            <KeyBindingsEditor
-              cursor={cursor}
-              setCursor={setCursor}
-              capture={capture}
-              setCapture={setCapture}
-            />
-          )}
-        </div>
-
-        <footer
-          className="px-4 py-2 text-[10px] uppercase tracking-wider"
-          style={{
-            color: "rgba(168,200,232,0.6)",
-            borderTop: "1px solid rgba(168,200,232,0.2)",
-          }}
-        >
-          {capture
-            ? "PRESS ANY KEY TO BIND · ESC CANCELS"
-            : page === "main"
-              ? "↑↓ MOVE · ←→ ADJUST · A / ENTER ACTIVATE · ESC CLOSE"
-              : "↑↓ SELECT · ENTER REBIND PRIMARY · CLICK SLOT TO REBIND · ESC BACK"}
-        </footer>
-      </ShellPanel>
+      <button
+        type="button"
+        onClick={() => {
+          setPage("keys");
+          setCursor(0);
+        }}
+        className="w-full rounded-md px-3 py-2 text-left text-xs uppercase tracking-wider"
+        style={{
+          background:
+            page === "keys"
+              ? "linear-gradient(180deg, rgba(74,120,200,0.95), rgba(42,53,80,0.95))"
+              : "linear-gradient(180deg, rgba(20,28,48,0.95), rgba(8,12,24,0.95))",
+          color: "#eef3ff",
+          border:
+            page === "keys"
+              ? "1px solid rgba(232,200,144,0.55)"
+              : "1px solid rgba(168,200,232,0.35)",
+        }}
+      >
+        Key Bindings
+      </button>
     </div>
+  );
+
+  return (
+    <DesktopSurfaceFrame
+      title="Settings"
+      subtitle={`${scene.label || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
+      onClose={close}
+      rail={rail}
+      footer={
+        capture
+          ? "Press any key to bind · Esc cancels · Delete clears alt slot"
+          : page === "main"
+            ? "↑↓ move · ←→ adjust · Enter activate · Esc close"
+            : "↑↓ select · Enter rebind primary · click slot to rebind · Esc back"
+      }
+    >
+      {page === "main" ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_280px] gap-4">
+          <ul className="space-y-1">
+            {rows.map((row, i) => {
+              const selected = i === cursor;
+              return (
+                <li key={row.label}>
+                  <button
+                    type="button"
+                    onPointerEnter={() => setCursor(i)}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      setCursor(i);
+                      row.onActivate?.();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded text-left"
+                    style={{
+                      background: selected
+                        ? row.danger
+                          ? "rgba(216,74,74,0.14)"
+                          : "rgba(232,200,144,0.12)"
+                        : "rgba(255,255,255,0.02)",
+                      border: selected
+                        ? row.danger
+                          ? "1px solid rgba(216,74,74,0.55)"
+                          : "1px solid rgba(232,200,144,0.45)"
+                        : "1px solid rgba(168,200,232,0.18)",
+                      color: selected
+                        ? row.danger
+                          ? "#f0a8a8"
+                          : "#e8c890"
+                        : "#eef3ff",
+                    }}
+                  >
+                    <span>{row.label}</span>
+                    <span
+                      style={{
+                        color: selected
+                          ? row.danger
+                            ? "#f0a8a8"
+                            : "#e8c890"
+                          : "#a8c8e8",
+                        opacity: 0.95,
+                      }}
+                    >
+                      {row.value}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <ShellPanel compact tone="subdued">
+            <ShellPanelTitle>Detail</ShellPanelTitle>
+            <div
+              className="text-xs leading-snug"
+              style={{ color: "#eef3ff" }}
+            >
+              {active?.detail ?? "—"}
+            </div>
+          </ShellPanel>
+        </div>
+      ) : (
+        <KeyBindingsEditor
+          cursor={cursor}
+          setCursor={setCursor}
+          capture={capture}
+          setCapture={setCapture}
+        />
+      )}
+    </DesktopSurfaceFrame>
   );
 }
 
@@ -541,23 +515,25 @@ function KeyBindingsEditor({
   cursor: number;
   setCursor: (i: number) => void;
   capture: { action: GameAction; slot: Slot } | null;
-  setCapture: (c: { action: GameAction; slot: Slot } | null) => void;
+  setCapture: (next: { action: GameAction; slot: Slot } | null) => void;
 }) {
   const [, force] = useState(0);
+
   useEffect(() => subscribeControls(() => force((n) => n + 1)), []);
-  const c = getControls();
+  const controls = getControls();
 
   return (
-    <div className="flex flex-col gap-1">
-      {ACTION_ORDER.map((a, i) => {
-        const b = c.bindings[a];
+    <div className="flex flex-col gap-2">
+      {ACTION_ORDER.map((action, i) => {
+        const binding = controls.bindings[action];
         const selected = i === cursor;
-        const isCapturingThis = capture?.action === a;
+        const capturingThis = capture?.action === action;
+
         return (
           <div
-            key={a}
+            key={action}
             onPointerEnter={() => setCursor(i)}
-            className="flex items-center justify-between gap-2 px-3 py-2 rounded"
+            className="flex items-center justify-between gap-3 rounded px-3 py-2"
             style={{
               background: selected
                 ? "rgba(232,200,144,0.10)"
@@ -567,52 +543,56 @@ function KeyBindingsEditor({
                 : "1px solid rgba(168,200,232,0.18)",
             }}
           >
-            <span
+            <div
               className="text-xs"
-              style={{ color: selected ? "#e8c890" : "#eef3ff", minWidth: 140 }}
+              style={{
+                color: selected ? "#e8c890" : "#eef3ff",
+                minWidth: 150,
+              }}
             >
-              {ACTION_LABEL[a]}
-            </span>
-            <div className="flex items-center gap-1.5">
+              {ACTION_LABEL[action]}
+            </div>
+
+            <div className="flex items-center gap-2">
               <SlotButton
                 label={
-                  isCapturingThis && capture?.slot === "primary"
+                  capturingThis && capture?.slot === "primary"
                     ? "PRESS KEY…"
-                    : keyLabel(b.primary)
+                    : keyLabel(binding.primary)
                 }
-                active={isCapturingThis && capture?.slot === "primary"}
-                onClick={() => setCapture({ action: a, slot: "primary" })}
-                title="Click then press a key to set the primary binding"
+                active={capturingThis && capture?.slot === "primary"}
+                onClick={() => setCapture({ action, slot: "primary" })}
               />
               <SlotButton
                 label={
-                  isCapturingThis && capture?.slot === "secondary"
+                  capturingThis && capture?.slot === "secondary"
                     ? "PRESS KEY…"
-                    : b.secondary
-                      ? keyLabel(b.secondary)
-                      : "—"
+                    : binding.secondary
+                      ? keyLabel(binding.secondary)
+                      : "SET ALT"
                 }
-                active={isCapturingThis && capture?.slot === "secondary"}
-                onClick={() => setCapture({ action: a, slot: "secondary" })}
-                title="Click then press a key to set the secondary binding"
+                active={capturingThis && capture?.slot === "secondary"}
+                onClick={() => setCapture({ action, slot: "secondary" })}
               />
               <button
                 type="button"
-                onClick={() => setBinding(a, b.primary, undefined)}
-                disabled={!b.secondary}
+                onClick={() =>
+                  setBinding(action, binding.primary, undefined)
+                }
+                disabled={!binding.secondary}
                 className="rounded px-2 py-1 text-[10px] uppercase"
                 style={{
-                  background: b.secondary
+                  background: binding.secondary
                     ? "rgba(216,74,74,0.18)"
                     : "rgba(0,0,0,0.25)",
-                  color: b.secondary ? "#f0a8a8" : "rgba(168,200,232,0.4)",
-                  border: b.secondary
+                  color: binding.secondary
+                    ? "#f0a8a8"
+                    : "rgba(168,200,232,0.4)",
+                  border: binding.secondary
                     ? "1px solid rgba(216,74,74,0.45)"
                     : "1px solid rgba(168,200,232,0.15)",
-                  cursor: b.secondary ? "pointer" : "not-allowed",
+                  cursor: binding.secondary ? "pointer" : "not-allowed",
                 }}
-                title="Clear secondary binding"
-                aria-label={`Clear secondary binding for ${ACTION_LABEL[a]}`}
               >
                 CLR
               </button>
@@ -620,6 +600,15 @@ function KeyBindingsEditor({
           </div>
         );
       })}
+
+      <ShellPanel compact tone="subdued">
+        <ShellPanelMeta>Capture</ShellPanelMeta>
+        <div className="text-xs mt-1" style={{ color: "#eef3ff" }}>
+          {capture
+            ? `Press a key for ${ACTION_LABEL[capture.action]} (${capture.slot === "primary" ? "primary" : "alt"}).`
+            : "Select a slot to begin rebinding."}
+        </div>
+      </ShellPanel>
     </div>
   );
 }
@@ -628,21 +617,18 @@ function SlotButton({
   label,
   active,
   onClick,
-  title,
 }: {
   label: string;
-  active: boolean;
   onClick: () => void;
-  title: string;
+  active: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={title}
       className="rounded px-2 py-1 text-[11px] font-mono"
       style={{
-        minWidth: 72,
+        minWidth: 84,
         background: active ? "rgba(232,200,144,0.22)" : "rgba(0,0,0,0.4)",
         color: active ? "#e8c890" : "#eef3ff",
         border: active
