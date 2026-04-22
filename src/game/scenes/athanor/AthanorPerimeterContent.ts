@@ -1,5 +1,5 @@
 /**
- * Act 3 — Athanor perimeter micro-scenes.
+ * Act 2 — Athanor perimeter micro-scenes.
  *
  * Each completed operation leaves a small physical trace at the edge of
  * the chamber: a soot mark by the south wall (after Nigredo), a rinse
@@ -32,6 +32,7 @@ export const ATHANOR_PERIMETER_INSPECTABLES: ActInteraction<AthanorHostScene>[] 
     requiredFlags: ["op_nigredo_done"],
     onInteract: ({ scene, save }) => {
       save.flags.athanor_perimeter_soot_seen = true;
+      scene.persist();
       scene.speak([
         { who: "FLOOR", text: "A black mark the size of your hand. The room kept it." },
         { who: "?", text: "What burned here did not leave the chamber. Only its disguise did." },
@@ -51,6 +52,7 @@ export const ATHANOR_PERIMETER_INSPECTABLES: ActInteraction<AthanorHostScene>[] 
     requiredFlags: ["op_albedo_done"],
     onInteract: ({ scene, save }) => {
       save.flags.athanor_perimeter_basin_seen = true;
+      scene.persist();
       scene.speak([
         { who: "BASIN", text: "Pale water. Still. It does not pretend the dirt was never there." },
         { who: "?", text: "Cleanliness, here, means honest. Not blameless." },
@@ -70,6 +72,7 @@ export const ATHANOR_PERIMETER_INSPECTABLES: ActInteraction<AthanorHostScene>[] 
     requiredFlags: ["op_citrinitas_done"],
     onInteract: ({ scene, save }) => {
       save.flags.athanor_perimeter_filament_seen = true;
+      scene.persist();
       scene.speak([
         { who: "CHAIN", text: "A thread of citrine has wound itself through the chains." },
         { who: "?", text: "Meaning, when it arrives, attaches to whatever was holding the room up." },
@@ -89,6 +92,7 @@ export const ATHANOR_PERIMETER_INSPECTABLES: ActInteraction<AthanorHostScene>[] 
     requiredFlags: ["op_rubedo_done"],
     onInteract: ({ scene, save }) => {
       save.flags.athanor_perimeter_seam_seen = true;
+      scene.persist();
       scene.speak([
         { who: "FLOOR", text: "A line of red runs from the vessel to the south door." },
         { who: "?", text: "Not blood. Not paint. The path the work takes when it leaves the room." },

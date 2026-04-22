@@ -124,9 +124,18 @@ export class AthanorThresholdScene extends Phaser.Scene {
   init(data: { save: SaveSlot }) {
     this.save = data.save;
     this.save.scene = "AthanorThreshold";
-    // Canonical act mapping — was hard-coded to 2 before.
     this.save.act = ACT_BY_SCENE.AthanorThreshold;
     writeSave(this.save);
+
+    this.busy = false;
+    this.depositedThisVisit = 0;
+    this.thresholdStage = 0;
+    this.vesselNodes = [];
+    this.doors = [];
+    this.doorPresentations = {};
+    this.perimeterTraces = [];
+    this.reflectionPortal = undefined;
+    this.reflectionLabel = undefined;
   }
 
   /** How many of the four operations have been completed. */
@@ -535,10 +544,12 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private athanorHostShim(): AthanorHostScene {
     return {
       save: this.save,
+      persist: () => {
+        writeSave(this.save);
+      },
       speak: (lines, onDone) => {
         this.busy = true;
         runDialog(this, lines, () => {
-          writeSave(this.save);
           this.busy = false;
           onDone?.();
         });
@@ -548,8 +559,10 @@ export class AthanorThresholdScene extends Phaser.Scene {
 
   private inspectVesselExpanded() {
     const stage = Math.max(0, Math.min(4, this.thresholdStage)) as 0 | 1 | 2 | 3 | 4;
+    const host = this.athanorHostShim();
     this.save.flags[ATHANOR_VESSEL_INSPECT_FLAG] = true;
-    this.athanorHostShim().speak(ATHANOR_VESSEL_LINES[stage]);
+    host.persist();
+    host.speak(ATHANOR_VESSEL_LINES[stage]);
   }
 
   private doorStatus(d: Door): string {
