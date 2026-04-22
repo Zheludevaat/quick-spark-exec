@@ -367,7 +367,7 @@ export function DesktopShellSettings() {
           Settings
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: "#a8c8e8" }}>
-          {scene.label || "—"}
+          {getPublicSceneLabel(scene.key) || "—"}
           {scene.zone ? ` · ${scene.zone}` : ""}
         </div>
       </div>
