@@ -336,39 +336,41 @@ export class MarsPlateauScene extends Phaser.Scene {
       return obj;
     };
 
+    // Always-visible atmospheric separation.
     add(
       this.add
-        .rectangle(0, 0, GBC_W, 18, color(pal.bg0), 0.35)
+        .rectangle(0, 0, GBC_W, 18, color(pal.bg0), 0.42)
         .setOrigin(0, 0)
         .setDepth(2),
     );
 
     add(
       this.add
-        .rectangle(0, 18, GBC_W, 66, color(pal.bg1), 0.18)
+        .rectangle(0, 18, GBC_W, 66, color(pal.bg1), 0.24)
         .setOrigin(0, 0)
         .setDepth(2),
     );
 
+    // Strong horizon and floor lips so the room never reads as dead black.
     add(
       this.add
-        .rectangle(0, 83, GBC_W, 1, color(pal.trim1), 0.45)
+        .rectangle(0, 83, GBC_W, 1, color(pal.trim1), 0.6)
         .setOrigin(0, 0)
-        .setDepth(7),
+        .setDepth(10),
     );
 
     add(
       this.add
-        .rectangle(0, 95, GBC_W, 2, color(pal.trim0), 0.65)
+        .rectangle(0, 95, GBC_W, 2, color(pal.trim0), 0.78)
         .setOrigin(0, 0)
-        .setDepth(7),
+        .setDepth(10),
     );
 
     add(
       this.add
-        .rectangle(0, 97, GBC_W, 47, color(pal.floor0), 0.14)
+        .rectangle(0, 97, GBC_W, 47, color(pal.floor0), 0.18)
         .setOrigin(0, 0)
-        .setDepth(5),
+        .setDepth(6),
     );
 
     if (zone === "approach" || zone === "stands" || zone === "line_yard") {
@@ -381,10 +383,10 @@ export class MarsPlateauScene extends Phaser.Scene {
               22,
               26 + (i % 3) * 8,
               color(pal.bg2),
-              0.22,
+              0.28,
             )
             .setOrigin(0, 0)
-            .setDepth(6),
+            .setDepth(8),
         );
       }
     }
@@ -392,8 +394,8 @@ export class MarsPlateauScene extends Phaser.Scene {
     if (zone === "approach") {
       add(
         this.add
-          .rectangle(80, 104, 56, 10, color(pal.trim0), 0.18)
-          .setDepth(8),
+          .rectangle(80, 104, 56, 10, color(pal.trim0), 0.22)
+          .setDepth(11),
       );
     }
 
@@ -401,9 +403,9 @@ export class MarsPlateauScene extends Phaser.Scene {
       for (let i = 0; i < 6; i++) {
         add(
           this.add
-            .rectangle(14 + i * 24, 21, 6, 14, color(pal.accent0), 0.16)
+            .rectangle(14 + i * 24, 21, 6, 14, color(pal.accent0), 0.2)
             .setOrigin(0, 0)
-            .setDepth(8),
+            .setDepth(11),
         );
       }
     }
@@ -411,48 +413,48 @@ export class MarsPlateauScene extends Phaser.Scene {
     if (zone === "line_yard") {
       add(
         this.add
-          .rectangle(80, 96, 42, 2, color(pal.accent1), 0.72)
-          .setDepth(9),
+          .rectangle(80, 96, 42, 2, color(pal.accent1), 0.82)
+          .setDepth(12),
       );
       add(
         this.add
-          .rectangle(80, 110, 42, 2, color(pal.accent1), 0.5)
-          .setDepth(9),
+          .rectangle(80, 110, 42, 2, color(pal.accent1), 0.58)
+          .setDepth(12),
       );
     }
 
     if (zone === "infirmary") {
       add(
         this.add
-          .rectangle(28, 96, 22, 6, color(pal.floor1), 0.45)
-          .setDepth(8),
+          .rectangle(28, 96, 22, 6, color(pal.floor1), 0.5)
+          .setDepth(11),
       );
       add(
         this.add
-          .rectangle(80, 96, 22, 6, color(pal.floor1), 0.45)
-          .setDepth(8),
+          .rectangle(80, 96, 22, 6, color(pal.floor1), 0.5)
+          .setDepth(11),
       );
       add(
         this.add
-          .rectangle(132, 96, 22, 6, color(pal.floor1), 0.45)
-          .setDepth(8),
+          .rectangle(132, 96, 22, 6, color(pal.floor1), 0.5)
+          .setDepth(11),
       );
     }
 
     if (zone === "endurance") {
       add(
         this.add
-          .rectangle(80, 104, 34, 10, color(pal.trim0), 0.12)
-          .setDepth(8),
+          .rectangle(80, 104, 34, 10, color(pal.trim0), 0.18)
+          .setDepth(11),
       );
     }
 
     if (zone === "threshold") {
       add(
         this.add
-          .circle(80, 108, 12, color(pal.accent0), 0.08)
-          .setStrokeStyle(1, color(pal.accent1), 0.78)
-          .setDepth(9),
+          .circle(80, 108, 12, color(pal.accent0), 0.1)
+          .setStrokeStyle(1, color(pal.accent1), 0.82)
+          .setDepth(12),
       );
     }
 
