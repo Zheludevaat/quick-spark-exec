@@ -1375,22 +1375,13 @@ export class MercuryPlateauScene extends Phaser.Scene {
         ease: "Sine.inOut",
       });
 
-      // Soryn beat — only on actual ignition, not on revisit.
-      if (!force && !this.busy) {
-        this.busy = true;
-        this.time.delayedCall(700, () => {
-          runDialog(
-            this,
-            [
-              { who: "SORYN", text: "The Tower has finished arranging its premise." },
-              { who: "SORYN", text: "The Question is ready. The door above remembers." },
-            ],
-            () => {
-              this.busy = false;
-            },
-          );
-        });
+      // Defer the SOPHENE ceremonial beat to the next safe tick so it does
+      // not collide with whatever dialog/inquiry just completed an op.
+      if (!force && !this.chamberBeatPlayed) {
+        this.pendingChamberReadyBeat = true;
       }
+
+      this.publishSceneSnapshot();
       return;
     }
 
