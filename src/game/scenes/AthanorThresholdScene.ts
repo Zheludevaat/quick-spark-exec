@@ -416,7 +416,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = true;
         runDialog(
           this,
-          [{ who: this.save.sorynReleased ? "ROWAN" : "SORYN", text: "All four are done. The vessel waits to be sealed." }],
+          [{ who: this.save.sorynReleased ? "ROWAN" : "SOPHENE", text: "All four are done. The vessel waits to be sealed." }],
           () => {
             this.busy = false;
             this.gotoSealedVessel();

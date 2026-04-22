@@ -252,7 +252,7 @@ export class RubedoScene extends Phaser.Scene {
       lead,
       this.optionsFor(idx, p),
       (picked) => {
-        if (picked.label === "RELEASE SORYN") {
+        if (picked.label === "RELEASE SOPHENE") {
           this.save.sorynReleased = true;
           activateQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_releasing_the_daimon");
@@ -321,7 +321,7 @@ export class RubedoScene extends Phaser.Scene {
     if (idx === 1 && !this.save.sorynReleased) {
       opts.push({
         choice: "ask",
-        label: "RELEASE SORYN",
+        label: "RELEASE SOPHENE",
         reply: "THANK YOU. GO HOME.",
       });
     }

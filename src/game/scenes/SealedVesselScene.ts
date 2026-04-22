@@ -114,7 +114,7 @@ export class SealedVesselScene extends Phaser.Scene {
     }
 
     const intro: { who: string; text: string }[] = [
-      { who: this.save.sorynReleased ? "ROWAN" : "SORYN", text: "Inscribe the seal. One sentence." },
+      { who: this.save.sorynReleased ? "ROWAN" : "SOPHENE", text: "Inscribe the seal. One sentence." },
       { who: "ROWAN", text: "(I choose what to carry forward.)" },
     ];
     runDialog(this, intro, () => this.choose());

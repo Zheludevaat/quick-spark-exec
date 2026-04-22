@@ -770,7 +770,7 @@ export class SilverThresholdScene extends Phaser.Scene {
 
     if (!this.nearSoryn()) {
       this.stillMs = 0;
-      this.hint.setText("STAND STILL NEAR SORYN");
+      this.hint.setText("STAND STILL NEAR SOPHENE");
       return;
     }
     const moving = Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001;
