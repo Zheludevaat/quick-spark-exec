@@ -421,7 +421,7 @@ export function DesktopShellSettings() {
   return (
     <DesktopSurfaceFrame
       title="Settings"
-      subtitle={`${scene.label || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
+      subtitle={`${getPublicSceneLabel(scene.key) || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
       onClose={close}
       rail={rail}
       footer={
