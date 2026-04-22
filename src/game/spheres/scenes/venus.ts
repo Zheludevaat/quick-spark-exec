@@ -148,6 +148,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private activeAttune: AttuneTarget | null = null;
   private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
   private kypriaPresentation?: EncounterPresentationHandle;
+  private previousZone: VenusZoneId | null = null;
 
   private destroyKypriaPresentation() {
     this.kypriaPresentation?.destroy();
@@ -172,6 +173,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.hotspots = [];
     this.doors = [];
     this.hotspotMarkers = [];
+    this.previousZone = null;
   }
 
   create() {
@@ -226,6 +228,27 @@ export class VenusPlateauScene extends Phaser.Scene {
       this.handleCancel();
     });
 
+    const onTouchAction = () => {
+      if (this.modal || this.busy) return;
+      this.handleAction();
+    };
+    const onTouchCancel = () => {
+      if (this.modal || this.busy) return;
+      this.handleCancel();
+    };
+
+    this.events.on("vinput-action", onTouchAction);
+    this.events.on("vinput-cancel", onTouchCancel);
+
+    this.events.once("shutdown", () => {
+      this.events.off("vinput-action", onTouchAction);
+      this.events.off("vinput-cancel", onTouchCancel);
+    });
+    this.events.once("destroy", () => {
+      this.events.off("vinput-action", onTouchAction);
+      this.events.off("vinput-cancel", onTouchCancel);
+    });
+
     if (!isVenusFlag(this.save, "introSeen")) {
       markVenusFlag(this.save, "introSeen");
       writeSave(this.save);
@@ -243,7 +266,15 @@ export class VenusPlateauScene extends Phaser.Scene {
   // Zone build
   // -----------------------------------------------------------------
 
-  private loadZone(zone: VenusZoneId, silent = false) {
+  private loadZone(
+    zone: VenusZoneId,
+    silent = false,
+    from: VenusZoneId | null = null,
+  ) {
+    if (from && from !== zone) {
+      this.previousZone = from;
+    }
+
     this.zone = zone;
     setVenusZone(this.save, zone);
     writeSave(this.save);
@@ -261,8 +292,8 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.subtitle.setText(this.subtitleFor(zone));
     publishVenusMinimap(zone);
 
-    // Place player at the zone's entry point
-    const entry = this.entryFor(zone);
+    // Place player at the zone's entry point (source-aware)
+    const entry = this.entryFor(zone, from);
     this.player.setPosition(entry.x, entry.y);
 
     switch (zone) {
@@ -301,22 +332,40 @@ export class VenusPlateauScene extends Phaser.Scene {
     }
   }
 
-  private entryFor(zone: VenusZoneId): { x: number; y: number } {
-    // Each zone has a logical entry that places the player just inside
-    // the door they came from.
+  private entryFor(
+    zone: VenusZoneId,
+    from: VenusZoneId | null,
+  ): { x: number; y: number } {
     switch (zone) {
       case "atrium":
+        if (from === "gallery") return { x: 18, y: 64 };
+        if (from === "recognition_hall") return { x: GBC_W - 18, y: 64 };
+        if (from === "ladder") return { x: GBC_W - 18, y: 108 };
+        if (from === "threshold") return { x: GBC_W / 2, y: GBC_H - 28 };
         return { x: 30, y: 80 };
+
       case "gallery":
-        return { x: 30, y: 90 };
+        if (from === "recognition_hall") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 88 };
+
       case "recognition_hall":
-        return { x: 30, y: 80 };
+        if (from === "gallery") return { x: 20, y: 108 };
+        if (from === "reconstruction") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 80 };
+
       case "reconstruction":
-        return { x: 30, y: 80 };
+        if (from === "threshold") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 80 };
+
       case "ladder":
-        return { x: 30, y: 90 };
+        if (from === "threshold") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 88 };
+
       case "threshold":
-        return { x: 30, y: 80 };
+        if (from === "reconstruction") return { x: GBC_W - 18, y: 108 };
+        if (from === "ladder") return { x: GBC_W - 18, y: 64 };
+        if (from === "atrium") return { x: 18, y: 80 };
+        return { x: 18, y: 80 };
     }
   }
 
@@ -652,8 +701,11 @@ export class VenusPlateauScene extends Phaser.Scene {
       onAct: () => this.trySettle(),
     });
 
-    this.doors.push({ to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" });
-    this.doors.push({ to: "ladder", x: GBC_W - 8, y: 50, w: 8, h: 30, label: "LADDER →" });
+    this.doors.push(
+      { to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" },
+      { to: "ladder", x: GBC_W - 8, y: 50, w: 8, h: 24, label: "LADDER →" },
+      { to: "reconstruction", x: GBC_W - 8, y: 96, w: 8, h: 24, label: "STUDIO →" },
+    );
   }
 
   // -----------------------------------------------------------------
@@ -705,6 +757,8 @@ export class VenusPlateauScene extends Phaser.Scene {
     color: number,
     flagKey: "etiquetteHeard" | "anniversaryHeard",
   ) {
+    const alreadyHeard = isVenusFlag(this.save, flagKey);
+
     const body = this.add.rectangle(x, y, 7, 12, color, 0.85).setDepth(20);
     body.setStrokeStyle(1, 0x000000, 0.55);
     const head = this.add.circle(x, y - 8, 3, color, 0.85).setDepth(21);
@@ -717,15 +771,17 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.root.add(head);
     this.root.add(tag.obj);
 
-    this.hotspots.push({
+    const hotspot: Hotspot = {
       id: `amb_${npc.id}`,
       x,
       y,
       r: 11,
-      label: `LISTEN: ${npc.name}`,
+      label: alreadyHeard ? `HEAR AGAIN: ${npc.name}` : `LISTEN: ${npc.name}`,
       onAct: () => {
         markVenusFlag(this.save, flagKey);
         writeSave(this.save);
+        hotspot.label = `HEAR AGAIN: ${npc.name}`;
+
         const lines = npc.ambient.map((t) => ({ who: npc.name, text: t }));
         this.modal = true;
         runDialog(this, lines, () => {
@@ -733,7 +789,9 @@ export class VenusPlateauScene extends Phaser.Scene {
           this.refreshHint();
         });
       },
-    });
+    };
+
+    this.hotspots.push(hotspot);
   }
 
   // -----------------------------------------------------------------
@@ -821,25 +879,7 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
     }
 
-    for (const d of this.doors) {
-      if (
-        nx >= d.x &&
-        nx <= d.x + d.w &&
-        ny >= d.y &&
-        ny <= d.y + d.h
-      ) {
-        const link = VENUS_ZONE_LINKS[this.zone];
-        if (link.includes(d.to)) {
-          if (d.to === "threshold" && !venusCrackingReady(this.save) && this.zone === "atrium") {
-            this.player.setPosition(oldX, oldY);
-            this.flashHint("the threshold is not yet for you.");
-            return;
-          }
-          gbcWipe(this, () => this.loadZone(d.to));
-          return;
-        }
-      }
-    }
+    // Door traversal is now intentional via A — no auto-transition on overlap.
 
     this.refreshHintForProximity();
   }
@@ -858,6 +898,22 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
       getAudio().sfx("confirm");
       h.onAct();
+      return;
+    }
+
+    const d = this.findDoorInRange();
+    if (d) {
+      if (!this.canUseDoor(d)) {
+        getAudio().sfx("cancel");
+        this.flashHint(
+          d.to === "threshold"
+            ? "the threshold is not yet for you."
+            : "that way is not open.",
+        );
+        return;
+      }
+      getAudio().sfx("open");
+      gbcWipe(this, () => this.loadZone(d.to, false, this.zone));
     }
   }
 
@@ -866,22 +922,84 @@ export class VenusPlateauScene extends Phaser.Scene {
       this.cancelActiveAttune(false);
       return;
     }
+
     if (this.zone === "atrium") {
       this.toHub();
       return;
     }
-    gbcWipe(this, () => this.loadZone("atrium"));
+
+    const back =
+      this.previousZone && VENUS_ZONE_LINKS[this.zone].includes(this.previousZone)
+        ? this.previousZone
+        : "atrium";
+
+    gbcWipe(this, () => this.loadZone(back, false, this.zone));
+  }
+
+  private hotspotPriority(h: Hotspot): number {
+    if (h.id === "enter_trial") return 100;
+    if (h.id === "settle_here") return 90;
+
+    if (
+      h.id === "unfinished_work" ||
+      h.id === "reconstruction_chamber" ||
+      h.id === "release_audience" ||
+      h.id === "ladder_challenge"
+    ) {
+      return 75;
+    }
+
+    if (h.id.startsWith("npc_")) return 60;
+    if (h.id.startsWith("side_")) return 40;
+    if (h.id.startsWith("amb_")) return 25;
+    if (h.id.startsWith("attune_extra_")) return 20;
+
+    return 0;
+  }
+
+  private hotspotDistanceSq(h: Hotspot): number {
+    const dx = this.player.x - h.x;
+    const dy = this.player.y - h.y;
+    return dx * dx + dy * dy;
+  }
+
+  private canUseDoor(d: Door): boolean {
+    if (!VENUS_ZONE_LINKS[this.zone].includes(d.to)) return false;
+    if (d.to === "threshold" && this.zone === "atrium" && !venusCrackingReady(this.save)) {
+      return false;
+    }
+    return true;
+  }
+
+  private doorDistanceSq(d: Door): number {
+    const cx = Phaser.Math.Clamp(this.player.x, d.x, d.x + d.w);
+    const cy = Phaser.Math.Clamp(this.player.y, d.y, d.y + d.h);
+    const dx = this.player.x - cx;
+    const dy = this.player.y - cy;
+    return dx * dx + dy * dy;
+  }
+
+  private findDoorInRange(): Door | null {
+    const candidates = this.doors.filter((d) => this.doorDistanceSq(d) <= 64);
+    candidates.sort((a, b) => this.doorDistanceSq(a) - this.doorDistanceSq(b));
+    return candidates[0] ?? null;
   }
 
   private findHotspotInRange(): Hotspot | null {
-    for (const h of this.hotspots) {
+    const candidates = this.hotspots.filter((h) => {
       const dx = this.player.x - h.x;
       const dy = this.player.y - h.y;
-      if (dx * dx + dy * dy <= (h.r + PLAYER_R) * (h.r + PLAYER_R)) {
-        return h;
-      }
-    }
-    return null;
+      return dx * dx + dy * dy <= (h.r + PLAYER_R) * (h.r + PLAYER_R);
+    });
+
+    candidates.sort((a, b) => {
+      const pa = this.hotspotPriority(a);
+      const pb = this.hotspotPriority(b);
+      if (pa !== pb) return pb - pa;
+      return this.hotspotDistanceSq(a) - this.hotspotDistanceSq(b);
+    });
+
+    return candidates[0] ?? null;
   }
 
   // -----------------------------------------------------------------
@@ -1016,41 +1134,69 @@ export class VenusPlateauScene extends Phaser.Scene {
     onResolved: () => void,
     completionLines: { who: string; text: string }[],
   ) {
-    if (this.activeAttune) {
-      this.cancelActiveAttune(false);
+    const begin = () => {
+      if (this.activeAttune) {
+        this.cancelActiveAttune(false);
+      }
+
+      const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
+      this.attuneRing = ring;
+
+      const target = createAttuneTarget(id, zone, requiredMs, {
+        onBreak: () => {
+          this.activeAttune = null;
+          this.attuneRing?.break();
+          this.attuneRing = null;
+          this.flashHint("attune broken. movement arrived before listening.");
+        },
+        onComplete: () => {
+          this.activeAttune = null;
+          getAudio().sfx("resolve");
+          this.attuneRing?.complete();
+          this.attuneRing = null;
+
+          onResolved();
+
+          this.modal = true;
+          this.time.delayedCall(380, () => {
+            runDialog(this, completionLines, () => {
+              this.modal = false;
+              gbcWipe(this, () => this.loadZone(this.zone, true));
+            });
+          });
+        },
+      });
+
+      startAttune(target);
+      this.activeAttune = target;
+      this.flashHint("attune. hold still.");
+    };
+
+    if (!this.save.flags.venus_attune_tutorial_seen) {
+      this.save.flags.venus_attune_tutorial_seen = true;
+      writeSave(this.save);
+      this.modal = true;
+      runDialog(
+        this,
+        [
+          {
+            who: "SORYN",
+            text: "ATTUNE means do less than you want to. Hold still long enough for the thing to arrive in its own name.",
+          },
+          {
+            who: "SORYN",
+            text: "Movement breaks it. Reaching breaks it. Let the moment touch you before you answer it.",
+          },
+        ],
+        () => {
+          this.modal = false;
+          begin();
+        },
+      );
+      return;
     }
 
-    const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
-    this.attuneRing = ring;
-
-    const target = createAttuneTarget(id, zone, requiredMs, {
-      onBreak: () => {
-        this.activeAttune = null;
-        this.attuneRing?.break();
-        this.attuneRing = null;
-        this.flashHint("attune broken. wanting arrived too early.");
-      },
-      onComplete: () => {
-        this.activeAttune = null;
-        getAudio().sfx("resolve");
-        this.attuneRing?.complete();
-        this.attuneRing = null;
-
-        onResolved();
-
-        this.modal = true;
-        this.time.delayedCall(380, () => {
-          runDialog(this, completionLines, () => {
-            this.modal = false;
-            gbcWipe(this, () => this.loadZone(this.zone, true));
-          });
-        });
-      },
-    });
-
-    startAttune(target);
-    this.activeAttune = target;
-    this.flashHint("attune. hold still.");
+    begin();
   }
 
   private cancelActiveAttune(silent: boolean) {
@@ -1119,6 +1265,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private toHub() {
     this.save.scene = "MetaxyHub";
+    this.save.act = ACT_BY_SCENE.MetaxyHub;
     writeSave(this.save);
     this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
@@ -1256,30 +1403,54 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private refreshHint() {
     const { done, total } = venusProgressCount(this.save);
+    const backLabel =
+      this.zone === "atrium"
+        ? "HUB"
+        : this.previousZone
+          ? VENUS_ZONE_LABEL[this.previousZone].toUpperCase()
+          : "ATRIUM";
+
     if (this.zone === "atrium") {
       this.hint.setText(`A: act   B: hub   (${done}/${total} seen)`);
       return;
     }
+
     if (this.zone === "threshold") {
       this.hint.setText(
         venusCrackingReady(this.save)
-          ? `A: face Kypria   (${done}/${total})`
-          : `A: act   more seeing needed (${done}/${total})`,
+          ? `A: act   B: ${backLabel}   (${done}/${total})`
+          : `A: act   B: ${backLabel}   more seeing needed (${done}/${total})`,
       );
       return;
     }
-    this.hint.setText(`A: act   B: atrium   (${done}/${total})`);
+
+    this.hint.setText(`A: act   B: ${backLabel}   (${done}/${total})`);
   }
 
   private refreshHintForProximity() {
     const h = this.findHotspotInRange();
-    if (!h) {
-      this.refreshHint();
+    if (h) {
+      const enabled = h.enabled ? h.enabled() : true;
+      const prefix = enabled ? "A: " : "(locked) ";
+      this.hint.setText(`${prefix}${h.label}`);
       return;
     }
-    const enabled = h.enabled ? h.enabled() : true;
-    const prefix = enabled ? "A: " : "(locked) ";
-    this.hint.setText(`${prefix}${h.label}`);
+
+    const d = this.findDoorInRange();
+    if (d) {
+      if (!this.canUseDoor(d)) {
+        this.hint.setText(
+          d.to === "threshold"
+            ? "the threshold is not yet for you."
+            : "that way is not open.",
+        );
+      } else {
+        this.hint.setText(`A: ${d.label}`);
+      }
+      return;
+    }
+
+    this.refreshHint();
   }
 
   private flashHint(text: string) {
@@ -1416,11 +1587,24 @@ export class VenusTrialScene extends Phaser.Scene {
     );
   }
 
+  private kypriaPhaseVerdict(attuned: boolean, choice: TrialChoice): string {
+    if (!attuned) {
+      return "You rushed before attuning. I asked for stillness before response.";
+    }
+    if (!choice.truthful) {
+      return "You preferred the flattering answer to the true one.";
+    }
+    if (!choice.nonPerformative) {
+      return "You made a stage of it. I asked for relation, not display.";
+    }
+    return "Better. You let the thing remain itself.";
+  }
+
   private runPhaseAttune(phaseId: string) {
     const cx = GBC_W / 2;
     const cy = 70;
     const box = drawGBCBox(this, cx - 60, cy - 14, 120, 28, 30);
-    const label = new GBCText(this, cx - 56, cy - 10, "HOLD STILL. DO NOTHING.", {
+    const label = new GBCText(this, cx - 56, cy - 10, "HOLD STILL. DO NOT MOVE. DO NOT PRESS A.", {
       color: COLOR.textAccent,
       depth: 31,
     });
@@ -1429,12 +1613,18 @@ export class VenusTrialScene extends Phaser.Scene {
     let elapsed = 0;
     const requiredMs = 1400;
     let resolved = false;
+    let inputArmed = false;
     let cleanupAct: (() => void) | null = null;
+
+    this.time.delayedCall(250, () => {
+      inputArmed = true;
+    });
 
     const finish = (attuned: boolean) => {
       box.destroy();
       label.destroy();
       cleanupAct?.();
+      this.events.off("vinput-action", onTouchBreak);
       this.time.delayedCall(220, () => this.runPhaseChoice(phaseId, attuned));
     };
 
@@ -1453,13 +1643,18 @@ export class VenusTrialScene extends Phaser.Scene {
       },
     });
 
-    cleanupAct = onActionDown(this, "action", () => {
-      if (resolved) return;
+    const breakAttune = () => {
+      if (!inputArmed || resolved) return;
       resolved = true;
       tick.remove(false);
       ring.break();
       finish(false);
-    });
+    };
+
+    const onTouchBreak = () => breakAttune();
+
+    cleanupAct = onActionDown(this, "action", breakAttune);
+    this.events.on("vinput-action", onTouchBreak);
   }
 
   private runPhaseChoice(phaseId: string, attuned: boolean) {
@@ -1481,10 +1676,21 @@ export class VenusTrialScene extends Phaser.Scene {
           truthful: choice.truthful,
           nonPerformative: choice.nonPerformative,
         });
+
         this.state.score += phaseScore;
         this.state.attuneScores.push(phaseScore);
         this.state.phaseIndex += 1;
-        this.runPhase();
+
+        runDialog(
+          this,
+          [
+            {
+              who: "KYPRIA",
+              text: this.kypriaPhaseVerdict(attuned, choice),
+            },
+          ],
+          () => this.runPhase(),
+        );
       },
     );
   }
