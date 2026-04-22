@@ -82,30 +82,30 @@ function readViewport(): ViewportSize {
 
 function computeMetrics(v: ViewportSize, buttonSize: ButtonSize): ShellMetrics {
   const scale = getButtonScale(buttonSize);
-  const compact = v.h <= 430 || v.w <= 932;
+  const compact = v.h <= 460 || v.w <= 960;
   const short = Math.min(v.w, v.h);
 
   const railBase = compact
-    ? clamp(short * 0.23, 84, 96)
+    ? clamp(short * 0.21, 80, 92)
     : clamp(short * 0.28, 96, 120);
 
   const joystickBase = compact
-    ? clamp(short * 0.23, 78, 96)
+    ? clamp(short * 0.21, 74, 92)
     : clamp(short * 0.28, 96, 120);
 
-  const utilBase = compact ? 38 : 44;
-  const aBase = compact ? 60 : 72;
-  const bBase = compact ? 52 : 60;
+  const utilBase = compact ? 36 : 44;
+  const aBase = compact ? 56 : 72;
+  const bBase = compact ? 48 : 60;
 
   return {
     compact,
-    railWidth: Math.round(railBase),
-    joystick: Math.round(clamp(joystickBase * scale, 72, 124)),
-    util: Math.round(clamp(utilBase * scale, 34, 52)),
-    a: Math.round(clamp(aBase * scale, 50, 84)),
-    b: Math.round(clamp(bBase * scale, 46, 72)),
-    gap: compact ? 6 : 8,
-    pad: compact ? 6 : 8,
+    railWidth: Math.round(clamp(railBase, 78, 120)),
+    joystick: Math.round(clamp(joystickBase * scale, 70, 124)),
+    util: Math.round(clamp(utilBase * scale, 32, 52)),
+    a: Math.round(clamp(aBase * scale, 48, 84)),
+    b: Math.round(clamp(bBase * scale, 44, 72)),
+    gap: compact ? 5 : 8,
+    pad: compact ? 5 : 8,
   };
 }
 
@@ -363,9 +363,9 @@ function CompactCenter({
       {dialogOpen ? (
         <div
           className="pointer-events-none absolute bottom-1 left-1 right-1"
-          style={{ zIndex: 5 }}
+          style={{ zIndex: 5, maxHeight: "45%" }}
         >
-          <div className="pointer-events-auto">
+          <div className="pointer-events-auto" style={{ maxHeight: "100%" }}>
             <GameDialogueTray compact />
           </div>
         </div>

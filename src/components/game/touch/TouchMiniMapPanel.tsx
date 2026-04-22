@@ -40,6 +40,9 @@ export function TouchMiniMapPanel({ compact = false }: Props) {
     ? scene.zone || getPublicSceneLabel(scene.key)
     : getPublicSceneLabel(scene.key);
 
+  const nodeSize = compact ? 6 : 8;
+  const markerSize = compact ? 5 : 6;
+
   return (
     <ShellPanel compact tone="subdued" style={{ width: "100%" }}>
       {!compact && (
@@ -48,7 +51,7 @@ export function TouchMiniMapPanel({ compact = false }: Props) {
         </ShellPanelMeta>
       )}
       <div
-        className="text-[10px] mb-1 leading-tight truncate"
+        className={`${compact ? "text-[9px]" : "text-[10px]"} mb-1 leading-tight truncate`}
         style={{ color: "#eef3ff" }}
       >
         {label}
@@ -64,7 +67,7 @@ export function TouchMiniMapPanel({ compact = false }: Props) {
       <div
         className="relative rounded-sm"
         style={{
-          aspectRatio: "5 / 3",
+          aspectRatio: compact ? "2 / 1" : "5 / 3",
           background:
             "repeating-linear-gradient(45deg, rgba(74,120,200,0.08) 0 2px, transparent 2px 6px)",
           border: "1px solid rgba(168,200,232,0.25)",
@@ -101,8 +104,8 @@ export function TouchMiniMapPanel({ compact = false }: Props) {
                 style={{
                   left: `${n.x * 100}%`,
                   top: `${n.y * 100}%`,
-                  width: 8,
-                  height: 8,
+                  width: nodeSize,
+                  height: nodeSize,
                   transform: "translate(-50%,-50%)",
                   background: n.active ? "#e8c890" : "#4a78c8",
                   border: "1px solid rgba(255,255,255,0.5)",
@@ -126,8 +129,8 @@ export function TouchMiniMapPanel({ compact = false }: Props) {
             style={{
               left: `${marker.x * 100}%`,
               top: `${marker.y * 100}%`,
-              width: 6,
-              height: 6,
+              width: markerSize,
+              height: markerSize,
               transform: "translate(-50%,-50%)",
               background: "#fff",
               boxShadow: "0 0 4px #fff, 0 0 8px #a8c8e8",
