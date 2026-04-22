@@ -45,6 +45,8 @@ export type ActInteraction<TScene = unknown> = {
   hiddenUntilFlags?: string[];
   /** Flag that, once set, marks this interaction as "seen once". */
   onceFlag?: string;
+  /** If true, interaction becomes unavailable after onceFlag is set. */
+  singleUse?: boolean;
   aftermathStyle?: "soften" | "mark" | "unlock" | "tone_shift";
   /** Optional puzzle room id (used when kind === "puzzle"). */
   puzzleRoomId?: string;
@@ -67,6 +69,9 @@ export function interactionEnabled<TScene>(
 ): boolean {
   if (!interactionVisible(flags, it)) return false;
   if (it.requiredFlags && !it.requiredFlags.every((f) => !!flags[f])) {
+    return false;
+  }
+  if (it.singleUse && it.onceFlag && !!flags[it.onceFlag]) {
     return false;
   }
   return true;
