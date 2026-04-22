@@ -284,8 +284,34 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.subtitle.setText(this.subtitleFor(zone));
     publishVenusMinimap(zone);
 
-    // Place player at the zone's entry point
-    const entry = this.entryFor(zone);
+  private loadZone(
+    zone: VenusZoneId,
+    silent = false,
+    from: VenusZoneId | null = null,
+  ) {
+    if (from && from !== zone) {
+      this.previousZone = from;
+    }
+
+    this.zone = zone;
+    setVenusZone(this.save, zone);
+    writeSave(this.save);
+
+    // Tear down previous zone visuals
+    this.destroyKypriaPresentation();
+    this.root.removeAll(true);
+    this.hotspots = [];
+    this.doors = [];
+    this.hotspotMarkers.forEach((g) => g.destroy());
+    this.hotspotMarkers = [];
+    this.cancelActiveAttune(true);
+
+    this.zoneLabel.setText(`VENUS - ${VENUS_ZONE_LABEL[zone].toUpperCase()}`);
+    this.subtitle.setText(this.subtitleFor(zone));
+    publishVenusMinimap(zone);
+
+    // Place player at the zone's entry point (source-aware)
+    const entry = this.entryFor(zone, from);
     this.player.setPosition(entry.x, entry.y);
 
     switch (zone) {
@@ -324,22 +350,40 @@ export class VenusPlateauScene extends Phaser.Scene {
     }
   }
 
-  private entryFor(zone: VenusZoneId): { x: number; y: number } {
-    // Each zone has a logical entry that places the player just inside
-    // the door they came from.
+  private entryFor(
+    zone: VenusZoneId,
+    from: VenusZoneId | null,
+  ): { x: number; y: number } {
     switch (zone) {
       case "atrium":
+        if (from === "gallery") return { x: 18, y: 64 };
+        if (from === "recognition_hall") return { x: GBC_W - 18, y: 64 };
+        if (from === "ladder") return { x: GBC_W - 18, y: 108 };
+        if (from === "threshold") return { x: GBC_W / 2, y: GBC_H - 28 };
         return { x: 30, y: 80 };
+
       case "gallery":
-        return { x: 30, y: 90 };
+        if (from === "recognition_hall") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 88 };
+
       case "recognition_hall":
-        return { x: 30, y: 80 };
+        if (from === "gallery") return { x: 20, y: 108 };
+        if (from === "reconstruction") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 80 };
+
       case "reconstruction":
-        return { x: 30, y: 80 };
+        if (from === "threshold") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 80 };
+
       case "ladder":
-        return { x: 30, y: 90 };
+        if (from === "threshold") return { x: GBC_W - 18, y: 64 };
+        return { x: 18, y: 88 };
+
       case "threshold":
-        return { x: 30, y: 80 };
+        if (from === "reconstruction") return { x: GBC_W - 18, y: 108 };
+        if (from === "ladder") return { x: GBC_W - 18, y: 64 };
+        if (from === "atrium") return { x: 18, y: 80 };
+        return { x: 18, y: 80 };
     }
   }
 
