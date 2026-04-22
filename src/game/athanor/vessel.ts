@@ -9,7 +9,7 @@
  *   Top:    4 stone groups stacked (B / W / Y / R), 3 pips each
  *   Middle: SHD n
  *   Below:  stain pips (only if stainsCarried > 0)
- *   Bottom: status chips: ★ if goldStone, ALN if sorynReleased
+ *   Bottom: status chips: ★ if goldStone, ALN if sopheneReleased
  *
  * All gain feedback (stone pop, +1 SHD chip, stain flash, ALN fade-in) is
  * driven by HUD events so it never replays on first mount or re-mount.

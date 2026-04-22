@@ -3,7 +3,7 @@
  *
  * Inscription palette is filtered by weddingType + reactive variants:
  *  - Always include the canonical inscription for the player's weddingType.
- *  - If `sorynReleased`: add "AND I WALKED ALONE."
+ *  - If `sopheneReleased`: add "AND I WALKED ALONE."
  *  - If `stainsCarried > 0`: add "STAINS AND ALL."
  *  - Otherwise add the other two canonical options as alternates.
  *
