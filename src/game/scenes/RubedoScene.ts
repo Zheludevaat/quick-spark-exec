@@ -20,7 +20,7 @@ import { onActionDown } from "../controls";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardNamedStone } from "../athanor/operations";
+import { awardNamedStone, markOperationDone } from "../athanor/operations";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { PAIRINGS, tallyWedding } from "../athanor/wedding";
@@ -66,6 +66,16 @@ export class RubedoScene extends Phaser.Scene {
     this.save = d.save;
     this.save.scene = "Rubedo";
     writeSave(this.save);
+
+    // Per-run scene state must reset on every fresh entry.
+    this.holds = 0;
+    this.yields = 0;
+    this.alones = 0;
+    this.isBusy = false;
+    this.isDone = false;
+    this.throneMarks = [];
+    this.releaseWisp = undefined;
+    this.thirteenthSilhouette = undefined;
   }
 
   create() {
@@ -74,14 +84,49 @@ export class RubedoScene extends Phaser.Scene {
     attachHUD(this, () => this.save.stats);
     this.vesselHud = mountVesselHud(this, this.save);
 
+    const cx = GBC_W / 2;
+    const tableY = GBC_H / 2 + 14;
+    const leftThroneX = cx - 40;
+    const rightThroneX = cx + 40;
+
+    // Union glow under the table. applyWeddingState() animates this.
+    this.unionGlow = this.add
+      .ellipse(cx, tableY, 92, 22, 0xb84040, 0.06)
+      .setDepth(0)
+      .setBlendMode("ADD") as unknown as Phaser.GameObjects.Arc;
+
     // Long banquet table
-    this.add.rectangle(GBC_W / 2, GBC_H / 2 + 14, 90, 5, 0x6a2818).setStrokeStyle(1, 0x402010).setDepth(1);
+    this.add
+      .rectangle(cx, tableY, 90, 5, 0x6a2818)
+      .setStrokeStyle(1, 0x402010)
+      .setDepth(1);
+
+    // Table seal: hidden at start, strengthened as pairings resolve.
+    this.tableSeal = this.add
+      .rectangle(cx, tableY, 14, 3, 0xc8a060, 0)
+      .setStrokeStyle(1, 0x6a4020, 0.9)
+      .setDepth(2);
+
     // Twin thrones flanking the table
-    this.add.rectangle(GBC_W / 2 - 40, GBC_H / 2 + 4, 14, 22, 0x401010).setStrokeStyle(1, 0xc8a040).setDepth(2);
-    this.add.rectangle(GBC_W / 2 + 40, GBC_H / 2 + 4, 14, 22, 0x401010).setStrokeStyle(1, 0xc8a040).setDepth(2);
+    this.leftThrone = this.add
+      .rectangle(leftThroneX, GBC_H / 2 + 4, 14, 22, 0x401010)
+      .setStrokeStyle(1, 0xc8a040)
+      .setDepth(2);
+
+    this.rightThrone = this.add
+      .rectangle(rightThroneX, GBC_H / 2 + 4, 14, 22, 0x401010)
+      .setStrokeStyle(1, 0xc8a040)
+      .setDepth(2);
+
     // Throne crests
-    this.add.circle(GBC_W / 2 - 40, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
-    this.add.circle(GBC_W / 2 + 40, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
+    this.add.circle(leftThroneX, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
+    this.add.circle(rightThroneX, GBC_H / 2 - 8, 2, 0xe8c860).setDepth(3);
+
+    // One mark per completed pairing.
+    this.throneMarks = [
+      this.add.circle(leftThroneX, GBC_H / 2 + 4, 2, 0xe8c860, 0).setDepth(4),
+      this.add.circle(rightThroneX, GBC_H / 2 + 4, 2, 0xe8c860, 0).setDepth(4),
+    ];
     // Two candles burning on the table
     [-12, 12].forEach((dx, i) => {
       this.add.rectangle(GBC_W / 2 + dx, GBC_H / 2 + 10, 2, 4, 0xe8d8b0).setDepth(2);
@@ -129,6 +174,9 @@ export class RubedoScene extends Phaser.Scene {
 
     this.add.rectangle(0, GBC_H - 11, GBC_W, 11, 0x0a0e1a, 0.85).setOrigin(0, 0).setDepth(199);
     this.hintText = new GBCText(this, 4, GBC_H - 9, "WALK", { color: COLOR.textDim, depth: 200 });
+
+    // Initialize wedding-state visuals so right-throne dim / glow baseline are valid.
+    this.applyWeddingState();
 
     this.isBusy = true;
     this.time.delayedCall(800, () => {
@@ -376,7 +424,11 @@ export class RubedoScene extends Phaser.Scene {
   private finish() {
     const wedding: WeddingType = tallyWedding(this.holds, this.yields, this.alones);
     this.save.weddingType = wedding;
-    writeSave(this.save);
+    if (!this.save.flags.op_rubedo_done) {
+      markOperationDone(this.save, "op_rubedo_done");
+    } else {
+      writeSave(this.save);
+    }
     unlockLore(this.save, "on_rubedo");
     showLoreToast(this, "on_rubedo");
     const closer = this.save.sorynReleased

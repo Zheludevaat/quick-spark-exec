@@ -1,5 +1,5 @@
 /**
- * Act 3 — Athanor Threshold expansion content.
+ * Act 2 — Athanor Threshold expansion content.
  *
  * Adds two layers of "the room remembers":
  *
@@ -17,6 +17,7 @@ import type { SaveSlot } from "../../types";
 
 export type AthanorHostScene = {
   save: SaveSlot;
+  persist: () => void;
   speak: (lines: { who: string; text: string }[], onDone?: () => void) => void;
 };
 
@@ -58,6 +59,7 @@ export const ATHANOR_NODE_INSPECTABLES: ActInteraction<AthanorHostScene>[] = [
     aftermathStyle: "mark",
     onInteract: ({ scene, save }) => {
       save.flags.athanor_node_nigredo_seen = true;
+      scene.persist();
       scene.speak([
         { who: "NODE", text: "The black does not erase. It exposes." },
         { who: "NODE", text: "What you sat with is still here, made smaller by being named." },
@@ -78,6 +80,7 @@ export const ATHANOR_NODE_INSPECTABLES: ActInteraction<AthanorHostScene>[] = [
     aftermathStyle: "mark",
     onInteract: ({ scene, save }) => {
       save.flags.athanor_node_albedo_seen = true;
+      scene.persist();
       scene.speak([
         { who: "NODE", text: "What is washed is not necessarily innocent. Only clearer." },
         { who: "NODE", text: "Clarity is not absolution. It is the room with the lights on." },
@@ -98,6 +101,7 @@ export const ATHANOR_NODE_INSPECTABLES: ActInteraction<AthanorHostScene>[] = [
     aftermathStyle: "mark",
     onInteract: ({ scene, save }) => {
       save.flags.athanor_node_citrinitas_seen = true;
+      scene.persist();
       scene.speak([
         { who: "NODE", text: "Meaning gathers slowly. It is not a light switch." },
         { who: "NODE", text: "What you understood here was already true. You only stopped refusing it." },
@@ -118,6 +122,7 @@ export const ATHANOR_NODE_INSPECTABLES: ActInteraction<AthanorHostScene>[] = [
     aftermathStyle: "mark",
     onInteract: ({ scene, save }) => {
       save.flags.athanor_node_rubedo_seen = true;
+      scene.persist();
       scene.speak([
         { who: "NODE", text: "The red seal is not triumph. It is integration." },
         { who: "NODE", text: "What was put in has become what carries you. Quietly. Without applause." },

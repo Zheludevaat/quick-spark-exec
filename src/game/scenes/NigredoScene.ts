@@ -17,7 +17,7 @@ import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "./hud
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { selectShards, returnToThreshold } from "../athanor/operationScene";
-import { awardNamedStone } from "../athanor/operations";
+import { awardNamedStone, markOperationDone } from "../athanor/operations";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { shardName } from "../athanor/shards";
@@ -72,6 +72,14 @@ export class NigredoScene extends Phaser.Scene {
     this.save = d.save;
     this.save.scene = "Nigredo";
     writeSave(this.save);
+
+    this.destroyedAny = false;
+    this.currentSat = 0;
+    this.isBusy = false;
+    this.isDone = false;
+    this.activeWhisper = undefined;
+    this.ambientWhisperEvent?.remove(false);
+    this.ambientWhisperEvent = undefined;
   }
 
   create() {
@@ -292,7 +300,6 @@ export class NigredoScene extends Phaser.Scene {
             const tail = bene
               ? [{ who: shade.name, text: bene }]
               : [];
-            writeSave(this.save);
             this.vesselHud.refresh();
             if (tail.length > 0) {
               runDialog(this, tail, () => {
@@ -325,6 +332,9 @@ export class NigredoScene extends Phaser.Scene {
   }
 
   private finish(sat: number) {
+    if (!this.save.flags.op_nigredo_done) {
+      markOperationDone(this.save, "op_nigredo_done");
+    }
     if (sat >= 2) {
       unlockLore(this.save, "on_nigredo");
       showLoreToast(this, "on_nigredo");

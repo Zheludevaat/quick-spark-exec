@@ -29,7 +29,7 @@ import { writeSave } from "../save";
 import type { SaveSlot, ShardId } from "../types";
 import { onActionDown, onDirection } from "../controls";
 import { shardName, consumeShard } from "./shards";
-import { markOperationDone } from "./operations";
+
 
 export type OperationKey = "nigredo" | "albedo" | "citrinitas" | "rubedo";
 
@@ -193,8 +193,7 @@ export function selectShards(
  * Standard "operation complete → return to threshold" tail. Marks the
  * op_<key>_done flag and wipes back.
  */
-export function returnToThreshold(scene: Phaser.Scene, save: SaveSlot, key: OperationKey): void {
-  markOperationDone(save, `op_${key}_done`);
+export function returnToThreshold(scene: Phaser.Scene, save: SaveSlot, _key: OperationKey): void {
   save.scene = "AthanorThreshold";
   writeSave(save);
   gbcWipe(scene, () => scene.scene.start("AthanorThreshold", { save }));
