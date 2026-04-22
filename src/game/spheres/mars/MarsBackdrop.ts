@@ -1,14 +1,18 @@
 /**
  * Mars backdrop — sky/haze/silhouette layers per zone. Returns a handle
- * the room painter cleans up on zone change.
+ * the room painter cleans up on zone change. Texture keys are passed in
+ * by the room painter so backdrop art uses the same per-zone palette
+ * bake as the rest of the room.
  */
 import * as Phaser from "phaser";
 import { MARS_ZONE_PALETTES, type MarsZoneKey } from "./MarsPalette";
 import type { ScenicHandle } from "../../visual/ScenicTypes";
+import type { MarsTextureKeys } from "./MarsTextures";
 
 export function buildMarsBackdrop(
   scene: Phaser.Scene,
   zone: MarsZoneKey,
+  textures: Pick<MarsTextureKeys, "banner" | "seal">,
 ): ScenicHandle {
   const pal = MARS_ZONE_PALETTES[zone];
   const parts: Phaser.GameObjects.GameObject[] = [];
@@ -57,7 +61,7 @@ export function buildMarsBackdrop(
   if (zone === "stands") {
     for (let i = 0; i < 7; i++) {
       const banner = scene.add
-        .image(16 + i * 20, 18, "mars_banner")
+        .image(16 + i * 20, 18, textures.banner)
         .setOrigin(0.5, 0)
         .setDepth(2);
       parts.push(banner);
@@ -66,7 +70,7 @@ export function buildMarsBackdrop(
 
   if (zone === "trial" || zone === "threshold") {
     const seal = scene.add
-      .image(80, 34, "mars_seal")
+      .image(80, 34, textures.seal)
       .setOrigin(0.5, 0.5)
       .setDepth(2);
     parts.push(seal);
