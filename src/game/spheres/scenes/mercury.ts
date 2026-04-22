@@ -31,9 +31,10 @@ import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "../..
 import { setSceneSnapshot } from "../../gameUiBridge";
 import { onActionDown } from "../../controls";
 import { getAudio } from "../../audio";
+import { nextMainlineScene } from "../../canon/mainlineFlow";
 import { askSphere } from "../SpherePlateauScene";
 import { mercuryConfig } from "../configs/mercury";
-import { markOpDone, opsCompleted, trialPassedKey } from "../types";
+import { markOpDone, opsCompleted, plateauProgressKey } from "../types";
 import { runInquiry } from "../../inquiry";
 import {
   createEncounterPresentation,
@@ -45,6 +46,13 @@ import {
   type MercuryRoomArtHandle,
 } from "../mercury/MercuryRoomPainter";
 import type { MercuryZoneKey } from "../mercury/MercuryPalette";
+import {
+  ensureMercuryCanon,
+  awardMercuryOperation,
+  awardMercuryCrack,
+  applyMercuryTrialPass,
+  applyMercuryTrialFail,
+} from "../mercury/mercuryCanonicalProgress";
 
 type StationKind =
   | "npc_defender"
@@ -131,19 +139,26 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private hermaiaPresentation?: EncounterPresentationHandle;
   private roomArt?: MercuryRoomArtHandle;
   private stationFocus!: Phaser.GameObjects.Arc;
+  private snapshotElapsed = 0;
+  private pendingChamberReadyBeat = false;
+  private chamberBeatPlayed = false;
 
   constructor() {
     super("MercuryPlateau");
   }
 
   init(data: { save: SaveSlot }) {
-    // Bypass template init — we own this scene.
     this.mSave = data.save;
+    ensureMercuryCanon(this.mSave);
     this.mSave.scene = "MercuryPlateau";
     this.mSave.act = ACT_BY_SCENE.MercuryPlateau;
     writeSave(this.mSave);
+
     this.stations = [];
     this.busy = false;
+    this.snapshotElapsed = 0;
+    this.pendingChamberReadyBeat = false;
+    this.chamberBeatPlayed = false;
   }
 
   /**
