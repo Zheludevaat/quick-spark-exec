@@ -1587,11 +1587,24 @@ export class VenusTrialScene extends Phaser.Scene {
     );
   }
 
+  private kypriaPhaseVerdict(attuned: boolean, choice: TrialChoice): string {
+    if (!attuned) {
+      return "You rushed before attuning. I asked for stillness before response.";
+    }
+    if (!choice.truthful) {
+      return "You preferred the flattering answer to the true one.";
+    }
+    if (!choice.nonPerformative) {
+      return "You made a stage of it. I asked for relation, not display.";
+    }
+    return "Better. You let the thing remain itself.";
+  }
+
   private runPhaseAttune(phaseId: string) {
     const cx = GBC_W / 2;
     const cy = 70;
     const box = drawGBCBox(this, cx - 60, cy - 14, 120, 28, 30);
-    const label = new GBCText(this, cx - 56, cy - 10, "HOLD STILL. DO NOTHING.", {
+    const label = new GBCText(this, cx - 56, cy - 10, "HOLD STILL. DO NOT MOVE. DO NOT PRESS A.", {
       color: COLOR.textAccent,
       depth: 31,
     });
@@ -1600,12 +1613,18 @@ export class VenusTrialScene extends Phaser.Scene {
     let elapsed = 0;
     const requiredMs = 1400;
     let resolved = false;
+    let inputArmed = false;
     let cleanupAct: (() => void) | null = null;
+
+    this.time.delayedCall(250, () => {
+      inputArmed = true;
+    });
 
     const finish = (attuned: boolean) => {
       box.destroy();
       label.destroy();
       cleanupAct?.();
+      this.events.off("vinput-action", onTouchBreak);
       this.time.delayedCall(220, () => this.runPhaseChoice(phaseId, attuned));
     };
 
@@ -1624,13 +1643,18 @@ export class VenusTrialScene extends Phaser.Scene {
       },
     });
 
-    cleanupAct = onActionDown(this, "action", () => {
-      if (resolved) return;
+    const breakAttune = () => {
+      if (!inputArmed || resolved) return;
       resolved = true;
       tick.remove(false);
       ring.break();
       finish(false);
-    });
+    };
+
+    const onTouchBreak = () => breakAttune();
+
+    cleanupAct = onActionDown(this, "action", breakAttune);
+    this.events.on("vinput-action", onTouchBreak);
   }
 
   private runPhaseChoice(phaseId: string, attuned: boolean) {
