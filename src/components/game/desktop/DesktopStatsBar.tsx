@@ -8,6 +8,7 @@ import {
   getGameUiSnapshot,
 } from "@/game/gameUiBridge";
 import { ShellPanel, ShellPanelMeta } from "@/components/game/shell/ShellPanel";
+import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
 
 const STAT_GLYPH: Record<"clarity" | "compassion" | "courage", string> = {
   clarity: "◇",

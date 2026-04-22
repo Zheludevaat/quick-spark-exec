@@ -6,6 +6,7 @@ import {
   type InquirySnapshot,
 } from "@/game/gameUiBridge";
 import { pulseVirtual } from "@/game/virtualInput";
+import { getPublicSceneLabel } from "@/game/canon/registry";
 import {
   ShellPanel,
   ShellPanelMeta,

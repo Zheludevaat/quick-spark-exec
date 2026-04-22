@@ -4,6 +4,7 @@ import {
   getGameUiSnapshot,
   type SceneNode,
 } from "@/game/gameUiBridge";
+import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
 import {
   ShellPanel,
   ShellPanelMeta,
