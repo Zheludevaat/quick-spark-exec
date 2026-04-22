@@ -1,5 +1,6 @@
 import { applyCanonMigration } from "./canon/migrateCanon";
 import {
+  SCENE_KEYS,
   LEGACY_ACT_NUMBER_BY_SCENE,
   LEGACY_ACT_TITLES,
   PUBLIC_SCENE_LABELS,
@@ -105,7 +106,7 @@ export type SaveSlot = {
   /** Ring buffer of recent soul events (max 5). */
   soulEventLog: string[];
 
-  // ===== SECRET ANNEX — ATHANOR / GREAT WORK =====
+  // ===== SECRET ANNEX / LEGACY ALCHEMY PROGRESS =====
   shardInventory: ShardId[];
   shardsConsumed: ShardId[];
   blackStones: number;
@@ -117,15 +118,15 @@ export type SaveSlot = {
   convictions: Record<string, boolean>;
   weddingType: WeddingType | null;
   act2Inscription: string | null;
-  sorynReleased: boolean;
+  sopheneReleased: boolean;
   stainsCarried: number;
 
-  // ===== METAXY ASCENT (Mercury → Saturn) =====
+  // ===== ASCENT PROGRESSION (Reception and later chapters) =====
   /** Player's chosen vocation, set in LastDay. Null until chosen. */
   calling: Calling | null;
   /** Soul integrity (0-100). Drains in higher spheres; restored by Stillness. */
   coherence: number;
-  /** Bond with the daimon Soryn (0-10). Derived from cumulative choices. */
+  /** Bond with the daimon Sophene (0-10). Derived from cumulative choices. */
   daimonBond: number;
   /** Per-sphere garment release ledger. True after the sphere's trial is passed. */
   garmentsReleased: Partial<Record<SphereKey, boolean>>;
@@ -202,7 +203,7 @@ export function migrateSave(raw: unknown): SaveSlot | null {
   let scene = (r.scene ?? "LastDay") as string;
   if (scene === "MoonHall" || scene === "MoonGate") scene = "ImaginalRealm";
 
-  const allowed = new Set<SceneKey>(Object.keys(ACT_BY_SCENE) as SceneKey[]);
+  const allowed = new Set<SceneKey>(SCENE_KEYS as readonly SceneKey[]);
   if (!allowed.has(scene as SceneKey)) scene = "LastDay";
 
   const act: number = ACT_BY_SCENE[scene as SceneKey] ?? 0;
@@ -286,7 +287,9 @@ export function migrateSave(raw: unknown): SaveSlot | null {
     convictions: (r.convictions as Record<string, boolean> | undefined) ?? {},
     weddingType: (r.weddingType as WeddingType | null | undefined) ?? null,
     act2Inscription: typeof r.act2Inscription === "string" ? r.act2Inscription : null,
-    sorynReleased: r.sorynReleased === true,
+    sopheneReleased:
+      (r as { sopheneReleased?: unknown }).sopheneReleased === true ||
+      (r as { sorynReleased?: unknown }).sorynReleased === true,
     stainsCarried: typeof r.stainsCarried === "number" ? r.stainsCarried : 0,
 
     calling: (r.calling as Calling | null | undefined) ?? null,

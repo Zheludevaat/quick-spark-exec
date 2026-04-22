@@ -219,7 +219,7 @@ function CodexContent({
           <KV label="Inscription" value={save?.act2Inscription ?? "—"} />
           <KV
             label="Sophene"
-            value={save?.sorynReleased ? "released" : "bound"}
+            value={save?.sopheneReleased ? "released" : "bound"}
           />
         </CodexCard>
       </div>
@@ -374,7 +374,7 @@ function CodexContent({
               ...Object.entries(save?.plateauSettled ?? {})
                 .filter(([, v]) => !!v)
                 .map(([k]) => `settled:${k}`),
-              ...(save?.sorynReleased ? ["soryn_released"] : []),
+              ...(save?.sopheneReleased ? ["sophene_released"] : []),
               ...(save?.weddingType ? [`wedding:${save.weddingType}`] : []),
               ...(save?.act2Inscription
                 ? [`inscription:${save.act2Inscription}`]
