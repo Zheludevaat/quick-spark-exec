@@ -10,8 +10,8 @@ import {
   textHeightPx,
   measureText,
 } from "../gbcArt";
-import { loadSave, newSave, clearSave, consumeSaveLoadWarning } from "../save";
-import type { SceneKey } from "../types";
+import { loadSave, newSave, clearSave, consumeSaveLoadWarning, writeSave } from "../save";
+import { ACT_BY_SCENE, type SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 import { openSettings } from "./settings";
@@ -23,6 +23,32 @@ import { setSceneSnapshot } from "../gameUiBridge";
  * Just the moon, the title, and the menu. No act/chapter spoilers.
  * The journey reveals itself as the player walks it.
  */
+type DevJumpSeed =
+  | "prelude_last_day"
+  | "prelude_crossing"
+  | "reception"
+  | "moon_plateau"
+  | "moon_trial"
+  | "metaxy"
+  | "secret_annex"
+  | "mercury_plateau"
+  | "mercury_trial"
+  | "venus_plateau"
+  | "venus_trial"
+  | "sun_plateau"
+  | "sun_district"
+  | "sun_trial"
+  | "mars_plateau"
+  | "mars_trial"
+  | "endings_router"
+  | "epilogue";
+
+type DevJumpEntry = {
+  label: string;
+  scene: SceneKey;
+  seed: DevJumpSeed;
+};
+
 export class TitleScene extends Phaser.Scene {
   constructor() {
     super("Title");
