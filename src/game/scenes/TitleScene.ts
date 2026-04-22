@@ -47,9 +47,12 @@ type DevJumpEntry = {
   label: string;
   scene: SceneKey;
   seed: DevJumpSeed;
+  readout?: string;
 };
 
 export class TitleScene extends Phaser.Scene {
+  private devMenuOpen = false;
+
   constructor() {
     super("Title");
   }
