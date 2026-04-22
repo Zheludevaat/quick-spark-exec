@@ -228,6 +228,27 @@ export class VenusPlateauScene extends Phaser.Scene {
       this.handleCancel();
     });
 
+    const onTouchAction = () => {
+      if (this.modal || this.busy) return;
+      this.handleAction();
+    };
+    const onTouchCancel = () => {
+      if (this.modal || this.busy) return;
+      this.handleCancel();
+    };
+
+    this.events.on("vinput-action", onTouchAction);
+    this.events.on("vinput-cancel", onTouchCancel);
+
+    this.events.once("shutdown", () => {
+      this.events.off("vinput-action", onTouchAction);
+      this.events.off("vinput-cancel", onTouchCancel);
+    });
+    this.events.once("destroy", () => {
+      this.events.off("vinput-action", onTouchAction);
+      this.events.off("vinput-cancel", onTouchCancel);
+    });
+
     if (!isVenusFlag(this.save, "introSeen")) {
       markVenusFlag(this.save, "introSeen");
       writeSave(this.save);
