@@ -1265,6 +1265,7 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private toHub() {
     this.save.scene = "MetaxyHub";
+    this.save.act = ACT_BY_SCENE.MetaxyHub;
     writeSave(this.save);
     this.destroyKypriaPresentation();
     gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.save }));
