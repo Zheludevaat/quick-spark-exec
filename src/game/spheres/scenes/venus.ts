@@ -148,6 +148,7 @@ export class VenusPlateauScene extends Phaser.Scene {
   private activeAttune: AttuneTarget | null = null;
   private attuneRing: ReturnType<typeof makeVenusAttuneRing> | null = null;
   private kypriaPresentation?: EncounterPresentationHandle;
+  private previousZone: VenusZoneId | null = null;
 
   private destroyKypriaPresentation() {
     this.kypriaPresentation?.destroy();
