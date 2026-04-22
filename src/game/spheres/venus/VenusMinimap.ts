@@ -3,13 +3,14 @@
  * via gameUiBridge. The shell turns this into the minimap panel.
  */
 import { setSceneSnapshot } from "../../gameUiBridge";
+import { ACT_BY_SCENE } from "../../types";
 import { VENUS_MINIMAP_NODES, VENUS_ZONE_LABEL, type VenusZoneId } from "./VenusData";
 
 export function publishVenusMinimap(zone: VenusZoneId): void {
   setSceneSnapshot({
     key: "VenusPlateau",
     label: "Venus - Eternal Biennale",
-    act: 5,
+    act: ACT_BY_SCENE.VenusPlateau,
     zone: VENUS_ZONE_LABEL[zone],
     nodes: VENUS_MINIMAP_NODES.map((n) => ({
       id: n.id,
@@ -26,7 +27,7 @@ export function publishVenusTrialMinimap(phaseLabel: string): void {
   setSceneSnapshot({
     key: "VenusTrial",
     label: "Venus - Kypria's Trial",
-    act: 5,
+    act: ACT_BY_SCENE.VenusTrial,
     zone: phaseLabel,
     nodes: null,
     marker: null,

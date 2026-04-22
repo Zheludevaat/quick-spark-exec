@@ -237,6 +237,17 @@ export type SaveSlot = {
   sopheneNamed: boolean;
 
 
+  // ===== VENUS SPHERE (Act 5) =====
+  /** Current Venus plateau sub-zone. */
+  venusZone:
+    | "atrium"
+    | "gallery"
+    | "recognition_hall"
+    | "reconstruction"
+    | "ladder"
+    | "threshold"
+    | null;
+
   // ===== SUN SPHERE (Act 6) =====
   /** Current Sun plateau sub-zone (null until first entry). */
   sunZone: "vestibule" | "testimony" | "archive" | "mirrors" | "warmth" | "threshold" | null;
@@ -277,6 +288,31 @@ export function migrateSave(raw: unknown): SaveSlot | null {
   const flags: Record<string, boolean> = { ...(r.flags ?? {}) };
   const garmentsReleased =
     (r.garmentsReleased as Partial<Record<SphereKey, boolean>> | undefined) ?? {};
+
+  const venusZoneRaw =
+    typeof (r as { venusZone?: unknown }).venusZone === "string"
+      ? (r as { venusZone: string }).venusZone
+      : (() => {
+          const legacy = (r.flags as Record<string, unknown> | undefined)?.["venus_zone_current"];
+          return typeof legacy === "string" ? legacy : null;
+        })();
+
+  const venusZone:
+    | "atrium"
+    | "gallery"
+    | "recognition_hall"
+    | "reconstruction"
+    | "ladder"
+    | "threshold"
+    | null =
+    venusZoneRaw === "atrium" ||
+    venusZoneRaw === "gallery" ||
+    venusZoneRaw === "recognition_hall" ||
+    venusZoneRaw === "reconstruction" ||
+    venusZoneRaw === "ladder" ||
+    venusZoneRaw === "threshold"
+      ? venusZoneRaw
+      : null;
 
   // One-time compatibility bridge for saves that had already crossed into
   // Sun-era content before Mercury/Venus gating was introduced.
@@ -382,6 +418,8 @@ export function migrateSave(raw: unknown): SaveSlot | null {
       typeof (r as { sopheneNamed?: unknown }).sopheneNamed === "boolean"
         ? ((r as { sopheneNamed: boolean }).sopheneNamed)
         : false,
+
+    venusZone,
 
     sunZone:
       (r.sunZone as
