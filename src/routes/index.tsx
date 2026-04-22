@@ -53,8 +53,21 @@ function GamePage() {
     node.id = "phaser-host";
     node.style.width = "100%";
     node.style.height = "100%";
+    node.style.display = "block";
+    node.style.position = "absolute";
+    node.style.inset = "0";
     phaserHostRef.current = node;
   }
+
+  const attachSlotRef = useCallback((node: HTMLDivElement | null) => {
+    slotRef.current = node;
+    const host = phaserHostRef.current;
+    if (!node || !host) return;
+
+    if (host.parentNode !== node) {
+      node.appendChild(host);
+    }
+  }, []);
 
   // Boot Phaser once.
   useEffect(() => {
