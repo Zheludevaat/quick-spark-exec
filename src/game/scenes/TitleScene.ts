@@ -11,7 +11,7 @@ import {
   measureText,
 } from "../gbcArt";
 import { loadSave, newSave, clearSave, consumeSaveLoadWarning, writeSave } from "../save";
-import { ACT_BY_SCENE, type SceneKey } from "../types";
+import { ACT_BY_SCENE, ACT_TITLES, SCENE_LABEL, type SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 import { openSettings } from "./settings";
