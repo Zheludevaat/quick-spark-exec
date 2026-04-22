@@ -15,6 +15,7 @@ import {
   getGameUiSnapshot,
   patchOverlaySnapshot,
   clearModalSnapshot,
+  clearDialogSnapshot,
 } from "@/game/gameUiBridge";
 import { clearVirtualInput } from "@/game/virtualInput";
 import type { CodexTabKey } from "./desktop/desktopUiModel";
@@ -112,7 +113,27 @@ export function DesktopGameShell({ children, booted, error }: Props) {
       } as EventListenerOptions);
   }, [scene.key, codexTab, modal.mode, modal.surface, openCodex]);
 
-  const titleMode = scene.key === "Title";
+  const titleMode = scene.key === "" || scene.key === "Title";
+
+  useEffect(() => {
+    if (!titleMode) return;
+
+    if (codexTab !== null) {
+      setCodexTab(null);
+    }
+
+    patchOverlaySnapshot({
+      playerHubOpen: false,
+      inventoryOpen: false,
+      settingsOpen: false,
+      loreOpen: false,
+      inquiryActive: false,
+    });
+
+    clearDialogSnapshot();
+    clearModalSnapshot();
+    clearVirtualInput();
+  }, [titleMode, codexTab]);
 
   const largeSurfaceActive =
     codexTab !== null ||
