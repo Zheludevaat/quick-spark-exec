@@ -1,28 +1,20 @@
-import type { SceneKey, SphereKey } from "../types";
+/**
+ * Thin wrapper over the canonical registry. Preserves all legacy
+ * exports so existing call sites keep compiling, but every chapter /
+ * scene identity is now derived from `src/game/canon/registry.ts`.
+ */
+import {
+  CHAPTER_REGISTRY,
+  SCENE_REGISTRY,
+  SCENE_KEYS,
+  type CanonChapterKey as RegistryChapterKey,
+  type CanonSceneRole as RegistrySceneRole,
+  type SceneKey,
+  type SphereKey,
+} from "./registry";
 
-export type CanonChapterKey =
-  | "prelude"
-  | "reception"
-  | "moon"
-  | "mercury"
-  | "venus"
-  | "sun"
-  | "mars"
-  | "jupiter"
-  | "saturn"
-  | "metaxy"
-  | "epilogue";
-
-export type CanonSceneRole =
-  | "mainline"
-  | "plateau"
-  | "trial"
-  | "district"
-  | "threshold"
-  | "connective"
-  | "optional_side"
-  | "secret_annex"
-  | "ending";
+export type CanonChapterKey = RegistryChapterKey;
+export type CanonSceneRole = RegistrySceneRole;
 
 export const DAIMON_CANON_NAME = "Sophene" as const;
 
@@ -93,91 +85,29 @@ export const SPHERE_VERB_BY_SPHERE: Record<SphereKey, string> = {
   saturn: "Release",
 };
 
-export const CHAPTER_TITLE: Record<CanonChapterKey, string> = {
-  prelude: "PRELUDE - THE LAST DAY",
-  reception: "ACT 0 - RECEPTION",
-  moon: "ACT I - MOON",
-  mercury: "ACT II - MERCURY",
-  venus: "ACT III - VENUS",
-  sun: "ACT IV - SUN",
-  mars: "ACT V - MARS",
-  jupiter: "ACT VI - JUPITER",
-  saturn: "ACT VII - SATURN",
-  metaxy: "METAXY",
-  epilogue: "EPILOGUE - BEYOND THE SPHERES",
-};
+/** Public chapter title per chapter key — derived from registry. */
+export const CHAPTER_TITLE: Record<CanonChapterKey, string> = (() => {
+  const out = {} as Record<CanonChapterKey, string>;
+  for (const c of Object.values(CHAPTER_REGISTRY)) out[c.key] = c.title;
+  return out;
+})();
 
-export const CANON_SCENE_CHAPTER: Record<SceneKey, CanonChapterKey> = {
-  LastDay: "prelude",
-  Crossing: "prelude",
-  SilverThreshold: "reception",
-  ImaginalRealm: "moon",
-  AthanorThreshold: "moon",
-  Nigredo: "moon",
-  Albedo: "moon",
-  Citrinitas: "moon",
-  Rubedo: "moon",
-  SealedVessel: "moon",
-  MetaxyHub: "metaxy",
-  MoonTrial: "moon",
-  MercuryPlateau: "mercury",
-  MercuryTrial: "mercury",
-  VenusPlateau: "venus",
-  VenusTrial: "venus",
-  CuratedSelf: "sun",
-  SunPlateau: "sun",
-  SunTrial: "sun",
-  MarsPlateau: "mars",
-  MarsTrial: "mars",
-  JupiterPlateau: "jupiter",
-  JupiterTrial: "jupiter",
-  SaturnPlateau: "saturn",
-  SaturnTrial: "saturn",
-  EndingsRouter: "epilogue",
-  Epilogue: "epilogue",
-};
+export const CANON_SCENE_CHAPTER: Record<SceneKey, CanonChapterKey> = (() => {
+  const out = {} as Record<SceneKey, CanonChapterKey>;
+  for (const k of SCENE_KEYS) out[k] = SCENE_REGISTRY[k].chapter;
+  return out;
+})();
 
-export const CANON_SCENE_ROLE: Record<SceneKey, CanonSceneRole> = {
-  LastDay: "mainline",
-  Crossing: "threshold",
-  SilverThreshold: "threshold",
-  ImaginalRealm: "plateau",
-  AthanorThreshold: "secret_annex",
-  Nigredo: "secret_annex",
-  Albedo: "secret_annex",
-  Citrinitas: "secret_annex",
-  Rubedo: "secret_annex",
-  SealedVessel: "secret_annex",
-  MetaxyHub: "connective",
-  MoonTrial: "trial",
-  MercuryPlateau: "plateau",
-  MercuryTrial: "trial",
-  VenusPlateau: "plateau",
-  VenusTrial: "trial",
-  CuratedSelf: "district",
-  SunPlateau: "plateau",
-  SunTrial: "trial",
-  MarsPlateau: "plateau",
-  MarsTrial: "trial",
-  JupiterPlateau: "plateau",
-  JupiterTrial: "trial",
-  SaturnPlateau: "plateau",
-  SaturnTrial: "trial",
-  EndingsRouter: "ending",
-  Epilogue: "ending",
-};
+export const CANON_SCENE_ROLE: Record<SceneKey, CanonSceneRole> = (() => {
+  const out = {} as Record<SceneKey, CanonSceneRole>;
+  for (const k of SCENE_KEYS) out[k] = SCENE_REGISTRY[k].role;
+  return out;
+})();
 
 export function chapterTitleForScene(scene: SceneKey): string {
   return CHAPTER_TITLE[CANON_SCENE_CHAPTER[scene]];
 }
 
 export function isSecretAlchemyScene(scene: SceneKey): boolean {
-  return (
-    scene === "AthanorThreshold" ||
-    scene === "Nigredo" ||
-    scene === "Albedo" ||
-    scene === "Citrinitas" ||
-    scene === "Rubedo" ||
-    scene === "SealedVessel"
-  );
+  return SCENE_REGISTRY[scene].role === "secret_annex";
 }
