@@ -4,7 +4,7 @@ import { getAudio } from "./audio";
 import { onActionDown } from "./controls";
 
 /**
- * SorynCompanion — the daimon that follows Rowan after the Silver Threshold binding.
+ * SopheneCompanion — the daimon that follows Rowan after the Silver Threshold binding.
  * - A floating glyph-being (sprite key "soryn_v2") with a halo and trailing motes.
  * - Trails the player with a small delay using eased follow-target points.
  * - Press B (vinput-cancel / B / Q key) near the daimon to open a contextual
@@ -14,7 +14,7 @@ import { onActionDown } from "./controls";
 
 export type CompanionContextLines = () => { who: string; text: string }[];
 
-export class SorynCompanion {
+export class SopheneCompanion {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private sprite: Phaser.GameObjects.Sprite;

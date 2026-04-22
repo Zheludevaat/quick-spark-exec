@@ -4,7 +4,7 @@ import { writeSave } from "../save";
 import type { ImaginalRegion, SaveSlot } from "../types";
 import { grantAlchemyHint } from "../canon/alchemySecret";
 import { attachHUD, mountImaginalProgressBadge, InputState, makeRowan, animateRowan, runDialog } from "./hud";
-import { SorynCompanion } from "../companion";
+import { SopheneCompanion } from "../companion";
 import { getAudio, SONG_MOON } from "../audio";
 import { setSceneSnapshot } from "../gameUiBridge";
 import { ACT_BY_SCENE } from "../types";
@@ -184,7 +184,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
   private hint!: GBCText;
   private titleText!: GBCText;
   private focusGlow!: Phaser.GameObjects.Arc;
-  private companion?: SorynCompanion;
+  private companion?: SopheneCompanion;
   private region: ImaginalRegion = "pools";
   private lastRegion: ImaginalRegion | null = null;
   private regionRoot!: Phaser.GameObjects.Container;
@@ -307,7 +307,7 @@ export class ImaginalRealmScene extends Phaser.Scene {
     this.refreshSoulTracker();
 
     // Spawn the daimon companion (lives across all 3 sub-regions)
-    this.companion = new SorynCompanion(this, this.rowan, () => this.companionLines(), [
+    this.companion = new SopheneCompanion(this, this.rowan, () => this.companionLines(), [
       "BREATHE.",
       "I AM HERE.",
       "THE MIRROR LIES KINDLY.",
