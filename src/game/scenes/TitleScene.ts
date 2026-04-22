@@ -367,7 +367,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     const confirm = () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       const opt = options[cursor];
 
       if (opt.action === "launch") {
@@ -380,7 +380,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     const move = (d: number) => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (options.length < 2) return;
       cursor = (cursor + d + options.length) % options.length;
       audio.sfx("cursor");
@@ -390,12 +390,12 @@ export class TitleScene extends Phaser.Scene {
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
-        if (settingsOpen) return;
+        if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
       });
       t.obj.on("pointerdown", () => {
-        if (settingsOpen) return;
+        if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
         confirm();
@@ -403,7 +403,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     onDirection(this, (d) => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (d === "up") move(-1);
       else if (d === "down") move(1);
     });
@@ -412,7 +412,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Erase stays available, but no longer pollutes the main menu.
     this.input.keyboard?.on("keydown-BACKSPACE", () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (save) erase();
     });
 
