@@ -1041,7 +1041,7 @@ export class TitleScene extends Phaser.Scene {
 
     const jumpStates = jumps.map((j) => fitSingleLineState(j.label, itemFitW));
     const metaStates = jumps.map((j) =>
-      fitSingleLineState(j.readout ?? this.devSceneReadout(j.scene), bandW),
+      fitSingleLineState(j.readout ?? getDevJumpReadout(j.scene), bandW),
     );
 
     const helpText = "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE";
