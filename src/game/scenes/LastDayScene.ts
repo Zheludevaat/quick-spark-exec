@@ -482,6 +482,7 @@ export class LastDayScene extends Phaser.Scene {
 
     this.setContextHint(breathHintOverride);
 
+    const usedMain = this.items.filter((t) => t.seed && t.seed !== "seed_mirror" && t.used).length;
     if (!this.exitOpen && usedMain >= MAIN_SEEDS_REQUIRED) {
       this.exitOpen = true;
       this.beginDeathBeat();
