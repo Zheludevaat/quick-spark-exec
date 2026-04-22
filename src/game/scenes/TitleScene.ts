@@ -1167,8 +1167,7 @@ export class TitleScene extends Phaser.Scene {
         selectedReadout.setText(jumpStates[pick].full);
       }
 
-      const chosen = jumps[pick];
-      selectedSceneLine.setText(chosen.readout ?? this.devSceneReadout(chosen.scene));
+      selectedSceneLine.setText(metaStates[pick].fitted);
     };
 
     refreshSkip();
