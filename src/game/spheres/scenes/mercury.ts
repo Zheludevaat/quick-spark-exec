@@ -1577,6 +1577,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
   private hermaiaPresentation?: EncounterPresentationHandle;
   private roomArt?: MercuryRoomArtHandle;
+  private snapshotElapsed = 0;
 
   constructor() {
     super("MercuryTrial");
@@ -1584,12 +1585,52 @@ export class MercuryTrialScene extends Phaser.Scene {
 
   init(data: { save: SaveSlot }) {
     this.mSave = data.save;
+    ensureMercuryCanon(this.mSave);
     this.mSave.scene = "MercuryTrial";
     this.mSave.act = ACT_BY_SCENE.MercuryTrial;
     writeSave(this.mSave);
     this.doors = [];
     this.busy = false;
     this.mScore = 0;
+    this.snapshotElapsed = 0;
+  }
+
+  private trialZoneLabel(): string {
+    const near = this.nearestDoor();
+    return near ? `Door of ${this.doorLabel(near.idx)}` : "Three Doors";
+  }
+
+  private publishTrialSnapshot() {
+    setSceneSnapshot({
+      key: "MercuryTrial",
+      label: "Mercury - Hermaia's Trial",
+      act: ACT_BY_SCENE.MercuryTrial ?? 4,
+      zone: this.trialZoneLabel(),
+      nodes: this.doors.map((d) => ({
+        id: `door_${d.idx}`,
+        label: this.doorLabel(d.idx),
+        x: d.x / GBC_W,
+        y: d.y / GBC_H,
+        active: !d.done,
+      })),
+      marker: this.rowan ? { x: this.rowan.x / GBC_W, y: this.rowan.y / GBC_H } : null,
+      idleTitle: "HERMAIA",
+      idleBody: this.doors.every((d) => d.done)
+        ? "All three names have been spoken."
+        : "Three arrivals wait behind three borrowed faces.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
+  }
+
+  private retreatToPlateau() {
+    if (this.busy) return;
+    gbcWipe(this, () => this.scene.start("MercuryPlateau", { save: this.mSave }));
   }
 
   create() {
@@ -1603,14 +1644,6 @@ export class MercuryTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: mercuryConfig.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.mSave.stats);
-    setSceneSnapshot({
-      key: "MercuryTrial",
-      label: "Mercury — Hermaia's Trial",
-      act: ACT_BY_SCENE.MercuryTrial ?? 4,
-      zone: "Three Doors",
-      nodes: null,
-      marker: null,
-    });
 
     // Title
     const rawTitle = "HERMAIA'S TRIAL";
