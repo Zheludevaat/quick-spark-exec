@@ -281,14 +281,6 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.buildStations();
 
     attachHUD(this, () => this.mSave.stats);
-    setSceneSnapshot({
-      key: "MercuryPlateau",
-      label: "Mercury — Tower of Reasons",
-      act: ACT_BY_SCENE.MercuryPlateau ?? 4,
-      zone: "Central Hall",
-      nodes: null,
-      marker: null,
-    });
 
     // Title strip — width-safe
     const titleText = fitSingleLineText("TOWER OF REASONS", GBC_W - 12);
@@ -365,6 +357,15 @@ export class MercuryPlateauScene extends Phaser.Scene {
       HERMAIA_PROFILE,
     );
 
+    this.publishSceneSnapshot();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.roomArt?.destroy();
+      this.hermaiaPresentation?.destroy();
+      this.ambientBarkEvent?.remove(false);
+      this.activeBark?.destroy();
+    });
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
@@ -374,10 +375,13 @@ export class MercuryPlateauScene extends Phaser.Scene {
         this.hermaiaPresentation?.introOnce(
           "encounter_seen_hermaia_plateau",
           this.mSave,
+          () => {
+            runDialog(this, mercuryConfig.opening, () => {
+              this.busy = false;
+              this.publishSceneSnapshot();
+            });
+          },
         );
-        runDialog(this, mercuryConfig.opening, () => {
-          this.busy = false;
-        });
       });
     }
   }
