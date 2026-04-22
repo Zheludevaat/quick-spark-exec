@@ -218,7 +218,7 @@ function CodexContent({
           <KV label="Wedding" value={save?.weddingType ?? "—"} />
           <KV label="Inscription" value={save?.act2Inscription ?? "—"} />
           <KV
-            label="Soryn"
+            label="Sophene"
             value={save?.sorynReleased ? "released" : "bound"}
           />
         </CodexCard>
