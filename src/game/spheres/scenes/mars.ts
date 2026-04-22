@@ -142,7 +142,7 @@ export class MarsPlateauScene extends Phaser.Scene {
     setSceneSnapshot({
       key: "MarsPlateau",
       label: "Mars - Arena of the Strong",
-      act: ACT_BY_SCENE.MarsPlateau ?? 7,
+      act: ACT_BY_SCENE.MarsPlateau,
       zone: ZONE_LABEL.approach,
       nodes: null,
       marker: null,
@@ -575,16 +575,15 @@ export class MarsPlateauScene extends Phaser.Scene {
     );
   }
 
-  private loadZone(zone: MarsZone) {
-    this.zone = zone;
-
+  private destroyZoneArt() {
     this.roomArt?.destroy();
     this.roomArt = undefined;
 
     this.readabilityPass?.destroy();
     this.readabilityPass = undefined;
+  }
 
-    // Per-zone camera floor so even a total art failure never reads as pure black.
+  private paintZone(zone: MarsZone) {
     this.cameras.main.setBackgroundColor(MARS_ZONE_PALETTES[zone as MarsZoneKey].bg0);
 
     try {
@@ -594,16 +593,14 @@ export class MarsPlateauScene extends Phaser.Scene {
       this.roomArt = this.buildFallbackRoom(zone);
     }
 
-    // Always add a readable structural pass after room painting.
     this.readabilityPass = this.buildReadabilityPass(zone);
+  }
 
-    this.applyAftermath();
-    this.buildHoldVisuals();
-
+  private publishZoneSnapshot(zone: MarsZone) {
     setSceneSnapshot({
       key: "MarsPlateau",
       label: "Mars - Arena of the Strong",
-      act: ACT_BY_SCENE.MarsPlateau ?? 7,
+      act: ACT_BY_SCENE.MarsPlateau,
       zone: ZONE_LABEL[zone],
       nodes: null,
       marker: null,
@@ -617,12 +614,24 @@ export class MarsPlateauScene extends Phaser.Scene {
       allowPlayerHub: true,
       showFooter: true,
     });
+  }
 
+  private positionRowanForZone(_zone: MarsZone) {
+    if (!this.rowan) return;
+    this.rowan.setPosition(GBC_W / 2, GBC_H - 24);
+  }
+
+  private loadZone(zone: MarsZone) {
+    this.zone = zone;
+
+    this.destroyZoneArt();
+    this.paintZone(zone);
+
+    this.applyAftermath();
+    this.buildHoldVisuals();
+    this.publishZoneSnapshot(zone);
     this.rebuildZoneHeaders();
-
-    if (this.rowan) {
-      this.rowan.setPosition(GBC_W / 2, GBC_H - 24);
-    }
+    this.positionRowanForZone(zone);
   }
 
   update(_t: number, dt: number) {
@@ -850,7 +859,7 @@ export class MarsTrialScene extends Phaser.Scene {
     setSceneSnapshot({
       key: "MarsTrial",
       label: "Mars - Areon's Trial",
-      act: ACT_BY_SCENE.MarsTrial ?? 6,
+      act: ACT_BY_SCENE.MarsTrial,
       zone: "Trial of STAND",
       nodes: null,
       marker: null,

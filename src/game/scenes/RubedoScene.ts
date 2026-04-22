@@ -50,7 +50,7 @@ export class RubedoScene extends Phaser.Scene {
   private isDone = false;
   private hintText!: GBCText;
   // --- CHAMBER MEMORY (Act 3 pass) ---
-  private unionGlow!: Phaser.GameObjects.Arc;
+  private unionGlow!: Phaser.GameObjects.Ellipse;
   private throneMarks: Phaser.GameObjects.Arc[] = [];
   private tableSeal!: Phaser.GameObjects.Rectangle;
   private releaseWisp?: Phaser.GameObjects.Arc;
@@ -93,7 +93,7 @@ export class RubedoScene extends Phaser.Scene {
     this.unionGlow = this.add
       .ellipse(cx, tableY, 92, 22, 0xb84040, 0.06)
       .setDepth(0)
-      .setBlendMode("ADD") as unknown as Phaser.GameObjects.Arc;
+      .setBlendMode("ADD");
 
     // Long banquet table
     this.add
@@ -330,7 +330,6 @@ export class RubedoScene extends Phaser.Scene {
 
   private tally(idx: number, _p: typeof PAIRINGS[number], kind: string, reply: string) {
     awardNamedStone(this, this.save, "red", `the ${idx === 0 ? "first" : "second"} union`);
-    writeSave(this.save);
     this.vesselHud.refresh();
     this.applyWeddingState(kind);
     runDialog(this, [{ who: "SOPHENE", text: reply }], () => this.runPairing(idx + 1));
