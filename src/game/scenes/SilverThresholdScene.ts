@@ -870,7 +870,7 @@ export class SilverThresholdScene extends Phaser.Scene {
           this.runMiniMechanic(kind, c, () => {
             // PHASE D NAMING — single source of the guardian's stat gift.
             runDialog(this, NAMING[kind], () => {
-              this.bumpStatForElement(kind, 1);
+              awardGuardianNamingGift(this.save, kind);
               shedAccessory(this, this.rowan, ELEM_TO_ACCESSORY[kind]);
               c.visited = true;
               this.save.flags[`elem_${kind}`] = true;
@@ -916,26 +916,6 @@ export class SilverThresholdScene extends Phaser.Scene {
     }
   }
 
-  private bumpStatForElement(kind: ElemKind, n: number) {
-    if (kind === "air") this.save.stats.clarity += n;
-    if (kind === "fire") this.save.stats.courage += n;
-    if (kind === "water") this.save.stats.compassion += n;
-    if (kind === "earth") this.save.stats.clarity += n;
-  }
-
-  private flashShardCollected() {
-    const t = new GBCText(this, this.rowan.x - 28, this.rowan.y - 18, "MEMORY SHARD +1", {
-      color: COLOR.textGold,
-      depth: 220,
-    });
-    this.tweens.add({
-      targets: t.obj,
-      alpha: 0,
-      y: this.rowan.y - 32,
-      duration: 1600,
-      onComplete: () => t.destroy(),
-    });
-  }
 
   // ============================================================================
   // PHASE C — Per-element mini-mechanics. All resolve to onDone() with no fail.
@@ -1319,9 +1299,9 @@ export class SilverThresholdScene extends Phaser.Scene {
             this,
             this.daimonV2.x,
             this.daimonV2.y,
-            SORYN_DAIMON_PROFILE,
+            SOPHENE_DAIMON_PROFILE,
           );
-          this.sorynPresentation.introOnce("encounter_seen_soryn_daimon", this.save);
+          this.sorynPresentation.introOnce("encounter_seen_sophene_daimon", this.save);
           writeSave(this.save);
 
           this.tweens.add({
@@ -1407,6 +1387,8 @@ export class SilverThresholdScene extends Phaser.Scene {
             ],
             () => {
               this.save.flags.daimon_bound = true;
+              finalizeReceptionBinding(this.save);
+
               (this.gate.getData("img") as Phaser.GameObjects.Image).setAlpha(1);
               this.tweens.add({
                 targets: this.gate,
@@ -1415,8 +1397,11 @@ export class SilverThresholdScene extends Phaser.Scene {
                 yoyo: true,
                 repeat: -1,
               });
+
               writeSave(this.save);
               this.dialogActive = false;
+              this.pendingTransformationResume = false;
+              this.publishSceneSnapshot();
             },
           );
         });
@@ -1432,9 +1417,10 @@ export class SilverThresholdScene extends Phaser.Scene {
       this.dialogActive = true;
       this.save.flags.stone_found = true;
       this.save.flags.reception_observe_taught = true;
-      this.save.stats.courage += 1;
+      awardReceptionStone(this.save);
       this.events.emit("stats-changed");
       writeSave(this.save);
+      this.publishSceneSnapshot();
       this.stone.setFillStyle(0x3a4868);
       getAudio().sfx("resolve");
       runDialog(this, STONE_LINES, () => {
@@ -1502,13 +1488,15 @@ export class SilverThresholdScene extends Phaser.Scene {
         });
         return;
       }
-      this.save.scene = "ImaginalRealm";
-      this.save.act = ACT_BY_SCENE.ImaginalRealm;
+      const nextScene = nextMainlineScene("SilverThreshold");
+      this.save.scene = nextScene;
+      this.save.act = ACT_BY_SCENE[nextScene];
       writeSave(this.save);
+
       const a = getAudio();
       a.sfx("wipe");
       a.music.stop();
-      gbcWipe(this, () => this.scene.start("ImaginalRealm", { save: this.save }));
+      gbcWipe(this, () => this.scene.start(nextScene, { save: this.save }));
       return;
     }
     // Optional Reception interactions — last priority.
