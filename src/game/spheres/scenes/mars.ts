@@ -579,6 +579,9 @@ export class MarsPlateauScene extends Phaser.Scene {
     this.readabilityPass?.destroy();
     this.readabilityPass = undefined;
 
+    // Per-zone camera floor so even a total art failure never reads as pure black.
+    this.cameras.main.setBackgroundColor(MARS_ZONE_PALETTES[zone as MarsZoneKey].bg0);
+
     try {
       this.roomArt = paintMarsRoom(this, zone as MarsZoneKey);
     } catch (err) {
