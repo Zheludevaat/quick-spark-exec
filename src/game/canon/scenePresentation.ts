@@ -4,7 +4,7 @@
  * baseline `setSceneSnapshot(...)` payload before its own publisher
  * augments it with zone/nodes/marker/idle copy.
  */
-import type { Partial as _Partial } from "./_typeShim"; // never imported; ensures TS doesn't complain on isolated modules
+
 import {
   CHAPTER_REGISTRY,
   LEGACY_ACT_NUMBER_BY_SCENE,
