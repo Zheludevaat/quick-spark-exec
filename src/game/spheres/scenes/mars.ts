@@ -198,9 +198,14 @@ export class MarsPlateauScene extends Phaser.Scene {
     // Load zone only after the shared HUD + actor state exists.
     this.loadZone("approach");
 
+    // Extra floor reference so the first frame never reads as empty black.
     this.add
-      .rectangle(GBC_W / 2, GBC_H - 10, 40, 1, 0xf0c0a0, 0.25)
-      .setDepth(9);
+      .rectangle(GBC_W / 2, GBC_H - 10, 40, 1, 0xf0c0a0, 0.32)
+      .setDepth(13);
+
+    // Keep Rowan and her shadow clearly above Mars structural art.
+    this.rowanShadow.setDepth(18);
+    this.rowan.setDepth(20);
 
     this.areonPresentation = createEncounterPresentation(
       this,
