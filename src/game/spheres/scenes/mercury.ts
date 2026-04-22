@@ -1716,6 +1716,12 @@ export class MercuryTrialScene extends Phaser.Scene {
 
     onActionDown(this, "action", () => this.tryInteract());
     this.events.on("vinput-action", () => this.tryInteract());
+    onActionDown(this, "cancel", () => this.retreatToPlateau());
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.roomArt?.destroy();
+      this.hermaiaPresentation?.destroy();
+    });
 
     // Hermaia presence presides over the trial chamber from the top center.
     this.hermaiaPresentation = createEncounterPresentation(
@@ -1725,15 +1731,20 @@ export class MercuryTrialScene extends Phaser.Scene {
       HERMAIA_PROFILE,
     );
 
+    this.publishTrialSnapshot();
+
     this.busy = true;
     this.time.delayedCall(500, () => {
       this.hermaiaPresentation?.introOnce(
         "encounter_seen_hermaia_trial",
         this.mSave,
+        () => {
+          runDialog(this, mercuryConfig.trialOpening, () => {
+            this.busy = false;
+            this.publishTrialSnapshot();
+          });
+        },
       );
-      runDialog(this, mercuryConfig.trialOpening, () => {
-        this.busy = false;
-      });
     });
   }
 
@@ -1766,6 +1777,12 @@ export class MercuryTrialScene extends Phaser.Scene {
       const remaining = this.doors.filter((d) => !d.done).length;
       this.hint.setText(remaining === 0 ? "ALL DOORS NAMED" : `${remaining} DOORS REMAIN`);
       this.hint.setColor(COLOR.textDim);
+    }
+
+    this.snapshotElapsed += delta;
+    if (this.snapshotElapsed >= 150) {
+      this.snapshotElapsed = 0;
+      this.publishTrialSnapshot();
     }
   }
 
