@@ -1,14 +1,9 @@
 /**
  * Minimap panel — Tier 3 fallback with optional Tier 2 nodes.
  *
- * - Always shows act + scene label so the panel is never empty.
- * - If the scene publishes nodes via setSceneSnapshot, renders them as
- *   a schematic in the panel area.
- * - Player marker dot if scene publishes one.
- *
- * Visual chrome comes from the shared ShellPanel primitive so the
- * minimap belongs to the same shell-card family as the dialogue tray
- * and inventory cards.
+ * In compact iPhone landscape mode, the chapter header is dropped, the
+ * panel hides itself when the scene does not request a minimap, and the
+ * label collapses to zone-or-scene to save horizontal space.
  */
 import { useEffect, useState } from "react";
 import {
@@ -20,9 +15,16 @@ import {
   ShellPanel,
   ShellPanelMeta,
 } from "@/components/game/shell/ShellPanel";
-import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
+import {
+  getPublicSceneLabel,
+  getPublicChapterTitle,
+} from "@/game/canon/registry";
 
-export function TouchMiniMapPanel() {
+type Props = {
+  compact?: boolean;
+};
+
+export function TouchMiniMapPanel({ compact = false }: Props) {
   const [scene, setScene] = useState<SceneSnapshot>(
     () => getGameUiSnapshot().scene,
   );
@@ -32,18 +34,26 @@ export function TouchMiniMapPanel() {
   const hasNodes = !!scene.nodes && scene.nodes.length > 0;
   const marker = scene.marker;
 
+  if (compact && !scene.showMiniMap) return null;
+
+  const label = compact
+    ? scene.zone || getPublicSceneLabel(scene.key)
+    : getPublicSceneLabel(scene.key);
+
   return (
     <ShellPanel compact tone="subdued" style={{ width: "100%" }}>
-      <ShellPanelMeta style={{ marginBottom: 4 }}>
-        {getPublicChapterTitle(scene.key)}
-      </ShellPanelMeta>
+      {!compact && (
+        <ShellPanelMeta style={{ marginBottom: 4 }}>
+          {getPublicChapterTitle(scene.key)}
+        </ShellPanelMeta>
+      )}
       <div
         className="text-[10px] mb-1 leading-tight truncate"
         style={{ color: "#eef3ff" }}
       >
-        {getPublicSceneLabel(scene.key)}
+        {label}
       </div>
-      {scene.zone && (
+      {!compact && scene.zone && (
         <div
           className="text-[9px] uppercase tracking-wider mb-1.5 truncate"
           style={{ color: "#e8c890", opacity: 0.85 }}

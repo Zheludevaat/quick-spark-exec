@@ -1,11 +1,22 @@
 /**
  * Top stats strip for touch landscape mode.
+ *
  * Reads HUD snapshot (clarity / compassion / courage + saved indicator)
- * from the gameUiBridge.
+ * from the gameUiBridge. In compact mode (iPhone landscape), drops the
+ * chapter label and uses tighter padding so it can be safely overlaid on
+ * top of the gameplay viewport without stealing a permanent row.
  */
 import { useEffect, useState } from "react";
-import { subscribeGameUi, getGameUiSnapshot, type HudSnapshot, type SceneSnapshot } from "@/game/gameUiBridge";
-import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
+import {
+  subscribeGameUi,
+  getGameUiSnapshot,
+  type HudSnapshot,
+  type SceneSnapshot,
+} from "@/game/gameUiBridge";
+import {
+  getPublicSceneLabel,
+  getPublicChapterTitle,
+} from "@/game/canon/registry";
 
 const STAT_GLYPH: Record<"clarity" | "compassion" | "courage", string> = {
   clarity: "◇",
@@ -18,7 +29,11 @@ const STAT_COLOR: Record<"clarity" | "compassion" | "courage", string> = {
   courage: "#e8c890",
 };
 
-export function TouchStatsStrip() {
+type Props = {
+  compact?: boolean;
+};
+
+export function TouchStatsStrip({ compact = false }: Props) {
   const [hud, setHud] = useState<HudSnapshot>(() => getGameUiSnapshot().hud);
   const [scene, setScene] = useState<SceneSnapshot>(() => getGameUiSnapshot().scene);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -37,9 +52,15 @@ export function TouchStatsStrip() {
     return () => window.clearTimeout(t);
   }, [hud.savedAt]);
 
+  const chapter = getPublicChapterTitle(scene.key);
+  const sceneLabel = getPublicSceneLabel(scene.key);
+  const rightLabel = compact ? scene.zone || sceneLabel : sceneLabel;
+
   return (
     <div
-      className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-md font-mono text-xs"
+      className={`flex items-center justify-between gap-3 rounded-md font-mono ${
+        compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+      }`}
       style={{
         background: "linear-gradient(180deg, rgba(20,28,48,0.92), rgba(8,12,24,0.92))",
         border: "1px solid rgba(74,120,200,0.45)",
@@ -47,7 +68,7 @@ export function TouchStatsStrip() {
         color: "#eef3ff",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center ${compact ? "gap-2" : "gap-3"}`}>
         {(["clarity", "compassion", "courage"] as const).map((k) => (
           <div key={k} className="flex items-center gap-1">
             <span style={{ color: STAT_COLOR[k] }}>{STAT_GLYPH[k]}</span>
@@ -57,11 +78,16 @@ export function TouchStatsStrip() {
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 text-[10px]" style={{ color: "rgba(200,210,230,0.85)" }}>
-        <span style={{ color: "rgba(200,210,230,0.55)" }}>
-          {getPublicChapterTitle(scene.key)}
+      <div
+        className={`flex items-center gap-2 ${compact ? "text-[9px]" : "text-[10px]"}`}
+        style={{ color: "rgba(200,210,230,0.85)" }}
+      >
+        {!compact && (
+          <span style={{ color: "rgba(200,210,230,0.55)" }}>{chapter}</span>
+        )}
+        <span className={`truncate ${compact ? "max-w-[48vw]" : "max-w-[40vw]"}`}>
+          {rightLabel}
         </span>
-        <span className="truncate max-w-[40vw]">{getPublicSceneLabel(scene.key)}</span>
         {savedFlash && (
           <span
             className="px-1.5 py-0.5 rounded"

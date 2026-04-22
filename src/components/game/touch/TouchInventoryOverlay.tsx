@@ -102,8 +102,8 @@ export function TouchInventoryOverlay({ open, onClose }: Props) {
       <ShellPanel
         tone="accent"
         style={{
-          width: "min(94vw, 720px)",
-          maxHeight: "92vh",
+          width: "min(96vw, 720px)",
+          maxHeight: "92dvh",
           padding: 0,
           overflow: "hidden",
           display: "flex",

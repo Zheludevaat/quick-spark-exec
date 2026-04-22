@@ -159,7 +159,10 @@ export function getEffectiveInterfaceMode(): "desktop" | "touch_landscape" {
       "ontouchstart" in window ||
       (typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) > 0);
     const isCoarse = window.matchMedia?.("(pointer: coarse)").matches;
-    if (isTouch && isCoarse) return "touch_landscape";
+    const isLandscape =
+      window.matchMedia?.("(orientation: landscape)").matches ??
+      window.innerWidth > window.innerHeight;
+    if (isTouch && isCoarse && isLandscape) return "touch_landscape";
   } catch {
     /* ignore */
   }

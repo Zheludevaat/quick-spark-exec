@@ -1,10 +1,10 @@
 /**
  * Shared shell-level dialogue tray. Used by BOTH desktop and touch
- * shells as the primary visible dialogue surface. The in-canvas Phaser
- * dialog box is no longer rendered (see runDialog in hud.ts).
+ * shells as the primary visible dialogue surface.
  *
- * Mirrors dialog state from gameUiBridge. Pointerdown pulses the
- * virtual A action so click/tap advances dialogue in either mode.
+ * In compact mode (iPhone landscape), the confirm hint shortens so the
+ * tray can be safely overlaid on top of the gameplay viewport without
+ * permanently shrinking it.
  */
 import { useEffect, useState } from "react";
 import {
@@ -15,7 +15,11 @@ import {
 import { pulseVirtual } from "@/game/virtualInput";
 import { ShellPanel, ShellPanelTitle } from "@/components/game/shell/ShellPanel";
 
-export function GameDialogueTray() {
+type Props = {
+  compact?: boolean;
+};
+
+export function GameDialogueTray({ compact = false }: Props) {
   const [dialog, setDialog] = useState<DialogSnapshot>(
     () => getGameUiSnapshot().dialog,
   );
@@ -37,10 +41,10 @@ export function GameDialogueTray() {
       aria-label="Dialogue tray. Click or tap to advance."
       style={{ background: "transparent", padding: 0, border: 0 }}
     >
-      <ShellPanel style={{ minHeight: 64 }}>
+      <ShellPanel style={{ minHeight: compact ? 48 : 64 }}>
         <ShellPanelTitle>{dialog.speaker || "—"}</ShellPanelTitle>
         <div
-          className="text-xs leading-snug whitespace-pre-wrap"
+          className={`leading-snug whitespace-pre-wrap ${compact ? "text-[11px]" : "text-xs"}`}
           style={{ color: "#eef3ff" }}
         >
           {dialog.text}
@@ -61,7 +65,11 @@ export function GameDialogueTray() {
               : "rgba(200,210,230,0.4)",
           }}
         >
-          {dialog.waitingForConfirm ? "▼ CLICK / TAP / A" : "…"}
+          {dialog.waitingForConfirm
+            ? compact
+              ? "TAP / A"
+              : "▼ CLICK / TAP / A"
+            : "…"}
         </div>
       </ShellPanel>
     </button>
