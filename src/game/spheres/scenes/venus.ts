@@ -757,6 +757,8 @@ export class VenusPlateauScene extends Phaser.Scene {
     color: number,
     flagKey: "etiquetteHeard" | "anniversaryHeard",
   ) {
+    const alreadyHeard = isVenusFlag(this.save, flagKey);
+
     const body = this.add.rectangle(x, y, 7, 12, color, 0.85).setDepth(20);
     body.setStrokeStyle(1, 0x000000, 0.55);
     const head = this.add.circle(x, y - 8, 3, color, 0.85).setDepth(21);
@@ -769,15 +771,17 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.root.add(head);
     this.root.add(tag.obj);
 
-    this.hotspots.push({
+    const hotspot: Hotspot = {
       id: `amb_${npc.id}`,
       x,
       y,
       r: 11,
-      label: `LISTEN: ${npc.name}`,
+      label: alreadyHeard ? `HEAR AGAIN: ${npc.name}` : `LISTEN: ${npc.name}`,
       onAct: () => {
         markVenusFlag(this.save, flagKey);
         writeSave(this.save);
+        hotspot.label = `HEAR AGAIN: ${npc.name}`;
+
         const lines = npc.ambient.map((t) => ({ who: npc.name, text: t }));
         this.modal = true;
         runDialog(this, lines, () => {
@@ -785,7 +789,9 @@ export class VenusPlateauScene extends Phaser.Scene {
           this.refreshHint();
         });
       },
-    });
+    };
+
+    this.hotspots.push(hotspot);
   }
 
   // -----------------------------------------------------------------
