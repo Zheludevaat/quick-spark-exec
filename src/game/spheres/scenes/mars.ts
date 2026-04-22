@@ -109,6 +109,8 @@ export class MarsPlateauScene extends Phaser.Scene {
   private besideTarget!: HoldTarget;
   private holdRing?: Phaser.GameObjects.Arc;
   private holdMark?: Phaser.GameObjects.Arc;
+  private zoneTitle?: GBCText;
+  private zoneSubtitle?: GBCText;
 
   constructor() {
     super("MarsPlateau");
@@ -186,6 +188,9 @@ export class MarsPlateauScene extends Phaser.Scene {
         );
       });
     }
+
+    this.events.once("shutdown", () => this.destroyZoneHeaders());
+    this.events.once("destroy", () => this.destroyZoneHeaders());
   }
 
   private clearAftermath() {
@@ -245,6 +250,53 @@ export class MarsPlateauScene extends Phaser.Scene {
       .setDepth(8);
   }
 
+  private destroyZoneHeaders() {
+    this.zoneTitle?.destroy();
+    this.zoneSubtitle?.destroy();
+    this.zoneTitle = undefined;
+    this.zoneSubtitle = undefined;
+  }
+
+  private rebuildZoneHeaders() {
+    this.destroyZoneHeaders();
+
+    const title = fitSingleLineText("ARENA OF THE STRONG", GBC_W - 12);
+    const titleX = Math.floor((GBC_W - measureText(title)) / 2);
+    this.zoneTitle = new GBCText(this, titleX, 2, title, {
+      color: COLOR.textGold,
+      depth: 50,
+    });
+
+    const sub = fitSingleLineText(ZONE_LABEL[this.zone].toUpperCase(), GBC_W - 12);
+    const subX = Math.floor((GBC_W - measureText(sub)) / 2);
+    this.zoneSubtitle = new GBCText(this, subX, 11, sub, {
+      color: COLOR.textDim,
+      depth: 50,
+    });
+  }
+
+  private allLessonsComplete(): boolean {
+    return (
+      !!this.save.flags[FLAG_BLOW] &&
+      !!this.save.flags[FLAG_LINE] &&
+      !!this.save.flags[FLAG_BESIDE]
+    );
+  }
+
+  private activeHoldTarget(): HoldTarget | null {
+    if (this.zone === "stands" && !this.save.flags[FLAG_BLOW]) return this.blowTarget;
+    if (this.zone === "line_yard" && !this.save.flags[FLAG_LINE]) return this.lineTarget;
+    if (this.zone === "infirmary" && !this.save.flags[FLAG_BESIDE]) return this.besideTarget;
+    return null;
+  }
+
+  private isNearTarget(target: HoldTarget, extra = 4): boolean {
+    return (
+      Phaser.Math.Distance.Between(this.rowan.x, this.rowan.y, target.x, target.y) <
+      target.radius + extra
+    );
+  }
+
   private loadZone(zone: MarsZone) {
     this.zone = zone;
     this.roomArt?.destroy();
@@ -270,19 +322,7 @@ export class MarsPlateauScene extends Phaser.Scene {
       showFooter: true,
     });
 
-    const title = fitSingleLineText("ARENA OF THE STRONG", GBC_W - 12);
-    const titleX = Math.floor((GBC_W - measureText(title)) / 2);
-    new GBCText(this, titleX, 2, title, {
-      color: COLOR.textGold,
-      depth: 50,
-    });
-
-    const sub = fitSingleLineText(ZONE_LABEL[zone].toUpperCase(), GBC_W - 12);
-    const subX = Math.floor((GBC_W - measureText(sub)) / 2);
-    new GBCText(this, subX, 11, sub, {
-      color: COLOR.textDim,
-      depth: 50,
-    });
+    this.rebuildZoneHeaders();
 
     if (this.rowan) {
       this.rowan.setPosition(GBC_W / 2, GBC_H - 24);
@@ -399,10 +439,14 @@ export class MarsPlateauScene extends Phaser.Scene {
 
   private currentPrompt(): string {
     if (this.zone === "approach") return "[A] ENTER";
-    if (this.zone === "stands" && !this.save.flags[FLAG_BLOW]) return "BE STILL";
-    if (this.zone === "line_yard" && !this.save.flags[FLAG_LINE]) return "HOLD";
-    if (this.zone === "infirmary" && !this.save.flags[FLAG_BESIDE])
-      return "STAND BESIDE";
+
+    const target = this.activeHoldTarget();
+    if (target && this.isNearTarget(target)) {
+      if (this.zone === "stands") return "BE STILL";
+      if (this.zone === "line_yard") return "HOLD";
+      if (this.zone === "infirmary") return "STAND BESIDE";
+    }
+
     if (this.zone === "endurance") return "[A] CONTINUE";
     if (this.zone === "threshold") return "[A] FACE AREON";
     return "";
@@ -432,11 +476,25 @@ export class MarsPlateauScene extends Phaser.Scene {
     }
 
     if (this.zone === "threshold") {
+      if (!this.allLessonsComplete()) {
+        this.busy = true;
+        runDialog(
+          this,
+          [
+            {
+              who: "AREON",
+              text: "You have not yet stood through all three lessons.",
+            },
+          ],
+          () => {
+            this.busy = false;
+          },
+        );
+        return;
+      }
+
       this.busy = true;
-      this.areonPresentation?.introOnce(
-        "encounter_seen_areon_trial",
-        this.save,
-      );
+      this.areonPresentation?.pulse();
       runDialog(
         this,
         [
@@ -492,6 +550,24 @@ export class MarsTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 14, color: marsConfig.accent, alpha: 0.6 });
 
     attachHUD(this, () => this.save.stats);
+
+    setSceneSnapshot({
+      key: "MarsTrial",
+      label: "Mars - Areon's Trial",
+      act: ACT_BY_SCENE.MarsTrial ?? 6,
+      zone: "Trial of STAND",
+      nodes: null,
+      marker: null,
+      idleTitle: "AREON'S TRIAL",
+      idleBody: "Three blows. No applause. Only where you place your weight.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: false,
+      showDialogueDock: true,
+      showMiniMap: false,
+      allowPlayerHub: false,
+      showFooter: false,
+    });
 
     const rawTitle = `${marsConfig.governor}'S TRIAL`;
     const titleText = fitSingleLineText(rawTitle, GBC_W - 12);
