@@ -28,8 +28,8 @@ import { BOOKS, TEACHERS_SENTENCE, type Book } from "../athanor/books";
 import { activateQuest, completeQuest, questStatus } from "../sideQuests";
 
 const OPENING = [
-  { who: "SORYN", text: "Sunlight on yellow paper. Three books." },
-  { who: "SORYN", text: "Read at least two. The truth is what you let stay." },
+  { who: "SOPHENE", text: "Sunlight on yellow paper. Three books." },
+  { who: "SOPHENE", text: "Read at least two. The truth is what you let stay." },
 ];
 
 export class CitrinitasScene extends Phaser.Scene {
@@ -536,7 +536,7 @@ export class CitrinitasScene extends Phaser.Scene {
       );
       return;
     }
-    runDialog(this, [{ who: "SORYN", text: "Enough. The yellow has settled." }], () => {
+    runDialog(this, [{ who: "SOPHENE", text: "Enough. The yellow has settled." }], () => {
       this.isDone = true;
       this.isBusy = false;
     });

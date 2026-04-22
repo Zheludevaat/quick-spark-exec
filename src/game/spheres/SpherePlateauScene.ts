@@ -353,7 +353,7 @@ export class SpherePlateauScene extends Phaser.Scene {
 
     if (done < needed) {
       getAudio().sfx("cancel");
-      runDialog(this, [{ who: "SORYN", text: `Sit with more of the work first. (${done}/${needed})` }], () => {
+      runDialog(this, [{ who: "SOPHENE", text: `Sit with more of the work first. (${done}/${needed})` }], () => {
         this.busy = false;
       });
       return;
@@ -374,7 +374,7 @@ export class SpherePlateauScene extends Phaser.Scene {
   private trySettle() {
     if (!this.isCracked()) {
       getAudio().sfx("cancel");
-      runDialog(this, [{ who: "SORYN", text: "Not yet. Answer the question first." }], () => {
+      runDialog(this, [{ who: "SOPHENE", text: "Not yet. Answer the question first." }], () => {
         this.busy = false;
       });
       return;
@@ -385,7 +385,7 @@ export class SpherePlateauScene extends Phaser.Scene {
   private tryEnterTrial() {
     if (!this.isCracked()) {
       getAudio().sfx("cancel");
-      runDialog(this, [{ who: "SORYN", text: "The question first. Then the trial." }], () => {
+      runDialog(this, [{ who: "SOPHENE", text: "The question first. Then the trial." }], () => {
         this.busy = false;
       });
       return;
