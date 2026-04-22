@@ -424,17 +424,33 @@ export class TitleScene extends Phaser.Scene {
 
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
-      t.obj.on("pointerover", () => {
+
+      const hover = () => {
         if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
-      });
-      t.obj.on("pointerdown", () => {
+      };
+
+      const press = () => {
         if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
         confirm();
-      });
+      };
+
+      t.obj.on("pointerover", hover);
+      t.obj.on("pointerdown", press);
+
+      rowHitboxes[i].on("pointerover", hover);
+      rowHitboxes[i].on("pointerdown", press);
+    });
+
+    this.events.once("shutdown", () => {
+      rowHitboxes.forEach((hit) => hit.destroy());
+    });
+
+    this.events.once("destroy", () => {
+      rowHitboxes.forEach((hit) => hit.destroy());
     });
 
     onDirection(this, (d) => {
