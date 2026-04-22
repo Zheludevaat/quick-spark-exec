@@ -105,7 +105,7 @@ export type SaveSlot = {
   /** Ring buffer of recent soul events (max 5). */
   soulEventLog: string[];
 
-  // ===== ACT 2 — THE GREAT WORK =====
+  // ===== SECRET ANNEX — ATHANOR / GREAT WORK =====
   shardInventory: ShardId[];
   shardsConsumed: ShardId[];
   blackStones: number;
@@ -120,7 +120,7 @@ export type SaveSlot = {
   sorynReleased: boolean;
   stainsCarried: number;
 
-  // ===== METAXY (Acts 3+) =====
+  // ===== METAXY ASCENT (Mercury → Saturn) =====
   /** Player's chosen vocation, set in LastDay. Null until chosen. */
   calling: Calling | null;
   /** Soul integrity (0-100). Drains in higher spheres; restored by Stillness. */
