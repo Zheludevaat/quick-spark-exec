@@ -163,7 +163,7 @@ export class TitleScene extends Phaser.Scene {
 
     let settingsOpen = false;
     const openTitleSettings = () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       settingsOpen = true;
       getAudio().sfx("confirm");
       openSettings(this, () => {
