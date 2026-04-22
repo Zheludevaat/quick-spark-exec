@@ -34,6 +34,7 @@ import { regionAftermathLevel } from "./imaginal/regionAftermath";
 import { veilKnotUnlocked } from "./imaginal/ImaginalExpandedContent";
 
 type Knot = {
+  id: string;
   kind: KnotKind;
   region: ImaginalRegion;
   x: number;
