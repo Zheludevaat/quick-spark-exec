@@ -31,9 +31,10 @@ import { attachHUD, runDialog, makeRowan, animateRowan, InputState } from "../..
 import { setSceneSnapshot } from "../../gameUiBridge";
 import { onActionDown } from "../../controls";
 import { getAudio } from "../../audio";
+import { nextMainlineScene } from "../../canon/mainlineFlow";
 import { askSphere } from "../SpherePlateauScene";
 import { mercuryConfig } from "../configs/mercury";
-import { markOpDone, opsCompleted, trialPassedKey } from "../types";
+import { markOpDone, opsCompleted, plateauProgressKey } from "../types";
 import { runInquiry } from "../../inquiry";
 import {
   createEncounterPresentation,
@@ -45,6 +46,13 @@ import {
   type MercuryRoomArtHandle,
 } from "../mercury/MercuryRoomPainter";
 import type { MercuryZoneKey } from "../mercury/MercuryPalette";
+import {
+  ensureMercuryCanon,
+  awardMercuryOperation,
+  awardMercuryCrack,
+  applyMercuryTrialPass,
+  applyMercuryTrialFail,
+} from "../mercury/mercuryCanonicalProgress";
 
 type StationKind =
   | "npc_defender"
@@ -131,19 +139,26 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private hermaiaPresentation?: EncounterPresentationHandle;
   private roomArt?: MercuryRoomArtHandle;
   private stationFocus!: Phaser.GameObjects.Arc;
+  private snapshotElapsed = 0;
+  private pendingChamberReadyBeat = false;
+  private chamberBeatPlayed = false;
 
   constructor() {
     super("MercuryPlateau");
   }
 
   init(data: { save: SaveSlot }) {
-    // Bypass template init — we own this scene.
     this.mSave = data.save;
+    ensureMercuryCanon(this.mSave);
     this.mSave.scene = "MercuryPlateau";
     this.mSave.act = ACT_BY_SCENE.MercuryPlateau;
     writeSave(this.mSave);
+
     this.stations = [];
     this.busy = false;
+    this.snapshotElapsed = 0;
+    this.pendingChamberReadyBeat = false;
+    this.chamberBeatPlayed = false;
   }
 
   /**
@@ -154,6 +169,103 @@ export class MercuryPlateauScene extends Phaser.Scene {
   private mercuryArtZone(): MercuryZoneKey {
     if (this.mSave.flags.sphere_mercury_cracked) return "cracking";
     return "plateau";
+  }
+
+  private currentZoneLabel(): string {
+    const near = this.nearestStation();
+    if (!near) return "Central Hall";
+    if (near.kind === "crack_chamber" || near.kind === "trial_door") return "Upper Chamber";
+    if (near.kind === "npc_defender" || near.kind === "npc_pedant" || near.kind === "npc_casuist") {
+      return "Lower Voices";
+    }
+    if (
+      near.kind === "puzzle_syllogism" ||
+      near.kind === "puzzle_refutation" ||
+      near.kind === "puzzle_silence"
+    ) {
+      return "Proof Tier";
+    }
+    return "Central Hall";
+  }
+
+  private publishSceneSnapshot() {
+    const opIds = mercuryConfig.operations.map((o) => o.id);
+    const opDone = opsCompleted(this.mSave, "mercury", opIds);
+    const cracked = !!this.mSave.flags.sphere_mercury_cracked;
+
+    setSceneSnapshot({
+      key: "MercuryPlateau",
+      label: "Mercury - Tower of Reasons",
+      act: ACT_BY_SCENE.MercuryPlateau ?? 4,
+      zone: this.currentZoneLabel(),
+      nodes: [
+        { id: "defender", label: "Defender", x: 26 / GBC_W, y: 98 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[0].id}`] },
+        { id: "pedant", label: "Pedant", x: 80 / GBC_W, y: 102 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[1].id}`] },
+        { id: "casuist", label: "Casuist", x: 134 / GBC_W, y: 98 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[2].id}`] },
+        { id: "proof", label: "Proof", x: 28 / GBC_W, y: 64 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_proof"] },
+        { id: "refutation", label: "Refutation", x: 80 / GBC_W, y: 68 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_refutation"] },
+        { id: "silence", label: "Silence", x: 132 / GBC_W, y: 64 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_silence"] },
+        { id: "argument", label: "Chalkboard", x: 20 / GBC_W, y: 42 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_argument"] },
+        { id: "chamber", label: "Cracking Chamber", x: 80 / GBC_W, y: 23 / GBC_H, active: opDone >= mercuryConfig.operations.length && !cracked },
+        { id: "trial", label: "Trial Door", x: 80 / GBC_W, y: 12 / GBC_H, active: cracked },
+        { id: "stairs", label: "Stairs", x: 80 / GBC_W, y: (GBC_H - 6) / GBC_H, active: true },
+      ],
+      marker: { x: this.rowan.x / GBC_W, y: this.rowan.y / GBC_H },
+      idleTitle: "MERCURY",
+      idleBody: cracked
+        ? "The Tower has yielded its question. Hermaia waits above."
+        : opDone >= mercuryConfig.operations.length
+        ? "The room is ready to be cracked."
+        : "Every surface here wants to become an argument.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
+  }
+
+  private maybeRunChamberReadyBeat() {
+    if (!this.pendingChamberReadyBeat || this.busy) return;
+    this.pendingChamberReadyBeat = false;
+    this.chamberBeatPlayed = true;
+    this.busy = true;
+
+    this.time.delayedCall(250, () => {
+      runDialog(
+        this,
+        [
+          { who: "SOPHENE", text: "The Tower has finished arranging its premise." },
+          { who: "SOPHENE", text: "The Question is ready. The door above remembers." },
+        ],
+        () => {
+          this.busy = false;
+          this.publishSceneSnapshot();
+        },
+      );
+    });
+  }
+
+  private repaintRoomForState() {
+    this.roomArt?.destroy();
+    this.roomArt = paintMercuryRoom(this, this.mercuryArtZone());
+  }
+
+  private unlockTrialDoorVisual() {
+    const st = this.stations.find((s) => s.kind === "trial_door");
+    if (st?.visual?.length) {
+      for (const v of st.visual) {
+        const rect = v as Phaser.GameObjects.Rectangle;
+        if ("setFillStyle" in rect) {
+          rect.setFillStyle(COLD, 0.85);
+        }
+      }
+    }
+
+    this.trialGlow.setFillStyle(COLD, 0.6);
+    this.trialGlow.setStrokeStyle(1, COLD, 0.8);
   }
 
   create() {
@@ -169,14 +281,6 @@ export class MercuryPlateauScene extends Phaser.Scene {
     this.buildStations();
 
     attachHUD(this, () => this.mSave.stats);
-    setSceneSnapshot({
-      key: "MercuryPlateau",
-      label: "Mercury — Tower of Reasons",
-      act: ACT_BY_SCENE.MercuryPlateau ?? 4,
-      zone: "Central Hall",
-      nodes: null,
-      marker: null,
-    });
 
     // Title strip — width-safe
     const titleText = fitSingleLineText("TOWER OF REASONS", GBC_W - 12);
@@ -253,6 +357,15 @@ export class MercuryPlateauScene extends Phaser.Scene {
       HERMAIA_PROFILE,
     );
 
+    this.publishSceneSnapshot();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.roomArt?.destroy();
+      this.hermaiaPresentation?.destroy();
+      this.ambientBarkEvent?.remove(false);
+      this.activeBark?.destroy();
+    });
+
     // First-visit dialog
     if (!this.mSave.flags.sphere_mercury_seen) {
       this.mSave.flags.sphere_mercury_seen = true;
@@ -262,10 +375,13 @@ export class MercuryPlateauScene extends Phaser.Scene {
         this.hermaiaPresentation?.introOnce(
           "encounter_seen_hermaia_plateau",
           this.mSave,
+          () => {
+            runDialog(this, mercuryConfig.opening, () => {
+              this.busy = false;
+              this.publishSceneSnapshot();
+            });
+          },
         );
-        runDialog(this, mercuryConfig.opening, () => {
-          this.busy = false;
-        });
       });
     }
   }
@@ -298,6 +414,16 @@ export class MercuryPlateauScene extends Phaser.Scene {
       .rectangle(GBC_W / 2, 23, 56, 14)
       .setStrokeStyle(1, COLD, 0.55)
       .setDepth(1.2);
+
+    // Chamber sigil — three glyph segments above the chamber plate.
+    // Lit during ignition ceremony in refreshChamberGlow().
+    this.chamberSigil = [];
+    for (let i = 0; i < 3; i++) {
+      const seg = this.add
+        .rectangle(GBC_W / 2 - 10 + i * 10, 30, 6, 1, COLD, 0.22)
+        .setDepth(2);
+      this.chamberSigil.push(seg);
+    }
 
     // Trial door.
     this.add
@@ -648,6 +774,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
       this.hint.setColor(COLOR.textDim);
       this.stationFocus.setVisible(false);
     }
+
+    this.maybeRunChamberReadyBeat();
+
+    this.snapshotElapsed += delta;
+    if (this.snapshotElapsed >= 150) {
+      this.snapshotElapsed = 0;
+      this.publishSceneSnapshot();
+    }
   }
 
   private nearestStation(): MStation | null {
@@ -831,7 +965,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                 const p3ok = p3.label === "Therefore I forget.";
                 const valid = p1ok && p2ok && p3ok;
                 if (valid) {
-                  this.mSave.stats.clarity += 1;
+                  awardMercuryOperation(this.mSave, "clarity", "structure", 1, 1);
                   if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
                   if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
                   writeSave(this.mSave);
@@ -843,7 +977,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                     this,
                     [
                       { who: "?", text: "The syllogism completes. The Tower exhales." },
-                      { who: "SORYN", text: "And yet — the major premise was an assumption." },
+                      { who: "SOPHENE", text: "And yet — the major premise was an assumption." },
                     ],
                     () => {
                       this.busy = false;
@@ -899,7 +1033,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
           (picked) => {
             const ok = picked.label.startsWith("It assumes");
             if (ok) {
-              this.mSave.stats.courage += 1;
+              awardMercuryOperation(this.mSave, "courage", "witnessing", 1, 1);
               this.mSave.convictions["i_can_unknow"] = true;
               if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
               if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -992,7 +1126,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       sub.destroy();
       timer.remove();
       if (success) {
-        this.mSave.stats.compassion += 1;
+        awardMercuryOperation(this.mSave, "compassion", "surrender", 1, 2);
         this.mSave.convictions["silence_is_an_answer"] = true;
         if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
         if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -1005,7 +1139,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
           this,
           [
             { who: "?", text: "You sat. The Tower stopped arguing for a moment." },
-            { who: "SORYN", text: "Silence is also a position." },
+            { who: "SOPHENE", text: "Silence is also a position." },
           ],
           () => {
             this.busy = false;
@@ -1063,7 +1197,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.flag) this.mSave.flags[picked.flag] = true;
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       if (op.rewardStat && picked.weight >= 2) {
-        this.mSave.stats[op.rewardStat] += 1;
+        awardMercuryOperation(this.mSave, op.rewardStat, "structure", 1, 1);
       }
       if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
       if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -1082,7 +1216,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       [
         { who: "?", text: "A statue of a debater. The head is missing." },
         { who: "?", text: "An inscription at the base: 'HE WON EVERY ARGUMENT.'" },
-        { who: "SORYN", text: "And lost everything else." },
+        { who: "SOPHENE", text: "And lost everything else." },
       ],
       () => {
         this.busy = false;
@@ -1124,7 +1258,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       runDialog(
         this,
         [
-          { who: "SORYN", text: `Not yet. Sit with more of the work first. (${done}/${need})` },
+          { who: "SOPHENE", text: `Not yet. Sit with more of the work first. (${done}/${need})` },
         ],
         () => {
           this.busy = false;
@@ -1136,17 +1270,27 @@ export class MercuryPlateauScene extends Phaser.Scene {
     askSphere(this, cq.prompt, cq.options, (picked) => {
       if (picked.flag) this.mSave.flags[picked.flag] = true;
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
+
       this.mSave.flags.sphere_mercury_cracked = true;
+      this.mSave.flags[plateauProgressKey("mercury")] = true;
+      awardMercuryCrack(this.mSave);
       writeSave(this.mSave);
+
       this.revealTrueNames();
+      this.repaintRoomForState();
+      this.unlockTrialDoorVisual();
+      this.refreshChamberGlow(true);
+      this.publishSceneSnapshot();
+
       runDialog(
         this,
         [
           { who: "HERMAIA", text: "Named. The Trial door is unsealed." },
-          { who: "SORYN", text: "When you are ready. The door hums above." },
+          { who: "SOPHENE", text: "When you are ready. The door hums above." },
         ],
         () => {
           this.busy = false;
+          this.publishSceneSnapshot();
         },
       );
     });
@@ -1231,22 +1375,13 @@ export class MercuryPlateauScene extends Phaser.Scene {
         ease: "Sine.inOut",
       });
 
-      // Soryn beat — only on actual ignition, not on revisit.
-      if (!force && !this.busy) {
-        this.busy = true;
-        this.time.delayedCall(700, () => {
-          runDialog(
-            this,
-            [
-              { who: "SORYN", text: "The Tower has finished arranging its premise." },
-              { who: "SORYN", text: "The Question is ready. The door above remembers." },
-            ],
-            () => {
-              this.busy = false;
-            },
-          );
-        });
+      // Defer the SOPHENE ceremonial beat to the next safe tick so it does
+      // not collide with whatever dialog/inquiry just completed an op.
+      if (!force && !this.chamberBeatPlayed) {
+        this.pendingChamberReadyBeat = true;
       }
+
+      this.publishSceneSnapshot();
       return;
     }
 
@@ -1399,7 +1534,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       runDialog(
         this,
         [
-          { who: "SORYN", text: "The door is sealed. Face the question first." },
+          { who: "SOPHENE", text: "The door is sealed. Face the question first." },
         ],
         () => {
           this.busy = false;
@@ -1407,10 +1542,9 @@ export class MercuryPlateauScene extends Phaser.Scene {
       );
       return;
     }
+    const nextScene = nextMainlineScene("MercuryPlateau");
     getAudio().sfx("confirm");
-    gbcWipe(this, () =>
-      this.scene.start("MercuryTrial", { save: this.mSave }),
-    );
+    gbcWipe(this, () => this.scene.start(nextScene, { save: this.mSave }));
   }
 
   private toHub() {
@@ -1443,6 +1577,7 @@ export class MercuryTrialScene extends Phaser.Scene {
   private chamberSigilSegs: Phaser.GameObjects.Rectangle[] = [];
   private hermaiaPresentation?: EncounterPresentationHandle;
   private roomArt?: MercuryRoomArtHandle;
+  private snapshotElapsed = 0;
 
   constructor() {
     super("MercuryTrial");
@@ -1450,12 +1585,52 @@ export class MercuryTrialScene extends Phaser.Scene {
 
   init(data: { save: SaveSlot }) {
     this.mSave = data.save;
+    ensureMercuryCanon(this.mSave);
     this.mSave.scene = "MercuryTrial";
     this.mSave.act = ACT_BY_SCENE.MercuryTrial;
     writeSave(this.mSave);
     this.doors = [];
     this.busy = false;
     this.mScore = 0;
+    this.snapshotElapsed = 0;
+  }
+
+  private trialZoneLabel(): string {
+    const near = this.nearestDoor();
+    return near ? `Door of ${this.doorLabel(near.idx)}` : "Three Doors";
+  }
+
+  private publishTrialSnapshot() {
+    setSceneSnapshot({
+      key: "MercuryTrial",
+      label: "Mercury - Hermaia's Trial",
+      act: ACT_BY_SCENE.MercuryTrial ?? 4,
+      zone: this.trialZoneLabel(),
+      nodes: this.doors.map((d) => ({
+        id: `door_${d.idx}`,
+        label: this.doorLabel(d.idx),
+        x: d.x / GBC_W,
+        y: d.y / GBC_H,
+        active: !d.done,
+      })),
+      marker: this.rowan ? { x: this.rowan.x / GBC_W, y: this.rowan.y / GBC_H } : null,
+      idleTitle: "HERMAIA",
+      idleBody: this.doors.every((d) => d.done)
+        ? "All three names have been spoken."
+        : "Three arrivals wait behind three borrowed faces.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
+  }
+
+  private retreatToPlateau() {
+    if (this.busy) return;
+    gbcWipe(this, () => this.scene.start("MercuryPlateau", { save: this.mSave }));
   }
 
   create() {
@@ -1469,14 +1644,6 @@ export class MercuryTrialScene extends Phaser.Scene {
     spawnMotes(this, { count: 18, color: mercuryConfig.accent, alpha: 0.5 });
 
     attachHUD(this, () => this.mSave.stats);
-    setSceneSnapshot({
-      key: "MercuryTrial",
-      label: "Mercury — Hermaia's Trial",
-      act: ACT_BY_SCENE.MercuryTrial ?? 4,
-      zone: "Three Doors",
-      nodes: null,
-      marker: null,
-    });
 
     // Title
     const rawTitle = "HERMAIA'S TRIAL";
@@ -1549,6 +1716,12 @@ export class MercuryTrialScene extends Phaser.Scene {
 
     onActionDown(this, "action", () => this.tryInteract());
     this.events.on("vinput-action", () => this.tryInteract());
+    onActionDown(this, "cancel", () => this.retreatToPlateau());
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.roomArt?.destroy();
+      this.hermaiaPresentation?.destroy();
+    });
 
     // Hermaia presence presides over the trial chamber from the top center.
     this.hermaiaPresentation = createEncounterPresentation(
@@ -1558,15 +1731,20 @@ export class MercuryTrialScene extends Phaser.Scene {
       HERMAIA_PROFILE,
     );
 
+    this.publishTrialSnapshot();
+
     this.busy = true;
     this.time.delayedCall(500, () => {
       this.hermaiaPresentation?.introOnce(
         "encounter_seen_hermaia_trial",
         this.mSave,
+        () => {
+          runDialog(this, mercuryConfig.trialOpening, () => {
+            this.busy = false;
+            this.publishTrialSnapshot();
+          });
+        },
       );
-      runDialog(this, mercuryConfig.trialOpening, () => {
-        this.busy = false;
-      });
     });
   }
 
@@ -1599,6 +1777,12 @@ export class MercuryTrialScene extends Phaser.Scene {
       const remaining = this.doors.filter((d) => !d.done).length;
       this.hint.setText(remaining === 0 ? "ALL DOORS NAMED" : `${remaining} DOORS REMAIN`);
       this.hint.setColor(COLOR.textDim);
+    }
+
+    this.snapshotElapsed += delta;
+    if (this.snapshotElapsed >= 150) {
+      this.snapshotElapsed = 0;
+      this.publishTrialSnapshot();
     }
   }
 
@@ -1674,6 +1858,7 @@ export class MercuryTrialScene extends Phaser.Scene {
       }
 
       writeSave(this.mSave);
+      this.publishTrialSnapshot();
 
       const remaining = this.doors.filter((d) => !d.done).length;
       if (remaining === 0) {
@@ -1695,27 +1880,23 @@ export class MercuryTrialScene extends Phaser.Scene {
 
   private resolve() {
     const max = mercuryConfig.trialRounds.length * 3;
-    const threshold = Math.ceil(max * 0.5);
+    const threshold =
+      mercuryConfig.trialPassThreshold ?? Math.ceil(max * 0.5);
     if (this.mScore >= threshold) return this.pass();
     return this.fail();
   }
 
   private pass() {
-    this.mSave.flags[trialPassedKey("mercury")] = true;
-    this.mSave.garmentsReleased = { ...this.mSave.garmentsReleased, mercury: true };
-    this.mSave.sphereVerbs = { ...this.mSave.sphereVerbs, name: true };
-    if (!this.mSave.relics.includes(mercuryConfig.inscription)) {
-      this.mSave.relics.push(mercuryConfig.inscription);
-    }
+    applyMercuryTrialPass(this.mSave, mercuryConfig.inscription);
     writeSave(this.mSave);
 
-    // Mercury seal mark — a quiet expanding ring left at the chamber center
-    // so the trial space remembers Hermaia's verdict, not just the dialog.
     this.hermaiaPresentation?.pulse();
+
     const seal = this.add
       .circle(GBC_W / 2, 22, 5, HERMAIA_PROFILE.palette.primary, 0.22)
       .setStrokeStyle(1, HERMAIA_PROFILE.palette.glow, 0.6)
       .setDepth(40);
+
     this.tweens.add({
       targets: seal,
       scale: { from: 1, to: 2.4 },
@@ -1726,13 +1907,15 @@ export class MercuryTrialScene extends Phaser.Scene {
       ease: "Sine.inOut",
     });
 
+    const nextScene = nextMainlineScene("MercuryTrial");
+
     runDialog(this, mercuryConfig.trialPass, () => {
-      gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.mSave }));
+      gbcWipe(this, () => this.scene.start(nextScene, { save: this.mSave }));
     });
   }
 
   private fail() {
-    this.mSave.coherence = Math.max(0, this.mSave.coherence - 15);
+    applyMercuryTrialFail(this.mSave, 15);
     writeSave(this.mSave);
     runDialog(this, mercuryConfig.trialFail, () => {
       gbcWipe(this, () =>
