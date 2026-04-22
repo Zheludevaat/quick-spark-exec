@@ -648,48 +648,74 @@ export class TitleScene extends Phaser.Scene {
     });
 
     devBtn.obj.setAlpha(0.78);
-    devBtn.obj
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.openSkipMenu());
+    devBtn.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+      if (this.devMenuOpen) return;
+      this.openSkipMenu();
+    });
+  }
+
+  private devMenuLabel(scene: SceneKey, fallback: string): string {
+    if (scene === "MetaxyHub") return "INTERLUDE · METAXY";
+    if (scene === "AthanorThreshold") return "ACT I · GREAT WORK · ATHANOR THRESHOLD";
+    if (scene === "Nigredo") return "ACT I · GREAT WORK · NIGREDO";
+    if (scene === "Albedo") return "ACT I · GREAT WORK · ALBEDO";
+    if (scene === "Citrinitas") return "ACT I · GREAT WORK · CITRINITAS";
+    if (scene === "Rubedo") return "ACT I · GREAT WORK · RUBEDO";
+    if (scene === "SealedVessel") return "ACT I · GREAT WORK · SEALED VESSEL";
+    return fallback;
+  }
+
+  private devSceneReadout(scene: SceneKey): string {
+    const act = ACT_BY_SCENE[scene] ?? 0;
+    const actTitle = ACT_TITLES[act] ?? `ACT ${act}`;
+    const sceneTitle = SCENE_LABEL[scene] ?? scene;
+    return `${sceneTitle} · ${actTitle}`;
   }
 
   private buildDevJumpEntries(): DevJumpEntry[] {
-    const all: DevJumpEntry[] = [
-      { label: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
-      { label: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
+    const all: Array<{ fallback: string; scene: SceneKey; seed: DevJumpSeed }> = [
+      { fallback: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
+      { fallback: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
 
-      { label: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
+      { fallback: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
 
-      { label: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
-      { label: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
+      { fallback: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
+      { fallback: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
 
-      { label: "METAXY", scene: "MetaxyHub", seed: "metaxy" },
+      { fallback: "INTERLUDE · METAXY", scene: "MetaxyHub", seed: "metaxy" },
 
-      { label: "SECRET · GREAT WORK ANNEX", scene: "AthanorThreshold", seed: "secret_annex" },
-      { label: "SECRET · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
-      { label: "SECRET · ALBEDO", scene: "Albedo", seed: "secret_annex" },
-      { label: "SECRET · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
-      { label: "SECRET · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
-      { label: "SECRET · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · ATHANOR THRESHOLD", scene: "AthanorThreshold", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · ALBEDO", scene: "Albedo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
 
-      { label: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
-      { label: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
+      { fallback: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
+      { fallback: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
 
-      { label: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
-      { label: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
+      { fallback: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
+      { fallback: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
 
-      { label: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
-      { label: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
-      { label: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
+      { fallback: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
+      { fallback: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
+      { fallback: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
 
-      { label: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
-      { label: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
+      { fallback: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
+      { fallback: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
 
-      { label: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
-      { label: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
+      { fallback: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
+      { fallback: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
     ];
 
-    return all.filter((entry) => !!this.scene.manager.keys[entry.scene]);
+    return all
+      .filter((entry) => !!this.scene.manager.keys[entry.scene])
+      .map((entry) => ({
+        scene: entry.scene,
+        seed: entry.seed,
+        label: this.devMenuLabel(entry.scene, entry.fallback),
+        readout: this.devSceneReadout(entry.scene),
+      }));
   }
 
   private seedDevBase(slot = newSave()) {
