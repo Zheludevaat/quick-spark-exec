@@ -47,7 +47,7 @@ export type EncounterPalette = {
 export type EncounterProfile = {
   /** Stable id for save flags (`encounter_seen_${id}`). */
   id: string;
-  /** Display name shown on the nameplate / intro card (e.g. "SORYN"). */
+  /** Display name shown on the nameplate / intro card (e.g. "SOPHENE"). */
   displayName: string;
   /** One short identity line — never a sentence, never a quip. */
   subtitle?: string;

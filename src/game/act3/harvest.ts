@@ -136,19 +136,19 @@ export function sorynBark(save: SaveSlot, event: SorynEvent): string | null {
   const lastSoul = log[log.length - 1] ?? "";
   switch (event) {
     case "enter":
-      return "Soryn: 'I'll stand at your shoulder. I won't speak for you.'";
+      return "Sophene: 'I'll stand at your shoulder. I won't speak for you.'";
     case "phase1_hit":
-      return "Soryn: 'Each name is a key. Keep turning.'";
+      return "Sophene: 'Each name is a key. Keep turning.'";
     case "phase2_hit":
       return lastSoul
-        ? `Soryn: 'You sat with them. The face you see now is theirs and yours.'`
-        : "Soryn: 'A face you remember. Let it be lit.'";
+        ? `Sophene: 'You sat with them. The face you see now is theirs and yours.'`
+        : "Sophene: 'A face you remember. Let it be lit.'";
     case "phase3_hit":
-      return "Soryn: 'You don't have to fix it. Just see it.'";
+      return "Sophene: 'You don't have to fix it. Just see it.'";
     case "ascend":
-      return "Soryn: 'Then go. I will not follow where I am not needed.'";
+      return "Sophene: 'Then go. I will not follow where I am not needed.'";
     case "victory":
-      return "Soryn: 'There. That's the work.'";
+      return "Sophene: 'There. That's the work.'";
   }
 }
 
