@@ -1054,34 +1054,57 @@ export class TitleScene extends Phaser.Scene {
       depth: 952,
     });
 
-    const help = new GBCText(this, 12, GBC_H - 12, "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE", {
-      color: COLOR.textDim,
-      depth: 952,
-      maxWidthPx: GBC_W - 24,
-    });
-
     const lineH = 9;
     const startY = 24;
-    const ITEM_X = 18;
-    const ITEM_FIT_W = GBC_W - ITEM_X - 8;
-    const READOUT_W = GBC_W - 24;
+    const itemX = 18;
+    const itemFitW = GBC_W - itemX - 8;
+    const bandW = GBC_W - 24;
 
-    const jumpStates = jumps.map((j) => fitSingleLineState(j.label, ITEM_FIT_W));
+    const jumpStates = jumps.map((j) => fitSingleLineState(j.label, itemFitW));
+    const metaStates = jumps.map((j) =>
+      fitSingleLineState(j.readout ?? this.devSceneReadout(j.scene), bandW),
+    );
+
+    const helpText = "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE";
+    const helpH = textHeightPx(helpText, bandW);
+
     const needsReadout = jumpStates.some((s) => s.trimmed);
-    const readoutH = needsReadout
-      ? Math.max(...jumpStates.map((s) => textHeightPx(s.full, READOUT_W)))
+    const maxReadoutH = needsReadout
+      ? Math.max(...jumpStates.map((s) => textHeightPx(s.full, bandW)))
       : 0;
-    const readoutBandH = needsReadout ? lineH + readoutH : 0;
 
-    const maxRows = Math.floor((GBC_H - 16 - (startY - 8) - readoutBandH - 18) / lineH);
+    const metaLineH = lineH;
+    const footerGap = 4;
+
+    // Reserve the entire bottom information band first:
+    // [selected full label readout] + gap + [selected scene meta] + gap + [help]
+    const reservedBottomH =
+      (needsReadout ? maxReadoutH + footerGap : 0) +
+      metaLineH +
+      footerGap +
+      helpH +
+      6;
+
+    const availableListH = GBC_H - 16 - startY - reservedBottomH;
+    const maxRows = Math.floor(availableListH / lineH);
     const visibleRows = Math.max(1, Math.min(10, Math.min(jumps.length, maxRows)));
+
+    const readoutY = startY + visibleRows * lineH + 4;
+    const metaY = readoutY + (needsReadout ? maxReadoutH + footerGap : 0);
+    const helpY = metaY + metaLineH + footerGap;
+
+    const help = new GBCText(this, 12, helpY, helpText, {
+      color: COLOR.textDim,
+      depth: 952,
+      maxWidthPx: bandW,
+    });
 
     let pick = 0;
 
     const items: GBCText[] = [];
     for (let i = 0; i < visibleRows; i++) {
       items.push(
-        new GBCText(this, ITEM_X, startY + i * lineH, "", {
+        new GBCText(this, itemX, startY + i * lineH, "", {
           color: COLOR.textLight,
           depth: 952,
         }),
@@ -1094,17 +1117,17 @@ export class TitleScene extends Phaser.Scene {
     });
 
     const selectedReadout = needsReadout
-      ? new GBCText(this, 12, startY + visibleRows * lineH + lineH, "", {
+      ? new GBCText(this, 12, readoutY, "", {
           color: COLOR.textAccent,
           depth: 952,
-          maxWidthPx: READOUT_W,
+          maxWidthPx: bandW,
         })
       : null;
 
-    const selectedSceneLine = new GBCText(this, 12, GBC_H - 22, "", {
+    // Important: metadata line is forced to single-line fitted text.
+    const selectedSceneLine = new GBCText(this, 12, metaY, "", {
       color: COLOR.textDim,
       depth: 952,
-      maxWidthPx: GBC_W - 24,
     });
 
     const computeStart = (p: number): number => {
@@ -1144,8 +1167,7 @@ export class TitleScene extends Phaser.Scene {
         selectedReadout.setText(jumpStates[pick].full);
       }
 
-      const chosen = jumps[pick];
-      selectedSceneLine.setText(chosen.readout ?? this.devSceneReadout(chosen.scene));
+      selectedSceneLine.setText(metaStates[pick].fitted);
     };
 
     refreshSkip();
