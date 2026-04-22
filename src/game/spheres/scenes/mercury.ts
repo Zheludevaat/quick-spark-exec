@@ -1033,7 +1033,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
           (picked) => {
             const ok = picked.label.startsWith("It assumes");
             if (ok) {
-              this.mSave.stats.courage += 1;
+              awardMercuryOperation(this.mSave, "courage", "witnessing", 1, 1);
               this.mSave.convictions["i_can_unknow"] = true;
               if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
               if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -1126,7 +1126,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       sub.destroy();
       timer.remove();
       if (success) {
-        this.mSave.stats.compassion += 1;
+        awardMercuryOperation(this.mSave, "compassion", "surrender", 1, 2);
         this.mSave.convictions["silence_is_an_answer"] = true;
         if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
         if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -1139,7 +1139,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
           this,
           [
             { who: "?", text: "You sat. The Tower stopped arguing for a moment." },
-            { who: "SORYN", text: "Silence is also a position." },
+            { who: "SOPHENE", text: "Silence is also a position." },
           ],
           () => {
             this.busy = false;
@@ -1197,7 +1197,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       if (picked.flag) this.mSave.flags[picked.flag] = true;
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
       if (op.rewardStat && picked.weight >= 2) {
-        this.mSave.stats[op.rewardStat] += 1;
+        awardMercuryOperation(this.mSave, op.rewardStat, "structure", 1, 1);
       }
       if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
       if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
@@ -1216,7 +1216,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       [
         { who: "?", text: "A statue of a debater. The head is missing." },
         { who: "?", text: "An inscription at the base: 'HE WON EVERY ARGUMENT.'" },
-        { who: "SORYN", text: "And lost everything else." },
+        { who: "SOPHENE", text: "And lost everything else." },
       ],
       () => {
         this.busy = false;
@@ -1258,7 +1258,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       runDialog(
         this,
         [
-          { who: "SORYN", text: `Not yet. Sit with more of the work first. (${done}/${need})` },
+          { who: "SOPHENE", text: `Not yet. Sit with more of the work first. (${done}/${need})` },
         ],
         () => {
           this.busy = false;
@@ -1270,17 +1270,27 @@ export class MercuryPlateauScene extends Phaser.Scene {
     askSphere(this, cq.prompt, cq.options, (picked) => {
       if (picked.flag) this.mSave.flags[picked.flag] = true;
       if (picked.conviction) this.mSave.convictions[picked.conviction] = true;
+
       this.mSave.flags.sphere_mercury_cracked = true;
+      this.mSave.flags[plateauProgressKey("mercury")] = true;
+      awardMercuryCrack(this.mSave);
       writeSave(this.mSave);
+
       this.revealTrueNames();
+      this.repaintRoomForState();
+      this.unlockTrialDoorVisual();
+      this.refreshChamberGlow(true);
+      this.publishSceneSnapshot();
+
       runDialog(
         this,
         [
           { who: "HERMAIA", text: "Named. The Trial door is unsealed." },
-          { who: "SORYN", text: "When you are ready. The door hums above." },
+          { who: "SOPHENE", text: "When you are ready. The door hums above." },
         ],
         () => {
           this.busy = false;
+          this.publishSceneSnapshot();
         },
       );
     });
