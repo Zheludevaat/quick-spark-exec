@@ -873,19 +873,7 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
     }
 
-    for (const d of this.doors) {
-      if (
-        nx >= d.x &&
-        nx <= d.x + d.w &&
-        ny >= d.y &&
-        ny <= d.y + d.h
-      ) {
-        // Door entry is now intentional via A; overlap alone does nothing.
-        // Keep player position unchanged but do not auto-transition.
-        void oldX;
-        void oldY;
-      }
-    }
+    // Door traversal is now intentional via A — no auto-transition on overlap.
 
     this.refreshHintForProximity();
   }
