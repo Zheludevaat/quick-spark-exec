@@ -232,6 +232,10 @@ export class TitleScene extends Phaser.Scene {
       const current = options[cursor];
       cursorMark.setColor(current.action === "erase" ? COLOR.textWarn : COLOR.textGold);
       cursorMark.setPosition(menuCursorX, menuRowY + cursor * lineH);
+
+      rowHitboxes.forEach((hit, i) => {
+        hit.setDepth(i === cursor ? 110 : 109);
+      });
     };
     refresh();
 
