@@ -1676,10 +1676,21 @@ export class VenusTrialScene extends Phaser.Scene {
           truthful: choice.truthful,
           nonPerformative: choice.nonPerformative,
         });
+
         this.state.score += phaseScore;
         this.state.attuneScores.push(phaseScore);
         this.state.phaseIndex += 1;
-        this.runPhase();
+
+        runDialog(
+          this,
+          [
+            {
+              who: "KYPRIA",
+              text: this.kypriaPhaseVerdict(attuned, choice),
+            },
+          ],
+          () => this.runPhase(),
+        );
       },
     );
   }
