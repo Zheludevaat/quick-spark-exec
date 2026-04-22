@@ -20,7 +20,7 @@ import { onActionDown } from "../controls";
 import { writeSave } from "../save";
 import { runRhythmTap } from "./minigames/rhythmTap";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardStoneFx, awardNamedStone } from "../athanor/operations";
+import { awardStoneFx, awardNamedStone, markOperationDone } from "../athanor/operations";
 import { emitHudStainAdded } from "../ui/hudSignals";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
@@ -68,6 +68,14 @@ export class AlbedoScene extends Phaser.Scene {
     this.save = d.save;
     this.save.scene = "Albedo";
     writeSave(this.save);
+
+    this.murky = false;
+    this.isBusy = false;
+    this.isDone = false;
+    this.bathResultShown = false;
+    this.waterHighlightBands = [];
+    this.keeperSilhouette = undefined;
+    this.keeperReflection = undefined;
   }
 
   create() {
@@ -285,7 +293,6 @@ export class AlbedoScene extends Phaser.Scene {
         if (r.judgment === "great") awardNamedStone(this, this.save, "white", "all forgiven");
         else if (r.judgment === "ok") awardNamedStone(this, this.save, "white", "most forgiven");
         else awardStoneFx(this, this.save, "white", 1);
-        writeSave(this.save);
         this.vesselHud.refresh();
         // Aftermath: bath visibly reacts before the Keeper speaks.
         const visualJudgment: "great" | "ok" | "poor" =
@@ -399,6 +406,9 @@ export class AlbedoScene extends Phaser.Scene {
   }
 
   private exit() {
+    if (!this.save.flags.op_albedo_done) {
+      markOperationDone(this.save, "op_albedo_done");
+    }
     this.isDone = true;
     this.isBusy = false;
   }

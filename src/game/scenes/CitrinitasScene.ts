@@ -21,7 +21,7 @@ import { onActionDown } from "../controls";
 import { writeSave } from "../save";
 import { runInquiry } from "../inquiry";
 import { returnToThreshold } from "../athanor/operationScene";
-import { awardNamedStone } from "../athanor/operations";
+import { awardNamedStone, markOperationDone } from "../athanor/operations";
 import { mountVesselHud, type VesselHud } from "../athanor/vessel";
 import { unlockLore, showLoreToast } from "./lore";
 import { BOOKS, TEACHERS_SENTENCE, type Book } from "../athanor/books";
@@ -60,6 +60,17 @@ export class CitrinitasScene extends Phaser.Scene {
     this.save = d.save;
     this.save.scene = "Citrinitas";
     writeSave(this.save);
+
+    this.read = 0;
+    this.librarianAsks = 0;
+    this.isBusy = false;
+    this.isDone = false;
+    this.floatingBooks = [];
+    this.floatingBookHalos = [];
+    this.teacherGlow = undefined;
+    this.fourthBookSprite = undefined;
+    this.ambientWhisperEvent?.remove(false);
+    this.ambientWhisperEvent = undefined;
   }
 
   create() {
@@ -444,7 +455,6 @@ export class CitrinitasScene extends Phaser.Scene {
           }
           const slot = this.floatingSlotFor(b, list);
           if (slot >= 0) this.markBookResolved(slot, accepted);
-          writeSave(this.save);
           this.runBook(i + 1, fourthUnlocked);
         },
       );
@@ -479,6 +489,9 @@ export class CitrinitasScene extends Phaser.Scene {
   }
 
   private finish() {
+    if (!this.save.flags.op_citrinitas_done) {
+      markOperationDone(this.save, "op_citrinitas_done");
+    }
     if (this.read >= 2) {
       unlockLore(this.save, "on_citrinitas");
       showLoreToast(this, "on_citrinitas");
