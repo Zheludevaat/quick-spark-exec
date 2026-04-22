@@ -263,13 +263,25 @@ export class TitleScene extends Phaser.Scene {
       launching = true;
       audio.sfx("confirm");
 
-      const slot = save ?? newSave();
+      const slot = save ? { ...save } : newSave();
       let next = save ? save.scene : "LastDay";
 
       if (!this.scene.manager.keys[next]) {
         console.warn("[title] saved scene not registered:", next, "— falling back to LastDay");
         next = "LastDay";
         slot.scene = "LastDay";
+      } else {
+        slot.scene = next;
+      }
+
+      // Persist the slot before launch so BEGIN creates a real save immediately
+      // and invalid-scene repair is committed instead of being only in-memory.
+      try {
+        writeSave(slot);
+      } catch (err) {
+        console.error("[title] failed to persist launch save:", err);
+        launching = false;
+        return;
       }
 
       audio.music.stop();
