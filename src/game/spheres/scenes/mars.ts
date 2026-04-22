@@ -46,7 +46,10 @@ import { askSphere } from "../SpherePlateauScene";
 import { marsConfig } from "../configs/mars";
 import { trialPassedKey, type SphereOption } from "../types";
 import { paintMarsRoom } from "../mars/MarsRoomPainter";
-import type { MarsZoneKey } from "../mars/MarsPalette";
+import {
+  MARS_ZONE_PALETTES,
+  type MarsZoneKey,
+} from "../mars/MarsPalette";
 import {
   createHoldTarget,
   updateHoldTarget,
@@ -99,6 +102,7 @@ export class MarsPlateauScene extends Phaser.Scene {
   private busy = false;
   private zone: MarsZone = "approach";
   private roomArt?: { destroy(): void };
+  private readabilityPass?: { destroy(): void };
   private aftermath: AftermathHandle[] = [];
   private toneOverlay?: AftermathHandle;
   private areonPresentation?: EncounterPresentationHandle;
@@ -215,7 +219,7 @@ export class MarsPlateauScene extends Phaser.Scene {
         runDialog(
           this,
           [
-            { who: "SOPHENE", text: "Mars. The Arena of the Strong." },
+            { who: "SORYN", text: "Mars. The Arena of the Strong." },
             {
               who: "AREON",
               text: "This sphere does not ask whether you can win.",
@@ -237,8 +241,13 @@ export class MarsPlateauScene extends Phaser.Scene {
     this.clearAftermath();
     this.clearHoldVisuals();
     this.destroyZoneHeaders();
+
+    this.readabilityPass?.destroy();
+    this.readabilityPass = undefined;
+
     this.roomArt?.destroy();
     this.roomArt = undefined;
+
     this.areonPresentation?.destroy();
     this.areonPresentation = undefined;
   }
@@ -417,7 +426,12 @@ export class MarsPlateauScene extends Phaser.Scene {
 
   private loadZone(zone: MarsZone) {
     this.zone = zone;
+
     this.roomArt?.destroy();
+    this.roomArt = undefined;
+
+    this.readabilityPass?.destroy();
+    this.readabilityPass = undefined;
 
     try {
       this.roomArt = paintMarsRoom(this, zone as MarsZoneKey);
@@ -425,6 +439,9 @@ export class MarsPlateauScene extends Phaser.Scene {
       console.error("[mars] room paint failed for zone:", zone, err);
       this.roomArt = this.buildFallbackRoom(zone);
     }
+
+    // Always add a readable structural pass after room painting.
+    this.readabilityPass = this.buildReadabilityPass(zone);
 
     this.applyAftermath();
     this.buildHoldVisuals();
