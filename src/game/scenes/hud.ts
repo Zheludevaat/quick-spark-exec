@@ -9,8 +9,8 @@ import {
   toggleLcd,
   reapplyLcd,
 } from "../gbcArt";
-import type { SaveSlot, Stats } from "../types";
-import { ACT_BY_SCENE, SCENE_LABEL } from "../types";
+import type { SaveSlot, Stats, SceneKey } from "../types";
+import { buildSceneSnapshotBase } from "../canon/scenePresentation";
 import { getAudio } from "../audio";
 import { loadSave } from "../save";
 import { openLoreLog } from "./lore";
@@ -67,11 +67,9 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   // Resolve presentation mode for this HUD instance — must match the route shell.
   const isTouchShell = isTouchLandscapeMode();
 
-  // Publish scene metadata to React shell.
-  const sceneKey = scene.scene.key;
-  const sceneLabel = (SCENE_LABEL as Record<string, string>)[sceneKey] ?? sceneKey;
-  const act = (ACT_BY_SCENE as Record<string, number>)[sceneKey] ?? 1;
-  setSceneSnapshot({ key: sceneKey, label: sceneLabel, act, zone: null, nodes: null, marker: null });
+  // Publish baseline scene metadata to React shell — registry-derived.
+  const sceneKey = scene.scene.key as SceneKey;
+  setSceneSnapshot(buildSceneSnapshotBase(sceneKey));
 
   let loreOpen = false;
   let settingsOpen = false;

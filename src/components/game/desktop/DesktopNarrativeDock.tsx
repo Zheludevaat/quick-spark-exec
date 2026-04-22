@@ -6,6 +6,7 @@ import {
   type InquirySnapshot,
 } from "@/game/gameUiBridge";
 import { pulseVirtual } from "@/game/virtualInput";
+import { getPublicSceneLabel } from "@/game/canon/registry";
 import {
   ShellPanel,
   ShellPanelMeta,
@@ -150,16 +151,16 @@ export function DesktopNarrativeDock() {
         <ShellPanelTitle>
           {scene.idleTitle || scene.zone || "Atmosphere"}
         </ShellPanelTitle>
-        <ShellPanelMeta>{scene.label || "—"}</ShellPanelMeta>
+        <ShellPanelMeta>{getPublicSceneLabel(scene.key)}</ShellPanelMeta>
       </div>
 
       <div
-        className="text-xs leading-snug whitespace-pre-line mt-1"
-        style={{ color: "#a8c8e8" }}
+        className="text-[10px] leading-snug"
+        style={{ color: "#eef3ff" }}
       >
         {scene.idleBody ||
-          (scene.label
-            ? `${scene.label} waits in silence.`
+          (scene.key
+            ? `${getPublicSceneLabel(scene.key)} waits in silence.`
             : "The scene keeps its own counsel.")}
       </div>
     </ShellPanel>

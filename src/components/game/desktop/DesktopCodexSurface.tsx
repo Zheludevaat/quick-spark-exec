@@ -6,6 +6,10 @@ import {
   getGameUiSnapshot,
 } from "@/game/gameUiBridge";
 import type { SaveSlot } from "@/game/types";
+import {
+  getPublicSceneLabel,
+  getPublicChapterTitle,
+} from "@/game/canon/registry";
 import { LORE_ENTRIES, type LoreEntry } from "@/game/scenes/loreData";
 import { DesktopSurfaceFrame } from "./DesktopSurfaceFrame";
 import type { CodexTabKey } from "./desktopUiModel";
@@ -94,7 +98,7 @@ export function DesktopCodexSurface({ initialTab, onClose }: Props) {
           Codex
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: "#a8c8e8" }}>
-          {scene.label || "—"}
+          {getPublicSceneLabel(scene.key)}
           {scene.zone ? ` · ${scene.zone}` : ""}
         </div>
       </div>
@@ -113,7 +117,7 @@ export function DesktopCodexSurface({ initialTab, onClose }: Props) {
           Current State
         </div>
         <div className="text-[10px] mt-1" style={{ color: "#eef3ff" }}>
-          Act {scene.act || "—"}
+          {getPublicChapterTitle(scene.key)}
         </div>
         <div className="text-[10px]" style={{ color: "#a8c8e8" }}>
           ◇ {save?.stats.clarity ?? 0} · ♡ {save?.stats.compassion ?? 0} · ▲{" "}
@@ -150,7 +154,7 @@ export function DesktopCodexSurface({ initialTab, onClose }: Props) {
   return (
     <DesktopSurfaceFrame
       title="Codex"
-      subtitle={`${scene.label || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
+      subtitle={`${getPublicSceneLabel(scene.key)}${scene.zone ? ` · ${scene.zone}` : ""}`}
       onClose={onClose}
       rail={rail}
       footer="Esc closes · codex unifies overview, inventory, journal, lore, quests, progress, and controls"
@@ -214,7 +218,7 @@ function CodexContent({
           <KV label="Wedding" value={save?.weddingType ?? "—"} />
           <KV label="Inscription" value={save?.act2Inscription ?? "—"} />
           <KV
-            label="Soryn"
+            label="Sophene"
             value={save?.sorynReleased ? "released" : "bound"}
           />
         </CodexCard>

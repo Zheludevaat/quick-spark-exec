@@ -11,7 +11,12 @@ import {
   measureText,
 } from "../gbcArt";
 import { loadSave, newSave, clearSave, consumeSaveLoadWarning, writeSave } from "../save";
-import { ACT_BY_SCENE, ACT_TITLES, SCENE_LABEL, type SceneKey } from "../types";
+import { ACT_BY_SCENE, type SceneKey } from "../types";
+import {
+  getDevJumpLabel,
+  getDevJumpReadout,
+  getImplementedDevJumpScenes,
+} from "../canon/registry";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 import { openSettings } from "./settings";
@@ -654,70 +659,44 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
-  private devMenuLabel(scene: SceneKey, fallback: string): string {
-    if (scene === "MetaxyHub") return "INTERLUDE · METAXY";
-    if (scene === "AthanorThreshold") return "ACT I · GREAT WORK · ATHANOR THRESHOLD";
-    if (scene === "Nigredo") return "ACT I · GREAT WORK · NIGREDO";
-    if (scene === "Albedo") return "ACT I · GREAT WORK · ALBEDO";
-    if (scene === "Citrinitas") return "ACT I · GREAT WORK · CITRINITAS";
-    if (scene === "Rubedo") return "ACT I · GREAT WORK · RUBEDO";
-    if (scene === "SealedVessel") return "ACT I · GREAT WORK · SEALED VESSEL";
-    return fallback;
-  }
-
-  private devSceneReadout(scene: SceneKey): string {
-    const act = ACT_BY_SCENE[scene] ?? 0;
-    const actTitle = ACT_TITLES[act] ?? `ACT ${act}`;
-    const sceneTitle = SCENE_LABEL[scene] ?? scene;
-    return `${sceneTitle} · ${actTitle}`;
-  }
-
   private buildDevJumpEntries(): DevJumpEntry[] {
-    const all: Array<{ fallback: string; scene: SceneKey; seed: DevJumpSeed }> = [
-      { fallback: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
-      { fallback: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
+    // Seed mapping per scene — drives which seedXxx helpers a jump runs.
+    const seedByScene: Partial<Record<SceneKey, DevJumpSeed>> = {
+      LastDay: "prelude_last_day",
+      Crossing: "prelude_crossing",
+      SilverThreshold: "reception",
+      ImaginalRealm: "moon_plateau",
+      MoonTrial: "moon_trial",
+      MetaxyHub: "metaxy",
+      AthanorThreshold: "secret_annex",
+      Nigredo: "secret_annex",
+      Albedo: "secret_annex",
+      Citrinitas: "secret_annex",
+      Rubedo: "secret_annex",
+      SealedVessel: "secret_annex",
+      MercuryPlateau: "mercury_plateau",
+      MercuryTrial: "mercury_trial",
+      VenusPlateau: "venus_plateau",
+      VenusTrial: "venus_trial",
+      SunPlateau: "sun_plateau",
+      CuratedSelf: "sun_district",
+      SunTrial: "sun_trial",
+      MarsPlateau: "mars_plateau",
+      MarsTrial: "mars_trial",
+      EndingsRouter: "endings_router",
+      Epilogue: "epilogue",
+    };
 
-      { fallback: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
-
-      { fallback: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
-      { fallback: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
-
-      { fallback: "INTERLUDE · METAXY", scene: "MetaxyHub", seed: "metaxy" },
-
-      { fallback: "ACT I · GREAT WORK · ATHANOR THRESHOLD", scene: "AthanorThreshold", seed: "secret_annex" },
-      { fallback: "ACT I · GREAT WORK · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
-      { fallback: "ACT I · GREAT WORK · ALBEDO", scene: "Albedo", seed: "secret_annex" },
-      { fallback: "ACT I · GREAT WORK · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
-      { fallback: "ACT I · GREAT WORK · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
-      { fallback: "ACT I · GREAT WORK · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
-
-      { fallback: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
-      { fallback: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
-
-      { fallback: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
-      { fallback: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
-
-      { fallback: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
-      { fallback: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
-      { fallback: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
-
-      { fallback: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
-      { fallback: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
-
-      { fallback: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
-      { fallback: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
-    ];
-
-    return all
-      .filter((entry) => !!this.scene.manager.keys[entry.scene])
-      .map((entry) => ({
-        scene: entry.scene,
-        seed: entry.seed,
-        label: this.devMenuLabel(entry.scene, entry.fallback),
-        readout: this.devSceneReadout(entry.scene),
+    return getImplementedDevJumpScenes()
+      .filter((scene) => seedByScene[scene] !== undefined)
+      .filter((scene) => !!this.scene.manager.keys[scene])
+      .map((scene) => ({
+        scene,
+        seed: seedByScene[scene]!,
+        label: getDevJumpLabel(scene),
+        readout: getDevJumpReadout(scene),
       }));
   }
-
   private seedDevBase(slot = newSave()) {
     slot.stats = { clarity: 9, compassion: 9, courage: 9 };
     slot.coherence = 100;
@@ -1062,7 +1041,7 @@ export class TitleScene extends Phaser.Scene {
 
     const jumpStates = jumps.map((j) => fitSingleLineState(j.label, itemFitW));
     const metaStates = jumps.map((j) =>
-      fitSingleLineState(j.readout ?? this.devSceneReadout(j.scene), bandW),
+      fitSingleLineState(j.readout ?? getDevJumpReadout(j.scene), bandW),
     );
 
     const helpText = "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE";

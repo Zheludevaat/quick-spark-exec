@@ -8,6 +8,7 @@ import {
   getGameUiSnapshot,
 } from "@/game/gameUiBridge";
 import { ShellPanel, ShellPanelMeta } from "@/components/game/shell/ShellPanel";
+import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
 
 const STAT_GLYPH: Record<"clarity" | "compassion" | "courage", string> = {
   clarity: "◇",
@@ -59,9 +60,9 @@ export function DesktopStatsBar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ShellPanelMeta>ACT {scene.act || "—"}</ShellPanelMeta>
+          <ShellPanelMeta>{getPublicChapterTitle(scene.key)}</ShellPanelMeta>
           <div className="text-xs font-mono" style={{ color: "#eef3ff" }}>
-            {scene.label || "—"}
+            {getPublicSceneLabel(scene.key)}
             {scene.zone ? (
               <span style={{ color: "#a8c8e8" }}> · {scene.zone}</span>
             ) : null}

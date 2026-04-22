@@ -20,6 +20,7 @@ import {
 } from "../gbcArt";
 import type { SaveSlot, SceneKey, SphereKey } from "../types";
 import { ACT_BY_SCENE } from "../types";
+import { getPublicSceneLabel } from "../canon/registry";
 import { writeSave } from "../save";
 import { attachHUD } from "./hud";
 import { onActionDown, onDirection } from "../controls";
@@ -116,12 +117,12 @@ const PORTALS: Portal[] = [
 
 /**
  * Hidden secret-annex portal. Only appended to PORTALS when
- * `shouldRevealAlchemyEntrance(save)` returns true. Routes to the secret
- * Great Work annex (AthanorThreshold). Not on the mainline ladder.
+ * `shouldRevealAlchemyEntrance(save)` returns true. Routes to the
+ * secret annex (AthanorThreshold). Not on the mainline ladder.
  */
 const ANNEX_PORTAL: Portal = {
   sphere: "moon",
-  label: "GREAT WORK ANNEX",
+  label: "SECRET ANNEX",
   scene: "AthanorThreshold",
   unlocked: () => true,
   dimLine: "A hidden chamber, not required, but true.",
@@ -339,7 +340,7 @@ export class MetaxyHubScene extends Phaser.Scene {
 
     setSceneSnapshot({
       key: "MetaxyHub",
-      label: "Metaxy Hub",
+      label: getPublicSceneLabel("MetaxyHub"),
       act: ACT_BY_SCENE.MetaxyHub,
       zone: "Portal Ascent",
       nodes: layout.map((n) => ({
