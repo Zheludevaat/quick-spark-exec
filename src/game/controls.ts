@@ -74,8 +74,12 @@ const DEFAULTS: ControlsState = {
 let state: ControlsState = load();
 const subscribers = new Set<() => void>();
 
+function hasWindow(): boolean {
+  return typeof window !== "undefined";
+}
+
 function load(): ControlsState {
-  if (typeof window === "undefined") return clone(DEFAULTS);
+  if (!hasWindow()) return clone(DEFAULTS);
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return clone(DEFAULTS);
@@ -100,7 +104,7 @@ export function getControls(): ControlsState {
 }
 
 export function saveControls() {
-  if (typeof window === "undefined") return;
+  if (!hasWindow()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
@@ -254,15 +258,17 @@ export function onActionDown(
   action: GameAction,
   handler: () => void,
 ): () => void {
+  if (!hasWindow()) return () => {};
+
   const wrap = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
     const b = state.bindings[action];
     if (name === b.primary || name === b.secondary) handler();
   };
-  const domHandler = (e: KeyboardEvent) => wrap(e);
-  window.addEventListener("keydown", domHandler);
-  const cleanup = () => window.removeEventListener("keydown", domHandler);
+
+  window.addEventListener("keydown", wrap);
+  const cleanup = () => window.removeEventListener("keydown", wrap);
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
   return cleanup;
@@ -276,6 +282,8 @@ export function onDirection(
   scene: Scene,
   handler: (dir: "up" | "down" | "left" | "right") => void,
 ): () => void {
+  if (!hasWindow()) return () => {};
+
   const domHandler = (e: KeyboardEvent) => {
     const name = normalizeKeyEvent(e);
     if (!name) return;
@@ -287,6 +295,7 @@ export function onDirection(
       }
     }
   };
+
   window.addEventListener("keydown", domHandler);
   const cleanup = () => window.removeEventListener("keydown", domHandler);
   scene.events.once("shutdown", cleanup);

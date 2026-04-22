@@ -55,6 +55,32 @@ type DevJumpEntry = {
   readout?: string;
 };
 
+const DEV_SEED_BY_SCENE: Partial<Record<SceneKey, DevJumpSeed>> = {
+  LastDay: "prelude_last_day",
+  Crossing: "prelude_crossing",
+  SilverThreshold: "reception",
+  ImaginalRealm: "moon_plateau",
+  MoonTrial: "moon_trial",
+  MetaxyHub: "metaxy",
+  AthanorThreshold: "secret_annex",
+  Nigredo: "secret_annex",
+  Albedo: "secret_annex",
+  Citrinitas: "secret_annex",
+  Rubedo: "secret_annex",
+  SealedVessel: "secret_annex",
+  MercuryPlateau: "mercury_plateau",
+  MercuryTrial: "mercury_trial",
+  VenusPlateau: "venus_plateau",
+  VenusTrial: "venus_trial",
+  SunPlateau: "sun_plateau",
+  CuratedSelf: "sun_district",
+  SunTrial: "sun_trial",
+  MarsPlateau: "mars_plateau",
+  MarsTrial: "mars_trial",
+  EndingsRouter: "endings_router",
+  Epilogue: "epilogue",
+};
+
 export class TitleScene extends Phaser.Scene {
   private devMenuOpen = false;
 
@@ -706,39 +732,26 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private buildDevJumpEntries(): DevJumpEntry[] {
-    // Seed mapping per scene — drives which seedXxx helpers a jump runs.
-    const seedByScene: Partial<Record<SceneKey, DevJumpSeed>> = {
-      LastDay: "prelude_last_day",
-      Crossing: "prelude_crossing",
-      SilverThreshold: "reception",
-      ImaginalRealm: "moon_plateau",
-      MoonTrial: "moon_trial",
-      MetaxyHub: "metaxy",
-      AthanorThreshold: "secret_annex",
-      Nigredo: "secret_annex",
-      Albedo: "secret_annex",
-      Citrinitas: "secret_annex",
-      Rubedo: "secret_annex",
-      SealedVessel: "secret_annex",
-      MercuryPlateau: "mercury_plateau",
-      MercuryTrial: "mercury_trial",
-      VenusPlateau: "venus_plateau",
-      VenusTrial: "venus_trial",
-      SunPlateau: "sun_plateau",
-      CuratedSelf: "sun_district",
-      SunTrial: "sun_trial",
-      MarsPlateau: "mars_plateau",
-      MarsTrial: "mars_trial",
-      EndingsRouter: "endings_router",
-      Epilogue: "epilogue",
-    };
+    const implemented = getImplementedDevJumpScenes().filter(
+      (scene) => !!this.scene.manager.keys[scene],
+    );
 
-    return getImplementedDevJumpScenes()
-      .filter((scene) => seedByScene[scene] !== undefined)
-      .filter((scene) => !!this.scene.manager.keys[scene])
+    const missingSeed = implemented.filter(
+      (scene) => DEV_SEED_BY_SCENE[scene] === undefined,
+    );
+
+    if (missingSeed.length) {
+      console.warn(
+        "[dev-jump] implemented scenes missing seed mapping:",
+        missingSeed,
+      );
+    }
+
+    return implemented
+      .filter((scene) => DEV_SEED_BY_SCENE[scene] !== undefined)
       .map((scene) => ({
         scene,
-        seed: seedByScene[scene]!,
+        seed: DEV_SEED_BY_SCENE[scene]!,
         label: getDevJumpLabel(scene),
         readout: getDevJumpReadout(scene),
       }));
@@ -1035,10 +1048,6 @@ export class TitleScene extends Phaser.Scene {
     return slot;
   }
 
-  /**
-   * DEV-only scene jump menu — auto-filters to currently registered scenes
-   * and seeds a coherent canonical save before launching.
-   */
   /**
    * DEV-only scene jump menu — auto-filters to currently registered scenes
    * and seeds a coherent canonical save before launching.
