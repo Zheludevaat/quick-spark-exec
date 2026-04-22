@@ -418,7 +418,14 @@ export class MarsPlateauScene extends Phaser.Scene {
   private loadZone(zone: MarsZone) {
     this.zone = zone;
     this.roomArt?.destroy();
-    this.roomArt = paintMarsRoom(this, zone as MarsZoneKey);
+
+    try {
+      this.roomArt = paintMarsRoom(this, zone as MarsZoneKey);
+    } catch (err) {
+      console.error("[mars] room paint failed for zone:", zone, err);
+      this.roomArt = this.buildFallbackRoom(zone);
+    }
+
     this.applyAftermath();
     this.buildHoldVisuals();
 
