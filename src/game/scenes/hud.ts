@@ -395,9 +395,16 @@ export function attachHUD(scene: Phaser.Scene, getStats: () => Stats) {
   const rebuildPad = () => {
     pad?.destroy();
     pad = null;
+
+    // Desktop mode should never render in-canvas touch controls.
+    if (!isTouchLandscapeMode()) return;
+
     const c = getControls();
-    if (isTouchLandscapeMode()) return;
+
+    // In touch landscape, respect the chosen touch layout,
+    // while still allowing the touch-device safety fallback.
     if (c.touchLayout === "off" && !shouldForceTouch(scene)) return;
+
     pad = buildTouchPad(scene);
   };
   rebuildPad();
