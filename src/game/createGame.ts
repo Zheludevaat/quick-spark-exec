@@ -19,8 +19,9 @@ import { MetaxyHubScene } from "./scenes/MetaxyHubScene";
 import { MercuryPlateauScene, MercuryTrialScene } from "./spheres/scenes/mercury";
 import { VenusPlateauScene, VenusTrialScene } from "./spheres/scenes/venus";
 import { MarsPlateauScene, MarsTrialScene } from "./spheres/scenes/mars";
-// Jupiter and Saturn scenes intentionally not imported: they remain
-// dim portals in MetaxyHubScene until their authored content lands.
+// Jupiter and Saturn are canonical scenes in src/game/canon/registry.ts but
+// intentionally not yet runtime-registered. They remain dim portals in
+// MetaxyHubScene and hidden from dev-jump until their authored content lands.
 import { SunPlateauScene } from "./scenes/SunPlateauScene";
 import { SunTrialScene } from "./scenes/SunTrialScene";
 import { MoonTrialScene } from "./scenes/MoonTrialScene";
