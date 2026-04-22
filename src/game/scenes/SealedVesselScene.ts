@@ -114,7 +114,7 @@ export class SealedVesselScene extends Phaser.Scene {
     }
 
     const intro: { who: string; text: string }[] = [
-      { who: this.save.sorynReleased ? "ROWAN" : "SOPHENE", text: "Inscribe the seal. One sentence." },
+      { who: this.save.sopheneReleased ? "ROWAN" : "SOPHENE", text: "Inscribe the seal. One sentence." },
       { who: "ROWAN", text: "(I choose what to carry forward.)" },
     ];
     runDialog(this, intro, () => this.choose());
@@ -126,7 +126,7 @@ export class SealedVesselScene extends Phaser.Scene {
     const opts: { label: string; reply: string }[] = [
       { label: canonical, reply: "The metal cools. The seal accepts it." },
     ];
-    if (this.save.sorynReleased) {
+    if (this.save.sopheneReleased) {
       opts.push({
         label: "AND I WALKED ALONE.",
         reply: "Honest. The seal accepts it. The room is quiet.",
@@ -165,7 +165,7 @@ export class SealedVesselScene extends Phaser.Scene {
         this.save.act2Inscription = chosen.label;
         unlockLore(this.save, "on_the_sealed_vessel");
         showLoreToast(this, "on_the_sealed_vessel");
-        if (this.save.sorynReleased && questStatus(this.save, "release_soryn") === "active") {
+        if (this.save.sopheneReleased && questStatus(this.save, "release_soryn") === "active") {
           completeQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_walking_alone");
         }
@@ -221,7 +221,7 @@ export class SealedVesselScene extends Phaser.Scene {
 
   private toAct3() {
     const lines: { who: string; text: string }[] = [];
-    if (this.save.sorynReleased) {
+    if (this.save.sopheneReleased) {
       lines.push({ who: "SOPHENE", text: "I will not follow further. Walk on." });
     } else {
       lines.push({ who: "SOPHENE", text: "The vessel is sealed. The Moon releases you." });

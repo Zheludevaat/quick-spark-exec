@@ -394,7 +394,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         writeSave(this.save);
         this.busy = true;
         const beat = STAGE_BEATS[stage as 1 | 2 | 3 | 4];
-        const line = this.save.sorynReleased
+        const line = this.save.sopheneReleased
           ? { who: "ROWAN", text: beat.text }
           : beat;
         runDialog(this, [line], () => {
@@ -416,7 +416,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = true;
         runDialog(
           this,
-          [{ who: this.save.sorynReleased ? "ROWAN" : "SOPHENE", text: "All four are done. The vessel waits to be sealed." }],
+          [{ who: this.save.sopheneReleased ? "ROWAN" : "SOPHENE", text: "All four are done. The vessel waits to be sealed." }],
           () => {
             this.busy = false;
             this.gotoSealedVessel();
@@ -708,7 +708,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
 
   /** Pick the right opening lines based on save state (Soryn-released, etc.). */
   private openingLines(): { who: string; text: string }[] {
-    if (this.save.sorynReleased) {
+    if (this.save.sopheneReleased) {
       return [
         { who: "ROWAN", text: "Down the stair. The Plateau ends here." },
         { who: "ROWAN", text: "An Athanor. The vessel that won't break what it transmutes." },
