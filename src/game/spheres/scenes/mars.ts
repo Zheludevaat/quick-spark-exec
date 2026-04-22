@@ -133,15 +133,38 @@ export class MarsPlateauScene extends Phaser.Scene {
   }
 
   create() {
+    try {
+      this.bootstrapPlateau();
+    } catch (err) {
+      console.error("[mars] plateau bootstrap failed", err);
+
+      this.clearAftermath();
+      this.clearHoldVisuals();
+      this.destroyZoneHeaders();
+      this.roomArt?.destroy();
+      this.roomArt = undefined;
+      this.areonPresentation?.destroy();
+      this.areonPresentation = undefined;
+
+      // Fail safe: do not strand the player on a black screen.
+      if (this.scene.manager.keys["MetaxyHub"]) {
+        this.scene.start("MetaxyHub", { save: this.save });
+      } else {
+        this.scene.start("Title");
+      }
+    }
+  }
+
+  private bootstrapPlateau() {
     this.cameras.main.setBackgroundColor("#140708");
     spawnMotes(this, { count: 12, color: 0xb84848, alpha: 0.3 });
 
-    this.loadZone("approach");
-
     attachHUD(this, () => this.save.stats);
+
     this.rowanShadow = this.add
       .ellipse(GBC_W / 2, GBC_H - 18, 10, 3, 0x000000, 0.4)
       .setDepth(19);
+
     this.rowan = makeRowan(this, GBC_W / 2, GBC_H - 20, "soul").setDepth(20);
     this.inputState = new InputState(this);
 
@@ -149,10 +172,14 @@ export class MarsPlateauScene extends Phaser.Scene {
       color: COLOR.textDim,
       depth: 200,
     });
+
     this.interactPrompt = new GBCText(this, 0, 0, "", {
       color: COLOR.textGold,
       depth: 60,
     });
+
+    // Load zone only after the shared HUD + actor state exists.
+    this.loadZone("approach");
 
     this.areonPresentation = createEncounterPresentation(
       this,
@@ -189,8 +216,18 @@ export class MarsPlateauScene extends Phaser.Scene {
       });
     }
 
-    this.events.once("shutdown", () => this.destroyZoneHeaders());
-    this.events.once("destroy", () => this.destroyZoneHeaders());
+    this.events.once("shutdown", () => this.cleanupPlateauScene());
+    this.events.once("destroy", () => this.cleanupPlateauScene());
+  }
+
+  private cleanupPlateauScene() {
+    this.clearAftermath();
+    this.clearHoldVisuals();
+    this.destroyZoneHeaders();
+    this.roomArt?.destroy();
+    this.roomArt = undefined;
+    this.areonPresentation?.destroy();
+    this.areonPresentation = undefined;
   }
 
   private clearAftermath() {
