@@ -701,8 +701,11 @@ export class VenusPlateauScene extends Phaser.Scene {
       onAct: () => this.trySettle(),
     });
 
-    this.doors.push({ to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" });
-    this.doors.push({ to: "ladder", x: GBC_W - 8, y: 50, w: 8, h: 30, label: "LADDER →" });
+    this.doors.push(
+      { to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" },
+      { to: "ladder", x: GBC_W - 8, y: 50, w: 8, h: 24, label: "LADDER →" },
+      { to: "reconstruction", x: GBC_W - 8, y: 96, w: 8, h: 24, label: "STUDIO →" },
+    );
   }
 
   // -----------------------------------------------------------------
