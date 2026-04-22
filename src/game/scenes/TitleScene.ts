@@ -198,6 +198,20 @@ export class TitleScene extends Phaser.Scene {
         }),
     );
 
+    const rowHitboxes = options.map((_, i) =>
+      this.add
+        .rectangle(
+          menuBoxX + 4 + (menuBoxW - 8) / 2,
+          menuRowY + i * lineH + Math.floor(lineH / 2),
+          menuBoxW - 8,
+          lineH,
+          0x000000,
+          0.001,
+        )
+        .setDepth(109)
+        .setInteractive({ useHandCursor: true }),
+    );
+
     const cursorMark = new GBCText(this, menuCursorX, menuRowY, "▶", {
       color: COLOR.textGold,
       depth: 111,
@@ -218,6 +232,10 @@ export class TitleScene extends Phaser.Scene {
       const current = options[cursor];
       cursorMark.setColor(current.action === "erase" ? COLOR.textWarn : COLOR.textGold);
       cursorMark.setPosition(menuCursorX, menuRowY + cursor * lineH);
+
+      rowHitboxes.forEach((hit, i) => {
+        hit.setDepth(i === cursor ? 110 : 109);
+      });
     };
     refresh();
 
@@ -245,13 +263,25 @@ export class TitleScene extends Phaser.Scene {
       launching = true;
       audio.sfx("confirm");
 
-      const slot = save ?? newSave();
+      const slot = save ? { ...save } : newSave();
       let next = save ? save.scene : "LastDay";
 
       if (!this.scene.manager.keys[next]) {
         console.warn("[title] saved scene not registered:", next, "— falling back to LastDay");
         next = "LastDay";
         slot.scene = "LastDay";
+      } else {
+        slot.scene = next;
+      }
+
+      // Persist the slot before launch so BEGIN creates a real save immediately
+      // and invalid-scene repair is committed instead of being only in-memory.
+      try {
+        writeSave(slot);
+      } catch (err) {
+        console.error("[title] failed to persist launch save:", err);
+        launching = false;
+        return;
       }
 
       audio.music.stop();
@@ -394,17 +424,33 @@ export class TitleScene extends Phaser.Scene {
 
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
-      t.obj.on("pointerover", () => {
+
+      const hover = () => {
         if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
-      });
-      t.obj.on("pointerdown", () => {
+      };
+
+      const press = () => {
         if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
         confirm();
-      });
+      };
+
+      t.obj.on("pointerover", hover);
+      t.obj.on("pointerdown", press);
+
+      rowHitboxes[i].on("pointerover", hover);
+      rowHitboxes[i].on("pointerdown", press);
+    });
+
+    this.events.once("shutdown", () => {
+      rowHitboxes.forEach((hit) => hit.destroy());
+    });
+
+    this.events.once("destroy", () => {
+      rowHitboxes.forEach((hit) => hit.destroy());
     });
 
     onDirection(this, (d) => {
