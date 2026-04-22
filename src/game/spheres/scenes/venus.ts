@@ -173,6 +173,7 @@ export class VenusPlateauScene extends Phaser.Scene {
     this.hotspots = [];
     this.doors = [];
     this.hotspotMarkers = [];
+    this.previousZone = null;
   }
 
   create() {
