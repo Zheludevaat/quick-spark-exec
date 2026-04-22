@@ -1534,7 +1534,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
       runDialog(
         this,
         [
-          { who: "SORYN", text: "The door is sealed. Face the question first." },
+          { who: "SOPHENE", text: "The door is sealed. Face the question first." },
         ],
         () => {
           this.busy = false;
@@ -1542,10 +1542,9 @@ export class MercuryPlateauScene extends Phaser.Scene {
       );
       return;
     }
+    const nextScene = nextMainlineScene("MercuryPlateau");
     getAudio().sfx("confirm");
-    gbcWipe(this, () =>
-      this.scene.start("MercuryTrial", { save: this.mSave }),
-    );
+    gbcWipe(this, () => this.scene.start(nextScene, { save: this.mSave }));
   }
 
   private toHub() {
