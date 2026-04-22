@@ -11,7 +11,7 @@ import {
   measureText,
 } from "../gbcArt";
 import { loadSave, newSave, clearSave, consumeSaveLoadWarning, writeSave } from "../save";
-import { ACT_BY_SCENE, type SceneKey } from "../types";
+import { ACT_BY_SCENE, ACT_TITLES, SCENE_LABEL, type SceneKey } from "../types";
 import { getAudio, SONG_TITLE } from "../audio";
 import { onActionDown, onDirection } from "../controls";
 import { openSettings } from "./settings";
@@ -47,9 +47,12 @@ type DevJumpEntry = {
   label: string;
   scene: SceneKey;
   seed: DevJumpSeed;
+  readout?: string;
 };
 
 export class TitleScene extends Phaser.Scene {
+  private devMenuOpen = false;
+
   constructor() {
     super("Title");
   }
@@ -160,7 +163,7 @@ export class TitleScene extends Phaser.Scene {
 
     let settingsOpen = false;
     const openTitleSettings = () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       settingsOpen = true;
       getAudio().sfx("confirm");
       openSettings(this, () => {
@@ -364,7 +367,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     const confirm = () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       const opt = options[cursor];
 
       if (opt.action === "launch") {
@@ -377,7 +380,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     const move = (d: number) => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (options.length < 2) return;
       cursor = (cursor + d + options.length) % options.length;
       audio.sfx("cursor");
@@ -387,12 +390,12 @@ export class TitleScene extends Phaser.Scene {
     labels.forEach((t, i) => {
       t.obj.setInteractive({ useHandCursor: true });
       t.obj.on("pointerover", () => {
-        if (settingsOpen) return;
+        if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
       });
       t.obj.on("pointerdown", () => {
-        if (settingsOpen) return;
+        if (settingsOpen || this.devMenuOpen) return;
         cursor = i;
         refresh();
         confirm();
@@ -400,7 +403,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     onDirection(this, (d) => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (d === "up") move(-1);
       else if (d === "down") move(1);
     });
@@ -409,7 +412,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Erase stays available, but no longer pollutes the main menu.
     this.input.keyboard?.on("keydown-BACKSPACE", () => {
-      if (settingsOpen) return;
+      if (settingsOpen || this.devMenuOpen) return;
       if (save) erase();
     });
 
@@ -645,48 +648,74 @@ export class TitleScene extends Phaser.Scene {
     });
 
     devBtn.obj.setAlpha(0.78);
-    devBtn.obj
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.openSkipMenu());
+    devBtn.obj.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+      if (this.devMenuOpen) return;
+      this.openSkipMenu();
+    });
+  }
+
+  private devMenuLabel(scene: SceneKey, fallback: string): string {
+    if (scene === "MetaxyHub") return "INTERLUDE · METAXY";
+    if (scene === "AthanorThreshold") return "ACT I · GREAT WORK · ATHANOR THRESHOLD";
+    if (scene === "Nigredo") return "ACT I · GREAT WORK · NIGREDO";
+    if (scene === "Albedo") return "ACT I · GREAT WORK · ALBEDO";
+    if (scene === "Citrinitas") return "ACT I · GREAT WORK · CITRINITAS";
+    if (scene === "Rubedo") return "ACT I · GREAT WORK · RUBEDO";
+    if (scene === "SealedVessel") return "ACT I · GREAT WORK · SEALED VESSEL";
+    return fallback;
+  }
+
+  private devSceneReadout(scene: SceneKey): string {
+    const act = ACT_BY_SCENE[scene] ?? 0;
+    const actTitle = ACT_TITLES[act] ?? `ACT ${act}`;
+    const sceneTitle = SCENE_LABEL[scene] ?? scene;
+    return `${sceneTitle} · ${actTitle}`;
   }
 
   private buildDevJumpEntries(): DevJumpEntry[] {
-    const all: DevJumpEntry[] = [
-      { label: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
-      { label: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
+    const all: Array<{ fallback: string; scene: SceneKey; seed: DevJumpSeed }> = [
+      { fallback: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
+      { fallback: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
 
-      { label: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
+      { fallback: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
 
-      { label: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
-      { label: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
+      { fallback: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
+      { fallback: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
 
-      { label: "METAXY", scene: "MetaxyHub", seed: "metaxy" },
+      { fallback: "INTERLUDE · METAXY", scene: "MetaxyHub", seed: "metaxy" },
 
-      { label: "SECRET · GREAT WORK ANNEX", scene: "AthanorThreshold", seed: "secret_annex" },
-      { label: "SECRET · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
-      { label: "SECRET · ALBEDO", scene: "Albedo", seed: "secret_annex" },
-      { label: "SECRET · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
-      { label: "SECRET · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
-      { label: "SECRET · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · ATHANOR THRESHOLD", scene: "AthanorThreshold", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · ALBEDO", scene: "Albedo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
+      { fallback: "ACT I · GREAT WORK · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
 
-      { label: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
-      { label: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
+      { fallback: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
+      { fallback: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
 
-      { label: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
-      { label: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
+      { fallback: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
+      { fallback: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
 
-      { label: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
-      { label: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
-      { label: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
+      { fallback: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
+      { fallback: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
+      { fallback: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
 
-      { label: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
-      { label: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
+      { fallback: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
+      { fallback: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
 
-      { label: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
-      { label: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
+      { fallback: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
+      { fallback: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
     ];
 
-    return all.filter((entry) => !!this.scene.manager.keys[entry.scene]);
+    return all
+      .filter((entry) => !!this.scene.manager.keys[entry.scene])
+      .map((entry) => ({
+        scene: entry.scene,
+        seed: entry.seed,
+        label: this.devMenuLabel(entry.scene, entry.fallback),
+        readout: this.devSceneReadout(entry.scene),
+      }));
   }
 
   private seedDevBase(slot = newSave()) {
@@ -985,13 +1014,21 @@ export class TitleScene extends Phaser.Scene {
    * DEV-only scene jump menu — auto-filters to currently registered scenes
    * and seeds a coherent canonical save before launching.
    */
+  /**
+   * DEV-only scene jump menu — auto-filters to currently registered scenes
+   * and seeds a coherent canonical save before launching.
+   */
   private openSkipMenu() {
+    if (this.devMenuOpen) return;
+    this.devMenuOpen = true;
+
     const audio = getAudio();
     audio.sfx("cursor");
 
     const jumps = this.buildDevJumpEntries();
 
     if (!jumps.length) {
+      this.devMenuOpen = false;
       const note = new GBCText(this, 18, 110, "NO REGISTERED DEV DESTINATIONS.", {
         color: COLOR.textGold,
         depth: 960,
@@ -1004,7 +1041,7 @@ export class TitleScene extends Phaser.Scene {
       .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.88)
       .setOrigin(0, 0)
       .setDepth(950)
-      .setInteractive();
+      .setInteractive({ useHandCursor: true });
 
     const box = drawGBCBox(this, 6, 8, GBC_W - 12, GBC_H - 16, 951);
     const title = new GBCText(this, 12, 12, "DEV · SCENE JUMP", {
@@ -1017,7 +1054,7 @@ export class TitleScene extends Phaser.Scene {
       depth: 952,
     });
 
-    const help = new GBCText(this, 12, GBC_H - 12, "A START  B CANCEL  ←→ PAGE", {
+    const help = new GBCText(this, 12, GBC_H - 12, "↑↓ MOVE  ←→ PAGE  A JUMP  B CLOSE", {
       color: COLOR.textDim,
       depth: 952,
       maxWidthPx: GBC_W - 24,
@@ -1077,6 +1114,7 @@ export class TitleScene extends Phaser.Scene {
     };
 
     let rowToJump: number[] = [];
+    let closed = false;
 
     const refreshSkip = () => {
       const start = computeStart(pick);
@@ -1107,17 +1145,23 @@ export class TitleScene extends Phaser.Scene {
       }
 
       const chosen = jumps[pick];
-      selectedSceneLine.setText(
-        `${chosen.scene} · ACT ${ACT_BY_SCENE[chosen.scene] ?? 0}`,
-      );
+      selectedSceneLine.setText(chosen.readout ?? this.devSceneReadout(chosen.scene));
     };
 
     refreshSkip();
 
     const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      this.devMenuOpen = false;
+
       unbindAct();
       unbindCancel();
       unbindDir();
+
+      dim.removeAllListeners();
+      items.forEach((t) => t.obj.removeAllListeners());
+
       dim.destroy();
       box.destroy();
       title.destroy();
@@ -1128,6 +1172,13 @@ export class TitleScene extends Phaser.Scene {
       selectedSceneLine.destroy();
       mark.destroy();
     };
+
+    const closeMenu = () => {
+      audio.sfx("cursor");
+      cleanup();
+    };
+
+    dim.on("pointerdown", closeMenu);
 
     const jumpTo = (idx: number) => {
       const j = jumps[idx];
@@ -1167,8 +1218,7 @@ export class TitleScene extends Phaser.Scene {
     const unbindAct = onActionDown(this, "action", () => jumpTo(pick));
 
     const unbindCancel = onActionDown(this, "cancel", () => {
-      audio.sfx("cursor");
-      cleanup();
+      closeMenu();
     });
 
     const unbindDir = onDirection(this, (d) => {
@@ -1202,5 +1252,8 @@ export class TitleScene extends Phaser.Scene {
         if (abs >= 0) jumpTo(abs);
       });
     });
+
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
   }
 }
