@@ -122,7 +122,15 @@ function GamePage() {
   }, []);
 
   const hostSlot = (
-    <div ref={slotRef} style={{ width: "100%", height: "100%" }} />
+    <div
+      ref={attachSlotRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    />
   );
 
   if (mode === "touch_landscape") {
