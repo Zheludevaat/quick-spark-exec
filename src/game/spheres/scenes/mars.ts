@@ -133,18 +133,31 @@ export class MarsPlateauScene extends Phaser.Scene {
   }
 
   create() {
+    // Publish a safe snapshot immediately so the shell never stays in a dead
+    // bootstrap state while Mars is being created.
+    setSceneSnapshot({
+      key: "MarsPlateau",
+      label: "Mars - Arena of the Strong",
+      act: ACT_BY_SCENE.MarsPlateau ?? 7,
+      zone: ZONE_LABEL.approach,
+      nodes: null,
+      marker: null,
+      idleTitle: ZONE_LABEL.approach.toUpperCase(),
+      idleBody: ZONE_IDLE_BODY.approach,
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: false,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
+
     try {
       this.bootstrapPlateau();
     } catch (err) {
       console.error("[mars] plateau bootstrap failed", err);
-
-      this.clearAftermath();
-      this.clearHoldVisuals();
-      this.destroyZoneHeaders();
-      this.roomArt?.destroy();
-      this.roomArt = undefined;
-      this.areonPresentation?.destroy();
-      this.areonPresentation = undefined;
+      this.cleanupPlateauScene();
 
       // Fail safe: do not strand the player on a black screen.
       if (this.scene.manager.keys["MetaxyHub"]) {
@@ -228,6 +241,74 @@ export class MarsPlateauScene extends Phaser.Scene {
     this.roomArt = undefined;
     this.areonPresentation?.destroy();
     this.areonPresentation = undefined;
+  }
+
+  private buildFallbackRoom(zone: MarsZone): { destroy(): void } {
+    const objects: Phaser.GameObjects.GameObject[] = [];
+
+    const add = <T extends Phaser.GameObjects.GameObject>(obj: T): T => {
+      objects.push(obj);
+      return obj;
+    };
+
+    add(
+      this.add
+        .rectangle(0, 0, GBC_W, GBC_H, 0x140708, 1)
+        .setOrigin(0, 0)
+        .setDepth(0),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 18, GBC_W, 60, 0x231014, 0.9)
+        .setOrigin(0, 0)
+        .setDepth(0),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 96, GBC_W, 48, 0x2b1518, 1)
+        .setOrigin(0, 0)
+        .setDepth(4),
+    );
+
+    if (zone === "approach" || zone === "stands" || zone === "line_yard") {
+      for (let i = 0; i < 5; i++) {
+        add(
+          this.add
+            .rectangle(i * 34 - 4, 58, 24, 24 + (i % 3) * 8, 0x402028, 1)
+            .setOrigin(0, 0)
+            .setDepth(1),
+        );
+      }
+    }
+
+    if (zone === "line_yard") {
+      add(
+        this.add.rectangle(80, 100, 36, 2, 0xf0c0a0, 0.85).setDepth(6),
+      );
+    }
+
+    if (zone === "infirmary") {
+      add(this.add.rectangle(28, 96, 20, 6, 0x503038, 1).setDepth(6));
+      add(this.add.rectangle(80, 96, 20, 6, 0x503038, 1).setDepth(6));
+      add(this.add.rectangle(132, 96, 20, 6, 0x503038, 1).setDepth(6));
+    }
+
+    if (zone === "threshold") {
+      add(
+        this.add
+          .circle(80, 108, 10, 0xd86060, 0.22)
+          .setStrokeStyle(1, 0xf0c0a0, 0.7)
+          .setDepth(6),
+      );
+    }
+
+    return {
+      destroy() {
+        objects.forEach((o) => o.destroy());
+      },
+    };
   }
 
   private clearAftermath() {
