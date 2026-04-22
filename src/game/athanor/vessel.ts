@@ -9,7 +9,7 @@
  *   Top:    4 stone groups stacked (B / W / Y / R), 3 pips each
  *   Middle: SHD n
  *   Below:  stain pips (only if stainsCarried > 0)
- *   Bottom: status chips: ★ if goldStone, ALN if sorynReleased
+ *   Bottom: status chips: ★ if goldStone, ALN if sopheneReleased
  *
  * All gain feedback (stone pop, +1 SHD chip, stain flash, ALN fade-in) is
  * driven by HUD events so it never replays on first mount or re-mount.
@@ -133,7 +133,7 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
       stainDots.forEach((d) => d.setVisible(false));
     }
     const showGold = !!save.goldStone;
-    const showAln = !!save.sorynReleased;
+    const showAln = !!save.sopheneReleased;
     goldChip.setText(showGold ? "★" : "");
     alnChip.setText(showAln ? "ALN" : "");
     if (showAln && !alnEverShown) {
@@ -206,7 +206,7 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   };
 
   const onAlnFirst = () => {
-    if (alnEverShown || !save.sorynReleased) return refresh();
+    if (alnEverShown || !save.sopheneReleased) return refresh();
     alnEverShown = true;
     alnChip.setText("ALN");
     alnChip.obj.setAlpha(0);
@@ -231,7 +231,7 @@ export function mountVesselHud(scene: Phaser.Scene, save: SaveSlot): VesselHud {
   scene.events.on(HUD_EVENTS.shardGained, onShardGain);
   scene.events.on(HUD_EVENTS.stainAdded, onStainAdded);
   scene.events.on("stats-changed", () => {
-    if (!alnEverShown && save.sorynReleased) onAlnFirst();
+    if (!alnEverShown && save.sopheneReleased) onAlnFirst();
     else refresh();
   });
 

@@ -17,7 +17,7 @@ const stoneTotal = (s: SaveSlot) =>
 export function openingWhisper(save: SaveSlot): string {
   const ins = save.act2Inscription?.trim();
   if (ins) return `"${ins.toUpperCase()}" — the sentence walks beside you.`;
-  if (save.sorynReleased) return "You return alone. The corridor knows your step.";
+  if (save.sopheneReleased) return "You return alone. The corridor knows your step.";
   return "You return. The image is waiting where you left it.";
 }
 
@@ -131,7 +131,7 @@ export function endingParagraphs(save: SaveSlot): string[] {
 
 /** Soryn bark — null when released (caller shows narrator instead). */
 export function sorynBark(save: SaveSlot, event: SorynEvent): string | null {
-  if (save.sorynReleased) return null;
+  if (save.sopheneReleased) return null;
   const log = save.soulEventLog ?? [];
   const lastSoul = log[log.length - 1] ?? "";
   switch (event) {

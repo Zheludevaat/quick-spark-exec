@@ -180,7 +180,7 @@ export class RubedoScene extends Phaser.Scene {
 
     this.isBusy = true;
     this.time.delayedCall(800, () => {
-      const intro = this.save.sorynReleased ? OPENING_ALONE : OPENING;
+      const intro = this.save.sopheneReleased ? OPENING_ALONE : OPENING;
       runDialog(this, intro, () => {
         this.isBusy = false;
       });
@@ -244,7 +244,7 @@ export class RubedoScene extends Phaser.Scene {
     if (idx >= PAIRINGS.length) return this.maybeThirteenth();
     const p = PAIRINGS[idx];
     // First, Soryn (or memory of her) prompts.
-    const lead = this.save.sorynReleased
+    const lead = this.save.sopheneReleased
       ? { who: "ROWAN", text: p.prompt.text }
       : p.prompt;
     runInquiry(
@@ -253,7 +253,7 @@ export class RubedoScene extends Phaser.Scene {
       this.optionsFor(idx, p),
       (picked) => {
         if (picked.label === "RELEASE SOPHENE") {
-          this.save.sorynReleased = true;
+          this.save.sopheneReleased = true;
           activateQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_releasing_the_daimon");
           showLoreToast(this, "on_releasing_the_daimon");
@@ -306,7 +306,7 @@ export class RubedoScene extends Phaser.Scene {
   private optionsFor(idx: number, p: typeof PAIRINGS[number]) {
     const opts: { choice: "confess" | "silent" | "ask"; label: string; reply: string }[] = [];
     opts.push({ choice: "confess", label: p.hold.label, reply: p.hold.reply });
-    if (this.save.sorynReleased) {
+    if (this.save.sopheneReleased) {
       opts.push({
         choice: "ask",
         label: "WALK IT ALONE",
@@ -318,7 +318,7 @@ export class RubedoScene extends Phaser.Scene {
       opts.push({ choice: "silent", label: p.yield.label, reply: `${reb.text} ${p.yield.reply}` });
     }
     // Mid-scene release option, only on the second pairing and only if Soryn present.
-    if (idx === 1 && !this.save.sorynReleased) {
+    if (idx === 1 && !this.save.sopheneReleased) {
       opts.push({
         choice: "ask",
         label: "RELEASE SOPHENE",
@@ -363,7 +363,7 @@ export class RubedoScene extends Phaser.Scene {
         ease: "Back.out",
       });
     }
-    if (this.save.sorynReleased) {
+    if (this.save.sopheneReleased) {
       this.rightThrone.setFillStyle(0x201008);
       this.rightThrone.setStrokeStyle(1, 0x603020);
       const lone = this.throneMarks[0];
@@ -399,7 +399,7 @@ export class RubedoScene extends Phaser.Scene {
         this,
         [
           { who: "GUEST", text: "(They sit at the table. No face. No need.)" },
-          { who: "SOPHENE", text: this.save.sorynReleased ? "(silence)" : "The thirteenth came. That is rare." },
+          { who: "SOPHENE", text: this.save.sopheneReleased ? "(silence)" : "The thirteenth came. That is rare." },
         ],
         () => {
           completeQuest(this, this.save, "meet_the_thirteenth");
@@ -431,7 +431,7 @@ export class RubedoScene extends Phaser.Scene {
     }
     unlockLore(this.save, "on_rubedo");
     showLoreToast(this, "on_rubedo");
-    const closer = this.save.sorynReleased
+    const closer = this.save.sopheneReleased
       ? { who: "ROWAN", text: `The wedding was ${wedding}. Time to seal the vessel.` }
       : { who: "SOPHENE", text: `The wedding was ${wedding}. Seal the vessel.` };
     runDialog(this, [closer], () => {

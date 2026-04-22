@@ -281,7 +281,7 @@ export class SunTrialScene extends Phaser.Scene {
   private speak(event: SorynEvent) {
     const line = sorynBark(this.save, event) ?? narratorLine(event);
     const t = new GBCText(this, 4, 28, line, {
-      color: this.save.sorynReleased ? COLOR.textGold : COLOR.textAccent,
+      color: this.save.sopheneReleased ? COLOR.textGold : COLOR.textAccent,
       depth: 160,
       maxWidthPx: GBC_W - 8,
     });

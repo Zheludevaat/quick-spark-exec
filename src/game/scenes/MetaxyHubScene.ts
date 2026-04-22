@@ -1,11 +1,15 @@
 /**
- * MetaxyHub — the connective spine of Acts 3+.
+ * MetaxyHub
  *
- * Seven planetary portals arranged in a vertical ascent. Moon, Mercury,
- * Venus, Sun, and Mars are wired and registered in createGame.ts.
- * Jupiter and Saturn remain dim portals — their plateau/trial scenes
- * are intentionally not registered yet to avoid "registered but
- * unreachable" content; they will land together as one authored pass.
+ * The connective spine between Reception and the planetary ascent.
+ *
+ * Canonically:
+ * - Metaxy is a connective layer, not a numbered act
+ * - Moon through Saturn remain the sphere chapters
+ * - the secret annex belongs to hidden side content, not the public chapter ladder
+ *
+ * Moon, Mercury, Venus, Sun, and Mars are currently wired.
+ * Jupiter and Saturn remain canonical future chapters but are not yet registered.
  */
 import * as Phaser from "phaser";
 import {
