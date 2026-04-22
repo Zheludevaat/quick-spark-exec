@@ -20,6 +20,7 @@ import {
   ShellPanel,
   ShellPanelMeta,
 } from "@/components/game/shell/ShellPanel";
+import { getPublicSceneLabel, getPublicChapterTitle } from "@/game/canon/registry";
 
 export function TouchMiniMapPanel() {
   const [scene, setScene] = useState<SceneSnapshot>(
@@ -34,13 +35,13 @@ export function TouchMiniMapPanel() {
   return (
     <ShellPanel compact tone="subdued" style={{ width: "100%" }}>
       <ShellPanelMeta style={{ marginBottom: 4 }}>
-        ACT {scene.act || "—"}
+        {getPublicChapterTitle(scene.key)}
       </ShellPanelMeta>
       <div
         className="text-[10px] mb-1 leading-tight truncate"
         style={{ color: "#eef3ff" }}
       >
-        {scene.label || "—"}
+        {getPublicSceneLabel(scene.key)}
       </div>
       {scene.zone && (
         <div
