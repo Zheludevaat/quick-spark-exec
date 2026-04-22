@@ -311,6 +311,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
     this.hint = new GBCText(this, 4, GBC_H - 22, "", { color: COLOR.textDim, depth: 100 });
 
     // Bind action
+    this.events.on("vinput-action", () => this.tryInteract());
     onActionDown(this, "action", () => this.tryInteract());
 
     // Always derive on entry — covers first visit AND returning after each
@@ -463,6 +464,16 @@ export class AthanorThresholdScene extends Phaser.Scene {
     return Math.hypot(this.rowan.x - this.reflectionPortalX, this.rowan.y - this.reflectionPortalY) < 12;
   }
 
+  private readyForSealedVessel(): boolean {
+    return (
+      !!this.save.flags.op_nigredo_done &&
+      !!this.save.flags.op_albedo_done &&
+      !!this.save.flags.op_citrinitas_done &&
+      !!this.save.flags.op_rubedo_done &&
+      !this.save.act2Inscription
+    );
+  }
+
   private refreshHint() {
     if (this.busy) return;
     const door = this.nearestDoor();
@@ -477,8 +488,13 @@ export class AthanorThresholdScene extends Phaser.Scene {
     }
     if (this.nearVessel()) {
       const n = this.save.shardInventory.length;
-      if (n > 0) this.hint.setText(`A: TRANSMUTE  (${n} SHARDS)`);
-      else this.hint.setText("VESSEL");
+      if (n > 0) {
+        this.hint.setText(`A: TRANSMUTE  (${n} SHARDS)`);
+      } else if (this.readyForSealedVessel()) {
+        this.hint.setText("A: SEAL THE VESSEL");
+      } else {
+        this.hint.setText("VESSEL");
+      }
       this.vesselPresentation?.introOnce(
         "encounter_seen_athanor_vessel",
         this.save,
@@ -556,7 +572,10 @@ export class AthanorThresholdScene extends Phaser.Scene {
       return;
     }
     if (this.nearVessel()) {
-      // If the player has shards, deposit; otherwise inspect for stage memory.
+      if (this.readyForSealedVessel()) {
+        this.gotoSealedVessel();
+        return;
+      }
       if (this.save.shardInventory.length > 0) {
         this.tryDeposit();
       } else {
@@ -577,15 +596,6 @@ export class AthanorThresholdScene extends Phaser.Scene {
         returnTo: "AthanorThreshold",
       });
       return;
-    }
-    // Coda: if all four operations done, show seal prompt
-    if (
-      this.save.flags.op_nigredo_done &&
-      this.save.flags.op_albedo_done &&
-      this.save.flags.op_citrinitas_done &&
-      this.save.flags.op_rubedo_done
-    ) {
-      this.gotoSealedVessel();
     }
   }
 
