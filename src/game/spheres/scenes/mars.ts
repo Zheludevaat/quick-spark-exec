@@ -315,6 +315,13 @@ export class MarsPlateauScene extends Phaser.Scene {
           .setStrokeStyle(1, 0xf0c0a0, 0.7)
           .setDepth(6),
       );
+    }
+
+    return {
+      destroy() {
+        objects.forEach((o) => o.destroy());
+      },
+    };
   }
 
   private buildReadabilityPass(zone: MarsZone): { destroy(): void } {
@@ -456,12 +463,6 @@ export class MarsPlateauScene extends Phaser.Scene {
     };
   }
 
-    return {
-      destroy() {
-        objects.forEach((o) => o.destroy());
-      },
-    };
-  }
 
   private clearAftermath() {
     this.aftermath.forEach((h) => h.destroy());
