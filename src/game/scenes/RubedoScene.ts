@@ -27,8 +27,8 @@ import { PAIRINGS, tallyWedding } from "../athanor/wedding";
 import { activateQuest, completeQuest } from "../sideQuests";
 
 const OPENING = [
-  { who: "SORYN", text: "Two thrones. A long table." },
-  { who: "SORYN", text: "Marry the opposites. I will argue with you." },
+  { who: "SOPHENE", text: "Two thrones. A long table." },
+  { who: "SOPHENE", text: "Marry the opposites. I will argue with you." },
 ];
 
 const OPENING_ALONE = [
@@ -252,7 +252,7 @@ export class RubedoScene extends Phaser.Scene {
       lead,
       this.optionsFor(idx, p),
       (picked) => {
-        if (picked.label === "RELEASE SORYN") {
+        if (picked.label === "RELEASE SOPHENE") {
           this.save.sorynReleased = true;
           activateQuest(this, this.save, "release_soryn");
           unlockLore(this.save, "on_releasing_the_daimon");
@@ -279,7 +279,7 @@ export class RubedoScene extends Phaser.Scene {
           runDialog(
             this,
             [
-              { who: "SORYN", text: "THANK YOU. GO HOME. — She becomes a wisp." },
+              { who: "SOPHENE", text: "THANK YOU. GO HOME. — She becomes a wisp." },
               { who: "ROWAN", text: "(The room is quieter. So am I.)" },
             ],
             () => this.runPairing(idx),
@@ -321,7 +321,7 @@ export class RubedoScene extends Phaser.Scene {
     if (idx === 1 && !this.save.sorynReleased) {
       opts.push({
         choice: "ask",
-        label: "RELEASE SORYN",
+        label: "RELEASE SOPHENE",
         reply: "THANK YOU. GO HOME.",
       });
     }
@@ -333,7 +333,7 @@ export class RubedoScene extends Phaser.Scene {
     writeSave(this.save);
     this.vesselHud.refresh();
     this.applyWeddingState(kind);
-    runDialog(this, [{ who: "SORYN", text: reply }], () => this.runPairing(idx + 1));
+    runDialog(this, [{ who: "SOPHENE", text: reply }], () => this.runPairing(idx + 1));
   }
 
   /** Light throne marks, strengthen the table seal, reflect Soryn's release. */
@@ -399,7 +399,7 @@ export class RubedoScene extends Phaser.Scene {
         this,
         [
           { who: "GUEST", text: "(They sit at the table. No face. No need.)" },
-          { who: "SORYN", text: this.save.sorynReleased ? "(silence)" : "The thirteenth came. That is rare." },
+          { who: "SOPHENE", text: this.save.sorynReleased ? "(silence)" : "The thirteenth came. That is rare." },
         ],
         () => {
           completeQuest(this, this.save, "meet_the_thirteenth");
@@ -433,7 +433,7 @@ export class RubedoScene extends Phaser.Scene {
     showLoreToast(this, "on_rubedo");
     const closer = this.save.sorynReleased
       ? { who: "ROWAN", text: `The wedding was ${wedding}. Time to seal the vessel.` }
-      : { who: "SORYN", text: `The wedding was ${wedding}. Seal the vessel.` };
+      : { who: "SOPHENE", text: `The wedding was ${wedding}. Seal the vessel.` };
     runDialog(this, [closer], () => {
       this.isDone = true;
       this.isBusy = false;

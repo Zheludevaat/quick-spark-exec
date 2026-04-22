@@ -16,8 +16,8 @@ export const marsConfig: SphereConfig = {
   trialScene: "MarsTrial",
 
   opening: [
-    { who: "SORYN", text: "Mars. The Arena of the Strong." },
-    { who: "SORYN", text: "Every wound here is worn like a medal by people who badly needed a hobby." },
+    { who: "SOPHENE", text: "Mars. The Arena of the Strong." },
+    { who: "SOPHENE", text: "Every wound here is worn like a medal by people who badly needed a hobby." },
     { who: "?", text: "Iron sand. Empty stands. The sort of silence that still smells faintly of cheering." },
   ],
 
@@ -149,12 +149,12 @@ export const marsConfig: SphereConfig = {
   trialPass: [
     { who: "AREON", text: "You stood without needing victory to certify you. That is rarer than strength." },
     { who: "AREON", text: "Take the verb. STAND is yours. Spend it where power expects nobody to interrupt." },
-    { who: "SORYN", text: "Mars releases its garment. The iron sand cools enough to remember it was once only earth." },
+    { who: "SOPHENE", text: "Mars releases its garment. The iron sand cools enough to remember it was once only earth." },
   ],
 
   trialFail: [
     { who: "AREON", text: "You fought. You did not stand. The resemblance fools many people for decades." },
-    { who: "SORYN", text: "Sit with the operations again. Return when force has become less flattering to you." },
+    { who: "SOPHENE", text: "Sit with the operations again. Return when force has become less flattering to you." },
   ],
 
   inscription: "I CAN STAND WITHOUT WINNING",

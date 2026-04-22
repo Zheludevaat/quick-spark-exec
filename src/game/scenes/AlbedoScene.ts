@@ -28,13 +28,13 @@ import { completeQuest, questStatus } from "../sideQuests";
 import { salvageShard } from "../athanor/shards";
 
 const OPENING = [
-  { who: "SORYN", text: "The bath is moonlight and salt." },
-  { who: "SORYN", text: "Each beat is a forgiveness. Yours, mostly." },
+  { who: "SOPHENE", text: "The bath is moonlight and salt." },
+  { who: "SOPHENE", text: "Each beat is a forgiveness. Yours, mostly." },
 ];
 
 const OPENING_MURKY = [
-  { who: "SORYN", text: "The water is murky tonight. You did not feed the fire." },
-  { who: "SORYN", text: "The beats will come faster. Try to keep up." },
+  { who: "SOPHENE", text: "The water is murky tonight. You did not feed the fire." },
+  { who: "SOPHENE", text: "The beats will come faster. Try to keep up." },
 ];
 
 const BATH_KEEPER_LINES = [

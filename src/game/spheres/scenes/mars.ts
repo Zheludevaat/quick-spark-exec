@@ -215,7 +215,7 @@ export class MarsPlateauScene extends Phaser.Scene {
         runDialog(
           this,
           [
-            { who: "SORYN", text: "Mars. The Arena of the Strong." },
+            { who: "SOPHENE", text: "Mars. The Arena of the Strong." },
             {
               who: "AREON",
               text: "This sphere does not ask whether you can win.",

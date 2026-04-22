@@ -22,8 +22,8 @@ export const venusConfig: SphereConfig = {
   trialPassThreshold: 7,
 
   opening: [
-    { who: "SORYN", text: "Venus. The Eternal Biennale." },
-    { who: "SORYN", text: "Every wall is a mirror with excellent taste and terrible judgment." },
+    { who: "SOPHENE", text: "Venus. The Eternal Biennale." },
+    { who: "SOPHENE", text: "Every wall is a mirror with excellent taste and terrible judgment." },
     { who: "?", text: "Three figures pose under copper light, each hoping to be mistaken for revelation and at least two of them overcommitting." },
   ],
 
@@ -155,12 +155,12 @@ export const venusConfig: SphereConfig = {
   trialPass: [
     { who: "KYPRIA", text: "You attuned without devouring. You received without turning reception into theatre." },
     { who: "KYPRIA", text: "Take the verb. ATTUNE is yours. Use it before admiration has time to put on a costume." },
-    { who: "SORYN", text: "Venus releases its garment. The Biennale dims, and for one rare moment the room risks becoming a room." },
+    { who: "SOPHENE", text: "Venus releases its garment. The Biennale dims, and for one rare moment the room risks becoming a room." },
   ],
 
   trialFail: [
     { who: "KYPRIA", text: "You performed where attuning was asked. It happens. Vanity is quicker than reverence. It usually is." },
-    { who: "SORYN", text: "Sit with the operations again. Return when the audience has become less interesting than the thing itself." },
+    { who: "SOPHENE", text: "Sit with the operations again. Return when the audience has become less interesting than the thing itself." },
   ],
 
   inscription: "I CAN BE BEAUTIFUL UNSEEN",

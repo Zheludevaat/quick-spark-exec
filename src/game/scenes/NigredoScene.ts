@@ -26,12 +26,12 @@ import { activateQuest } from "../sideQuests";
 import { onActionDown } from "../controls";
 
 const OPENING = [
-  { who: "SORYN", text: "The furnace is cold until you feed it." },
-  { who: "SORYN", text: "Three shards. Three ghosts. Sit with each." },
+  { who: "SOPHENE", text: "The furnace is cold until you feed it." },
+  { who: "SOPHENE", text: "Three shards. Three ghosts. Sit with each." },
 ];
 
 const OPENING_RUSHED = [
-  { who: "SORYN", text: "Few shards. The fire will work with what you bring." },
+  { who: "SOPHENE", text: "Few shards. The fire will work with what you bring." },
 ];
 
 /** Faint accusatory wall whispers heard while idle, before the work begins
@@ -344,9 +344,9 @@ export class NigredoScene extends Phaser.Scene {
     }
     const closing: { who: string; text: string }[] = [];
     if (this.destroyedAny) {
-      closing.push({ who: "SORYN", text: "Something burned through. The water may keep it." });
+      closing.push({ who: "SOPHENE", text: "Something burned through. The water may keep it." });
     } else {
-      closing.push({ who: "SORYN", text: "Black sediment, settling. Good." });
+      closing.push({ who: "SOPHENE", text: "Black sediment, settling. Good." });
     }
     runDialog(this, closing, () => {
       this.isDone = true;

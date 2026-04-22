@@ -19,6 +19,7 @@ import {
 } from "@/game/controls";
 import { getAudio } from "@/game/audio";
 import { subscribeGameUi, getGameUiSnapshot } from "@/game/gameUiBridge";
+import { getPublicSceneLabel } from "@/game/canon/registry";
 import { DesktopSurfaceFrame } from "./DesktopSurfaceFrame";
 import {
   ShellPanel,
@@ -366,7 +367,7 @@ export function DesktopShellSettings() {
           Settings
         </div>
         <div className="text-[10px] mt-0.5" style={{ color: "#a8c8e8" }}>
-          {scene.label || "—"}
+          {getPublicSceneLabel(scene.key) || "—"}
           {scene.zone ? ` · ${scene.zone}` : ""}
         </div>
       </div>
@@ -420,7 +421,7 @@ export function DesktopShellSettings() {
   return (
     <DesktopSurfaceFrame
       title="Settings"
-      subtitle={`${scene.label || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
+      subtitle={`${getPublicSceneLabel(scene.key) || "—"}${scene.zone ? ` · ${scene.zone}` : ""}`}
       onClose={close}
       rail={rail}
       footer={

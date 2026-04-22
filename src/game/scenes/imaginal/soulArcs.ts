@@ -463,7 +463,7 @@ const ARCS: Record<SoulId, SoulArc> = {
       {
         kind: "witness",
         missingHint: {
-          who: "SORYN",
+          who: "SOPHENE",
           text: "He needs only to be seen. You don't yet know how to stay.",
         },
         lines: [

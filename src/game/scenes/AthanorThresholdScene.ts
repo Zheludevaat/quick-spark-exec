@@ -71,24 +71,24 @@ const NODE_COLORS = [0x3a3a48, 0xe8e8f0, 0xe8c860, 0xd03838] as const;
 
 /** Short return-beats spoken once per stage as the player re-enters. */
 const STAGE_BEATS: Record<1 | 2 | 3 | 4, { who: string; text: string }> = {
-  1: { who: "SORYN", text: "The vessel has taken the black." },
-  2: { who: "SORYN", text: "The vessel brightens. Something was forgiven." },
-  3: { who: "SORYN", text: "Yellow gathers along the rim. Meaning condenses." },
-  4: { who: "SORYN", text: "The red has arrived. The vessel waits to be sealed." },
+  1: { who: "SOPHENE", text: "The vessel has taken the black." },
+  2: { who: "SOPHENE", text: "The vessel brightens. Something was forgiven." },
+  3: { who: "SOPHENE", text: "Yellow gathers along the rim. Meaning condenses." },
+  4: { who: "SOPHENE", text: "The red has arrived. The vessel waits to be sealed." },
 };
 
 const OPENING_LINES = [
-  { who: "SORYN", text: "Down the stair, Rowan. The Plateau ends here." },
+  { who: "SOPHENE", text: "Down the stair, Rowan. The Plateau ends here." },
   { who: "ROWAN", text: "What is this place?" },
-  { who: "SORYN", text: "An Athanor. The vessel that will not break what it transmutes." },
-  { who: "SORYN", text: "Bring what you carry. Put it into the glass." },
+  { who: "SOPHENE", text: "An Athanor. The vessel that will not break what it transmutes." },
+  { who: "SOPHENE", text: "Bring what you carry. Put it into the glass." },
 ];
 
 const TRANSMUTE_LINES = [
-  { who: "SORYN", text: "There is a sixth verb. You have not used it." },
-  { who: "SORYN", text: "TRANSMUTE. To turn one thing into another by attention." },
+  { who: "SOPHENE", text: "There is a sixth verb. You have not used it." },
+  { who: "SOPHENE", text: "TRANSMUTE. To turn one thing into another by attention." },
   { who: "ROWAN", text: "Like the verbs before." },
-  { who: "SORYN", text: "Worse. The matter is you." },
+  { who: "SOPHENE", text: "Worse. The matter is you." },
 ];
 
 export class AthanorThresholdScene extends Phaser.Scene {
@@ -376,7 +376,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         runDialog(
           this,
           [
-            { who: "SORYN", text: "The bath kept something. The water always does." },
+            { who: "SOPHENE", text: "The bath kept something. The water always does." },
           ],
           () => (this.busy = false),
         );
@@ -416,7 +416,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
         this.busy = true;
         runDialog(
           this,
-          [{ who: this.save.sorynReleased ? "ROWAN" : "SORYN", text: "All four are done. The vessel waits to be sealed." }],
+          [{ who: this.save.sorynReleased ? "ROWAN" : "SOPHENE", text: "All four are done. The vessel waits to be sealed." }],
           () => {
             this.busy = false;
             this.gotoSealedVessel();
@@ -615,7 +615,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private tryDeposit() {
     if (this.save.shardInventory.length === 0) {
       this.busy = true;
-      runDialog(this, [{ who: "SORYN", text: "The vessel is full enough. Walk." }], () => {
+      runDialog(this, [{ who: "SOPHENE", text: "The vessel is full enough. Walk." }], () => {
         this.busy = false;
       });
       return;
@@ -665,7 +665,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.busy = true;
       runDialog(
         this,
-        [{ who: "SORYN", text: "Not yet. The order matters here." }],
+        [{ who: "SOPHENE", text: "Not yet. The order matters here." }],
         () => (this.busy = false),
       );
       return;
@@ -674,7 +674,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.busy = true;
       runDialog(
         this,
-        [{ who: "SORYN", text: "First, the vessel. Then the door." }],
+        [{ who: "SOPHENE", text: "First, the vessel. Then the door." }],
         () => (this.busy = false),
       );
       return;
@@ -683,7 +683,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
       this.busy = true;
       runDialog(
         this,
-        [{ who: "SORYN", text: "That work is finished. Look at the vessel." }],
+        [{ who: "SOPHENE", text: "That work is finished. Look at the vessel." }],
         () => (this.busy = false),
       );
       return;
@@ -722,7 +722,7 @@ export class AthanorThresholdScene extends Phaser.Scene {
   private runApologyGate() {
     runInquiry(
       this,
-      { who: "SORYN", text: "Before the stair — the saint. You forced her hand." },
+      { who: "SOPHENE", text: "Before the stair — the saint. You forced her hand." },
       [
         {
           choice: "confess",

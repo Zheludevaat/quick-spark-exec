@@ -1180,11 +1180,11 @@ export class VenusPlateauScene extends Phaser.Scene {
         this,
         [
           {
-            who: "SORYN",
+            who: "SOPHENE",
             text: "ATTUNE means do less than you want to. Hold still long enough for the thing to arrive in its own name.",
           },
           {
-            who: "SORYN",
+            who: "SOPHENE",
             text: "Movement breaks it. Reaching breaks it. Let the moment touch you before you answer it.",
           },
         ],

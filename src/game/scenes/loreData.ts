@@ -118,7 +118,7 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
   daimon_binding: {
     id: "daimon_binding",
     title: "ON DAIMONS",
-    source: "SORYN, AT THE THRESHOLD",
+    source: "SOPHENE, AT THE THRESHOLD",
     body: [
       "A DAIMON IS NOT A GUIDE.",
       "A DAIMON IS THE PART OF YOU",
@@ -354,7 +354,7 @@ export const LORE_ENTRIES: Record<string, LoreEntry> = {
   on_the_shades: {
     id: "on_the_shades",
     title: "ON THE SHADES",
-    source: "SORYN, OFFHAND",
+    source: "SOPHENE, OFFHAND",
     body: [
       "FAME IS A LANTERN.",
       "THE PLATEAU NOTICES LANTERNS.",

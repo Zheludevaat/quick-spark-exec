@@ -28,15 +28,15 @@ export type Pairing = {
 export const PAIRINGS: Pairing[] = [
   {
     id: "black_white",
-    prompt: { who: "SORYN", text: "Black and white. Pair them?" },
+    prompt: { who: "SOPHENE", text: "Black and white. Pair them?" },
     hold: {
       label: "HOLD: SHADOW WEDS PURITY",
       reply: "She presses. You hold. The wax does not break.",
     },
     rebuttal: (save) =>
       save.shadesEncountered["inquisitor"] === "sat_with"
-        ? { who: "SORYN", text: "But the Inquisitor sat with you. Why marry him to anyone?" }
-        : { who: "SORYN", text: "Shadow needs no bride. Let it stand alone." },
+        ? { who: "SOPHENE", text: "But the Inquisitor sat with you. Why marry him to anyone?" }
+        : { who: "SOPHENE", text: "Shadow needs no bride. Let it stand alone." },
     yield: {
       label: "YIELD: LET THE SHADOW STAND",
       reply: "She nods. The pairing softens. Something stays unmarried.",
@@ -44,19 +44,19 @@ export const PAIRINGS: Pairing[] = [
   },
   {
     id: "yellow_red",
-    prompt: { who: "SORYN", text: "Yellow and red. Mind and heart. Pair them?" },
+    prompt: { who: "SOPHENE", text: "Yellow and red. Mind and heart. Pair them?" },
     hold: {
       label: "HOLD: MIND WEDS HEART",
       reply: "Steady. The room warms.",
     },
     rebuttal: (save) => {
       if (hasChoice(save, "weighed_heart", "held")) {
-        return { who: "SORYN", text: "You held the feather. You know what mind costs heart." };
+        return { who: "SOPHENE", text: "You held the feather. You know what mind costs heart." };
       }
       if (Object.values(save.convictions).filter(Boolean).length >= 3) {
-        return { who: "SORYN", text: "Three convictions and a wedding? Greedy." };
+        return { who: "SOPHENE", text: "Three convictions and a wedding? Greedy." };
       }
-      return { who: "SORYN", text: "Heart was always the senior partner. Don't wed them — let her speak." };
+      return { who: "SOPHENE", text: "Heart was always the senior partner. Don't wed them — let her speak." };
     },
     yield: {
       label: "YIELD: HEART SPEAKS, MIND LISTENS",
