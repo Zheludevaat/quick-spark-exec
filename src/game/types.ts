@@ -105,7 +105,7 @@ export type WeddingType = "strong" | "gentle" | "fractured";
 
 /** Roman numeral + chapter title shown on the title screen. */
 export const ACT_TITLES: Record<number, string> = {
-  0: "PRELUDE - THE LAST DAY",
+  0: "PRELUDE - LAST DAY / CROSSING",
   1: "ACT 0 - RECEPTION",
   2: "ACT I - MOON",
   3: "ACT II - MERCURY",
