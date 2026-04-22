@@ -1,35 +1,21 @@
 import { applyCanonMigration } from "./canon/migrateCanon";
+import {
+  LEGACY_ACT_NUMBER_BY_SCENE,
+  LEGACY_ACT_TITLES,
+  PUBLIC_SCENE_LABELS,
+  type SceneKey as RegistrySceneKey,
+  type SphereKey as RegistrySphereKey,
+} from "./canon/registry";
 
 export type Stats = { clarity: number; compassion: number; courage: number };
 
-export type SceneKey =
-  | "LastDay"
-  | "Crossing"
-  | "SilverThreshold"
-  | "ImaginalRealm"
-  | "AthanorThreshold"
-  | "Nigredo"
-  | "Albedo"
-  | "Citrinitas"
-  | "Rubedo"
-  | "SealedVessel"
-  | "MetaxyHub"
-  | "MoonTrial"
-  | "MercuryPlateau"
-  | "MercuryTrial"
-  | "VenusPlateau"
-  | "VenusTrial"
-  | "CuratedSelf"
-  | "SunPlateau"
-  | "SunTrial"
-  | "MarsPlateau"
-  | "MarsTrial"
-  | "JupiterPlateau"
-  | "JupiterTrial"
-  | "SaturnPlateau"
-  | "SaturnTrial"
-  | "EndingsRouter"
-  | "Epilogue";
+/**
+ * Re-export of canonical scene/sphere keys from the registry. The
+ * registry is the single source of truth — this alias survives only
+ * for the existing import path.
+ */
+export type SceneKey = RegistrySceneKey;
+export type SphereKey = RegistrySphereKey;
 
 // ===== Canonical support types (added in canon-alignment pass) =====
 export type GarmentKey = SphereKey;
@@ -50,41 +36,15 @@ export type RelicId = string;
 
 export type ImaginalRegion = "pools" | "field" | "corridor";
 
-/** The seven planetary spheres of the Metaxy ascent. */
-export type SphereKey = "moon" | "mercury" | "venus" | "sun" | "mars" | "jupiter" | "saturn";
-
 export type Calling = "scholar" | "caregiver" | "reformer";
 
-/** Canonical act number per scene. Extend as new acts ship. */
-export const ACT_BY_SCENE: Record<SceneKey, number> = {
-  LastDay: 0,
-  Crossing: 0,
-  SilverThreshold: 1,
-  ImaginalRealm: 2,
-  AthanorThreshold: 2,
-  Nigredo: 2,
-  Albedo: 2,
-  Citrinitas: 2,
-  Rubedo: 2,
-  SealedVessel: 2,
-  MetaxyHub: 2,
-  MoonTrial: 2,
-  MercuryPlateau: 3,
-  MercuryTrial: 3,
-  VenusPlateau: 4,
-  VenusTrial: 4,
-  CuratedSelf: 5,
-  SunPlateau: 5,
-  SunTrial: 5,
-  MarsPlateau: 6,
-  MarsTrial: 6,
-  JupiterPlateau: 7,
-  JupiterTrial: 7,
-  SaturnPlateau: 8,
-  SaturnTrial: 8,
-  EndingsRouter: 9,
-  Epilogue: 9,
-};
+/**
+ * Canonical act number per scene — COMPATIBILITY SHIM ONLY.
+ * Public UI MUST NOT consume this. Use registry `getPublicChapterTitle`
+ * for chapter identity. Survives only for save persistence
+ * (`save.act = ACT_BY_SCENE[scene]`).
+ */
+export const ACT_BY_SCENE: Record<SceneKey, number> = LEGACY_ACT_NUMBER_BY_SCENE;
 
 /** Stable shard ID — derived from Act 1 quest completions + 2 prelude defaults. */
 export type ShardId =
@@ -103,50 +63,17 @@ export type StoneColor = "black" | "white" | "yellow" | "red";
 
 export type WeddingType = "strong" | "gentle" | "fractured";
 
-/** Roman numeral + chapter title shown on the title screen. */
-export const ACT_TITLES: Record<number, string> = {
-  0: "PRELUDE - LAST DAY / CROSSING",
-  1: "ACT 0 - RECEPTION",
-  2: "ACT I - MOON / THE GREAT WORK",
-  3: "ACT II - MERCURY",
-  4: "ACT III - VENUS",
-  5: "ACT IV - SUN",
-  6: "ACT V - MARS",
-  7: "ACT VI - JUPITER",
-  8: "ACT VII - SATURN",
-  9: "EPILOGUE - BEYOND THE SPHERES",
-};
+/**
+ * Roman numeral + chapter title — COMPATIBILITY SHIM ONLY, derived
+ * from registry. UI must use `getPublicChapterTitle(scene)` instead.
+ */
+export const ACT_TITLES: Record<number, string> = LEGACY_ACT_TITLES;
 
-/** Per-scene short label for the Continue row. */
-export const SCENE_LABEL: Record<SceneKey, string> = {
-  LastDay: "The Last Day",
-  Crossing: "The Crossing",
-  SilverThreshold: "Reception - Silver Threshold",
-  ImaginalRealm: "Moon - Mirror's Palace",
-  AthanorThreshold: "Great Work - Athanor Threshold",
-  Nigredo: "Great Work - Nigredo",
-  Albedo: "Great Work - Albedo",
-  Citrinitas: "Great Work - Citrinitas",
-  Rubedo: "Great Work - Rubedo",
-  SealedVessel: "Great Work - Sealed Vessel",
-  MetaxyHub: "Metaxy",
-  MoonTrial: "Moon - Selenos' Trial",
-  MercuryPlateau: "Mercury - Tower of Reasons",
-  MercuryTrial: "Mercury - Hermaia's Trial",
-  VenusPlateau: "Venus - Eternal Biennale",
-  VenusTrial: "Venus - Kypria's Trial",
-  CuratedSelf: "Sun - Curated Self",
-  SunPlateau: "Sun - Hall of Illuminated Testimony",
-  SunTrial: "Sun - Helion's Trial",
-  MarsPlateau: "Mars - Arena of the Strong",
-  MarsTrial: "Mars - Areon's Trial",
-  JupiterPlateau: "Jupiter - Grand Tribunal of Perfect Justice",
-  JupiterTrial: "Jupiter - Jovian's Trial",
-  SaturnPlateau: "Saturn - Avenue of Accepted Fate",
-  SaturnTrial: "Saturn - Kronikos' Trial",
-  EndingsRouter: "Beyond the Spheres",
-  Epilogue: "Beyond the Spheres",
-};
+/**
+ * Per-scene short label — COMPATIBILITY SHIM ONLY, derived from
+ * registry. UI must use `getPublicSceneLabel(scene)` instead.
+ */
+export const SCENE_LABEL: Record<SceneKey, string> = PUBLIC_SCENE_LABELS;
 
 export type SaveSlot = {
   scene: SceneKey;
