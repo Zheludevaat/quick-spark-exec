@@ -27,7 +27,7 @@ import {
   gbcWipe,
   spawnMotes,
 } from "../../gbcArt";
-import { getAudio } from "../../audio";
+import { getAudio, SONG_SILVER, SONG_BOSS } from "../../audio";
 import { onActionDown } from "../../controls";
 import { venusConfig } from "../configs/venus";
 import { askSphere } from "../SpherePlateauScene";
@@ -177,6 +177,8 @@ export class VenusPlateauScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(380);
+
+    getAudio().music.play("venus_plateau", SONG_SILVER);
 
     // Bake bespoke Venus art assets once per scene lifetime.
     bakeVenusTiles(this);
@@ -638,6 +640,18 @@ export class VenusPlateauScene extends Phaser.Scene {
       onAct: () => this.enterTrial(),
     });
 
+    // Bespoke settle route — stay in Venus instead of facing Kypria.
+    this.hotspots.push({
+      id: "settle_here",
+      x: GBC_W / 2 - 28,
+      y: 112,
+      r: 9,
+      label: this.canSettleHere() ? "SETTLE IN THE BIENNALE" : "settling not yet offered",
+      enabled: () => this.canSettleHere(),
+      badge: () => (this.save.plateauSettled.venus ? "*" : null),
+      onAct: () => this.trySettle(),
+    });
+
     this.doors.push({ to: "atrium", x: 0, y: 50, w: 8, h: 30, label: "← ATRIUM" });
     this.doors.push({ to: "ladder", x: GBC_W - 8, y: 50, w: 8, h: 30, label: "LADDER →" });
   }
@@ -1076,6 +1090,33 @@ export class VenusPlateauScene extends Phaser.Scene {
     gbcWipe(this, () => this.scene.start("VenusTrial", { save: this.save }));
   }
 
+  private canSettleHere(): boolean {
+    return venusCrackingReady(this.save) && !this.save.garmentsReleased.venus;
+  }
+
+  private trySettle() {
+    if (!this.canSettleHere()) {
+      getAudio().sfx("cancel");
+      this.flashHint("the room has not yet earned your staying.");
+      return;
+    }
+
+    this.modal = true;
+    runDialog(
+      this,
+      venusConfig.settleText.map((text) => ({ who: "?", text })),
+      () => {
+        this.modal = false;
+        this.save.plateauSettled = { ...this.save.plateauSettled, venus: true };
+        this.save.scene = "Epilogue";
+        this.save.act = ACT_BY_SCENE.Epilogue;
+        writeSave(this.save);
+        this.destroyKypriaPresentation();
+        gbcWipe(this, () => this.scene.start("Epilogue", { save: this.save }));
+      },
+    );
+  }
+
   private toHub() {
     this.save.scene = "MetaxyHub";
     writeSave(this.save);
@@ -1095,7 +1136,9 @@ export class VenusPlateauScene extends Phaser.Scene {
 
   private placeSideGuest(g: VenusSideGuest) {
     const softened = !!this.save.flags[VENUS_FLAGS[g.softFlag]];
+    const alreadyHeard = !!this.save.flags[g.listenedFlag];
     const baseAlpha = softened ? 0.95 : 0.78;
+
     const body = this.add.rectangle(g.x, g.y, 7, 12, g.color, baseAlpha).setDepth(20);
     body.setStrokeStyle(1, 0x000000, 0.55);
     const head = this.add.circle(g.x, g.y - 8, 3, g.color, baseAlpha).setDepth(21);
@@ -1113,14 +1156,23 @@ export class VenusPlateauScene extends Phaser.Scene {
       x: g.x,
       y: g.y,
       r: 11,
-      label: `LISTEN: ${g.name}`,
+      label: alreadyHeard ? `HEAR AGAIN: ${g.name}` : `LISTEN: ${g.name}`,
       onAct: () => {
+        const source = softened ? g.barksAfter : g.barksBefore;
+        const firstListen = !this.save.flags[g.listenedFlag];
+
         this.save.flags[g.listenedFlag] = true;
         writeSave(this.save);
-        const lines = (softened ? g.barksAfter : g.barksBefore).map((t) => ({
+
+        const chosen = firstListen
+          ? source
+          : [source[source.length - 1] ?? source[0] ?? "..."];
+
+        const lines = chosen.map((t) => ({
           who: g.name,
           text: t,
         }));
+
         this.modal = true;
         runDialog(this, lines, () => {
           this.modal = false;
@@ -1298,6 +1350,8 @@ export class VenusTrialScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(venusConfig.bg);
     this.cameras.main.fadeIn(420);
 
+    getAudio().music.play("venus_trial", SONG_BOSS);
+
     // Bake bespoke Venus art assets and lay down the chamber.
     bakeVenusTiles(this);
     bakeAllVenusSprites(this);
@@ -1438,6 +1492,8 @@ export class VenusTrialScene extends Phaser.Scene {
   private resolveTrial() {
     if (venusTrialPassed(this.state)) {
       awardVenusTrialPass(this.save, venusConfig.inscription);
+      this.save.scene = "MetaxyHub";
+      this.save.act = ACT_BY_SCENE.MetaxyHub;
       writeSave(this.save);
 
       // Delicate mirror-rose memory mark — Venus remembers Kypria's verdict
@@ -1463,8 +1519,12 @@ export class VenusTrialScene extends Phaser.Scene {
       });
       return;
     }
+
     this.save.coherence = Math.max(0, this.save.coherence - 15);
+    this.save.scene = "VenusPlateau";
+    this.save.act = ACT_BY_SCENE.VenusPlateau;
     writeSave(this.save);
+
     runDialog(this, venusConfig.trialFail, () => {
       this.destroyKypriaPresentation();
       gbcWipe(this, () => this.scene.start("VenusPlateau", { save: this.save }));

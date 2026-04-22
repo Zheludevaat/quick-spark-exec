@@ -141,6 +141,7 @@ export function newSave(): SaveSlot {
     endingChosen: null,
     plateauSettled: {},
     puzzleState: {},
+    venusZone: null,
     sunZone: null,
     sunWitnessHeard: {},
     sunOpsDone: {},
