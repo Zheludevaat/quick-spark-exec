@@ -16,9 +16,6 @@ import { runDialog } from "./scenes/hud";
 import {
   setInquirySnapshot,
   clearInquirySnapshot,
-  setModalSnapshot,
-  clearModalSnapshot,
-  getGameUiSnapshot,
 } from "./gameUiBridge";
 
 export type InquiryChoice = "observe" | "ask" | "confess" | "silent";
@@ -103,13 +100,6 @@ function openShellInquiry(
       })),
       cursor,
     });
-    setModalSnapshot({
-      surface: "inquiry",
-      mode: "shell",
-      title: prompt.who || null,
-      subtitle: null,
-      blocking: true,
-    });
   };
 
   publish();
@@ -170,9 +160,6 @@ function openShellInquiry(
     window.removeEventListener("hermetic-inquiry-pick", onShellPick as EventListener);
     window.removeEventListener("hermetic-inquiry-cursor", onShellCursor as EventListener);
     clearInquirySnapshot();
-    if (getGameUiSnapshot().modal.surface === "inquiry") {
-      clearModalSnapshot();
-    }
   };
 }
 
