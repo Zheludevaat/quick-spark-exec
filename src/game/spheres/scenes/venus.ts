@@ -266,24 +266,6 @@ export class VenusPlateauScene extends Phaser.Scene {
   // Zone build
   // -----------------------------------------------------------------
 
-  private loadZone(zone: VenusZoneId, silent = false) {
-    this.zone = zone;
-    setVenusZone(this.save, zone);
-    writeSave(this.save);
-
-    // Tear down previous zone visuals
-    this.destroyKypriaPresentation();
-    this.root.removeAll(true);
-    this.hotspots = [];
-    this.doors = [];
-    this.hotspotMarkers.forEach((g) => g.destroy());
-    this.hotspotMarkers = [];
-    this.cancelActiveAttune(true);
-
-    this.zoneLabel.setText(`VENUS - ${VENUS_ZONE_LABEL[zone].toUpperCase()}`);
-    this.subtitle.setText(this.subtitleFor(zone));
-    publishVenusMinimap(zone);
-
   private loadZone(
     zone: VenusZoneId,
     silent = false,
