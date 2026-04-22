@@ -74,9 +74,11 @@ export const RECEPTION_OPTIONAL_INTERACTIONS: ActInteraction<ReceptionHostScene>
     kind: "ritual",
     prompt: "A: BE STILL",
     onceFlag: "threshold_quiet_completion",
+    singleUse: true,
     hiddenUntilFlags: ["elem_air", "elem_fire", "elem_water", "elem_earth"],
     aftermathStyle: "tone_shift",
     onInteract: ({ scene, save }) => {
+      if (save.flags.threshold_quiet_completion) return;
       save.flags.threshold_quiet_completion = true;
       save.daimonBond = Math.min(10, save.daimonBond + 1);
       scene.speak([
