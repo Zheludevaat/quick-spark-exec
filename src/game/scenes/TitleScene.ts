@@ -650,32 +650,355 @@ export class TitleScene extends Phaser.Scene {
       .on("pointerdown", () => this.openSkipMenu());
   }
 
+  private buildDevJumpEntries(): DevJumpEntry[] {
+    const all: DevJumpEntry[] = [
+      { label: "PRELUDE · LAST DAY", scene: "LastDay", seed: "prelude_last_day" },
+      { label: "PRELUDE · CROSSING", scene: "Crossing", seed: "prelude_crossing" },
+
+      { label: "ACT 0 · RECEPTION", scene: "SilverThreshold", seed: "reception" },
+
+      { label: "ACT I · MOON PLATEAU", scene: "ImaginalRealm", seed: "moon_plateau" },
+      { label: "ACT I · SELENOS' TRIAL", scene: "MoonTrial", seed: "moon_trial" },
+
+      { label: "METAXY", scene: "MetaxyHub", seed: "metaxy" },
+
+      { label: "SECRET · GREAT WORK ANNEX", scene: "AthanorThreshold", seed: "secret_annex" },
+      { label: "SECRET · NIGREDO", scene: "Nigredo", seed: "secret_annex" },
+      { label: "SECRET · ALBEDO", scene: "Albedo", seed: "secret_annex" },
+      { label: "SECRET · CITRINITAS", scene: "Citrinitas", seed: "secret_annex" },
+      { label: "SECRET · RUBEDO", scene: "Rubedo", seed: "secret_annex" },
+      { label: "SECRET · SEALED VESSEL", scene: "SealedVessel", seed: "secret_annex" },
+
+      { label: "ACT II · MERCURY PLATEAU", scene: "MercuryPlateau", seed: "mercury_plateau" },
+      { label: "ACT II · HERMAIA'S TRIAL", scene: "MercuryTrial", seed: "mercury_trial" },
+
+      { label: "ACT III · VENUS PLATEAU", scene: "VenusPlateau", seed: "venus_plateau" },
+      { label: "ACT III · KYPRIA'S TRIAL", scene: "VenusTrial", seed: "venus_trial" },
+
+      { label: "ACT IV · SUN PLATEAU", scene: "SunPlateau", seed: "sun_plateau" },
+      { label: "ACT IV · CURATED SELF", scene: "CuratedSelf", seed: "sun_district" },
+      { label: "ACT IV · HELION'S TRIAL", scene: "SunTrial", seed: "sun_trial" },
+
+      { label: "ACT V · MARS PLATEAU", scene: "MarsPlateau", seed: "mars_plateau" },
+      { label: "ACT V · AREON'S TRIAL", scene: "MarsTrial", seed: "mars_trial" },
+
+      { label: "EPILOGUE · ENDINGS ROUTER", scene: "EndingsRouter", seed: "endings_router" },
+      { label: "EPILOGUE · BEYOND THE SPHERES", scene: "Epilogue", seed: "epilogue" },
+    ];
+
+    return all.filter((entry) => !!this.scene.manager.keys[entry.scene]);
+  }
+
+  private seedDevBase(slot = newSave()) {
+    slot.stats = { clarity: 9, compassion: 9, courage: 9 };
+    slot.coherence = 100;
+    slot.clarityPoints = 18;
+    slot.daimonBond = 6;
+    slot.sopheneNamed = true;
+
+    slot.plateauSettled = {};
+    slot.gnosticAccepted = false;
+    slot.endingChosen = null;
+
+    slot.sphereVerbs = {
+      witness: true,
+      name: false,
+      attune: false,
+      expose: false,
+      stand: false,
+      weigh: false,
+      release: false,
+    };
+
+    slot.garmentsReleased = {};
+    slot.garmentWeights = {
+      moon: 3,
+      mercury: 3,
+      venus: 3,
+      sun: 3,
+      mars: 3,
+      jupiter: 3,
+      saturn: 3,
+    };
+
+    slot.resonanceProfile = {
+      witnessing: 2,
+      control: 0,
+      possession: 0,
+      performance: 0,
+      struggle: 0,
+      structure: 1,
+      surrender: 1,
+    };
+
+    slot.memoryLattice = [];
+    slot.relics = [];
+
+    slot.convictions = {
+      ...(slot.convictions ?? {}),
+      i_am_loved: true,
+      i_can_rest: true,
+      i_will_remain: true,
+    };
+
+    slot.shadesEncountered = {
+      ...(slot.shadesEncountered ?? {}),
+      the_critic: "sat_with",
+      the_orphan: "sat_with",
+      the_lover: "sat_with",
+    };
+
+    return slot;
+  }
+
+  private seedReceptionComplete(slot: ReturnType<typeof newSave>) {
+    slot.flags.intro_done = true;
+    slot.flags.elem_air = true;
+    slot.flags.elem_fire = true;
+    slot.flags.elem_water = true;
+    slot.flags.elem_earth = true;
+    slot.flags.elements_done = true;
+    slot.flags.daimon_bound = true;
+
+    slot.flags.sophene_bound = true;
+    slot.flags.sophene_threshold_intro_seen = true;
+    slot.flags.sophene_daimon_intro_seen = true;
+    slot.flags.encounter_seen_sophene_threshold = true;
+    slot.flags.encounter_seen_sophene_daimon = true;
+
+    slot.flags.soryn_bound = true;
+    slot.flags.soryn_threshold_intro_seen = true;
+    slot.flags.soryn_daimon_intro_seen = true;
+    slot.flags.encounter_seen_soryn_threshold = true;
+    slot.flags.encounter_seen_soryn_daimon = true;
+
+    slot.flags.stone_found = true;
+    slot.flags.reception_observe_taught = true;
+    slot.flags.threshold_gate_preview_seen = true;
+    slot.flags.threshold_basin_seen = true;
+    slot.flags.threshold_quiet_completion = true;
+
+    slot.sopheneNamed = true;
+    slot.daimonBond = Math.max(slot.daimonBond, 4);
+  }
+
+  private seedMoonComplete(slot: ReturnType<typeof newSave>) {
+    slot.garmentsReleased.moon = true;
+    slot.garmentWeights.moon = 0;
+    slot.sphereVerbs.witness = true;
+    slot.flags.sphere_moon_trial_passed = true;
+    slot.soulsCompleted = Math.max(slot.soulsCompleted, 5);
+    slot.act2Inscription = slot.act2Inscription ?? "I AM WHAT I MET";
+  }
+
+  private seedAlchemyUnlocked(slot: ReturnType<typeof newSave>) {
+    slot.flags.alchemy_hint_reception_basin = true;
+    slot.flags.alchemy_hint_moon_flaw = true;
+    slot.flags.alchemy_hint_metaxy_whisper = true;
+    slot.flags.alchemy_secret_annex_unlocked = true;
+    slot.flags.alchemy_secret_annex_seen = true;
+
+    slot.verbs = { ...slot.verbs, witness: true, transmute: true };
+    slot.blackStones = 3;
+    slot.whiteStones = 3;
+    slot.yellowStones = 3;
+    slot.redStones = 3;
+    slot.goldStone = true;
+  }
+
+  private seedMercuryPlateauReady(slot: ReturnType<typeof newSave>) {
+    this.seedReceptionComplete(slot);
+    this.seedMoonComplete(slot);
+    slot.flags.sphere_mercury_seen = false;
+  }
+
+  private seedMercuryTrialReady(slot: ReturnType<typeof newSave>) {
+    this.seedMercuryPlateauReady(slot);
+
+    slot.flags.sphere_mercury_soul_the_defender = true;
+    slot.flags.sphere_mercury_soul_the_pedant = true;
+    slot.flags.sphere_mercury_soul_the_casuist = true;
+    slot.flags.sphere_mercury_op_argument = true;
+    slot.flags.sphere_mercury_op_proof = true;
+    slot.flags.sphere_mercury_op_refutation = true;
+    slot.flags.sphere_mercury_op_silence = true;
+    slot.flags.sphere_mercury_cracked = true;
+    slot.flags.sphere_mercury_plateau_done = true;
+  }
+
+  private seedMercuryComplete(slot: ReturnType<typeof newSave>) {
+    this.seedMercuryTrialReady(slot);
+    slot.flags.sphere_mercury_trial_passed = true;
+    slot.garmentsReleased.mercury = true;
+    slot.garmentWeights.mercury = 0;
+    slot.sphereVerbs.name = true;
+    if (!slot.relics.includes("I CAN NAME WHAT I DO NOT KNOW")) {
+      slot.relics.push("I CAN NAME WHAT I DO NOT KNOW");
+    }
+  }
+
+  private seedVenusPlateauReady(slot: ReturnType<typeof newSave>) {
+    this.seedMercuryComplete(slot);
+  }
+
+  private seedVenusTrialReady(slot: ReturnType<typeof newSave>) {
+    this.seedVenusPlateauReady(slot);
+    slot.flags.introSeen = true;
+    slot.flags.trialThresholdSeen = true;
+  }
+
+  private seedVenusComplete(slot: ReturnType<typeof newSave>) {
+    this.seedVenusTrialReady(slot);
+    slot.garmentsReleased.venus = true;
+    slot.garmentWeights.venus = 0;
+    slot.sphereVerbs.attune = true;
+  }
+
+  private seedSunPlateauReady(slot: ReturnType<typeof newSave>) {
+    this.seedVenusComplete(slot);
+    slot.flags.legacy_sun_bridge = true;
+  }
+
+  private seedSunTrialReady(slot: ReturnType<typeof newSave>) {
+    this.seedSunPlateauReady(slot);
+    slot.sunTrialReady = true;
+  }
+
+  private seedSunComplete(slot: ReturnType<typeof newSave>) {
+    this.seedSunTrialReady(slot);
+    slot.garmentsReleased.sun = true;
+    slot.garmentWeights.sun = 0;
+    slot.sphereVerbs.expose = true;
+  }
+
+  private seedMarsPlateauReady(slot: ReturnType<typeof newSave>) {
+    this.seedSunComplete(slot);
+  }
+
+  private seedMarsTrialReady(slot: ReturnType<typeof newSave>) {
+    this.seedMarsPlateauReady(slot);
+  }
+
+  private seedMarsComplete(slot: ReturnType<typeof newSave>) {
+    this.seedMarsTrialReady(slot);
+    slot.garmentsReleased.mars = true;
+    slot.garmentWeights.mars = 0;
+    slot.sphereVerbs.stand = true;
+  }
+
+  private seedEndgameReady(slot: ReturnType<typeof newSave>) {
+    this.seedMarsComplete(slot);
+
+    slot.garmentsReleased.jupiter = true;
+    slot.garmentWeights.jupiter = 0;
+    slot.sphereVerbs.weigh = true;
+
+    slot.garmentsReleased.saturn = true;
+    slot.garmentWeights.saturn = 0;
+    slot.sphereVerbs.release = true;
+  }
+
+  private buildDevSkipSave(seed: DevJumpSeed, scene: SceneKey) {
+    const slot = this.seedDevBase(newSave());
+
+    switch (seed) {
+      case "prelude_last_day":
+        break;
+
+      case "prelude_crossing":
+        break;
+
+      case "reception":
+        break;
+
+      case "moon_plateau":
+        this.seedReceptionComplete(slot);
+        break;
+
+      case "moon_trial":
+        this.seedReceptionComplete(slot);
+        slot.soulsCompleted = Math.max(slot.soulsCompleted, 3);
+        break;
+
+      case "metaxy":
+        this.seedReceptionComplete(slot);
+        this.seedMoonComplete(slot);
+        break;
+
+      case "secret_annex":
+        this.seedReceptionComplete(slot);
+        this.seedMoonComplete(slot);
+        this.seedAlchemyUnlocked(slot);
+        break;
+
+      case "mercury_plateau":
+        this.seedMercuryPlateauReady(slot);
+        break;
+
+      case "mercury_trial":
+        this.seedMercuryTrialReady(slot);
+        break;
+
+      case "venus_plateau":
+        this.seedVenusPlateauReady(slot);
+        break;
+
+      case "venus_trial":
+        this.seedVenusTrialReady(slot);
+        break;
+
+      case "sun_plateau":
+        this.seedSunPlateauReady(slot);
+        break;
+
+      case "sun_district":
+        this.seedSunPlateauReady(slot);
+        break;
+
+      case "sun_trial":
+        this.seedSunTrialReady(slot);
+        break;
+
+      case "mars_plateau":
+        this.seedMarsPlateauReady(slot);
+        break;
+
+      case "mars_trial":
+        this.seedMarsTrialReady(slot);
+        break;
+
+      case "endings_router":
+        this.seedEndgameReady(slot);
+        break;
+
+      case "epilogue":
+        this.seedEndgameReady(slot);
+        break;
+    }
+
+    slot.scene = scene;
+    slot.act = ACT_BY_SCENE[scene] ?? slot.act;
+    return slot;
+  }
+
   /**
-   * DEV-only skip menu — jumps to any scene with a fresh maxed save so the
-   * player can spot-check Act 2/3 work without replaying the whole game.
+   * DEV-only scene jump menu — auto-filters to currently registered scenes
+   * and seeds a coherent canonical save before launching.
    */
   private openSkipMenu() {
     const audio = getAudio();
     audio.sfx("cursor");
 
-    const jumps: { label: string; scene: SceneKey; act: number }[] = [
-      { label: "ACT 0 · LAST DAY", scene: "LastDay", act: 0 },
-      { label: "ACT 0 · CROSSING", scene: "Crossing", act: 0 },
-      { label: "ACT 1 · SILVER THR.", scene: "SilverThreshold", act: 1 },
-      { label: "ACT 2 · IMAGINAL", scene: "ImaginalRealm", act: 2 },
-      { label: "ACT 3 · MOON THR.", scene: "AthanorThreshold", act: 3 },
-      { label: "ACT 3 · NIGREDO", scene: "Nigredo", act: 3 },
-      { label: "ACT 3 · ALBEDO", scene: "Albedo", act: 3 },
-      { label: "ACT 3 · CITRINITAS", scene: "Citrinitas", act: 3 },
-      { label: "ACT 3 · RUBEDO", scene: "Rubedo", act: 3 },
-      { label: "ACT 3 · SEALED MOON", scene: "SealedVessel", act: 3 },
-      { label: "METAXY HUB", scene: "MetaxyHub", act: 3 },
-      { label: "ACT 4 · MERCURY", scene: "MercuryPlateau", act: 4 },
-      { label: "ACT 5 · VENUS", scene: "VenusPlateau", act: 5 },
-      { label: "ACT 6 · SUN HALL", scene: "CuratedSelf", act: 6 },
-      { label: "ACT 7 · MARS", scene: "MarsPlateau", act: 7 },
-      { label: "ACT 10 · ENDINGS", scene: "Epilogue", act: 10 },
-    ];
+    const jumps = this.buildDevJumpEntries();
+
+    if (!jumps.length) {
+      const note = new GBCText(this, 18, 110, "NO REGISTERED DEV DESTINATIONS.", {
+        color: COLOR.textGold,
+        depth: 960,
+      });
+      this.time.delayedCall(1600, () => note.destroy());
+      return;
+    }
 
     const dim = this.add
       .rectangle(0, 0, GBC_W, GBC_H, 0x000000, 0.88)
@@ -684,13 +1007,20 @@ export class TitleScene extends Phaser.Scene {
       .setInteractive();
 
     const box = drawGBCBox(this, 6, 8, GBC_W - 12, GBC_H - 16, 951);
-    const title = new GBCText(this, 12, 12, "DEV · SKIP TO SCENE", {
+    const title = new GBCText(this, 12, 12, "DEV · SCENE JUMP", {
       color: COLOR.textGold,
       depth: 952,
     });
+
     const counter = new GBCText(this, GBC_W - 36, 12, "", {
       color: COLOR.textDim,
       depth: 952,
+    });
+
+    const help = new GBCText(this, 12, GBC_H - 12, "A START  B CANCEL  ←→ PAGE", {
+      color: COLOR.textDim,
+      depth: 952,
+      maxWidthPx: GBC_W - 24,
     });
 
     const lineH = 9;
@@ -699,9 +1029,6 @@ export class TitleScene extends Phaser.Scene {
     const ITEM_FIT_W = GBC_W - ITEM_X - 8;
     const READOUT_W = GBC_W - 24;
 
-    // Per-jump display state. If any label trims, reserve a wrapped readout
-    // band inside the same overlay so the selected destination is always
-    // fully readable.
     const jumpStates = jumps.map((j) => fitSingleLineState(j.label, ITEM_FIT_W));
     const needsReadout = jumpStates.some((s) => s.trimmed);
     const readoutH = needsReadout
@@ -709,12 +1036,11 @@ export class TitleScene extends Phaser.Scene {
       : 0;
     const readoutBandH = needsReadout ? lineH + readoutH : 0;
 
-    const maxRows = Math.floor((GBC_H - 16 - (startY - 8) - readoutBandH - 8) / lineH);
+    const maxRows = Math.floor((GBC_H - 16 - (startY - 8) - readoutBandH - 18) / lineH);
     const visibleRows = Math.max(1, Math.min(10, Math.min(jumps.length, maxRows)));
+
     let pick = 0;
 
-    // Render slots are reused; only their text/visibility/color change as we
-    // scroll the windowed list.
     const items: GBCText[] = [];
     for (let i = 0; i < visibleRows; i++) {
       items.push(
@@ -724,19 +1050,25 @@ export class TitleScene extends Phaser.Scene {
         }),
       );
     }
+
     const mark = new GBCText(this, 10, startY, "▶", {
       color: COLOR.textGold,
       depth: 953,
     });
 
-    const readoutY = startY + visibleRows * lineH + lineH;
     const selectedReadout = needsReadout
-      ? new GBCText(this, 12, readoutY, "", {
+      ? new GBCText(this, 12, startY + visibleRows * lineH + lineH, "", {
           color: COLOR.textAccent,
           depth: 952,
           maxWidthPx: READOUT_W,
         })
       : null;
+
+    const selectedSceneLine = new GBCText(this, 12, GBC_H - 22, "", {
+      color: COLOR.textDim,
+      depth: 952,
+      maxWidthPx: GBC_W - 24,
+    });
 
     const computeStart = (p: number): number => {
       const half = Math.floor(visibleRows / 2);
@@ -744,13 +1076,12 @@ export class TitleScene extends Phaser.Scene {
       return Math.max(0, Math.min(max, p - half));
     };
 
-    // Map row index → absolute jumps index for current frame, used by pointer
-    // handlers (rebuilt on every refreshSkip).
     let rowToJump: number[] = [];
 
     const refreshSkip = () => {
       const start = computeStart(pick);
       rowToJump = [];
+
       for (let row = 0; row < visibleRows; row++) {
         const abs = start + row;
         const j = jumps[abs];
@@ -760,16 +1091,27 @@ export class TitleScene extends Phaser.Scene {
           rowToJump.push(-1);
           continue;
         }
+
         items[row].obj.setVisible(true);
         items[row].setText(jumpStates[abs].fitted);
         items[row].setColor(abs === pick ? COLOR.textGold : COLOR.textLight);
         rowToJump.push(abs);
       }
+
       const visiblePick = pick - start;
       mark.setPosition(10, startY + visiblePick * lineH);
       counter.setText(`${pick + 1}/${jumps.length}`);
-      if (selectedReadout) selectedReadout.setText(jumpStates[pick].full);
+
+      if (selectedReadout) {
+        selectedReadout.setText(jumpStates[pick].full);
+      }
+
+      const chosen = jumps[pick];
+      selectedSceneLine.setText(
+        `${chosen.scene} · ACT ${ACT_BY_SCENE[chosen.scene] ?? 0}`,
+      );
     };
+
     refreshSkip();
 
     const cleanup = () => {
@@ -780,49 +1122,32 @@ export class TitleScene extends Phaser.Scene {
       box.destroy();
       title.destroy();
       counter.destroy();
+      help.destroy();
       items.forEach((t) => t.destroy());
       selectedReadout?.destroy();
+      selectedSceneLine.destroy();
       mark.destroy();
     };
 
     const jumpTo = (idx: number) => {
       const j = jumps[idx];
       if (!j) return;
+      if (!this.scene.manager.keys[j.scene]) {
+        audio.sfx("cancel");
+        console.warn("[dev-skip] scene not registered:", j.scene);
+        return;
+      }
+
+      const slot = this.buildDevSkipSave(j.seed, j.scene);
+
+      try {
+        writeSave(slot);
+      } catch (err) {
+        console.warn("[dev-skip] failed to persist seeded save", err);
+      }
+
       audio.sfx("confirm");
-      // Fully-stocked save so reactive content (Act 2/3) has something to show.
-      const slot = newSave();
-      slot.act = j.act;
-      slot.scene = j.scene;
-      slot.stats = { clarity: 9, compassion: 9, courage: 9 };
-      slot.verbs = { witness: true, transmute: true };
-      slot.blackStones = 3;
-      slot.whiteStones = 3;
-      slot.yellowStones = 3;
-      slot.redStones = 3;
-      slot.goldStone = true;
-      slot.weddingType = "strong";
-      slot.act2Inscription = "I AM WHAT I MET";
-      slot.convictions = {
-        ...(slot.convictions ?? {}),
-        i_am_loved: true,
-        i_can_rest: true,
-        i_will_remain: true,
-      };
-      slot.shadesEncountered = {
-        ...(slot.shadesEncountered ?? {}),
-        the_critic: "sat_with",
-        the_orphan: "sat_with",
-        the_lover: "sat_with",
-      };
-      slot.garmentsReleased.moon = j.act >= 4;
-      slot.garmentsReleased.mercury = j.act >= 5;
-      slot.garmentsReleased.venus = j.act >= 6;
-      slot.garmentsReleased.sun = j.act >= 7;
-      slot.garmentsReleased.mars = j.act >= 8;
-      slot.sphereVerbs.name = j.act >= 4;
-      slot.sphereVerbs.attune = j.act >= 5;
-      slot.sphereVerbs.stand = j.act >= 7;
-      slot.flags.legacy_sun_bridge = j.act >= 6;
+
       try {
         cleanup();
         audio.music.stop();
@@ -832,11 +1157,20 @@ export class TitleScene extends Phaser.Scene {
       }
     };
 
+    const pageMove = (dir: -1 | 1) => {
+      const page = Math.max(1, visibleRows - 1);
+      pick = (pick + dir * page + jumps.length) % jumps.length;
+      audio.sfx("cursor");
+      refreshSkip();
+    };
+
     const unbindAct = onActionDown(this, "action", () => jumpTo(pick));
+
     const unbindCancel = onActionDown(this, "cancel", () => {
       audio.sfx("cursor");
       cleanup();
     });
+
     const unbindDir = onDirection(this, (d) => {
       if (d === "up") {
         pick = (pick - 1 + jumps.length) % jumps.length;
@@ -846,17 +1180,23 @@ export class TitleScene extends Phaser.Scene {
         pick = (pick + 1) % jumps.length;
         audio.sfx("cursor");
         refreshSkip();
+      } else if (d === "left") {
+        pageMove(-1);
+      } else if (d === "right") {
+        pageMove(1);
       }
     });
 
     items.forEach((t, row) => {
       t.obj.setInteractive({ useHandCursor: true });
+
       t.obj.on("pointerover", () => {
         const abs = rowToJump[row];
         if (abs < 0) return;
         pick = abs;
         refreshSkip();
       });
+
       t.obj.on("pointerdown", () => {
         const abs = rowToJump[row];
         if (abs >= 0) jumpTo(abs);
