@@ -892,6 +892,22 @@ export class VenusPlateauScene extends Phaser.Scene {
       }
       getAudio().sfx("confirm");
       h.onAct();
+      return;
+    }
+
+    const d = this.findDoorInRange();
+    if (d) {
+      if (!this.canUseDoor(d)) {
+        getAudio().sfx("cancel");
+        this.flashHint(
+          d.to === "threshold"
+            ? "the threshold is not yet for you."
+            : "that way is not open.",
+        );
+        return;
+      }
+      getAudio().sfx("open");
+      gbcWipe(this, () => this.loadZone(d.to, false, this.zone));
     }
   }
 
@@ -900,22 +916,84 @@ export class VenusPlateauScene extends Phaser.Scene {
       this.cancelActiveAttune(false);
       return;
     }
+
     if (this.zone === "atrium") {
       this.toHub();
       return;
     }
-    gbcWipe(this, () => this.loadZone("atrium"));
+
+    const back =
+      this.previousZone && VENUS_ZONE_LINKS[this.zone].includes(this.previousZone)
+        ? this.previousZone
+        : "atrium";
+
+    gbcWipe(this, () => this.loadZone(back, false, this.zone));
+  }
+
+  private hotspotPriority(h: Hotspot): number {
+    if (h.id === "enter_trial") return 100;
+    if (h.id === "settle_here") return 90;
+
+    if (
+      h.id === "unfinished_work" ||
+      h.id === "reconstruction_chamber" ||
+      h.id === "release_audience" ||
+      h.id === "ladder_challenge"
+    ) {
+      return 75;
+    }
+
+    if (h.id.startsWith("npc_")) return 60;
+    if (h.id.startsWith("side_")) return 40;
+    if (h.id.startsWith("amb_")) return 25;
+    if (h.id.startsWith("attune_extra_")) return 20;
+
+    return 0;
+  }
+
+  private hotspotDistanceSq(h: Hotspot): number {
+    const dx = this.player.x - h.x;
+    const dy = this.player.y - h.y;
+    return dx * dx + dy * dy;
+  }
+
+  private canUseDoor(d: Door): boolean {
+    if (!VENUS_ZONE_LINKS[this.zone].includes(d.to)) return false;
+    if (d.to === "threshold" && this.zone === "atrium" && !venusCrackingReady(this.save)) {
+      return false;
+    }
+    return true;
+  }
+
+  private doorDistanceSq(d: Door): number {
+    const cx = Phaser.Math.Clamp(this.player.x, d.x, d.x + d.w);
+    const cy = Phaser.Math.Clamp(this.player.y, d.y, d.y + d.h);
+    const dx = this.player.x - cx;
+    const dy = this.player.y - cy;
+    return dx * dx + dy * dy;
+  }
+
+  private findDoorInRange(): Door | null {
+    const candidates = this.doors.filter((d) => this.doorDistanceSq(d) <= 64);
+    candidates.sort((a, b) => this.doorDistanceSq(a) - this.doorDistanceSq(b));
+    return candidates[0] ?? null;
   }
 
   private findHotspotInRange(): Hotspot | null {
-    for (const h of this.hotspots) {
+    const candidates = this.hotspots.filter((h) => {
       const dx = this.player.x - h.x;
       const dy = this.player.y - h.y;
-      if (dx * dx + dy * dy <= (h.r + PLAYER_R) * (h.r + PLAYER_R)) {
-        return h;
-      }
-    }
-    return null;
+      return dx * dx + dy * dy <= (h.r + PLAYER_R) * (h.r + PLAYER_R);
+    });
+
+    candidates.sort((a, b) => {
+      const pa = this.hotspotPriority(a);
+      const pb = this.hotspotPriority(b);
+      if (pa !== pb) return pb - pa;
+      return this.hotspotDistanceSq(a) - this.hotspotDistanceSq(b);
+    });
+
+    return candidates[0] ?? null;
   }
 
   // -----------------------------------------------------------------
