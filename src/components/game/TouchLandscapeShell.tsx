@@ -1,25 +1,16 @@
 /**
  * Touch landscape shell.
  *
- * Layout:
- *   ┌──────────────┬─────────────────────────┬──────────────┐
- *   │              │   stats strip           │              │
- *   │  left rail   ├─────────────────────────┤ right rail   │
- *   │  ⚙  inv      │                         │ ▢ minimap    │
- *   │              │   gameplay viewport     │              │
- *   │  joystick    │                         │  B           │
- *   │              ├─────────────────────────┤  A           │
- *   │              │   dialogue tray         │              │
- *   └──────────────┴─────────────────────────┴──────────────┘
+ * Two regimes:
+ *   - Standard:  permanent stats row at top, dialogue tray at bottom.
+ *   - Compact:   stats and dialogue overlay the gameplay viewport so the
+ *                viewport stays dominant on iPhone landscape.
  *
- * Left-handed mode swaps the entire left & right rails (not just the
- * joystick).
- *
- * The center column hosts the Phaser canvas (passed in via children).
- * Pointer events on rails are captured by their own controls; gameplay
- * pointer events still reach Phaser.
+ * Rails and button sizes scale from real viewport size + the saved
+ * `buttonSize` so phones get smaller controls without changing desktop
+ * defaults. Left-handed mode swaps the entire left/right rails.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TouchJoystick } from "./touch/TouchJoystick";
 import { TouchButton } from "./touch/TouchButton";
 import { TouchStatsStrip } from "./touch/TouchStatsStrip";
@@ -38,13 +29,85 @@ import {
   patchOverlaySnapshot,
   type OverlaySnapshot,
 } from "@/game/gameUiBridge";
-import { getControls, subscribeControls } from "@/game/controls";
+import {
+  getControls,
+  subscribeControls,
+  type ButtonSize,
+} from "@/game/controls";
 
 type Props = {
   children: React.ReactNode;
   booted: boolean;
   error: string | null;
 };
+
+type ViewportSize = { w: number; h: number };
+
+type ShellMetrics = {
+  compact: boolean;
+  railWidth: number;
+  joystick: number;
+  util: number;
+  a: number;
+  b: number;
+  gap: number;
+  pad: number;
+};
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function getButtonScale(size: ButtonSize) {
+  switch (size) {
+    case "s":
+      return 0.84;
+    case "m":
+      return 0.93;
+    case "xl":
+      return 1.12;
+    default:
+      return 1;
+  }
+}
+
+function readViewport(): ViewportSize {
+  if (typeof window === "undefined") return { w: 844, h: 390 };
+  const vv = window.visualViewport;
+  return {
+    w: Math.round(vv?.width ?? window.innerWidth),
+    h: Math.round(vv?.height ?? window.innerHeight),
+  };
+}
+
+function computeMetrics(v: ViewportSize, buttonSize: ButtonSize): ShellMetrics {
+  const scale = getButtonScale(buttonSize);
+  const compact = v.h <= 430 || v.w <= 932;
+  const short = Math.min(v.w, v.h);
+
+  const railBase = compact
+    ? clamp(short * 0.23, 84, 96)
+    : clamp(short * 0.28, 96, 120);
+
+  const joystickBase = compact
+    ? clamp(short * 0.23, 78, 96)
+    : clamp(short * 0.28, 96, 120);
+
+  const utilBase = compact ? 38 : 44;
+  const aBase = compact ? 60 : 72;
+  const bBase = compact ? 52 : 60;
+
+  return {
+    compact,
+    railWidth: Math.round(railBase),
+    joystick: Math.round(clamp(joystickBase * scale, 72, 124)),
+    util: Math.round(clamp(utilBase * scale, 34, 52)),
+    a: Math.round(clamp(aBase * scale, 50, 84)),
+    b: Math.round(clamp(bBase * scale, 46, 72)),
+    gap: compact ? 6 : 8,
+    pad: compact ? 6 : 8,
+  };
+}
 
 export function TouchLandscapeShell({ children, booted, error }: Props) {
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -55,6 +118,8 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
     () => getGameUiSnapshot().dialog.open,
   );
   const [leftHanded, setLeftHanded] = useState(() => getControls().leftHanded);
+  const [buttonSize, setButtonSizeState] = useState(() => getControls().buttonSize);
+  const [viewport, setViewport] = useState<ViewportSize>(() => readViewport());
 
   useEffect(() => {
     return subscribeGameUi((s) => {
@@ -62,24 +127,33 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
       setDialogOpen(s.dialog.open);
     });
   }, []);
+
   useEffect(() => {
-    return subscribeControls(() => setLeftHanded(getControls().leftHanded));
+    return subscribeControls(() => {
+      const c = getControls();
+      setLeftHanded(c.leftHanded);
+      setButtonSizeState(c.buttonSize);
+    });
   }, []);
 
-  // Clear held virtual input only on real overlay/modal transitions.
-  // The rotate hint is advisory and must NOT clear input or freeze play.
+  useEffect(() => {
+    const update = () => setViewport(readViewport());
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
+  }, []);
 
-  // ---------------------------------------------------------------------
-  // Modal input policy — explicit, not a single blanket flag.
-  //
-  // Joystick: disabled whenever ANY blocking surface is up
-  //   (inventory, settings, lore, dialog, inquiry, modalLock).
-  // A:        disabled when a hard overlay owns the screen
-  //   (inventory, settings, lore). Stays live during dialog/inquiry so
-  //   the player can advance/select with A.
-  // B:        almost never disabled — it's how the player closes
-  //   inventory/lore/settings and backs out of inquiries.
-  // ---------------------------------------------------------------------
+  const metrics = useMemo(
+    () => computeMetrics(viewport, buttonSize),
+    [viewport, buttonSize],
+  );
+
   const settingsOpen = overlay.settingsOpen;
   const loreOpen = overlay.loreOpen;
   const inquiryActive = overlay.inquiryActive;
@@ -95,7 +169,6 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   const actionDisabled = inventoryOpen || settingsOpen || loreOpen;
   const cancelDisabled = false;
 
-  // Always release any held virtual input when entering a hard modal.
   useEffect(() => {
     if (inventoryOpen || settingsOpen || loreOpen) clearVirtualInput();
   }, [inventoryOpen, settingsOpen, loreOpen]);
@@ -116,23 +189,12 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
     clearVirtualInput();
   }, []);
 
-  // Closing the inventory clears any held actions.
   const closeInventory = useCallback(() => {
     setInventoryOpen(false);
     patchOverlaySnapshot({ inventoryOpen: false });
     clearVirtualInput();
   }, []);
 
-  // ---------------------------------------------------------------------
-  // B-button routing.
-  //
-  // Inventory is owned by the shell. If it is open, B closes it and we
-  // SWALLOW the cancel — never letting it reach the Phaser scene
-  // underneath (which would otherwise leak as a Witness/cancel action).
-  //
-  // For settings/lore (Phaser-owned), B passes through to the scene's
-  // own cancel handler. For all other states, B is normal cancel.
-  // ---------------------------------------------------------------------
   const handleBPress = useCallback(() => {
     if (inventoryOpen) {
       closeInventory();
@@ -149,6 +211,9 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   const leftRail = (
     <RailControls
       kind="utility"
+      compact={metrics.compact}
+      utilSize={metrics.util}
+      joystickSize={metrics.joystick}
       onSettings={openSettings}
       onInventory={openInventory}
       inventoryActive={inventoryOpen}
@@ -158,6 +223,9 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   const rightRail = (
     <RailControls
       kind="action"
+      compact={metrics.compact}
+      aSize={metrics.a}
+      bSize={metrics.b}
       actionDisabled={actionDisabled}
       cancelDisabled={cancelDisabled}
       onAPress={() => emitVirtualDown("action")}
@@ -167,6 +235,8 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
     />
   );
 
+  const railCol = `${metrics.railWidth}px`;
+
   return (
     <div
       className="fixed inset-0 overflow-hidden font-mono"
@@ -174,11 +244,10 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
         background:
           "radial-gradient(ellipse at center, #0a1428 0%, #03060e 100%)",
         color: "#eef3ff",
-        // CSS tokens for child controls.
-        ["--rail-width" as string]: "120px",
-        ["--joystick-size" as string]: "120px",
-        ["--ab-size" as string]: "68px",
-        ["--util-size" as string]: "44px",
+        ["--rail-width" as string]: railCol,
+        ["--joystick-size" as string]: `${metrics.joystick}px`,
+        ["--ab-size" as string]: `${metrics.a}px`,
+        ["--util-size" as string]: `${metrics.util}px`,
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
         paddingLeft: "env(safe-area-inset-left)",
@@ -199,68 +268,43 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
           border: 0,
         }}
       >
-        Hermetic Comedy — a pixel-art RPG of small verbs
+        Hermetic Comedy — touch landscape shell
       </h1>
 
       <div
-        className="grid h-full w-full gap-2 p-2"
+        className="grid h-full w-full"
         style={{
-          gridTemplateColumns: leftHanded
-            ? "var(--rail-width) 1fr var(--rail-width)"
-            : "var(--rail-width) 1fr var(--rail-width)",
+          gridTemplateColumns: `${railCol} 1fr ${railCol}`,
+          gap: metrics.gap,
+          padding: metrics.pad,
         }}
       >
-        {/* Left rail (or right rail if left-handed) */}
-        <aside className="flex flex-col items-stretch gap-2 min-h-0">
+        <aside
+          className="flex flex-col items-stretch min-h-0"
+          style={{ gap: metrics.gap }}
+        >
           {leftHanded ? rightRail : leftRail}
         </aside>
 
-        {/* Center column */}
         <main
-          className="flex flex-col gap-2 min-h-0 min-w-0"
-          style={{ touchAction: "none" }}
+          className="flex flex-col min-h-0 min-w-0"
+          style={{ gap: metrics.gap, touchAction: "none" }}
         >
-          <TouchStatsStrip />
-          <div
-            className="relative flex-1 min-h-0 grid place-items-center"
-            style={{ overflow: "hidden" }}
-          >
-            <div
-              style={{
-                aspectRatio: "160 / 144",
-                maxWidth: "100%",
-                maxHeight: "100%",
-                width: "100%",
-                imageRendering: "pixelated",
-                border: "1px solid #2a3550",
-                background: "#05070d",
-                boxShadow: "0 0 30px rgba(74,120,200,0.18)",
-              }}
-            >
+          {metrics.compact ? (
+            <CompactCenter booted={booted} error={error} dialogOpen={dialogOpen}>
               {children}
-            </div>
-            {!booted && !error && (
-              <div
-                className="pointer-events-none absolute inset-0 grid place-items-center text-xs opacity-70"
-                style={{ color: "#a8c8e8" }}
-              >
-                Loading the silver…
-              </div>
-            )}
-            {error && (
-              <div
-                className="pointer-events-none absolute inset-0 grid place-items-center text-xs px-4 text-center"
-                style={{ color: "#d86a6a" }}
-              >
-                Failed to load: {error}
-              </div>
-            )}
-          </div>
-          <GameDialogueTray />
+            </CompactCenter>
+          ) : (
+            <StandardCenter booted={booted} error={error} dialogOpen={dialogOpen}>
+              {children}
+            </StandardCenter>
+          )}
         </main>
 
-        {/* Right rail (or left rail if left-handed) */}
-        <aside className="flex flex-col items-stretch gap-2 min-h-0">
+        <aside
+          className="flex flex-col items-stretch min-h-0"
+          style={{ gap: metrics.gap }}
+        >
           {leftHanded ? leftRail : rightRail}
         </aside>
       </div>
@@ -270,10 +314,122 @@ export function TouchLandscapeShell({ children, booted, error }: Props) {
   );
 }
 
-// Internal helper component for the left/right rails.
+function StandardCenter({
+  children,
+  booted,
+  error,
+  dialogOpen,
+}: {
+  children: React.ReactNode;
+  booted: boolean;
+  error: string | null;
+  dialogOpen: boolean;
+}) {
+  return (
+    <>
+      <TouchStatsStrip />
+      <ViewportStage booted={booted} error={error}>
+        {children}
+      </ViewportStage>
+      {dialogOpen ? <GameDialogueTray /> : null}
+    </>
+  );
+}
+
+function CompactCenter({
+  children,
+  booted,
+  error,
+  dialogOpen,
+}: {
+  children: React.ReactNode;
+  booted: boolean;
+  error: string | null;
+  dialogOpen: boolean;
+}) {
+  return (
+    <div className="relative flex-1 min-h-0 min-w-0">
+      <ViewportStage booted={booted} error={error} compact>
+        {children}
+      </ViewportStage>
+      <div
+        className="pointer-events-none absolute top-1 left-1 right-1"
+        style={{ zIndex: 5 }}
+      >
+        <div className="pointer-events-auto">
+          <TouchStatsStrip compact />
+        </div>
+      </div>
+      {dialogOpen ? (
+        <div
+          className="pointer-events-none absolute bottom-1 left-1 right-1"
+          style={{ zIndex: 5 }}
+        >
+          <div className="pointer-events-auto">
+            <GameDialogueTray compact />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ViewportStage({
+  children,
+  booted,
+  error,
+  compact = false,
+}: {
+  children: React.ReactNode;
+  booted: boolean;
+  error: string | null;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className="relative flex-1 min-h-0 grid place-items-center"
+      style={{ overflow: "hidden" }}
+    >
+      <div
+        style={{
+          aspectRatio: "160 / 144",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          width: "100%",
+          imageRendering: "pixelated",
+          border: compact ? "1px solid #1a2540" : "1px solid #2a3550",
+          background: "#05070d",
+          boxShadow: "0 0 30px rgba(74,120,200,0.18)",
+        }}
+      >
+        {children}
+      </div>
+      {!booted && !error && (
+        <div
+          className="pointer-events-none absolute inset-0 grid place-items-center text-xs opacity-70"
+          style={{ color: "#a8c8e8" }}
+        >
+          Loading the silver…
+        </div>
+      )}
+      {error && (
+        <div
+          className="pointer-events-none absolute inset-0 grid place-items-center text-xs px-4 text-center"
+          style={{ color: "#d86a6a" }}
+        >
+          Failed to load: {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type RailProps =
   | {
       kind: "utility";
+      compact: boolean;
+      utilSize: number;
+      joystickSize: number;
       onSettings: () => void;
       onInventory: () => void;
       inventoryActive: boolean;
@@ -281,6 +437,9 @@ type RailProps =
     }
   | {
       kind: "action";
+      compact: boolean;
+      aSize: number;
+      bSize: number;
       actionDisabled: boolean;
       cancelDisabled: boolean;
       onAPress: () => void;
@@ -294,12 +453,18 @@ function RailControls(props: RailProps) {
     return (
       <>
         <div className="flex gap-2 justify-center">
-          <UtilButton label="≡" ariaLabel="Settings" onPress={props.onSettings} />
+          <UtilButton
+            label="≡"
+            ariaLabel="Settings"
+            onPress={props.onSettings}
+            size={props.utilSize}
+          />
           <UtilButton
             label="◫"
             ariaLabel="Inventory"
             active={props.inventoryActive}
             onPress={props.onInventory}
+            size={props.utilSize}
           />
         </div>
         <div className="flex-1 grid place-items-center">
@@ -308,16 +473,21 @@ function RailControls(props: RailProps) {
       </>
     );
   }
+
   return (
     <>
       <div className="px-1">
-        <TouchMiniMapPanel />
+        <TouchMiniMapPanel compact={props.compact} />
       </div>
-      <div className="flex-1 flex flex-col items-center justify-end gap-3 pb-2">
+      <div
+        className={`flex-1 flex flex-col items-center justify-end ${
+          props.compact ? "gap-2 pb-1" : "gap-3 pb-2"
+        }`}
+      >
         <TouchButton
           label="B"
           variant="b"
-          size={60}
+          size={props.bSize}
           ariaLabel="Cancel / Witness"
           disabled={props.cancelDisabled}
           onPress={props.onBPress}
@@ -326,7 +496,7 @@ function RailControls(props: RailProps) {
         <TouchButton
           label="A"
           variant="a"
-          size={72}
+          size={props.aSize}
           ariaLabel="Confirm / Interact"
           disabled={props.actionDisabled}
           onPress={props.onAPress}
@@ -342,11 +512,13 @@ function UtilButton({
   ariaLabel,
   onPress,
   active = false,
+  size,
 }: {
   label: string;
   ariaLabel: string;
   onPress: () => void;
   active?: boolean;
+  size: number;
 }) {
   return (
     <button
@@ -358,8 +530,8 @@ function UtilButton({
       }}
       className="select-none touch-none rounded-md grid place-items-center"
       style={{
-        width: "var(--util-size, 44px)",
-        height: "var(--util-size, 44px)",
+        width: size,
+        height: size,
         background: active
           ? "linear-gradient(180deg, #4a78c8, #2a3550)"
           : "linear-gradient(180deg, rgba(40,55,90,0.9), rgba(20,28,48,0.95))",
@@ -368,7 +540,7 @@ function UtilButton({
         boxShadow: active
           ? "inset 0 0 8px rgba(255,255,255,0.3)"
           : "inset 0 -2px 4px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.5)",
-        fontSize: 22,
+        fontSize: Math.max(18, Math.round(size * 0.45)),
         fontWeight: 700,
       }}
     >
@@ -376,4 +548,3 @@ function UtilButton({
     </button>
   );
 }
-
