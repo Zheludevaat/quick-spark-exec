@@ -19,6 +19,7 @@ import {
 } from "@/game/controls";
 import { getAudio } from "@/game/audio";
 import { subscribeGameUi, getGameUiSnapshot } from "@/game/gameUiBridge";
+import { getPublicSceneLabel } from "@/game/canon/registry";
 import { DesktopSurfaceFrame } from "./DesktopSurfaceFrame";
 import {
   ShellPanel,
