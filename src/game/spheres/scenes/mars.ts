@@ -198,6 +198,10 @@ export class MarsPlateauScene extends Phaser.Scene {
     // Load zone only after the shared HUD + actor state exists.
     this.loadZone("approach");
 
+    this.add
+      .rectangle(GBC_W / 2, GBC_H - 10, 40, 1, 0xf0c0a0, 0.25)
+      .setDepth(9);
+
     this.areonPresentation = createEncounterPresentation(
       this,
       GBC_W / 2,
@@ -311,7 +315,146 @@ export class MarsPlateauScene extends Phaser.Scene {
           .setStrokeStyle(1, 0xf0c0a0, 0.7)
           .setDepth(6),
       );
+  }
+
+  private buildReadabilityPass(zone: MarsZone): { destroy(): void } {
+    const pal = MARS_ZONE_PALETTES[zone as MarsZoneKey];
+    const objects: Phaser.GameObjects.GameObject[] = [];
+
+    const color = (hex: string) =>
+      Phaser.Display.Color.HexStringToColor(hex).color;
+
+    const add = <T extends Phaser.GameObjects.GameObject>(obj: T): T => {
+      objects.push(obj);
+      return obj;
+    };
+
+    add(
+      this.add
+        .rectangle(0, 0, GBC_W, 18, color(pal.bg0), 0.35)
+        .setOrigin(0, 0)
+        .setDepth(2),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 18, GBC_W, 66, color(pal.bg1), 0.18)
+        .setOrigin(0, 0)
+        .setDepth(2),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 83, GBC_W, 1, color(pal.trim1), 0.45)
+        .setOrigin(0, 0)
+        .setDepth(7),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 95, GBC_W, 2, color(pal.trim0), 0.65)
+        .setOrigin(0, 0)
+        .setDepth(7),
+    );
+
+    add(
+      this.add
+        .rectangle(0, 97, GBC_W, 47, color(pal.floor0), 0.14)
+        .setOrigin(0, 0)
+        .setDepth(5),
+    );
+
+    if (zone === "approach" || zone === "stands" || zone === "line_yard") {
+      for (let i = 0; i < 5; i++) {
+        add(
+          this.add
+            .rectangle(
+              i * 34 - 4,
+              54,
+              22,
+              26 + (i % 3) * 8,
+              color(pal.bg2),
+              0.22,
+            )
+            .setOrigin(0, 0)
+            .setDepth(6),
+        );
+      }
     }
+
+    if (zone === "approach") {
+      add(
+        this.add
+          .rectangle(80, 104, 56, 10, color(pal.trim0), 0.18)
+          .setDepth(8),
+      );
+    }
+
+    if (zone === "stands") {
+      for (let i = 0; i < 6; i++) {
+        add(
+          this.add
+            .rectangle(14 + i * 24, 21, 6, 14, color(pal.accent0), 0.16)
+            .setOrigin(0, 0)
+            .setDepth(8),
+        );
+      }
+    }
+
+    if (zone === "line_yard") {
+      add(
+        this.add
+          .rectangle(80, 96, 42, 2, color(pal.accent1), 0.72)
+          .setDepth(9),
+      );
+      add(
+        this.add
+          .rectangle(80, 110, 42, 2, color(pal.accent1), 0.5)
+          .setDepth(9),
+      );
+    }
+
+    if (zone === "infirmary") {
+      add(
+        this.add
+          .rectangle(28, 96, 22, 6, color(pal.floor1), 0.45)
+          .setDepth(8),
+      );
+      add(
+        this.add
+          .rectangle(80, 96, 22, 6, color(pal.floor1), 0.45)
+          .setDepth(8),
+      );
+      add(
+        this.add
+          .rectangle(132, 96, 22, 6, color(pal.floor1), 0.45)
+          .setDepth(8),
+      );
+    }
+
+    if (zone === "endurance") {
+      add(
+        this.add
+          .rectangle(80, 104, 34, 10, color(pal.trim0), 0.12)
+          .setDepth(8),
+      );
+    }
+
+    if (zone === "threshold") {
+      add(
+        this.add
+          .circle(80, 108, 12, color(pal.accent0), 0.08)
+          .setStrokeStyle(1, color(pal.accent1), 0.78)
+          .setDepth(9),
+      );
+    }
+
+    return {
+      destroy() {
+        objects.forEach((o) => o.destroy());
+      },
+    };
+  }
 
     return {
       destroy() {
