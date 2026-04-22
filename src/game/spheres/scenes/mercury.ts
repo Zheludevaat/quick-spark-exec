@@ -774,6 +774,14 @@ export class MercuryPlateauScene extends Phaser.Scene {
       this.hint.setColor(COLOR.textDim);
       this.stationFocus.setVisible(false);
     }
+
+    this.maybeRunChamberReadyBeat();
+
+    this.snapshotElapsed += delta;
+    if (this.snapshotElapsed >= 150) {
+      this.snapshotElapsed = 0;
+      this.publishSceneSnapshot();
+    }
   }
 
   private nearestStation(): MStation | null {
@@ -957,7 +965,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                 const p3ok = p3.label === "Therefore I forget.";
                 const valid = p1ok && p2ok && p3ok;
                 if (valid) {
-                  this.mSave.stats.clarity += 1;
+                  awardMercuryOperation(this.mSave, "clarity", "structure", 1, 1);
                   if (st.opId) markOpDone(this.mSave, "mercury", st.opId);
                   if (st.doneFlag) this.mSave.flags[st.doneFlag] = true;
                   writeSave(this.mSave);
@@ -969,7 +977,7 @@ export class MercuryPlateauScene extends Phaser.Scene {
                     this,
                     [
                       { who: "?", text: "The syllogism completes. The Tower exhales." },
-                      { who: "SORYN", text: "And yet — the major premise was an assumption." },
+                      { who: "SOPHENE", text: "And yet — the major premise was an assumption." },
                     ],
                     () => {
                       this.busy = false;
