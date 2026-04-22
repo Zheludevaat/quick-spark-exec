@@ -16,8 +16,8 @@ export const mercuryConfig: SphereConfig = {
   trialScene: "MercuryTrial",
 
   opening: [
-    { who: "SORYN", text: "Mercury. The Tower of Reasons." },
-    { who: "SORYN", text: "Every thought here arrives sharpened, overdressed, and faintly disappointed in reality." },
+    { who: "SOPHENE", text: "Mercury. The Tower of Reasons." },
+    { who: "SOPHENE", text: "Every thought here arrives sharpened, overdressed, and faintly disappointed in reality." },
     { who: "?", text: "Three voices in three corners, each winning magnificently against an audience that does not exist." },
   ],
 
@@ -149,13 +149,15 @@ export const mercuryConfig: SphereConfig = {
   trialPass: [
     { who: "HERMAIA", text: "You named what yielded to naming, and stopped where naming would have become theft." },
     { who: "HERMAIA", text: "Take the verb. NAME is yours now. Use it like medicine, not decoration." },
-    { who: "SORYN", text: "Mercury releases its garment. The Tower looks almost peaceful, which on it is a dangerously flattering angle." },
+    { who: "SOPHENE", text: "Mercury releases its garment. The Tower looks almost peaceful, which on it is a dangerously flattering angle." },
   ],
 
   trialFail: [
     { who: "HERMAIA", text: "You supplied many words and very little naming. It happens. Language is cheap and likes to dress well." },
-    { who: "SORYN", text: "Sit with the operations again. Return when the cleverness has stopped trying to pass as courage." },
+    { who: "SOPHENE", text: "Sit with the operations again. Return when the cleverness has stopped trying to pass as courage." },
   ],
+
+  trialPassThreshold: 5,
 
   inscription: "I CAN NAME WHAT I DO NOT KNOW",
 
