@@ -1,27 +1,13 @@
-/**
- * Desktop shell with granular per-scene visibility.
- *
- * Each scene publishes which shell parts are useful via gameUiBridge.
- * The shell renders only those parts. The Phaser viewport is always shown.
- *
- * Modal ownership doctrine (desktop):
- *   - Phaser owns world-space + diegetic feedback only.
- *   - The shell's DesktopModalHost owns ALL blocking non-diegetic UI:
- *       dialog, inquiry, settings, lore, inventory, playerHub.
- *   - When a modal is blocking, the surrounding shell chrome is dimmed
- *     so attention belongs to the modal alone.
- */
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { DesktopStatsBar } from "./desktop/DesktopStatsBar";
-import { DesktopUtilityRail } from "./desktop/DesktopUtilityRail";
-import { DesktopMiniMapCard } from "./desktop/DesktopMiniMapCard";
-import { DesktopDialogueDock } from "./desktop/DesktopDialogueDock";
+import { DesktopCommandRail } from "./desktop/DesktopCommandRail";
+import { DesktopNarrativeDock } from "./desktop/DesktopNarrativeDock";
+import { DesktopMapDock } from "./desktop/DesktopMapDock";
 import { DesktopModalHost } from "./desktop/DesktopModalHost";
 import { ShellPanel, ShellPanelMeta } from "./shell/ShellPanel";
 import {
@@ -30,6 +16,7 @@ import {
   patchOverlaySnapshot,
 } from "@/game/gameUiBridge";
 import { clearVirtualInput } from "@/game/virtualInput";
+import type { CodexTabKey } from "./desktop/desktopUiModel";
 
 type Props = {
   children: ReactNode;
@@ -38,42 +25,19 @@ type Props = {
 };
 
 const DEFAULT_FOOTER_HINT =
-  "ARROWS / WASD MOVE · SPACE / ENTER = A · Q = WITNESS · L = LORE · I = INVENTORY · P / ESC = SETTINGS · PLAYER HUB IN LEFT RAIL";
+  "WASD / ARROWS MOVE · SPACE / ENTER = A · Q = WITNESS · I = CODEX INVENTORY · J = CODEX JOURNAL · L = LORE TAB · P / ESC = SETTINGS";
 
 export function DesktopGameShell({ children, booted, error }: Props) {
-  const [playerHubOpen, setPlayerHubOpen] = useState(false);
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [overlay, setOverlay] = useState(() => getGameUiSnapshot().overlay);
   const [scene, setScene] = useState(() => getGameUiSnapshot().scene);
   const [modal, setModal] = useState(() => getGameUiSnapshot().modal);
+  const [codexTab, setCodexTab] = useState<CodexTabKey | null>(null);
 
   useEffect(() => {
     return subscribeGameUi((s) => {
-      setOverlay(s.overlay);
       setScene(s.scene);
       setModal(s.modal);
     });
   }, []);
-
-  const closePlayerHub = useCallback(() => {
-    setPlayerHubOpen(false);
-    patchOverlaySnapshot({ playerHubOpen: false });
-  }, []);
-
-  const closeInventory = useCallback(() => {
-    setInventoryOpen(false);
-    patchOverlaySnapshot({ inventoryOpen: false });
-  }, []);
-
-  useEffect(() => {
-    if (playerHubOpen || inventoryOpen) clearVirtualInput();
-  }, [playerHubOpen, inventoryOpen]);
-
-  useEffect(() => {
-    if (!scene.allowPlayerHub && playerHubOpen) {
-      closePlayerHub();
-    }
-  }, [scene.allowPlayerHub, playerHubOpen, closePlayerHub]);
 
   const openSettings = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -82,90 +46,133 @@ export function DesktopGameShell({ children, booted, error }: Props) {
     fn?.();
   }, []);
 
-  const anyShellModalActive =
-    playerHubOpen ||
-    inventoryOpen ||
-    (modal.blocking && modal.surface !== "none");
+  const openCodex = useCallback(
+    (tab: CodexTabKey = "overview") => {
+      if (scene.key === "Title") return;
+      if (modal.mode === "shell" && modal.surface === "settings") return;
 
-  const openPlayerHub = useCallback(() => {
-    if (
-      !scene.allowPlayerHub ||
-      overlay.settingsOpen ||
-      overlay.loreOpen ||
-      overlay.inventoryOpen ||
-      overlay.inquiryActive ||
-      modal.blocking
-    ) {
-      return;
-    }
-    setPlayerHubOpen(true);
-    patchOverlaySnapshot({ playerHubOpen: true });
-  }, [overlay, scene.allowPlayerHub, modal.blocking]);
+      setCodexTab(tab);
+      patchOverlaySnapshot({
+        playerHubOpen: true,
+        inventoryOpen: tab === "inventory",
+      });
+    },
+    [scene.key, modal.mode, modal.surface],
+  );
 
-  const openInventory = useCallback(() => {
-    if (
-      overlay.settingsOpen ||
-      overlay.loreOpen ||
-      overlay.inquiryActive ||
-      modal.blocking
-    ) {
-      return;
-    }
-    setInventoryOpen(true);
-    patchOverlaySnapshot({ inventoryOpen: true });
-  }, [overlay, modal.blocking]);
+  const closeCodex = useCallback(() => {
+    setCodexTab(null);
+    patchOverlaySnapshot({
+      playerHubOpen: false,
+      inventoryOpen: false,
+    });
+  }, []);
 
-  // Global I-key opens inventory (when no other modal is active).
+  useEffect(() => {
+    if (codexTab) clearVirtualInput();
+  }, [codexTab]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (anyShellModalActive) return;
+      if (scene.key === "Title") return;
+      if (codexTab) return;
+      if (modal.mode === "shell" && modal.surface === "settings") return;
+
       if (e.key === "i" || e.key === "I") {
         e.preventDefault();
-        openInventory();
+        e.stopPropagation();
+        openCodex("inventory");
+        return;
+      }
+
+      if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        e.stopPropagation();
+        openCodex("journal");
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [openInventory, anyShellModalActive]);
 
-  const footerHint = scene.footerHint || DEFAULT_FOOTER_HINT;
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKey, {
+        capture: true,
+      } as EventListenerOptions);
+  }, [scene.key, codexTab, modal.mode, modal.surface, openCodex]);
 
-  const showDock =
-    scene.showUtilityRail || scene.showDialogueDock || scene.showMiniMap;
+  const titleMode = scene.key === "Title";
 
-  const dockStyle = useMemo(() => {
-    const cols: string[] = [];
-    if (scene.showUtilityRail) cols.push("180px");
-    if (scene.showDialogueDock) cols.push("1fr");
-    if (scene.showMiniMap) cols.push("240px");
-    return {
-      width: "min(96vw, 1100px)",
-      display: "grid",
-      gridTemplateColumns: cols.join(" "),
-      gap: 10,
-      alignItems: "stretch" as const,
-    };
-  }, [scene.showUtilityRail, scene.showDialogueDock, scene.showMiniMap]);
+  const largeSurfaceActive =
+    codexTab !== null ||
+    (modal.mode === "shell" &&
+      (modal.surface === "settings" ||
+        modal.surface === "lore" ||
+        modal.surface === "inventory" ||
+        modal.surface === "playerHub"));
 
-  // Chrome dimming: when a blocking shell modal is active, fade the
-  // surrounding chrome so the modal owns attention. The Phaser viewport
-  // stays fully visible underneath.
-  const dimmedChromeStyle = anyShellModalActive
-    ? { opacity: 0.45, filter: "saturate(0.7)", transition: "opacity 200ms ease" }
-    : { opacity: 1, transition: "opacity 200ms ease" };
+  const chromeStyle = largeSurfaceActive
+    ? {
+        opacity: 0.45,
+        filter: "saturate(0.72)",
+        transition: "opacity 180ms ease",
+      }
+    : {
+        opacity: 1,
+        transition: "opacity 180ms ease",
+      };
+
+  if (titleMode) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#05070d",
+          color: "#eef3ff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10px 12px",
+        }}
+      >
+        <div
+          style={{
+            width: "min(96vw, 1100px)",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: "min(100%, 760px)",
+              aspectRatio: "160 / 144",
+              imageRendering: "pixelated",
+              border: "1px solid rgba(232,200,144,0.4)",
+              background: "#05070d",
+              boxShadow:
+                "0 0 60px rgba(74,120,200,0.18), inset 0 0 0 1px rgba(0,0,0,0.6)",
+              borderRadius: 4,
+            }}
+          >
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#05070d",
+        background:
+          "radial-gradient(ellipse at center, #0a1428 0%, #03060e 100%)",
         color: "#eef3ff",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         fontFamily: "monospace",
-        padding: "10px 12px",
+        padding: "12px 12px",
       }}
     >
       <h1
@@ -181,82 +188,90 @@ export function DesktopGameShell({ children, booted, error }: Props) {
           border: 0,
         }}
       >
-        Hermetic Comedy — desktop shell
+        Hermetic Comedy - desktop command frame
       </h1>
 
-      {scene.showStatsBar && (
-        <div style={{ width: "min(96vw, 1100px)", ...dimmedChromeStyle }}>
-          <DesktopStatsBar />
-        </div>
-      )}
+      <div style={{ width: "min(96vw, 1180px)", ...chromeStyle }}>
+        <DesktopStatsBar />
+      </div>
 
-      <div style={{ width: "min(96vw, 1100px)" }}>
+      <div style={{ width: "min(96vw, 1180px)" }}>
         <div
           style={{
-            position: "relative",
             margin: "0 auto",
-            width: "min(100%, 760px)",
-            aspectRatio: "160 / 144",
-            imageRendering: "pixelated",
-            border: "1px solid rgba(232,200,144,0.4)",
-            background: "#05070d",
-            boxShadow:
-              "0 0 60px rgba(74,120,200,0.18), inset 0 0 0 1px rgba(0,0,0,0.6)",
+            padding: 8,
+            width: "100%",
+            background:
+              "linear-gradient(180deg, rgba(12,18,34,0.96), rgba(6,10,20,0.96))",
+            border: "1px solid rgba(74,120,200,0.45)",
+            boxShadow: "0 0 40px rgba(74,120,200,0.12)",
             borderRadius: 4,
           }}
         >
-          {children}
+          <div
+            style={{
+              position: "relative",
+              margin: "0 auto",
+              width: "min(100%, 760px)",
+              aspectRatio: "160 / 144",
+              imageRendering: "pixelated",
+              border: "1px solid #2a3550",
+              background: "#05070d",
+              boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.45)",
+              overflow: "hidden",
+            }}
+          >
+            {children}
 
-          {!booted && !error && (
-            <div
-              className="absolute inset-0 flex items-center justify-center text-xs"
-              style={{ color: "#a8c8e8", pointerEvents: "none" }}
-            >
-              Loading the silver…
-            </div>
-          )}
+            {!booted && !error ? (
+              <div
+                className="absolute inset-0 flex items-center justify-center text-xs"
+                style={{ color: "#a8c8e8", pointerEvents: "none" }}
+              >
+                Loading the silver…
+              </div>
+            ) : null}
 
-          {error && (
-            <div
-              className="absolute inset-0 flex items-center justify-center text-xs"
-              style={{ color: "#d86a6a", pointerEvents: "none" }}
-            >
-              Failed to load: {error}
-            </div>
-          )}
+            {error ? (
+              <div
+                className="absolute inset-0 flex items-center justify-center text-xs px-4 text-center"
+                style={{ color: "#d86a6a", pointerEvents: "none" }}
+              >
+                Failed to load: {error}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {showDock && (
-        <div style={{ ...dockStyle, ...dimmedChromeStyle }}>
-          {scene.showUtilityRail && (
-            <DesktopUtilityRail
-              onOpenHub={openPlayerHub}
-              onOpenSettings={openSettings}
-              onOpenInventory={openInventory}
-              hubOpen={playerHubOpen}
-            />
-          )}
-          {scene.showDialogueDock && <DesktopDialogueDock />}
-          {scene.showMiniMap && <DesktopMiniMapCard />}
-        </div>
-      )}
+      <div
+        style={{
+          width: "min(96vw, 1180px)",
+          display: "grid",
+          gridTemplateColumns: "180px minmax(0,1fr) 240px",
+          gap: 12,
+          alignItems: "stretch",
+          ...chromeStyle,
+        }}
+      >
+        <DesktopCommandRail
+          codexOpen={codexTab !== null}
+          onOpenCodex={() => openCodex("overview")}
+          onOpenSettings={openSettings}
+        />
+        <DesktopNarrativeDock />
+        <DesktopMapDock />
+      </div>
 
-      {scene.showFooter && !anyShellModalActive && (
-        <div style={{ width: "min(96vw, 1100px)" }}>
-          <ShellPanel tone="subdued" compact>
-            <ShellPanelMeta>{footerHint}</ShellPanelMeta>
-          </ShellPanel>
-        </div>
-      )}
+      <div style={{ width: "min(96vw, 1180px)", ...chromeStyle }}>
+        <ShellPanel tone="subdued" compact>
+          <ShellPanelMeta>
+            {scene.footerHint || DEFAULT_FOOTER_HINT}
+          </ShellPanelMeta>
+        </ShellPanel>
+      </div>
 
-      {/* Single owner of all blocking non-diegetic UI on desktop. */}
-      <DesktopModalHost
-        playerHubOpen={playerHubOpen}
-        onClosePlayerHub={closePlayerHub}
-        inventoryOpen={inventoryOpen}
-        onCloseInventory={closeInventory}
-      />
+      <DesktopModalHost codexTab={codexTab} onCloseCodex={closeCodex} />
     </div>
   );
 }
