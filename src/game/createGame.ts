@@ -71,9 +71,10 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       VenusTrialScene,
       MarsPlateauScene,
       MarsTrialScene,
-      // Jupiter / Saturn plateau + trial scenes are not yet wired here.
-      // The hub already gates their portals; registering them prematurely
-      // creates "registered but unreachable" content.
+      // Jupiter / Saturn plateau + trial scenes are canonical in the registry
+      // but not yet wired here. The hub gates their portals and the dev-jump
+      // selector filters them out; registering them prematurely would create
+      // "registered but unreachable" content.
       MoonTrialScene,
       SunPlateauScene,
       SunTrialScene,
