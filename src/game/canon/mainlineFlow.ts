@@ -1,11 +1,11 @@
 /**
- * Mainline scene flow — derived from the canonical registry. Only
- * implemented scenes are reachable; Jupiter/Saturn skip ahead to the
- * next implemented scene until their content lands.
+ * Mainline scene flow derived from implemented canonical scenes only.
+ * This keeps runtime routing honest while allowing the registry to
+ * contain future canonical chapters that are not yet registered.
  */
 import {
   getImplementedMainlineSceneOrder,
-  SCENE_REGISTRY,
+  isImplementedMainlineScene,
   type SceneKey,
 } from "./registry";
 
@@ -24,5 +24,5 @@ export function previousMainlineScene(scene: SceneKey): SceneKey {
 }
 
 export function isMainlineChapterScene(scene: SceneKey): boolean {
-  return SCENE_REGISTRY[scene].role !== "secret_annex";
+  return isImplementedMainlineScene(scene);
 }

@@ -1,23 +1,17 @@
-/**
- * Scene presentation helpers — derive snapshot bootstrap from the
- * canonical registry. Used by `attachHUD` and any scene that needs a
- * baseline `setSceneSnapshot(...)` payload before its own publisher
- * augments it with zone/nodes/marker/idle copy.
- */
-
 import {
-  CHAPTER_REGISTRY,
+  getPublicSceneLabel,
+  getPublicChapterTitle,
   LEGACY_ACT_NUMBER_BY_SCENE,
-  SCENE_REGISTRY,
+  getSceneMeta,
   type SceneKey,
 } from "./registry";
 
 export function canonicalSceneLabel(scene: SceneKey): string {
-  return SCENE_REGISTRY[scene].label;
+  return getPublicSceneLabel(scene);
 }
 
 export function canonicalChapterTitle(scene: SceneKey): string {
-  return CHAPTER_REGISTRY[SCENE_REGISTRY[scene].chapter].title;
+  return getPublicChapterTitle(scene);
 }
 
 export function canonicalLegacyAct(scene: SceneKey): number {
@@ -25,13 +19,9 @@ export function canonicalLegacyAct(scene: SceneKey): number {
 }
 
 export function canonicalSceneRole(scene: SceneKey) {
-  return SCENE_REGISTRY[scene].role;
+  return getSceneMeta(scene).role;
 }
 
-/**
- * Minimal shell-baseline snapshot. Caller spreads in zone/nodes/etc.
- * Use this everywhere instead of reading legacy SCENE_LABEL/ACT_BY_SCENE.
- */
 export function buildSceneSnapshotBase(scene: SceneKey) {
   return {
     key: scene,

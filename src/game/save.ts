@@ -121,7 +121,7 @@ export function newSave(): SaveSlot {
     convictions: {},
     weddingType: null,
     act2Inscription: null,
-    sorynReleased: false,
+    sopheneReleased: false,
     stainsCarried: 0,
     calling: null,
     coherence: 100,
