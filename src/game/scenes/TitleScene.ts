@@ -198,6 +198,20 @@ export class TitleScene extends Phaser.Scene {
         }),
     );
 
+    const rowHitboxes = options.map((_, i) =>
+      this.add
+        .rectangle(
+          menuBoxX + 4 + (menuBoxW - 8) / 2,
+          menuRowY + i * lineH + Math.floor(lineH / 2),
+          menuBoxW - 8,
+          lineH,
+          0x000000,
+          0.001,
+        )
+        .setDepth(109)
+        .setInteractive({ useHandCursor: true }),
+    );
+
     const cursorMark = new GBCText(this, menuCursorX, menuRowY, "▶", {
       color: COLOR.textGold,
       depth: 111,
