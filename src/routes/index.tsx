@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DesktopGameShell } from "@/components/game/DesktopGameShell";
 import { TouchLandscapeShell } from "@/components/game/TouchLandscapeShell";
 import {
@@ -53,8 +53,21 @@ function GamePage() {
     node.id = "phaser-host";
     node.style.width = "100%";
     node.style.height = "100%";
+    node.style.display = "block";
+    node.style.position = "absolute";
+    node.style.inset = "0";
     phaserHostRef.current = node;
   }
+
+  const attachSlotRef = useCallback((node: HTMLDivElement | null) => {
+    slotRef.current = node;
+    const host = phaserHostRef.current;
+    if (!node || !host) return;
+
+    if (host.parentNode !== node) {
+      node.appendChild(host);
+    }
+  }, []);
 
   // Boot Phaser once.
   useEffect(() => {
@@ -87,15 +100,17 @@ function GamePage() {
     };
   }, []);
 
-  // Re-parent the persistent Phaser host into the current shell's slot.
+  // Keep the persistent Phaser host attached to the live slot.
+  // This must survive title <-> gameplay shell subtree swaps, not just mode changes.
   useLayoutEffect(() => {
     const slot = slotRef.current;
     const host = phaserHostRef.current;
     if (!slot || !host) return;
+
     if (host.parentNode !== slot) {
       slot.appendChild(host);
     }
-  }, [mode]);
+  });
 
   // Live-react to interface mode changes from Settings.
   useEffect(() => {
@@ -107,7 +122,15 @@ function GamePage() {
   }, []);
 
   const hostSlot = (
-    <div ref={slotRef} style={{ width: "100%", height: "100%" }} />
+    <div
+      ref={attachSlotRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    />
   );
 
   if (mode === "touch_landscape") {
