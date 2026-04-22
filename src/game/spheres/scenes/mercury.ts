@@ -171,6 +171,103 @@ export class MercuryPlateauScene extends Phaser.Scene {
     return "plateau";
   }
 
+  private currentZoneLabel(): string {
+    const near = this.nearestStation();
+    if (!near) return "Central Hall";
+    if (near.kind === "crack_chamber" || near.kind === "trial_door") return "Upper Chamber";
+    if (near.kind === "npc_defender" || near.kind === "npc_pedant" || near.kind === "npc_casuist") {
+      return "Lower Voices";
+    }
+    if (
+      near.kind === "puzzle_syllogism" ||
+      near.kind === "puzzle_refutation" ||
+      near.kind === "puzzle_silence"
+    ) {
+      return "Proof Tier";
+    }
+    return "Central Hall";
+  }
+
+  private publishSceneSnapshot() {
+    const opIds = mercuryConfig.operations.map((o) => o.id);
+    const opDone = opsCompleted(this.mSave, "mercury", opIds);
+    const cracked = !!this.mSave.flags.sphere_mercury_cracked;
+
+    setSceneSnapshot({
+      key: "MercuryPlateau",
+      label: "Mercury - Tower of Reasons",
+      act: ACT_BY_SCENE.MercuryPlateau ?? 4,
+      zone: this.currentZoneLabel(),
+      nodes: [
+        { id: "defender", label: "Defender", x: 26 / GBC_W, y: 98 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[0].id}`] },
+        { id: "pedant", label: "Pedant", x: 80 / GBC_W, y: 102 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[1].id}`] },
+        { id: "casuist", label: "Casuist", x: 134 / GBC_W, y: 98 / GBC_H, active: !this.mSave.flags[`sphere_mercury_soul_${mercuryConfig.souls[2].id}`] },
+        { id: "proof", label: "Proof", x: 28 / GBC_W, y: 64 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_proof"] },
+        { id: "refutation", label: "Refutation", x: 80 / GBC_W, y: 68 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_refutation"] },
+        { id: "silence", label: "Silence", x: 132 / GBC_W, y: 64 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_silence"] },
+        { id: "argument", label: "Chalkboard", x: 20 / GBC_W, y: 42 / GBC_H, active: !this.mSave.flags["sphere_mercury_op_argument"] },
+        { id: "chamber", label: "Cracking Chamber", x: 80 / GBC_W, y: 23 / GBC_H, active: opDone >= mercuryConfig.operations.length && !cracked },
+        { id: "trial", label: "Trial Door", x: 80 / GBC_W, y: 12 / GBC_H, active: cracked },
+        { id: "stairs", label: "Stairs", x: 80 / GBC_W, y: (GBC_H - 6) / GBC_H, active: true },
+      ],
+      marker: { x: this.rowan.x / GBC_W, y: this.rowan.y / GBC_H },
+      idleTitle: "MERCURY",
+      idleBody: cracked
+        ? "The Tower has yielded its question. Hermaia waits above."
+        : opDone >= mercuryConfig.operations.length
+        ? "The room is ready to be cracked."
+        : "Every surface here wants to become an argument.",
+      footerHint: null,
+      showStatsBar: true,
+      showUtilityRail: true,
+      showDialogueDock: true,
+      showMiniMap: true,
+      allowPlayerHub: true,
+      showFooter: true,
+    });
+  }
+
+  private maybeRunChamberReadyBeat() {
+    if (!this.pendingChamberReadyBeat || this.busy) return;
+    this.pendingChamberReadyBeat = false;
+    this.chamberBeatPlayed = true;
+    this.busy = true;
+
+    this.time.delayedCall(250, () => {
+      runDialog(
+        this,
+        [
+          { who: "SOPHENE", text: "The Tower has finished arranging its premise." },
+          { who: "SOPHENE", text: "The Question is ready. The door above remembers." },
+        ],
+        () => {
+          this.busy = false;
+          this.publishSceneSnapshot();
+        },
+      );
+    });
+  }
+
+  private repaintRoomForState() {
+    this.roomArt?.destroy();
+    this.roomArt = paintMercuryRoom(this, this.mercuryArtZone());
+  }
+
+  private unlockTrialDoorVisual() {
+    const st = this.stations.find((s) => s.kind === "trial_door");
+    if (st?.visual?.length) {
+      for (const v of st.visual) {
+        const rect = v as Phaser.GameObjects.Rectangle;
+        if ("setFillStyle" in rect) {
+          rect.setFillStyle(COLD, 0.85);
+        }
+      }
+    }
+
+    this.trialGlow.setFillStyle(COLD, 0.6);
+    this.trialGlow.setStrokeStyle(1, COLD, 0.8);
+  }
+
   create() {
     this.cameras.main.setBackgroundColor(mercuryConfig.bg);
     this.cameras.main.fadeIn(500);
