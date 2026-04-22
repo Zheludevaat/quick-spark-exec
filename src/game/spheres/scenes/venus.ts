@@ -1134,41 +1134,69 @@ export class VenusPlateauScene extends Phaser.Scene {
     onResolved: () => void,
     completionLines: { who: string; text: string }[],
   ) {
-    if (this.activeAttune) {
-      this.cancelActiveAttune(false);
+    const begin = () => {
+      if (this.activeAttune) {
+        this.cancelActiveAttune(false);
+      }
+
+      const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
+      this.attuneRing = ring;
+
+      const target = createAttuneTarget(id, zone, requiredMs, {
+        onBreak: () => {
+          this.activeAttune = null;
+          this.attuneRing?.break();
+          this.attuneRing = null;
+          this.flashHint("attune broken. movement arrived before listening.");
+        },
+        onComplete: () => {
+          this.activeAttune = null;
+          getAudio().sfx("resolve");
+          this.attuneRing?.complete();
+          this.attuneRing = null;
+
+          onResolved();
+
+          this.modal = true;
+          this.time.delayedCall(380, () => {
+            runDialog(this, completionLines, () => {
+              this.modal = false;
+              gbcWipe(this, () => this.loadZone(this.zone, true));
+            });
+          });
+        },
+      });
+
+      startAttune(target);
+      this.activeAttune = target;
+      this.flashHint("attune. hold still.");
+    };
+
+    if (!this.save.flags.venus_attune_tutorial_seen) {
+      this.save.flags.venus_attune_tutorial_seen = true;
+      writeSave(this.save);
+      this.modal = true;
+      runDialog(
+        this,
+        [
+          {
+            who: "SORYN",
+            text: "ATTUNE means do less than you want to. Hold still long enough for the thing to arrive in its own name.",
+          },
+          {
+            who: "SORYN",
+            text: "Movement breaks it. Reaching breaks it. Let the moment touch you before you answer it.",
+          },
+        ],
+        () => {
+          this.modal = false;
+          begin();
+        },
+      );
+      return;
     }
 
-    const ring = makeVenusAttuneRing(this, this.player.x, this.player.y - 8, 6);
-    this.attuneRing = ring;
-
-    const target = createAttuneTarget(id, zone, requiredMs, {
-      onBreak: () => {
-        this.activeAttune = null;
-        this.attuneRing?.break();
-        this.attuneRing = null;
-        this.flashHint("attune broken. wanting arrived too early.");
-      },
-      onComplete: () => {
-        this.activeAttune = null;
-        getAudio().sfx("resolve");
-        this.attuneRing?.complete();
-        this.attuneRing = null;
-
-        onResolved();
-
-        this.modal = true;
-        this.time.delayedCall(380, () => {
-          runDialog(this, completionLines, () => {
-            this.modal = false;
-            gbcWipe(this, () => this.loadZone(this.zone, true));
-          });
-        });
-      },
-    });
-
-    startAttune(target);
-    this.activeAttune = target;
-    this.flashHint("attune. hold still.");
+    begin();
   }
 
   private cancelActiveAttune(silent: boolean) {
