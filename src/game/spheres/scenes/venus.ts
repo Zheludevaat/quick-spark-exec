@@ -880,16 +880,10 @@ export class VenusPlateauScene extends Phaser.Scene {
         ny >= d.y &&
         ny <= d.y + d.h
       ) {
-        const link = VENUS_ZONE_LINKS[this.zone];
-        if (link.includes(d.to)) {
-          if (d.to === "threshold" && !venusCrackingReady(this.save) && this.zone === "atrium") {
-            this.player.setPosition(oldX, oldY);
-            this.flashHint("the threshold is not yet for you.");
-            return;
-          }
-          gbcWipe(this, () => this.loadZone(d.to));
-          return;
-        }
+        // Door entry is now intentional via A; overlap alone does nothing.
+        // Keep player position unchanged but do not auto-transition.
+        void oldX;
+        void oldY;
       }
     }
 
