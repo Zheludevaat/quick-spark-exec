@@ -1858,6 +1858,7 @@ export class MercuryTrialScene extends Phaser.Scene {
       }
 
       writeSave(this.mSave);
+      this.publishTrialSnapshot();
 
       const remaining = this.doors.filter((d) => !d.done).length;
       if (remaining === 0) {
@@ -1879,27 +1880,23 @@ export class MercuryTrialScene extends Phaser.Scene {
 
   private resolve() {
     const max = mercuryConfig.trialRounds.length * 3;
-    const threshold = Math.ceil(max * 0.5);
+    const threshold =
+      mercuryConfig.trialPassThreshold ?? Math.ceil(max * 0.5);
     if (this.mScore >= threshold) return this.pass();
     return this.fail();
   }
 
   private pass() {
-    this.mSave.flags[trialPassedKey("mercury")] = true;
-    this.mSave.garmentsReleased = { ...this.mSave.garmentsReleased, mercury: true };
-    this.mSave.sphereVerbs = { ...this.mSave.sphereVerbs, name: true };
-    if (!this.mSave.relics.includes(mercuryConfig.inscription)) {
-      this.mSave.relics.push(mercuryConfig.inscription);
-    }
+    applyMercuryTrialPass(this.mSave, mercuryConfig.inscription);
     writeSave(this.mSave);
 
-    // Mercury seal mark — a quiet expanding ring left at the chamber center
-    // so the trial space remembers Hermaia's verdict, not just the dialog.
     this.hermaiaPresentation?.pulse();
+
     const seal = this.add
       .circle(GBC_W / 2, 22, 5, HERMAIA_PROFILE.palette.primary, 0.22)
       .setStrokeStyle(1, HERMAIA_PROFILE.palette.glow, 0.6)
       .setDepth(40);
+
     this.tweens.add({
       targets: seal,
       scale: { from: 1, to: 2.4 },
@@ -1910,13 +1907,15 @@ export class MercuryTrialScene extends Phaser.Scene {
       ease: "Sine.inOut",
     });
 
+    const nextScene = nextMainlineScene("MercuryTrial");
+
     runDialog(this, mercuryConfig.trialPass, () => {
-      gbcWipe(this, () => this.scene.start("MetaxyHub", { save: this.mSave }));
+      gbcWipe(this, () => this.scene.start(nextScene, { save: this.mSave }));
     });
   }
 
   private fail() {
-    this.mSave.coherence = Math.max(0, this.mSave.coherence - 15);
+    applyMercuryTrialFail(this.mSave, 15);
     writeSave(this.mSave);
     runDialog(this, mercuryConfig.trialFail, () => {
       gbcWipe(this, () =>
